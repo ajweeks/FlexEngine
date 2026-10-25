@@ -1,6 +1,7 @@
 #include "stdafx.hpp"
 
 #include "FlexEngine.hpp"
+#include "Game.hpp"
 #include "Platform/Platform.hpp"
 #include "SceneTestRunner.hpp"
 #include "Test.hpp"
@@ -97,10 +98,19 @@ int main(int argc, char *argv[])
 
 		// The game's main menu is shown on startup, unless testing or "--editor" is passed (which opens the last
 		// opened test scene)
+		// "--play" skips the main menu & loads the most recently played world ("--play=<world name>" picks one)
 		bool bEditor = false;
 		for (i32 i = 1; i < argc; ++i)
 		{
 			bEditor = bEditor || strcmp(argv[i], "--editor") == 0;
+			if (!bTestScenes && strcmp(argv[i], "--play") == 0)
+			{
+				flex::Game::RequestAutoPlay("");
+			}
+			else if (!bTestScenes && strncmp(argv[i], "--play=", 7) == 0)
+			{
+				flex::Game::RequestAutoPlay(argv[i] + 7);
+			}
 		}
 
 		flex::FlexEngine* engineInstance = new flex::FlexEngine();

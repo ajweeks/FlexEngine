@@ -17,8 +17,8 @@ namespace flex
 		// Records a value measured elsewhere (e.g. GPU timings), averaged per frame in the report
 		void AddSample(const char* name, ms duration);
 
-		// Prints scopes sorted by average time per frame
-		void PrintReport();
+		// Prints scopes sorted by average time per frame (or total time, when bTotals is set)
+		void PrintReport(bool bTotals = false);
 		void Reset();
 
 		struct Scope

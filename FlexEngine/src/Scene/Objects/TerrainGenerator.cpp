@@ -22,6 +22,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
+#include "GameUI.hpp"
 #include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
@@ -38,12 +39,14 @@ IGNORE_WARNINGS_POP
 #include "Scene/MeshComponent.hpp"
 #include "Scene/Objects/Road.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Systems/JobSystem.hpp"
 #include "Time.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
 {
 	TerrainGenerator* TerrainGenerator::s_Active = nullptr;
+	void (*TerrainGenerator::s_OnPlantFelled)(const terrain::PlantInfo& plant, const glm::vec3& fallDirection) = nullptr;
 	bool TerrainGenerator::s_bShowWorldMap = false;
 	bool TerrainGenerator::s_bShowMinimap = true;
 
@@ -178,6 +181,21 @@ namespace flex
 			m_TerrainMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
 		}
 
+		const char* waterMaterialName = "Terrain water";
+		m_WaterMatID = g_Renderer->GetMaterialID(waterMaterialName);
+		if (m_WaterMatID == InvalidMaterialID)
+		{
+			MaterialCreateInfo matCreateInfo = {};
+			matCreateInfo.name = waterMaterialName;
+			matCreateInfo.shaderName = "terrain_water";
+			matCreateInfo.constAlbedo = glm::vec4(1.0f, 0.0f, 0.0f, 1.0f);
+			matCreateInfo.constRoughness = 1.0f;
+			matCreateInfo.constMetallic = 0.0f;
+			matCreateInfo.bSerializable = false;
+			matCreateInfo.bDynamic = true;
+			m_WaterMatID = g_Renderer->InitializeMaterial(&matCreateInfo);
+		}
+
 		m_Mesh = new Mesh(this);
 		m_Mesh->SetTypeToMemory();
 
@@ -253,6 +271,47 @@ namespace flex
 		}
 	}
 
+	void TerrainGenerator::ApplyParamsIfDirty()
+	{
+		if (!m_bParamsDirty || m_Streamer == nullptr)
+		{
+			return;
+		}
+
+		m_bParamsDirty = false;
+		const terrain::WorldParams params = GetEffectiveParams();
+
+		// Edits are stored per world (seed)
+		const bool bWorldChanged = params.seed != m_LoadedEditsSeed || m_bReloadEdits;
+		if (bWorldChanged && m_bEnableDiskCache)
+		{
+			m_bReloadEdits = false;
+			SaveEdits();
+			m_LoadedEditsSeed = params.seed;
+			std::vector<terrain::Edit> edits;
+			terrain::ReadEdits(GetSaveFilePathBase() + ".edits", params.seed, edits);
+			m_Streamer->SetEdits(edits);
+		}
+		m_LoadedEditsSeed = params.seed;
+		if (m_bEnableDiskCache)
+		{
+			m_Streamer->SetSnapshotPath(GetSaveFilePathBase() + ".snapshot");
+		}
+
+		m_Streamer->SetParams(params);
+		if (m_bEnableDiskCache && bWorldChanged)
+		{
+			// Each world has its own snapshot of the chunks displayed when it was last left
+			m_Streamer->LoadSnapshotAsync();
+		}
+		m_QueryDensity.reset();
+		m_LoadStartTime = Time::CurrentNanoseconds();
+		m_bLoadComplete = false;
+		m_MaxApplyTime = 0.0f;
+		m_WorldMap.bValid = false;
+		UpdateSceneFog();
+	}
+
 	void TerrainGenerator::Update()
 	{
 		PROFILE_AUTO("TerrainGenerator Update");
@@ -266,35 +325,7 @@ namespace flex
 				g_Renderer->SetShadowDistanceOverride(m_ShadowDistance);
 			}
 
-			if (m_bParamsDirty)
-			{
-				m_bParamsDirty = false;
-				const terrain::WorldParams params = GetEffectiveParams();
-
-				// Edits are stored per world (seed)
-				if ((params.seed != m_LoadedEditsSeed || m_bReloadEdits) && m_bEnableDiskCache)
-				{
-					m_bReloadEdits = false;
-					SaveEdits();
-					m_LoadedEditsSeed = params.seed;
-					std::vector<terrain::Edit> edits;
-					terrain::ReadEdits(GetSaveFilePathBase() + ".edits", params.seed, edits);
-					m_Streamer->SetEdits(edits);
-				}
-				m_LoadedEditsSeed = params.seed;
-				if (m_bEnableDiskCache)
-				{
-					m_Streamer->SetSnapshotPath(GetSaveFilePathBase() + ".snapshot");
-				}
-
-				m_Streamer->SetParams(params);
-				m_QueryDensity.reset();
-				m_LoadStartTime = Time::CurrentNanoseconds();
-				m_bLoadComplete = false;
-				m_MaxApplyTime = 0.0f;
-				m_WorldMap.bValid = false;
-				UpdateSceneFog();
-			}
+			ApplyParamsIfDirty();
 
 			const glm::vec3 center = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
 			m_LastCenter = center;
@@ -307,9 +338,15 @@ namespace flex
 				camera->zFar = m_Params.viewDistance * 1.05f;
 			}
 			ApplyChunkCommands();
-			UpdateRigidBodies();
+			{
+				PROFILE_AUTO("TerrainGenerator UpdateRigidBodies");
+				UpdateRigidBodies();
+			}
 			UpdateEditorBrush();
-			UpdateMinimap();
+			{
+				PROFILE_AUTO("TerrainGenerator UpdateMinimap");
+				UpdateMinimap();
+			}
 
 			if (m_bEditsDirty && g_SecElapsedSinceProgramStart - m_EditsDirtyTime > 2.0f)
 			{
@@ -347,7 +384,7 @@ namespace flex
 		vertexBufferCreateInfo.attributes = terrainShader->vertexAttributes;
 
 		auto CreateMeshComponent = [&](std::vector<glm::vec3>&& positions, std::vector<glm::vec3>&& normals, std::vector<glm::vec4>&& colours,
-			std::vector<glm::vec4>&& weights, const std::vector<u32>& indices, bool bCastsShadow, i32* outSubmeshIndex)
+			std::vector<glm::vec4>&& weights, const std::vector<u32>& indices, bool bCastsShadow, i32* outSubmeshIndex, MaterialID materialID)
 		{
 			const u32 vertexCount = (u32)positions.size();
 
@@ -371,7 +408,7 @@ namespace flex
 			renderObjectCreateInfo.bCastsShadow = bCastsShadow;
 			renderObjectCreateInfo.cullSphere = glm::vec4((boundsMin + boundsMax) * 0.5f, glm::length(boundsMax - boundsMin) * 0.5f);
 
-			MeshComponent* meshComponent = MeshComponent::LoadFromMemoryDynamic(m_Mesh, vertexBufferCreateInfo, indices, m_TerrainMatID,
+			MeshComponent* meshComponent = MeshComponent::LoadFromMemoryDynamic(m_Mesh, vertexBufferCreateInfo, indices, materialID,
 				vertexCount, &renderObjectCreateInfo, true, outSubmeshIndex);
 			if (meshComponent != nullptr)
 			{
@@ -396,7 +433,7 @@ namespace flex
 		if (!mesh.indices.empty())
 		{
 			chunk.meshComponent = CreateMeshComponent(std::move(mesh.positions), std::move(mesh.normals), std::move(mesh.colours),
-				std::move(mesh.weights), mesh.indices, true, &chunk.submeshIndex);
+				std::move(mesh.weights), mesh.indices, true, &chunk.submeshIndex, m_TerrainMatID);
 		}
 
 		if (!mesh.waterIndices.empty())
@@ -413,7 +450,7 @@ namespace flex
 				std::vector<glm::vec3>(waterVertexCount, VEC3_UP),
 				std::vector<glm::vec4>(waterVertexCount, waterColour),
 				std::vector<glm::vec4>(waterVertexCount, VEC4_ZERO),
-				mesh.waterIndices, false, &chunk.waterSubmeshIndex);
+				mesh.waterIndices, false, &chunk.waterSubmeshIndex, m_WaterMatID != InvalidMaterialID ? m_WaterMatID : m_TerrainMatID);
 		}
 
 		if (bHidden)
@@ -561,6 +598,8 @@ namespace flex
 		const bool bHasPlayer = player != nullptr;
 		const glm::vec3 playerPos = bHasPlayer ? player->GetTransform()->GetWorldPosition() : VEC3_ZERO;
 
+		static std::vector<Chunk*> toCreate;
+		toCreate.clear();
 		for (auto& pair : m_Chunks)
 		{
 			Chunk& chunk = pair.second;
@@ -573,12 +612,25 @@ namespace flex
 
 			if (bShouldHaveRigidBody && chunk.rigidBody == nullptr)
 			{
-				CreateChunkRigidBody(chunk);
+				toCreate.push_back(&chunk);
 			}
 			else if (!bShouldHaveRigidBody && chunk.rigidBody != nullptr)
 			{
 				DestroyChunkRigidBody(chunk);
 			}
+		}
+
+		if (toCreate.size() > 1)
+		{
+			// Building the collision BVHs is the expensive part (many chunks at once when a world loads), & is
+			// independent per chunk. Bodies are added to the physics world afterwards, on this thread.
+			JobSystem::Context context;
+			JobSystem::Dispatch(context, (u32)toCreate.size(), 1, [](JobSystem::JobArgs args) { BuildChunkCollisionShapes(*toCreate[args.jobIndex]); });
+			JobSystem::Wait(context);
+		}
+		for (Chunk* chunk : toCreate)
+		{
+			CreateChunkRigidBody(*chunk);
 		}
 	}
 
@@ -605,8 +657,66 @@ namespace flex
 		{
 			return;
 		}
+
+		// Plants whose roots are dug out fall over (found before the dig changes where the ground is)
+		std::vector<terrain::PlantInfo> plants;
+		const glm::vec3 plantSearchExtent(radius + 1.5f, radius + 6.0f, radius + 1.5f);
+		m_Streamer->FindPlants(center - plantSearchExtent, center + plantSearchExtent, plants);
+		std::vector<terrain::PlantInfo> undermined;
+		for (const terrain::PlantInfo& plant : plants)
+		{
+			// The ground just below the trunk's base
+			const glm::vec3 root = plant.base - glm::vec3(0.0f, 0.3f, 0.0f);
+			if (glm::distance(root, center) < radius + plant.trunkRadius * 0.5f + 0.3f)
+			{
+				undermined.push_back(plant);
+				edits.push_back(terrain::MakeRemovePlantEdit(plant));
+			}
+		}
+
 		m_Streamer->ApplyEdits(edits.data(), (u32)edits.size());
 		MarkEditsDirty();
+
+		for (const terrain::PlantInfo& plant : undermined)
+		{
+			// Topple away from the hole
+			glm::vec3 away = plant.base - center;
+			away.y = 0.0f;
+			if (s_OnPlantFelled != nullptr)
+			{
+				s_OnPlantFelled(plant, glm::length(away) > 1e-3f ? glm::normalize(away) : VEC3_ZERO);
+			}
+		}
+	}
+
+	void TerrainGenerator::FindPlants(const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<terrain::PlantInfo>& outPlants) const
+	{
+		if (m_Streamer != nullptr)
+		{
+			m_Streamer->FindPlants(boxMin, boxMax, outPlants);
+		}
+	}
+
+	void TerrainGenerator::BuildPlantMesh(const terrain::PlantInfo& plant, terrain::ChunkMeshData& outMesh) const
+	{
+		if (m_Streamer != nullptr)
+		{
+			terrain::BuildPlantMesh(*m_Streamer->Density(), plant, outMesh);
+		}
+	}
+
+	void TerrainGenerator::FellPlant(const terrain::PlantInfo& plant, const glm::vec3& fallDirection)
+	{
+		if (m_Streamer == nullptr)
+		{
+			return;
+		}
+
+		ApplyEdit(terrain::MakeRemovePlantEdit(plant));
+		if (s_OnPlantFelled != nullptr)
+		{
+			s_OnPlantFelled(plant, fallDirection);
+		}
 	}
 
 	void TerrainGenerator::FindFloatingFragments(const glm::vec3& center, real extent, std::vector<terrain::Edit>& inOutEdits) const
@@ -965,7 +1075,7 @@ namespace flex
 		if (m_Streamer != nullptr)
 		{
 			SaveEdits();
-			if (m_bEnableDiskCache)
+			if (m_bEnableDiskCache && !m_bSnapshotFinal)
 			{
 				// (Cameras may have already been destroyed)
 				m_Streamer->SaveSnapshot(m_LastCenter);
@@ -1158,6 +1268,15 @@ namespace flex
 					player->AddToInventory(vehicleID, 1);
 				}
 			}
+			ImGui::SameLine();
+			if (ImGui::Button("Give player a row boat"))
+			{
+				const PrefabID boatID = g_ResourceManager->GetPrefabID("row boat");
+				if (boatID.IsValid())
+				{
+					player->AddToInventory(boatID, 1);
+				}
+			}
 			if (ImGui::IsItemHovered())
 			{
 				ImGui::SetTooltip("Place it with the place item key, & pick it up again by holding the pickup key while looking at it");
@@ -1319,9 +1438,9 @@ namespace flex
 		}
 	}
 
-	std::future<TerrainGenerator::WorldMap> TerrainGenerator::GenerateMap(std::shared_ptr<const terrain::TerrainDensity> density, const glm::vec3& center, real extent, u32 resolution)
+	std::future<TerrainGenerator::WorldMap> TerrainGenerator::GenerateMap(std::shared_ptr<const terrain::TerrainDensity> density, const glm::vec3& center, real extent, u32 resolution, bool bParallel /* = false */)
 	{
-		return std::async(std::launch::async, [density, center, extent, resolution]()
+		return std::async(std::launch::async, [density, center, extent, resolution, bParallel]()
 		{
 			WorldMap map = {};
 			map.center = center;
@@ -1332,13 +1451,27 @@ namespace flex
 			// Rows run from +z (north, top) to -z
 			std::vector<terrain::ColumnSample> columns(resolution * resolution);
 			const real cellSize = (2.0f * extent) / (real)resolution;
-			for (u32 row = 0; row < resolution; ++row)
+			auto SampleRow = [&](u32 row)
 			{
 				for (u32 x = 0; x < resolution; ++x)
 				{
 					const real px = center.x - extent + ((real)x + 0.5f) * cellSize;
 					const real pz = center.z + extent - ((real)row + 0.5f) * cellSize;
 					columns[row * resolution + x] = density->SampleColumn(px, pz);
+				}
+			};
+			if (bParallel)
+			{
+				// Column sampling dominates (~2.5us each, so a 384^2 map takes ~350ms on one thread)
+				JobSystem::Context context;
+				JobSystem::Dispatch(context, resolution, 4, [&](JobSystem::JobArgs args) { SampleRow(args.jobIndex); });
+				JobSystem::Wait(context);
+			}
+			else
+			{
+				for (u32 row = 0; row < resolution; ++row)
+				{
+					SampleRow(row);
 				}
 			}
 
@@ -1489,10 +1622,12 @@ namespace flex
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 		const glm::vec3 pos = player != nullptr ? player->GetTransform()->GetWorldPosition() : camera->position;
 
-		const bool bStale = !m_Minimap.bValid || glm::distance(glm::vec2(pos.x, pos.z), glm::vec2(m_Minimap.center.x, m_Minimap.center.z)) > m_MinimapExtent * 0.15f;
+		// Regenerated (in the background, ~60ms) whenever the player moves a little, so they stay near the center
+		const bool bStale = !m_Minimap.bValid || m_Minimap.extent != m_MinimapExtent ||
+			glm::distance(glm::vec2(pos.x, pos.z), glm::vec2(m_Minimap.center.x, m_Minimap.center.z)) > m_MinimapExtent * 0.02f;
 		if (bStale && !m_MinimapFuture.valid())
 		{
-			m_MinimapFuture = GenerateMap(m_Streamer->Density(), pos, m_MinimapExtent, 96);
+			m_MinimapFuture = GenerateMap(m_Streamer->Density(), pos, m_MinimapExtent, MINIMAP_RESOLUTION);
 		}
 
 		if (m_MinimapTextureID == InvalidTextureID || !m_Minimap.bValid)
@@ -1500,33 +1635,52 @@ namespace flex
 			return;
 		}
 
-		// Positions are in the sprite's screen space ([-aspect, aspect] x [-1, 1], +y up), anchored at sprite centers
-		const glm::vec2i frameBufferSize = g_Window->GetFrameBufferSize();
-		const real aspectRatio = (real)frameBufferSize.x / (real)glm::max(frameBufferSize.y, 1);
-		const real halfSize = 0.28f;
-		const real margin = 0.05f;
-		const glm::vec2 center(aspectRatio - margin - halfSize, 1.0f - margin - halfSize);
+		// A plate in the top right corner (see docs/visual_design.md), in pixels from the top left. The plate is UI,
+		// the map & markers are sprites drawn after the UI.
+		const glm::vec2i windowSize = g_Window->GetSize();
+		const glm::vec2 screenSize((real)glm::max(windowSize.x, 1), (real)glm::max(windowSize.y, 1));
+		const real scale = screenSize.y / 1080.0f;
+		const real mapSizePx = 280.0f * scale;
+		const real padding = 6.0f * scale;
+		const glm::vec2 mapCenterPx(screenSize.x - (UITheme::HUD_MARGIN + padding) * scale - mapSizePx * 0.5f, (UITheme::HUD_MARGIN + padding) * scale + mapSizePx * 0.5f);
+		const UIRect plate(mapCenterPx.x - mapSizePx * 0.5f - padding, mapCenterPx.y - mapSizePx * 0.5f - padding, mapSizePx + padding * 2.0f, mapSizePx + padding * 2.0f);
+		GameUI::DrawRoundedRect(plate, UITheme::SURFACE_TOP, UITheme::SURFACE, UITheme::RADIUS_L * scale);
 
-		g_Renderer->EnqueueUntexturedQuad(center, AnchorPoint::CENTER, glm::vec2(halfSize + 0.008f), glm::vec4(0.05f, 0.05f, 0.06f, 0.85f));
+		const real aspectRatio = screenSize.x / screenSize.y;
+		auto PxToSprite = [&](const glm::vec2& px) { return glm::vec3((px.x / screenSize.x * 2.0f - 1.0f) * aspectRatio, 1.0f - px.y / screenSize.y * 2.0f, 0.0f); };
+		auto Quad = [&](const glm::vec2& px, real halfSizePx, const glm::vec4& colour)
+		{
+			SpriteQuadDrawInfo drawInfo = {};
+			drawInfo.anchor = AnchorPoint::CENTER;
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.bEnableAlbedoSampler = false;
+			drawInfo.zOrder = Z_ORDER_UI + 10;
+			drawInfo.colour = colour;
+			drawInfo.pos = PxToSprite(px);
+			drawInfo.scale = glm::vec3(glm::vec2(halfSizePx * 2.0f / screenSize.y), 1.0f);
+			g_Renderer->EnqueueSprite(drawInfo);
+		};
 
 		SpriteQuadDrawInfo mapSprite = {};
 		mapSprite.textureID = m_MinimapTextureID;
 		mapSprite.anchor = AnchorPoint::CENTER;
 		mapSprite.bScreenSpace = true;
 		mapSprite.bReadDepth = false;
-		mapSprite.pos = glm::vec3(center, 0.0f);
-		mapSprite.scale = glm::vec3(halfSize, halfSize, 1.0f);
+		mapSprite.zOrder = Z_ORDER_UI + 10;
+		mapSprite.pos = PxToSprite(mapCenterPx);
+		mapSprite.scale = glm::vec3(glm::vec2(mapSizePx / screenSize.y), 1.0f);
 		g_Renderer->EnqueueSprite(mapSprite);
 
 		// Player marker & heading
-		glm::vec2 offset = glm::vec2(pos.x - m_Minimap.center.x, pos.z - m_Minimap.center.z) / m_Minimap.extent;
-		offset = glm::clamp(offset, glm::vec2(-1.0f), glm::vec2(1.0f));
-		const glm::vec2 markerPos = center + offset * halfSize;
-		glm::vec2 forward(camera->forward.x, camera->forward.z);
-		forward = glm::length(forward) > 1e-4f ? glm::normalize(forward) : glm::vec2(0.0f, 1.0f);
-		g_Renderer->EnqueueUntexturedQuad(markerPos, AnchorPoint::CENTER, glm::vec2(0.009f), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f));
-		g_Renderer->EnqueueUntexturedQuad(markerPos, AnchorPoint::CENTER, glm::vec2(0.006f), glm::vec4(1.0f, 1.0f, 1.0f, 1.0f));
-		g_Renderer->EnqueueUntexturedQuad(markerPos + forward * 0.022f, AnchorPoint::CENTER, glm::vec2(0.004f), glm::vec4(1.0f, 0.35f, 0.25f, 1.0f));
+		glm::vec2 offset = glm::vec2(pos.x - m_Minimap.center.x, -(pos.z - m_Minimap.center.z)) / m_Minimap.extent;
+		offset = glm::clamp(offset, glm::vec2(-0.95f), glm::vec2(0.95f));
+		const glm::vec2 markerPx = mapCenterPx + offset * mapSizePx * 0.5f;
+		glm::vec2 forward(camera->forward.x, -camera->forward.z);
+		forward = glm::length(forward) > 1e-4f ? glm::normalize(forward) : glm::vec2(0.0f, -1.0f);
+		Quad(markerPx, 6.0f * scale, UITheme::INK);
+		Quad(markerPx, 4.0f * scale, UITheme::TEXT_PRIMARY);
+		Quad(markerPx + forward * 12.0f * scale, 3.0f * scale, UITheme::EMBER);
 	}
 
 	// Draws a rectangle outline with dashes moving around it (used to show chunks being loaded)
@@ -1963,9 +2117,21 @@ namespace flex
 		}
 		m_Params.seed = seed;
 		m_bReloadEdits = true;
+		m_bSnapshotFinal = false;
 		m_LargeMap.bValid = false;
 		m_Minimap.bValid = false;
 		Regenerate();
+		// Applied now rather than on the next update, so the new world's density (& saved terrain) is used right away
+		ApplyParamsIfDirty();
+	}
+
+	void TerrainGenerator::SaveSnapshot(bool bFinal /* = false */)
+	{
+		if (m_Streamer != nullptr && m_bEnableDiskCache && !m_bParamsDirty && !m_bSnapshotFinal)
+		{
+			m_Streamer->SaveSnapshot(m_LastCenter);
+		}
+		m_bSnapshotFinal = m_bSnapshotFinal || bFinal;
 	}
 
 	void TerrainGenerator::FlushEdits()
@@ -1995,7 +2161,7 @@ namespace flex
 		{
 			return;
 		}
-		m_LargeMapFuture = GenerateMap(m_Streamer->Density(), center, extent, resolution);
+		m_LargeMapFuture = GenerateMap(m_Streamer->Density(), center, extent, resolution, true);
 	}
 
 	void TerrainGenerator::UpdateLargeMap()
@@ -2110,6 +2276,46 @@ namespace flex
 
 		delete chunk.triangleIndexVertexArray;
 		chunk.triangleIndexVertexArray = nullptr;
+
+		if (chunk.foliageRigidBody != nullptr)
+		{
+			chunk.foliageRigidBody->Destroy();
+			delete chunk.foliageRigidBody;
+			chunk.foliageRigidBody = nullptr;
+		}
+		delete chunk.foliageCollisionShape;
+		chunk.foliageCollisionShape = nullptr;
+		delete chunk.foliageTriangleIndexVertexArray;
+		chunk.foliageTriangleIndexVertexArray = nullptr;
+	}
+
+	void TerrainGenerator::BuildChunkCollisionShapes(Chunk& chunk)
+	{
+		MeshComponent* submesh = chunk.meshComponent;
+		if (chunk.rigidBody != nullptr || chunk.collisionShape != nullptr || submesh == nullptr || submesh->GetIndexCount() == 0 ||
+			chunk.collisionIndexCount == 0)
+		{
+			return;
+		}
+
+		// Foliage isn't collided with (it's after collisionIndexCount)
+		submesh->CreateCollisionMesh(&chunk.triangleIndexVertexArray, (btBvhTriangleMeshShape**)&chunk.collisionShape, chunk.collisionIndexCount);
+
+		const u32 indexCount = submesh->GetIndexCount();
+		if (chunk.collisionIndexCount < indexCount)
+		{
+			VertexBufferData* vertexBufferData = submesh->GetVertexBufferData();
+			btIndexedMesh part = {};
+			part.m_vertexBase = (const unsigned char*)vertexBufferData->vertexData;
+			part.m_vertexStride = vertexBufferData->VertexStride;
+			part.m_numVertices = vertexBufferData->UsedVertexCount;
+			part.m_triangleIndexBase = (const unsigned char*)(submesh->GetIndexBufferDataPtr() + chunk.collisionIndexCount);
+			part.m_triangleIndexStride = sizeof(u32) * 3;
+			part.m_numTriangles = (i32)((indexCount - chunk.collisionIndexCount) / 3);
+			chunk.foliageTriangleIndexVertexArray = new btTriangleIndexVertexArray();
+			chunk.foliageTriangleIndexVertexArray->addIndexedMesh(part, PHY_INTEGER);
+			chunk.foliageCollisionShape = new btBvhTriangleMeshShape(chunk.foliageTriangleIndexVertexArray, false);
+		}
 	}
 
 	void TerrainGenerator::CreateChunkRigidBody(Chunk& chunk)
@@ -2125,16 +2331,27 @@ namespace flex
 			return;
 		}
 
-		CHECK_EQ(chunk.collisionShape, nullptr);
-
-		// Foliage isn't collided with (it's after collisionIndexCount)
-		submesh->CreateCollisionMesh(&chunk.triangleIndexVertexArray, (btBvhTriangleMeshShape**)&chunk.collisionShape, chunk.collisionIndexCount);
+		// (Usually already built, in parallel)
+		BuildChunkCollisionShapes(chunk);
 
 		RigidBody* rigidBody = new RigidBody((u32)CollisionType::STATIC, (u32)CollisionType::DEFAULT & ~(u32)CollisionType::STATIC);
 		rigidBody->SetStatic(true);
 		rigidBody->Initialize(chunk.collisionShape, &m_Transform);
 		chunk.rigidBody = rigidBody;
 		chunk.rigidBody->GetRigidBodyInternal()->setActivationState(WANTS_DEACTIVATION);
+
+		// Foliage gets a separate body which only rays asking for it hit (nothing collides with it), so trees can be
+		// targeted (e.g. by the grappling hook)
+		if (chunk.foliageCollisionShape != nullptr)
+		{
+			RigidBody* foliageRigidBody = new RigidBody((u32)CollisionType::RAYCAST_ONLY, (u32)CollisionType::RAYCAST_ONLY);
+			foliageRigidBody->SetStatic(true);
+			foliageRigidBody->Initialize(chunk.foliageCollisionShape, &m_Transform);
+			btRigidBody* rb = foliageRigidBody->GetRigidBodyInternal();
+			rb->setCollisionFlags(rb->getCollisionFlags() | btCollisionObject::CF_NO_CONTACT_RESPONSE);
+			rb->setActivationState(WANTS_DEACTIVATION);
+			chunk.foliageRigidBody = foliageRigidBody;
+		}
 	}
 
 	void TerrainGenerator::DestroyChunk(Chunk& chunk)

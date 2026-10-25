@@ -3,6 +3,7 @@
 #include "GameUI.hpp"
 
 #include "Audio/AudioManager.hpp"
+#include "GameSounds.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
@@ -48,8 +49,10 @@ namespace flex
 		m_bMouseDown = g_InputManager->IsMouseButtonDown(MouseButton::LEFT);
 		m_Scroll = g_InputManager->GetVerticalScrollDistance();
 		m_Time += g_UnpausedDeltaTime;
+		m_ReleasedID = 0;
 		if (!m_bMouseDown)
 		{
+			m_ReleasedID = m_ActiveID;
 			m_ActiveID = 0;
 		}
 		if (m_ClickSoundID == InvalidAudioSourceID)
@@ -66,6 +69,31 @@ namespace flex
 		}
 	}
 
+	bool GameUI::WasReleased(const char* id) const
+	{
+		return m_ReleasedID != 0 && m_ReleasedID == HashID(id);
+	}
+
+	void GameUI::PlayConfirm()
+	{
+		if (GameSounds::IsReady())
+		{
+			GameSounds::PlayUIConfirm();
+			return;
+		}
+
+		// Until the game's sounds have been synthesized
+		if (m_ConfirmSoundID == InvalidAudioSourceID)
+		{
+			// A short, soft sine (frequency is in radians per second)
+			m_ConfirmSoundID = AudioManager::SynthesizeSound(0.16f, TWO_PI * 660.0f);
+		}
+		if (m_ConfirmSoundID != InvalidAudioSourceID)
+		{
+			AudioManager::PlaySourceWithGain(m_ConfirmSoundID, 0.5f);
+		}
+	}
+
 	real GameUI::HoverAmount(u64 id, bool bHovered)
 	{
 		real& amount = m_HoverAmounts[id];
@@ -77,6 +105,16 @@ namespace flex
 	// Rounded rects are triangle fans with an extra ring of transparent vertices around their edge, which anti-aliases
 	// it (& with a large ring, makes soft shadows)
 	void GameUI::FillRectGradient(const UIRect& rect, const glm::vec4& top, const glm::vec4& bottom, real cornerRadius /* = 0.0f */)
+	{
+		FillRectGradientInternal(rect, top, bottom, cornerRadius, false);
+	}
+
+	void GameUI::FillRectGradientHorizontal(const UIRect& rect, const glm::vec4& left, const glm::vec4& right, real cornerRadius /* = 0.0f */)
+	{
+		FillRectGradientInternal(rect, left, right, cornerRadius, true);
+	}
+
+	void GameUI::FillRectGradientInternal(const UIRect& rect, const glm::vec4& from, const glm::vec4& to, real cornerRadius, bool bHorizontal)
 	{
 		if (rect.w <= 0.0f || rect.h <= 0.0f)
 		{
@@ -116,28 +154,28 @@ namespace flex
 		const u32 outlineCount = (u32)outline.size();
 
 		auto ToNDC = [this](const glm::vec2& p) { return glm::vec2(p.x / m_Width * 2.0f - 1.0f, 1.0f - p.y / m_Height * 2.0f); };
-		auto ColourAt = [&](real y, real alphaScale)
+		auto ColourAt = [&](const glm::vec2& p, real alphaScale)
 		{
-			const real t = glm::clamp((y - rect.y) / rect.h, 0.0f, 1.0f);
-			glm::vec4 c = glm::mix(top, bottom, t);
+			const real t = bHorizontal ? glm::clamp((p.x - rect.x) / rect.w, 0.0f, 1.0f) : glm::clamp((p.y - rect.y) / rect.h, 0.0f, 1.0f);
+			glm::vec4 c = glm::mix(from, to, t);
 			c.a *= alphaScale;
 			return c;
 		};
 
 		// Center, inner ring, outer (transparent) ring
 		points.push_back(ToNDC(rect.Center()));
-		colours.push_back(ColourAt(rect.Center().y, 1.0f));
+		colours.push_back(ColourAt(rect.Center(), 1.0f));
 		for (u32 i = 0; i < outlineCount; ++i)
 		{
 			const glm::vec2 inner = outline[i] - normals[i] * feather * 0.5f;
 			points.push_back(ToNDC(inner));
-			colours.push_back(ColourAt(inner.y, 1.0f));
+			colours.push_back(ColourAt(inner, 1.0f));
 		}
 		for (u32 i = 0; i < outlineCount; ++i)
 		{
 			const glm::vec2 outer = outline[i] + normals[i] * feather * 0.5f;
 			points.push_back(ToNDC(outer));
-			colours.push_back(ColourAt(outer.y, 0.0f));
+			colours.push_back(ColourAt(outer, 0.0f));
 		}
 
 		for (u32 i = 0; i < outlineCount; ++i)
@@ -222,9 +260,11 @@ namespace flex
 
 	void GameUI::Panel(const UIRect& rect)
 	{
-		const real radius = UITheme::CORNER_RADIUS * 1.5f * m_Scale;
-		Shadow(rect, 24.0f * m_Scale, radius);
-		FillRectGradient(rect, UITheme::PANEL_TOP, UITheme::PANEL, radius);
+		const real radius = UITheme::RADIUS_L * m_Scale;
+		Shadow(rect, 24.0f * m_Scale, radius, 0.4f);
+		FillRectGradient(rect, UITheme::SURFACE_TOP, UITheme::SURFACE, radius);
+		// Faint highlight along the top edge, so panels read as a lit surface rather than a hole
+		FillRect(UIRect(rect.x + radius, rect.y, rect.w - radius * 2.0f, 1.0f * m_Scale), UITheme::WithAlpha(UITheme::TEXT_PRIMARY, 0.08f));
 	}
 
 	void GameUI::Circle(const glm::vec2& center, real radius, const glm::vec4& colour)
@@ -318,11 +358,11 @@ namespace flex
 		const real hover = HoverAmount(hash, bHovered);
 		const real radius = UITheme::CORNER_RADIUS * m_Scale;
 
-		glm::vec4 base = bPrimary ? UITheme::ACCENT_DARK : UITheme::WIDGET;
-		glm::vec4 hovered = bPrimary ? UITheme::ACCENT : UITheme::WIDGET_HOVER;
+		glm::vec4 base = bPrimary ? UITheme::EMBER : UITheme::RAISED;
+		glm::vec4 hovered = bPrimary ? UITheme::EMBER_GLOW : UITheme::RAISED_HOVER;
 		if (!bEnabled)
 		{
-			base.a *= 0.4f;
+			base = UITheme::WithAlpha(UITheme::RAISED, 0.5f);
 			hovered = base;
 		}
 		const glm::vec4 colour = glm::mix(base, hovered, hover);
@@ -330,15 +370,16 @@ namespace flex
 		const real grow = hover * 3.0f * m_Scale;
 		const UIRect drawn(rect.x - grow, rect.y - grow, rect.w + grow * 2.0f, rect.h + grow * 2.0f);
 		Shadow(drawn, 8.0f * m_Scale, radius, 0.3f);
-		FillRectGradient(drawn, colour * glm::vec4(1.12f, 1.12f, 1.12f, 1.0f), colour, radius);
+		const glm::vec4 bottom = bPrimary ? glm::mix(UITheme::EMBER_DEEP, colour, 0.35f + 0.65f * hover) : colour;
+		FillRectGradient(drawn, colour * glm::vec4(1.08f, 1.08f, 1.08f, 1.0f), bottom, radius);
 		// Accent bar slides in on hover
 		if (!bPrimary && hover > 0.01f)
 		{
-			FillRect(UIRect(drawn.x, drawn.y + drawn.h * 0.2f, 4.0f * m_Scale * hover, drawn.h * 0.6f), UITheme::ACCENT, 2.0f * m_Scale);
+			FillRect(UIRect(drawn.x, drawn.y + drawn.h * 0.2f, 4.0f * m_Scale * hover, drawn.h * 0.6f), UITheme::EMBER, UITheme::RADIUS_S * 0.5f * m_Scale);
 		}
 
-		const glm::vec4 textColour = bEnabled ? (bPrimary ? UITheme::TEXT_DARK : UITheme::TEXT_MAIN) : UITheme::TEXT_DIM;
-		Text(label, rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f, 20.0f * m_Scale, textColour, TextAlign::CENTER);
+		const glm::vec4 textColour = bEnabled ? (bPrimary ? UITheme::TEXT_ON_ACCENT : UITheme::TEXT_PRIMARY) : UITheme::TEXT_DISABLED;
+		Text(label, rect.x + rect.w * 0.5f, rect.y + rect.h * 0.5f, UITheme::TEXT_BODY_LARGE * m_Scale, textColour, TextAlign::CENTER);
 
 		const bool bClicked = bEnabled && WasClicked(rect);
 		if (bClicked)
@@ -354,17 +395,17 @@ namespace flex
 		const bool bHovered = IsMouseOver(rect);
 		const real hover = HoverAmount(hash, bHovered);
 		const real radius = UITheme::CORNER_RADIUS * m_Scale;
-		FillRect(rect, glm::mix(UITheme::WIDGET, UITheme::WIDGET_HOVER, hover), radius);
-		Text(label, rect.x + 20.0f * m_Scale, rect.y + rect.h * 0.5f, 18.0f * m_Scale, UITheme::TEXT_MAIN);
+		FillRect(rect, glm::mix(UITheme::RAISED, UITheme::RAISED_HOVER, hover), radius);
+		Text(label, rect.x + UITheme::SPACE_XL * m_Scale, rect.y + rect.h * 0.5f, UITheme::TEXT_BODY * m_Scale, UITheme::TEXT_PRIMARY);
 
 		// Toggle switch on the right
 		const real switchW = 56.0f * m_Scale;
 		const real switchH = 28.0f * m_Scale;
-		const UIRect track(rect.x + rect.w - switchW - 18.0f * m_Scale, rect.y + (rect.h - switchH) * 0.5f, switchW, switchH);
+		const UIRect track(rect.x + rect.w - switchW - UITheme::SPACE_XL * m_Scale, rect.y + (rect.h - switchH) * 0.5f, switchW, switchH);
 		const real on = HoverAmount(hash ^ 0x5bd1e995u, *value);
-		FillRect(track, glm::mix(glm::vec4(0.3f, 0.31f, 0.35f, 1.0f), UITheme::ACCENT, on), switchH * 0.5f);
+		FillRect(track, glm::mix(UITheme::OUTLINE, UITheme::EMBER, on), switchH * 0.5f);
 		const real knobRadius = switchH * 0.5f - 3.0f * m_Scale;
-		Circle(glm::vec2(track.x + switchH * 0.5f + (switchW - switchH) * on, track.y + switchH * 0.5f), knobRadius, UITheme::TEXT_MAIN);
+		Circle(glm::vec2(track.x + switchH * 0.5f + (switchW - switchH) * on, track.y + switchH * 0.5f), knobRadius, UITheme::TEXT_PRIMARY);
 
 		if (WasClicked(rect))
 		{
@@ -381,12 +422,14 @@ namespace flex
 		const bool bHovered = IsMouseOver(rect);
 		const real hover = HoverAmount(hash, bHovered || m_ActiveID == hash);
 		const real radius = UITheme::CORNER_RADIUS * m_Scale;
-		FillRect(rect, glm::mix(UITheme::WIDGET, UITheme::WIDGET_HOVER, hover), radius);
-		Text(label, rect.x + 20.0f * m_Scale, rect.y + rect.h * 0.5f, 18.0f * m_Scale, UITheme::TEXT_MAIN);
+		FillRect(rect, glm::mix(UITheme::RAISED, UITheme::RAISED_HOVER, hover), radius);
+		Text(label, rect.x + UITheme::SPACE_XL * m_Scale, rect.y + rect.h * 0.5f, UITheme::TEXT_BODY * m_Scale, UITheme::TEXT_PRIMARY);
 
 		char valueText[64];
 		snprintf(valueText, ARRAY_LENGTH(valueText), format, *value);
-		Text(valueText, rect.x + rect.w - 18.0f * m_Scale, rect.y + rect.h * 0.5f, 18.0f * m_Scale, UITheme::TEXT_DIM, TextAlign::RIGHT);
+		// The value brightens while it's being changed
+		const glm::vec4 valueColour = m_ActiveID == hash ? UITheme::EMBER_GLOW : UITheme::TEXT_SECONDARY;
+		Text(valueText, rect.x + rect.w - UITheme::SPACE_XL * m_Scale, rect.y + rect.h * 0.5f, UITheme::TEXT_BODY * m_Scale, valueColour, TextAlign::RIGHT);
 
 		// Track in the middle
 		const real trackLeft = rect.x + rect.w * 0.42f;
@@ -394,9 +437,9 @@ namespace flex
 		const real trackY = rect.y + rect.h * 0.5f;
 		const real t = glm::clamp((*value - min) / (max - min), 0.0f, 1.0f);
 		const real trackHeight = 6.0f * m_Scale;
-		FillRect(UIRect(trackLeft, trackY - trackHeight * 0.5f, trackWidth, trackHeight), glm::vec4(0.3f, 0.31f, 0.35f, 1.0f), trackHeight * 0.5f);
-		FillRect(UIRect(trackLeft, trackY - trackHeight * 0.5f, trackWidth * t, trackHeight), UITheme::ACCENT, trackHeight * 0.5f);
-		Circle(glm::vec2(trackLeft + trackWidth * t, trackY), (9.0f + 3.0f * hover) * m_Scale, UITheme::TEXT_MAIN);
+		FillRect(UIRect(trackLeft, trackY - trackHeight * 0.5f, trackWidth, trackHeight), UITheme::OUTLINE, trackHeight * 0.5f);
+		FillRect(UIRect(trackLeft, trackY - trackHeight * 0.5f, trackWidth * t, trackHeight), UITheme::EMBER, trackHeight * 0.5f);
+		Circle(glm::vec2(trackLeft + trackWidth * t, trackY), (9.0f + 3.0f * hover) * m_Scale, UITheme::TEXT_PRIMARY);
 
 		if (m_bMousePressed && bHovered)
 		{
@@ -431,10 +474,10 @@ namespace flex
 			}
 		}
 
-		FillRect(rect, glm::mix(UITheme::WIDGET, UITheme::WIDGET_HOVER, hover), radius);
+		FillRect(rect, glm::mix(UITheme::RAISED, UITheme::RAISED_HOVER, hover), radius);
 		if (bFocused)
 		{
-			FillRect(UIRect(rect.x, rect.y + rect.h - 3.0f * m_Scale, rect.w, 3.0f * m_Scale), UITheme::ACCENT, 1.5f * m_Scale);
+			FillRect(UIRect(rect.x + radius * 0.5f, rect.y + rect.h - 3.0f * m_Scale, rect.w - radius, 3.0f * m_Scale), UITheme::EMBER, 1.5f * m_Scale);
 		}
 
 		bool bSubmitted = false;
@@ -458,20 +501,20 @@ namespace flex
 			}
 		}
 
-		const real textX = rect.x + 18.0f * m_Scale;
+		const real textX = rect.x + UITheme::SPACE_XL * m_Scale;
 		const real textY = rect.y + rect.h * 0.5f;
 		if (text->empty() && !bFocused)
 		{
-			Text(placeholder, textX, textY, 18.0f * m_Scale, UITheme::TEXT_DIM);
+			Text(placeholder, textX, textY, UITheme::TEXT_BODY * m_Scale, UITheme::TEXT_DISABLED);
 		}
 		else
 		{
-			Text(*text, textX, textY, 18.0f * m_Scale, UITheme::TEXT_MAIN);
+			Text(*text, textX, textY, UITheme::TEXT_BODY * m_Scale, UITheme::TEXT_PRIMARY);
 			if (bFocused && glm::fract(m_Time * 1.2f) < 0.6f)
 			{
 				// Caret
-				const real caretX = textX + MeasureText(*text, 18.0f * m_Scale) + 2.0f * m_Scale;
-				FillRect(UIRect(caretX, textY - 13.0f * m_Scale, 2.0f * m_Scale, 26.0f * m_Scale), UITheme::ACCENT);
+				const real caretX = textX + MeasureText(*text, UITheme::TEXT_BODY * m_Scale) + 2.0f * m_Scale;
+				FillRect(UIRect(caretX, textY - 13.0f * m_Scale, 2.0f * m_Scale, 26.0f * m_Scale), UITheme::EMBER);
 			}
 		}
 		return bSubmitted;
@@ -483,14 +526,14 @@ namespace flex
 		const bool bHovered = IsMouseOver(rect);
 		const real hover = HoverAmount(hash, bHovered);
 		const real radius = UITheme::CORNER_RADIUS * m_Scale;
-		glm::vec4 colour = glm::mix(UITheme::WIDGET, UITheme::WIDGET_HOVER, hover);
+		glm::vec4 colour = glm::mix(UITheme::RAISED, UITheme::RAISED_HOVER, glm::max(hover, bSelected ? 0.6f : 0.0f));
 		FillRect(rect, colour, radius);
 		if (bSelected)
 		{
-			FillRect(UIRect(rect.x, rect.y, 5.0f * m_Scale, rect.h), UITheme::ACCENT, 2.5f * m_Scale);
+			FillRect(UIRect(rect.x + UITheme::SPACE_S * m_Scale, rect.y + rect.h * 0.2f, 4.0f * m_Scale, rect.h * 0.6f), UITheme::EMBER, 2.0f * m_Scale);
 		}
-		Text(title, rect.x + 22.0f * m_Scale, rect.y + rect.h * 0.36f, 20.0f * m_Scale, bSelected ? UITheme::ACCENT : UITheme::TEXT_MAIN);
-		Text(subtitle, rect.x + 22.0f * m_Scale, rect.y + rect.h * 0.7f, 14.0f * m_Scale, UITheme::TEXT_DIM);
+		Text(title, rect.x + UITheme::SPACE_XL * m_Scale, rect.y + rect.h * 0.36f, UITheme::TEXT_BODY_LARGE * m_Scale, bSelected ? UITheme::EMBER : UITheme::TEXT_PRIMARY);
+		Text(subtitle, rect.x + UITheme::SPACE_XL * m_Scale, rect.y + rect.h * 0.7f, UITheme::TEXT_CAPTION * m_Scale, UITheme::TEXT_SECONDARY);
 
 		if (WasClicked(rect))
 		{

@@ -1264,9 +1264,35 @@ namespace flex
 				return intensity * (sumR * RAYLEIGH * (phaseR + MULTIPLE_SCATTERING) + sumM * MIE * phaseM);
 			}
 
+			// LinearToDisplay in vk_misc.glsl: PBR Neutral tone mapping, then sRGB encoding
+			glm::vec3 LinearToDisplay(glm::vec3 colour)
+			{
+				colour = glm::max(colour, VEC3_ZERO);
+				const real startCompression = 0.8f - 0.04f;
+				const real desaturation = 0.15f;
+				const real x = glm::min(colour.r, glm::min(colour.g, colour.b));
+				const real offset = x < 0.08f ? x - 6.25f * x * x : 0.04f;
+				colour -= offset;
+				const real peak = glm::max(colour.r, glm::max(colour.g, colour.b));
+				if (peak >= startCompression)
+				{
+					const real d = 1.0f - startCompression;
+					const real newPeak = 1.0f - d * d / (peak + d - startCompression);
+					colour *= newPeak / peak;
+					const real g = 1.0f - 1.0f / (desaturation * (peak - newPeak) + 1.0f);
+					colour = glm::mix(colour, glm::vec3(newPeak), g);
+				}
+				for (i32 i = 0; i < 3; ++i)
+				{
+					const real v = glm::clamp(colour[i], 0.0f, 1.0f);
+					colour[i] = v <= 0.0031308f ? v * 12.92f : 1.055f * std::pow(v, 1.0f / 2.4f) - 0.055f;
+				}
+				return colour;
+			}
+
 			glm::vec3 ToDisplay(const glm::vec3& radiance)
 			{
-				return VEC3_ONE - glm::exp(-radiance * WHITE_BALANCE * EXPOSURE);
+				return LinearToDisplay(radiance * WHITE_BALANCE * EXPOSURE);
 			}
 		} // namespace atmosphere
 	} // anonymous namespace

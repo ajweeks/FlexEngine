@@ -5,21 +5,29 @@
 #include <csignal>
 
 IGNORE_WARNINGS_PUSH
+#include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "Cameras/VehicleCamera.hpp"
+#include "FlexEngine.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "Pair.hpp"
 #include "Physics/PhysicsDebuggingSettings.hpp"
+#include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Platform/Platform.hpp"
 #include "Player.hpp"
 #include "Scene/BaseScene.hpp"
+#include "ResourceManager.hpp"
+#include "Scene/Objects/Building.hpp"
 #include "Scene/Objects/TerrainGenerator.hpp"
+#include "Scene/Objects/Vehicle.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Time.hpp"
 #include "Traversal.hpp"
@@ -49,12 +57,16 @@ namespace flex
 				CLIMB,
 				SKI,
 				DIG,
+				TREE_GRAPPLE,
+				FLAT_GROUND,
+				MANTLE,
+				ROPE,
 				DONE
 			};
 
 			static const char* StepName(Step step)
 			{
-				static const char* names[] = { "wait for ground", "jump", "glide", "wingsuit", "land", "thermal", "relocate", "grapple", "climb", "ski", "dig", "done" };
+				static const char* names[] = { "wait for ground", "jump", "glide", "wingsuit", "land", "thermal", "relocate", "grapple", "climb", "ski", "dig", "tree grapple", "flat ground", "mantle", "rope", "done" };
 				return names[(u32)step];
 			}
 
@@ -94,6 +106,7 @@ namespace flex
 					}
 					if (!player->IsAwaitingTerrainCollision() && player->IsGrounded() && m_StepTime > 1.0f)
 					{
+						m_SpawnPos = pos;
 						NextStep(Step::JUMP);
 					}
 					else if (m_StepTime > 60.0f)
@@ -332,10 +345,11 @@ namespace flex
 				{
 					if (m_Frame == 0)
 					{
-						if (!FindTarget(terrainGenerator, pos, false, m_TargetDir))
+						// From where the hook is fired from (the camera)
+						if (!FindTarget(terrainGenerator, g_CameraManager->CurrentCamera()->position, false, m_TargetDir))
 						{
 							Print("Traversal test: no grapple target in range, skipping\n");
-							NextStep(Step::CLIMB);
+							NextStep(Step::SKI);
 							break;
 						}
 						const glm::vec3 horizontal = glm::normalize(glm::vec3(m_TargetDir.x, 0.0f, m_TargetDir.z));
@@ -351,7 +365,7 @@ namespace flex
 						if (!traversal->IsHookAttached())
 						{
 							Fail("grappling hook didn't attach to the terrain");
-							NextStep(Step::CLIMB);
+							NextStep(Step::SKI);
 							break;
 						}
 						m_Max = traversal->GetRopeLength();
@@ -382,7 +396,7 @@ namespace flex
 							{
 								Fail("grappling hook didn't release");
 							}
-							NextStep(Step::CLIMB);
+							NextStep(Step::SKI);
 						}
 					}
 				} break;
@@ -397,7 +411,7 @@ namespace flex
 						if (!terrainGenerator->FindStandingPoint(pos + heading * 10.0f, true, groundPos))
 						{
 							Fail("couldn't find somewhere to build a pillar to climb");
-							NextStep(Step::SKI);
+							m_AfterFlatGround = Step::MANTLE; NextStep(Step::FLAT_GROUND);
 							break;
 						}
 						const real pillarRadius = 3.5f;
@@ -432,14 +446,23 @@ namespace flex
 						m_SubStep = 2;
 						m_SubStepTime = m_StepTime;
 					}
-					else if (m_SubStep == 2 && m_StepTime > m_SubStepTime + 0.15f)
+					else if (m_SubStep == 2)
 					{
-						if (traversal->GetMode() != Traversal::Mode::CLIMBING)
+						// Holding shift grabs on (walking into the pillar too, if it's not within reach)
+						if (m_StepTime > m_SubStepTime + 0.15f)
+						{
+							Press(KeyCode::KEY_W);
+						}
+						if (traversal->GetMode() == Traversal::Mode::CLIMBING)
+						{
+							Press(KeyCode::KEY_W);
+							m_SubStep = 3;
+						}
+						else if (m_StepTime > m_SubStepTime + 2.0f)
 						{
 							Fail("didn't grab onto the pillar");
+							m_SubStep = 3;
 						}
-						Press(KeyCode::KEY_W);
-						m_SubStep = 3;
 					}
 					else if (m_SubStep == 3 && (m_StepTime > 14.0f || (player->IsGrounded() && pos.y > m_StartPos.y + 5.0f)))
 					{
@@ -453,7 +476,7 @@ namespace flex
 							Fail("didn't climb up & over the top of the pillar");
 						}
 						m_SubStep = 0;
-						NextStep(Step::SKI);
+						m_AfterFlatGround = Step::MANTLE; NextStep(Step::FLAT_GROUND);
 					}
 				} break;
 				case Step::SKI:
@@ -545,7 +568,290 @@ namespace flex
 					}
 					if (m_StepTime > 1.0f)
 					{
+						NextStep(Step::TREE_GRAPPLE);
+					}
+				} break;
+				case Step::FLAT_GROUND:
+				{
+					// Somewhere flat to build things on, near where the test started (a different spot each time, so
+					// structures built by earlier steps aren't in the way)
+					if (m_Frame == 0)
+					{
+						const real angle = 2.4f * (real)m_FlatGroundCount;
+						const glm::vec3 searchPos = m_SpawnPos + glm::vec3(std::cos(angle), 0.0f, std::sin(angle)) * (60.0f * (real)m_FlatGroundCount);
+						++m_FlatGroundCount;
+						glm::vec3 flatPos;
+						if (FindFlatGround(terrainGenerator, searchPos, flatPos))
+						{
+							player->TeleportOnTerrain(flatPos);
+						}
+						else
+						{
+							Print("Traversal test: no flat ground nearby, using the spawn point\n");
+							player->TeleportOnTerrain(m_SpawnPos + VEC3_UP * 2.0f);
+						}
+					}
+					else if (m_Frame > 2 && m_StepTime > 1.5f && !player->IsAwaitingTerrainCollision() && player->IsGrounded())
+					{
+						NextStep(m_AfterFlatGround);
+					}
+					else if (m_StepTime > 30.0f)
+					{
+						Fail("never landed on flat ground");
+						NextStep(m_AfterFlatGround);
+					}
+				} break;
+				case Step::MANTLE:
+				{
+					// A steep, rounded lip too high to jump onto (like the top of a steep hill): walking into it shouldn't
+					// get the player up, jumping into it should (by pulling up over the lip)
+					if (m_Frame == 0)
+					{
+						const glm::vec3 heading = HorizontalLook(player);
+						glm::vec3 groundPos;
+						if (!terrainGenerator->FindStandingPoint(pos + heading * 12.0f, true, groundPos))
+						{
+							Fail("couldn't find somewhere to build a ledge");
+							NextStep(Step::ROPE);
+							break;
+						}
+						const real radius = 3.0f;
+						BuildBlock(terrainGenerator, groundPos + VEC3_UP * 0.3f, heading, radius, 1);
+						m_TargetDir = heading;
+						m_TargetPos = groundPos;
+						m_StartPos = StandingPointNear(terrainGenerator, groundPos - heading * (radius + 2.5f)) + VEC3_UP * (player->GetHeight() * 0.5f + 0.3f);
+						Teleport(player, m_StartPos);
+					}
+					else if (m_SubStep == 0 && m_StepTime > 1.5f && !terrainGenerator->IsApplyingEdits())
+					{
+						glm::vec3 hitPos, hitNormal;
+						m_TopY = terrainGenerator->Raycast(m_TargetPos + VEC3_UP * 20.0f, -VEC3_UP, 30.0f, hitPos, hitNormal) ? hitPos.y : m_TargetPos.y;
+						Teleport(player, m_StartPos);
+						Look(player, m_TargetDir, 0.0f);
+						m_Count = traversal->GetMantleCount();
+						m_SubStep = 1;
+						m_SubStepTime = m_StepTime;
+					}
+					else if (m_SubStep == 1 && m_StepTime > m_SubStepTime + 0.3f && !player->IsAwaitingTerrainCollision())
+					{
+						Press(KeyCode::KEY_W);
+						m_SubStep = 2;
+						m_SubStepTime = m_StepTime;
+					}
+					else if (m_SubStep >= 2)
+					{
+						// Walking into it (stepping up a low lip), or jumping into it after a while, should get the player on
+						// top by pulling up over the lip. Input stops once there, so they don't walk off the far side.
+						const real groundY = m_StartPos.y - player->GetHeight() * 0.5f - 0.3f;
+						const real feetY = pos.y - player->GetHeight() * 0.5f;
+						const bool bOnTop = player->IsGrounded() && feetY > groundY + 1.6f && traversal->GetMode() == Traversal::Mode::NONE;
+						if (bOnTop || m_StepTime > m_SubStepTime + 6.0f)
+						{
+							Release(KeyCode::KEY_W);
+							Release(KeyCode::KEY_SPACE);
+							Print("Traversal test: %s a %.1fm high rounded ledge %s (%u mantles, feet %.1fm above the ground)\n", m_SubStep == 2 ? "walking into" : "jumping into",
+								m_TopY - groundY, bOnTop ? "got on top" : "didn't get on top", traversal->GetMantleCount() - m_Count, feetY - groundY);
+							if (!bOnTop)
+							{
+								Fail("didn't pull up over the ledge");
+							}
+							else if (traversal->GetMantleCount() == m_Count)
+							{
+								// The terrain's meshing can round the lip off enough to walk up
+								Print("Traversal test: the ledge was walkable (no mantling needed)\n");
+							}
+							NextStep(Step::ROPE);
+						}
+						else if (m_SubStep == 2 && m_StepTime > m_SubStepTime + 1.8f)
+						{
+							Press(KeyCode::KEY_SPACE);
+							m_SubStep = 3;
+						}
+						else if (m_SubStep == 3 && m_StepTime > m_SubStepTime + 2.1f)
+						{
+							Release(KeyCode::KEY_SPACE);
+							m_SubStep = 4;
+						}
+					}
+				} break;
+				case Step::TREE_GRAPPLE:
+				{
+					if (m_Frame == 0)
+					{
+						m_Candidates.clear();
+						FindForests(terrainGenerator, pos, m_Candidates);
+						m_Count = 0;
+						m_ForestTime = 0.0f;
+						m_SubStep = 1;
+						m_SubStepTime = -10.0f;
+					}
+					if (m_SubStep == 1 && m_StepTime > m_SubStepTime + 1.0f)
+					{
+						// Look for a tree from here, then from forests nearby (waiting for their collision to load)
+						m_SubStepTime = m_StepTime;
+						if (!player->IsAwaitingTerrainCollision() && FindTree(player, m_TargetDir, m_TargetPos))
+						{
+							Print("Traversal test: found a tree %.0fm away (aiming %.1fm above the ground)\n", glm::distance(g_CameraManager->CurrentCamera()->position, m_TargetPos),
+								m_TargetPos.y - terrainGenerator->SampleColumn(m_TargetPos.x, m_TargetPos.z).height);
+							const glm::vec3 horizontal = glm::normalize(glm::vec3(m_TargetDir.x, 0.0f, m_TargetDir.z) + glm::vec3(1e-5f, 0.0f, 0.0f));
+							Look(player, horizontal, glm::degrees(std::asin(glm::clamp(m_TargetDir.y, -1.0f, 1.0f))));
+							m_SubStep = 2;
+						}
+						else if (m_Count == 0 || m_StepTime > m_ForestTime + 15.0f)
+						{
+							if (m_Count >= (u32)m_Candidates.size() || m_Count >= 4)
+							{
+								Fail("couldn't find a tree to grapple to");
+								m_AfterFlatGround = Step::CLIMB;
+								NextStep(Step::FLAT_GROUND);
+								break;
+							}
+							player->TeleportOnTerrain(m_Candidates[m_Count]);
+							++m_Count;
+							m_ForestTime = m_StepTime;
+						}
+					}
+					else if (m_SubStep == 2)
+					{
+						// Aimed (the camera follows the new look direction a frame later)
+						Press(KeyCode::KEY_F);
+						m_SubStep = 3;
+						m_SubStepTime = m_StepTime;
+					}
+					else if (m_SubStep == 3)
+					{
+						Release(KeyCode::KEY_F);
+						if (m_StepTime > m_SubStepTime + 1.2f)
+						{
+							const real error = glm::distance(traversal->GetHookPos(), m_TargetPos);
+							Print("Traversal test: grappling hook %s the tree (%.1fm from the aimed point)\n", traversal->IsHookAttached() ? "attached to" : "didn't attach to", error);
+							if (!traversal->IsHookAttached() || error > 3.0f)
+							{
+								Fail("grappling hook didn't attach to a tree");
+							}
+							else if (s_bScreenshots)
+							{
+								RequestScreenshot("traversal_tree_grapple");
+							}
+							Press(KeyCode::KEY_F);
+							m_SubStep = 4;
+							m_SubStepTime = m_StepTime;
+						}
+					}
+					else if (m_SubStep == 4)
+					{
+						Release(KeyCode::KEY_F);
+						if (m_StepTime > m_SubStepTime + 0.5f && (player->IsGrounded() || m_StepTime > m_SubStepTime + 10.0f))
+						{
+							m_AfterFlatGround = Step::CLIMB;
+							NextStep(Step::FLAT_GROUND);
+						}
+					}
+				} break;
+				case Step::ROPE:
+				{
+					// A cliff with a rounded top: toss a rope up onto it, then climb the rope & over the top
+					if (m_Frame == 0)
+					{
+						const glm::vec3 heading = HorizontalLook(player);
+						glm::vec3 groundPos;
+						if (!terrainGenerator->FindStandingPoint(pos + heading * 14.0f, true, groundPos))
+						{
+							Fail("couldn't find somewhere to build a cliff");
+							NextStep(Step::DONE);
+							break;
+						}
+						const real radius = 3.5f;
+						BuildBlock(terrainGenerator, groundPos + VEC3_UP * 1.0f, heading, radius, 2);
+						m_TargetDir = heading;
+						m_TargetPos = groundPos;
+						m_StartPos = StandingPointNear(terrainGenerator, groundPos - heading * (radius + 4.0f)) + VEC3_UP * (player->GetHeight() * 0.5f + 0.3f);
+						Teleport(player, m_StartPos);
+					}
+					else if (m_SubStep == 0 && m_StepTime > 1.5f && !terrainGenerator->IsApplyingEdits())
+					{
+						glm::vec3 hitPos, hitNormal;
+						m_TopY = terrainGenerator->Raycast(m_TargetPos + VEC3_UP * 30.0f, -VEC3_UP, 40.0f, hitPos, hitNormal) ? hitPos.y : m_TargetPos.y;
+						Teleport(player, m_StartPos);
+						m_SubStep = 1;
+						m_SubStepTime = m_StepTime;
+					}
+					else if (m_SubStep == 1 && m_StepTime > m_SubStepTime + 0.5f && !player->IsAwaitingTerrainCollision())
+					{
+						// Aim a little above the middle of the top
+						const glm::vec3 aim = glm::vec3(m_TargetPos.x, m_TopY + 1.0f, m_TargetPos.z) - g_CameraManager->CurrentCamera()->position;
+						const glm::vec3 horizontal = glm::normalize(glm::vec3(aim.x, 0.0f, aim.z) + glm::vec3(1e-5f, 0.0f, 0.0f));
+						Look(player, horizontal, glm::degrees(std::atan2(aim.y, glm::length(glm::vec2(aim.x, aim.z)))));
+						m_SubStep = 2;
+					}
+					else if (m_SubStep == 2)
+					{
+						m_PrevRopeID = traversal->GetLastTossedRopeID();
+						if (!traversal->TossRope())
+						{
+							Fail("couldn't toss a rope");
+						}
+						m_SubStep = 3;
+						m_SubStepTime = m_StepTime;
+					}
+					else if (m_SubStep == 3 && !traversal->IsTossingRope())
+					{
+						BuildPiece* rope = (BuildPiece*)traversal->GetLastTossedRopeID().Get();
+						if (rope == nullptr || traversal->GetLastTossedRopeID() == m_PrevRopeID)
+						{
+							Print("Traversal test: rope toss: %s\n", traversal->GetRopeTossFailure().c_str());
+							Fail("tossed rope didn't catch on the cliff");
+							NextStep(Step::DONE);
+							break;
+						}
+						u32 pieceCount = 0;
+						real ropeTop = -1e30f;
+						for (BuildPiece* piece : BuildPiece::GetAllPieces())
+						{
+							if (piece->GetPieceType() == BuildPieceType::ROPE && glm::distance(glm::vec2(piece->GetClimbBottom().x, piece->GetClimbBottom().z), glm::vec2(m_TargetPos.x, m_TargetPos.z)) < 12.0f)
+							{
+								++pieceCount;
+								ropeTop = glm::max(ropeTop, piece->GetClimbTop().y);
+							}
+						}
+						const glm::vec3 bottom = rope->GetClimbBottom();
+						Print("Traversal test: tossed rope caught %.1fm below the top of a %.1fm cliff, in %u piece(s), reaching %.1fm above the ground\n",
+							m_TopY - ropeTop, m_TopY - m_TargetPos.y, pieceCount, bottom.y - m_TargetPos.y);
+						if (s_bScreenshots)
+						{
+							RequestScreenshot("traversal_rope");
+						}
+						// Walk into the rope & climb it
+						const glm::vec3 toRope = bottom - pos;
+						Look(player, glm::normalize(glm::vec3(toRope.x, 0.0f, toRope.z) + glm::vec3(1e-5f, 0.0f, 0.0f)), 0.0f);
+						Press(KeyCode::KEY_W);
+						m_Count = 0;
+						m_SubStep = 4;
+						m_SubStepTime = m_StepTime;
+					}
+					else if (m_SubStep == 3 && m_StepTime > m_SubStepTime + 8.0f)
+					{
+						Fail("tossed rope never landed");
 						NextStep(Step::DONE);
+					}
+					else if (m_SubStep == 4)
+					{
+						if (traversal->GetMode() == Traversal::Mode::CLIMBING && !traversal->IsMantling())
+						{
+							++m_Count;
+						}
+						const real feetY = pos.y - player->GetHeight() * 0.5f;
+						const bool bOnTop = player->IsGrounded() && feetY > m_TopY - 1.5f && traversal->GetMode() == Traversal::Mode::NONE;
+						if (bOnTop || m_StepTime > m_SubStepTime + 25.0f)
+						{
+							Release(KeyCode::KEY_W);
+							Print("Traversal test: climbing the rope %s (climbed for %u frames, feet %.1fm below the top)\n", bOnTop ? "got on top of the cliff" : "didn't get on top of the cliff", m_Count, m_TopY - feetY);
+							if (!bOnTop || m_Count == 0)
+							{
+								Fail("didn't climb the tossed rope onto the cliff");
+							}
+							NextStep(Step::DONE);
+						}
 					}
 				} break;
 				default:
@@ -646,7 +952,9 @@ namespace flex
 						const real yaw = TWO_PI * (real)i / 24.0f;
 						const glm::vec3 dir(std::cos(yaw) * std::cos(glm::radians(pitch)), std::sin(glm::radians(pitch)), std::sin(yaw) * std::cos(glm::radians(pitch)));
 						glm::vec3 hitPos, hitNormal;
-						if (terrainGenerator->Raycast(pos, dir, 120.0f, hitPos, hitNormal) && glm::distance(pos, hitPos) > 15.0f)
+						// Facing the ray (rather than grazing a crest, which a slightly different ray could miss)
+						if (terrainGenerator->Raycast(pos, dir, 120.0f, hitPos, hitNormal) && glm::distance(pos, hitPos) > 15.0f &&
+							glm::dot(glm::normalize(hitNormal), -dir) > 0.4f)
 						{
 							outDir = dir;
 							return true;
@@ -688,6 +996,168 @@ namespace flex
 				return steepest > 0.0f;
 			}
 
+			static glm::vec3 HorizontalLook(Player* player)
+			{
+				const glm::vec3 look = player->GetLookDirection();
+				return glm::normalize(glm::vec3(look.x, 0.0f, look.z) + glm::vec3(1e-4f, 0.0f, 0.0f));
+			}
+
+			static glm::vec3 StandingPointNear(TerrainGenerator* terrainGenerator, const glm::vec3& pos)
+			{
+				glm::vec3 standPos;
+				if (terrainGenerator->FindStandingPoint(pos + VEC3_UP * 30.0f, true, standPos) && glm::distance(glm::vec2(standPos.x, standPos.z), glm::vec2(pos.x, pos.z)) < 1.0f)
+				{
+					return standPos;
+				}
+				return pos;
+			}
+
+			// A wall of rock (overlapping spheres, rounded on top) across the given direction, layers high
+			static void BuildBlock(TerrainGenerator* terrainGenerator, const glm::vec3& base, const glm::vec3& heading, real radius, u32 layers)
+			{
+				const glm::vec3 right = glm::cross(heading, VEC3_UP);
+				for (u32 layer = 0; layer < layers; ++layer)
+				{
+					for (i32 i = -1; i <= 1; ++i)
+					{
+						terrainGenerator->Fill(base + right * ((real)i * radius) + VEC3_UP * ((real)layer * radius), radius, terrain::Material::GRANITE);
+					}
+				}
+			}
+
+			// Dry land without slopes or bumps, nearest first
+			static bool FindFlatGround(TerrainGenerator* terrainGenerator, const glm::vec3& center, glm::vec3& outPos)
+			{
+				for (i32 ring = 0; ring < 14; ++ring)
+				{
+					const u32 count = ring == 0 ? 1 : 16;
+					for (u32 i = 0; i < count; ++i)
+					{
+						const real angle = TWO_PI * (real)i / (real)count;
+						const real x = center.x + std::cos(angle) * (real)ring * 25.0f;
+						const real z = center.z + std::sin(angle) * (real)ring * 25.0f;
+						const terrain::ColumnSample column = terrainGenerator->SampleColumn(x, z);
+						if ((column.lakeID != 0 && column.lakeT < 1.2f) || column.height < column.waterLevel + 2.0f)
+						{
+							continue;
+						}
+						// The heightfield must match the actual surface (no overhangs, caves or arches)
+						if (terrainGenerator->SampleDensity(glm::vec3(x, column.height + 1.5f, z)) <= 0.0f ||
+							terrainGenerator->SampleDensity(glm::vec3(x, column.height - 1.5f, z)) >= 0.0f)
+						{
+							continue;
+						}
+						real minHeight = column.height;
+						real maxHeight = column.height;
+						for (u32 j = 0; j < 12; ++j)
+						{
+							const real a = TWO_PI * (real)j / 12.0f;
+							for (real r : { 6.0f, 14.0f })
+							{
+								const glm::vec3 p(x + std::cos(a) * r, 0.0f, z + std::sin(a) * r);
+								const real h = terrainGenerator->SampleColumn(p.x, p.z).height;
+								if (terrainGenerator->SampleDensity(glm::vec3(p.x, h + 2.0f, p.z)) <= 0.0f)
+								{
+									maxHeight = 1e30f;
+								}
+								minHeight = glm::min(minHeight, h);
+								maxHeight = glm::max(maxHeight, h);
+							}
+						}
+						if (maxHeight - minHeight < 2.5f)
+						{
+							outPos = glm::vec3(x, column.height + 2.0f, z);
+							return true;
+						}
+					}
+				}
+				return false;
+			}
+
+			// Dry, grassy, temperate land (where trees grow), nearest first
+			static void FindForests(TerrainGenerator* terrainGenerator, const glm::vec3& center, std::vector<glm::vec3>& outPositions)
+			{
+				std::vector<Pair<real, glm::vec3>> candidates;
+				const i32 halfCount = 15;
+				const real spacing = 160.0f;
+				for (i32 iz = -halfCount; iz <= halfCount; ++iz)
+				{
+					for (i32 ix = -halfCount; ix <= halfCount; ++ix)
+					{
+						const real x = center.x + (real)ix * spacing;
+						const real z = center.z + (real)iz * spacing;
+						const terrain::ColumnSample column = terrainGenerator->SampleColumn(x, z);
+						if (column.lakeID != 0 && column.lakeT < 1.2f)
+						{
+							continue;
+						}
+						if (column.grassiness > 0.7f && column.temperature > -0.3f && column.temperature < 0.5f && column.height > column.waterLevel + 3.0f)
+						{
+							candidates.push_back({ (real)(ix * ix + iz * iz), glm::vec3(x, column.height + 20.0f, z) });
+						}
+					}
+				}
+				std::sort(candidates.begin(), candidates.end(), [](const Pair<real, glm::vec3>& a, const Pair<real, glm::vec3>& b) { return a.first < b.first; });
+				for (const Pair<real, glm::vec3>& candidate : candidates)
+				{
+					outPositions.push_back(candidate.second);
+				}
+			}
+
+			// A tree (trunk or foliage) in view of the camera, which the grappling hook could reach
+			static bool FindTree(Player* player, glm::vec3& outDir, glm::vec3& outHitPos)
+			{
+				struct TreeRayCallback final : public btCollisionWorld::ClosestRayResultCallback
+				{
+					TreeRayCallback(const btVector3& from, const btVector3& to, const btCollisionObject* ignored) :
+						ClosestRayResultCallback(from, to),
+						ignored(ignored)
+					{
+						m_collisionFilterGroup = (i32)CollisionType::DEFAULT | (i32)CollisionType::RAYCAST_ONLY;
+						m_collisionFilterMask = (i32)CollisionType::STATIC | (i32)CollisionType::DEFAULT | (i32)CollisionType::RAYCAST_ONLY;
+					}
+
+					virtual bool needsCollision(btBroadphaseProxy* proxy) const override
+					{
+						return proxy->m_clientObject != ignored && ClosestRayResultCallback::needsCollision(proxy);
+					}
+
+					const btCollisionObject* ignored;
+				};
+
+				const glm::vec3 origin = g_CameraManager->CurrentCamera()->position;
+				btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+				real bestDistance = 1e30f;
+				for (real pitch : { 2.0f, 8.0f, 15.0f, 25.0f })
+				{
+					for (u32 i = 0; i < 72; ++i)
+					{
+						const real yaw = TWO_PI * (real)i / 72.0f;
+						const glm::vec3 dir(std::cos(yaw) * std::cos(glm::radians(pitch)), std::sin(glm::radians(pitch)), std::sin(yaw) * std::cos(glm::radians(pitch)));
+						const btVector3 from = ToBtVec3(origin);
+						const btVector3 to = ToBtVec3(origin + dir * 90.0f);
+						TreeRayCallback callback(from, to, player->GetRigidBody()->GetRigidBodyInternal());
+						world->rayTest(from, to, callback);
+						if (!callback.hasHit() || callback.m_collisionObject->getBroadphaseHandle() == nullptr ||
+							(callback.m_collisionObject->getBroadphaseHandle()->m_collisionFilterGroup & (i32)CollisionType::RAYCAST_ONLY) == 0)
+						{
+							continue;
+						}
+						const glm::vec3 hitPos = ToVec3(callback.m_hitPointWorld);
+						const real distance = glm::distance(origin, hitPos);
+						// Up in the foliage (which nothing else collides with), not the trunk
+						const real heightAboveGround = hitPos.y - TerrainGenerator::GetActive()->SampleColumn(hitPos.x, hitPos.z).height;
+						if (distance > 8.0f && distance < bestDistance && heightAboveGround > 3.0f)
+						{
+							bestDistance = distance;
+							outDir = dir;
+							outHitPos = hitPos;
+						}
+					}
+				}
+				return bestDistance < 1e29f;
+			}
+
 			static bool FindWall(TerrainGenerator* terrainGenerator, const glm::vec3& pos, glm::vec3& outPos, glm::vec3& outNormal)
 			{
 				// Search outwards & upwards for a steep face
@@ -723,11 +1193,452 @@ namespace flex
 			real m_Max = 0.0f;
 			glm::vec3 m_StartPos = VEC3_ZERO;
 			glm::vec3 m_TargetDir = VEC3_ZERO;
+			glm::vec3 m_TargetPos = VEC3_ZERO;
+			real m_TopY = 0.0f;
+			u32 m_Count = 0;
+			sec m_ForestTime = 0.0f;
+			std::vector<glm::vec3> m_Candidates;
+			GameObjectID m_PrevRopeID;
+			Step m_AfterFlatGround = Step::MANTLE;
+			glm::vec3 m_SpawnPos = VEC3_ZERO;
+			u32 m_FlatGroundCount = 1;
 			glm::vec3 m_Sum = VEC3_ZERO;
 			u32 m_SampleCount = 0;
 		};
 
 		TraversalTestScript* s_TraversalTest = nullptr;
+
+		// FLEX_VEHICLE_TEST=car|boat: drives a vehicle (or rows a boat on the nearest water) with injected input,
+		// printing camera smoothness measurements & saving screenshots (brake lights, camera pitch, boat interior)
+		class VehicleTestScript
+		{
+		public:
+			explicit VehicleTestScript(bool bBoat) :
+				m_bBoat(bBoat)
+			{
+			}
+
+			bool IsDone() const { return m_State == State::DONE; }
+
+			void Update()
+			{
+				if (m_State == State::DONE)
+				{
+					return;
+				}
+
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				Player* player = scene->GetPlayer(0);
+				TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+				if (player == nullptr || terrainGenerator == nullptr)
+				{
+					return;
+				}
+
+				m_Time += g_DeltaTime;
+				const char* prefix = m_bBoat ? "Boat test" : "Vehicle test";
+
+				switch (m_State)
+				{
+				case State::WAIT_FOR_GROUND:
+				{
+					if (m_Time < g_DeltaTime * 1.5f)
+					{
+						g_InputManager->SetIgnoreWindowFocus(true);
+						g_CameraManager->SetCameraByName("first-person", false);
+					}
+					if (!player->IsAwaitingTerrainCollision() && player->IsGrounded() && m_Time > 1.0f && !m_bBoat && !m_bMovedToFlatGround)
+					{
+						// Drive somewhere flat & open, so the camera measurements aren't of the car crashing into hills
+						m_bMovedToFlatGround = true;
+						if (FindFlatGround(terrainGenerator, player->GetTransform()->GetWorldPosition(), m_DriveStart))
+						{
+							Print("Vehicle test: driving from (%.1f, %.1f, %.1f)\n", m_DriveStart.x, m_DriveStart.y, m_DriveStart.z);
+							player->TeleportOnTerrain(m_DriveStart - VEC3_RIGHT * 6.0f + VEC3_UP * 2.0f);
+							m_Time = 0.0f;
+						}
+					}
+					else if (!player->IsAwaitingTerrainCollision() && player->IsGrounded() && m_Time > 2.0f)
+					{
+						GameObject* vehicle = m_bBoat ? SpawnBoatOnWater(terrainGenerator, player) : SpawnCar(terrainGenerator);
+						if (vehicle == nullptr)
+						{
+							PrintError("%s: failed to spawn\n", prefix);
+							m_State = State::DONE;
+							return;
+						}
+						m_VehicleID = vehicle->ID;
+						NextState(State::SETTLE);
+					}
+					else if (m_Time > 60.0f)
+					{
+						PrintError("%s: player never landed on the terrain\n", prefix);
+						m_State = State::DONE;
+					}
+				} break;
+				case State::SETTLE:
+				{
+					GameObject* vehicle = m_VehicleID.Get();
+					if (vehicle == nullptr)
+					{
+						PrintError("%s: vehicle disappeared\n", prefix);
+						m_State = State::DONE;
+						return;
+					}
+					if (m_Time > 0.5f && !player->GetRidingVehicleID().IsValid())
+					{
+						player->SetRidingVehicle(vehicle);
+					}
+					// Boats are spawned far away, wait for the terrain (& water) to stream in around them
+					if (m_Time > (m_bBoat ? 8.0f : 2.0f))
+					{
+						PrintStatus(vehicle, "settled");
+						SetKey(KeyCode::KEY_W, true);
+						NextState(State::DRIVE);
+					}
+				} break;
+				case State::DRIVE:
+				{
+					GameObject* vehicle = m_VehicleID.Get();
+					if (vehicle == nullptr)
+					{
+						m_State = State::DONE;
+						return;
+					}
+
+					// Cruise at a steady speed, so the measurements are of the camera rather than of the car crashing
+					if (!m_bBoat)
+					{
+						const real speed = glm::length(ToVec3(vehicle->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity()));
+						SetKey(KeyCode::KEY_W, speed < 14.0f);
+					}
+
+					// Gentle turns, alternating directions
+					const real cycle = glm::mod(m_Time, 6.0f);
+					const real turnTime = m_bBoat ? 1.0f : 0.3f;
+					SetKey(KeyCode::KEY_D, cycle > 2.0f && cycle < 2.0f + turnTime);
+					SetKey(KeyCode::KEY_A, cycle > 5.0f && cycle < 5.0f + turnTime);
+
+					if (Crossed(2.0f))
+					{
+						VehicleCamera::SetStatsEnabled(true);
+					}
+					if (Crossed(6.0f) || Crossed(10.0f))
+					{
+						PrintStatus(vehicle, "driving");
+					}
+					if (Crossed(11.0f))
+					{
+						RequestScreenshot(m_bBoat ? "boat_rowing" : "vehicle_drive");
+					}
+					if (Crossed(14.0f))
+					{
+						VehicleCamera::PrintStats(m_bBoat ? "boat" : "car");
+						VehicleCamera::SetStatsEnabled(false);
+						SetKey(KeyCode::KEY_W, false);
+						SetKey(KeyCode::KEY_A, false);
+						SetKey(KeyCode::KEY_D, false);
+						if (!m_bBoat)
+						{
+							Press(KeyCode::KEY_SPACE);
+						}
+						NextState(State::BRAKE);
+					}
+				} break;
+				case State::BRAKE:
+				{
+					if (Crossed(0.4f))
+					{
+						RequestScreenshot(m_bBoat ? "boat_stopping" : "vehicle_brake");
+					}
+					if (Crossed(1.5f))
+					{
+						Release(KeyCode::KEY_SPACE);
+					}
+					if (Crossed(2.5f))
+					{
+						RequestScreenshot(m_bBoat ? "boat_idle" : "vehicle_no_brake");
+					}
+					if (Crossed(3.0f))
+					{
+						NextState(State::PITCH);
+					}
+				} break;
+				case State::PITCH:
+				{
+					BaseCamera* currentCamera = g_CameraManager->CurrentCamera();
+					VehicleCamera* camera = currentCamera->type == CameraType::VEHICLE ? (VehicleCamera*)currentCamera : nullptr;
+					if (camera == nullptr)
+					{
+						PrintError("%s: not using the vehicle camera\n", prefix);
+						NextState(State::EXIT);
+						return;
+					}
+					if (Crossed(0.1f))
+					{
+						camera->AddPitchOffset(-10.0f);
+						Print("%s: pitch offset (min) %.2f\n", prefix, camera->GetPitchOffset());
+					}
+					if (Crossed(0.6f))
+					{
+						RequestScreenshot(m_bBoat ? "boat_pitch_up" : "vehicle_pitch_up");
+					}
+					if (Crossed(1.0f))
+					{
+						camera->AddPitchOffset(10.0f);
+						Print("%s: pitch offset (max) %.2f\n", prefix, camera->GetPitchOffset());
+					}
+					if (Crossed(1.5f))
+					{
+						RequestScreenshot(m_bBoat ? "boat_pitch_down" : "vehicle_pitch_down");
+					}
+					if (Crossed(2.0f))
+					{
+						camera->AddPitchOffset(-camera->GetPitchOffset());
+						NextState(State::EXIT);
+					}
+				} break;
+				case State::EXIT:
+				{
+					GameObject* vehicle = m_VehicleID.Get();
+					if (Crossed(0.1f) && player->GetRidingVehicleID().IsValid())
+					{
+						player->SetRidingVehicle(nullptr);
+						const glm::vec3 pos = player->GetTransform()->GetWorldPosition();
+						real waterHeight;
+						const bool bInWater = RowBoat::SampleWaterHeight(pos, waterHeight) && pos.y < waterHeight + 0.5f;
+						Print("%s: exited at (%.1f, %.1f, %.1f), %.1fm from the vehicle%s\n", prefix, pos.x, pos.y, pos.z,
+							vehicle != nullptr ? glm::distance(pos, vehicle->GetTransform()->GetWorldPosition()) : -1.0f, bInWater ? " (in the water)" : "");
+					}
+					if (Crossed(2.0f))
+					{
+						RequestScreenshot(m_bBoat ? "boat_exit" : "vehicle_exit");
+					}
+					if (Crossed(2.5f))
+					{
+						if (m_bBoat)
+						{
+							// Back to dry land (the scene check expects the player to be standing on the terrain)
+							player->TeleportOnTerrain(m_SearchCenter);
+						}
+						m_State = State::DONE;
+					}
+				} break;
+				default: break;
+				}
+			}
+
+			void Finish()
+			{
+				for (KeyCode key : { KeyCode::KEY_W, KeyCode::KEY_A, KeyCode::KEY_D, KeyCode::KEY_SPACE })
+				{
+					Release(key);
+				}
+				VehicleCamera::SetStatsEnabled(false);
+				g_InputManager->SetIgnoreWindowFocus(false);
+			}
+
+		private:
+			enum class State
+			{
+				WAIT_FOR_GROUND,
+				SETTLE,
+				DRIVE,
+				BRAKE,
+				PITCH,
+				EXIT,
+				DONE
+			};
+
+			void NextState(State state)
+			{
+				m_State = state;
+				m_Time = 0.0f;
+			}
+
+			// Whether the state's time passed t this frame
+			bool Crossed(real t) const
+			{
+				return m_Time >= t && m_Time - g_DeltaTime < t;
+			}
+
+			void SetKey(KeyCode key, bool bDown)
+			{
+				const bool bWasDown = m_KeysDown.count(key) != 0;
+				if (bDown && !bWasDown)
+				{
+					Press(key);
+					m_KeysDown.insert(key);
+				}
+				else if (!bDown && bWasDown)
+				{
+					Release(key);
+					m_KeysDown.erase(key);
+				}
+			}
+
+			static void Press(KeyCode key)
+			{
+				g_InputManager->KeyCallback(key, KeyAction::KEY_PRESS, 0);
+			}
+
+			static void Release(KeyCode key)
+			{
+				g_InputManager->KeyCallback(key, KeyAction::KEY_RELEASE, 0);
+			}
+
+			void RequestScreenshot(const char* name)
+			{
+				if (!s_bScreenshots)
+				{
+					return;
+				}
+				const std::string directory = RelativePathToAbsolute(SCREENSHOT_DIRECTORY);
+				Platform::CreateDirectoryRecursive(directory);
+				g_Renderer->RequestScreenshot(directory + "test_" + name + ".png");
+			}
+
+			void PrintStatus(GameObject* vehicle, const char* label)
+			{
+				const glm::vec3 pos = vehicle->GetTransform()->GetWorldPosition();
+				const glm::vec3 vel = ToVec3(vehicle->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
+				real waterHeight = 0.0f;
+				const bool bWater = RowBoat::SampleWaterHeight(pos, waterHeight);
+				std::string extra;
+				if (vehicle->GetTypeID() == RowBoatSID)
+				{
+					RowBoat* boat = (RowBoat*)vehicle;
+					extra = " submerged " + FloatToString(boat->GetSubmergedFraction() * 100.0f, 0) + "%";
+				}
+				Print("%s (%s): pos (%.1f, %.1f, %.1f) speed %.2fm/s up %.2f water %s%.2f%s\n", m_bBoat ? "Boat test" : "Vehicle test", label,
+					pos.x, pos.y, pos.z, glm::length(vel), vehicle->GetTransform()->GetUp().y,
+					bWater ? "height " : "none ", bWater ? waterHeight : 0.0f, extra.c_str());
+			}
+
+			// Finds dry ground which is flat for a long way along +x
+			static bool FindFlatGround(TerrainGenerator* terrainGenerator, const glm::vec3& center, glm::vec3& outPos)
+			{
+				real best = FLT_MAX;
+				const real spacing = 60.0f;
+				for (i32 iz = -15; iz <= 15; ++iz)
+				{
+					for (i32 ix = -15; ix <= 15; ++ix)
+					{
+						const real x = center.x + (real)ix * spacing;
+						const real z = center.z + (real)iz * spacing;
+						const terrain::ColumnSample start = terrainGenerator->SampleColumn(x, z);
+						real deviation = 0.0f;
+						for (real d = 0.0f; d <= 160.0f && deviation < best; d += 10.0f)
+						{
+							for (real lateral : { -8.0f, 0.0f, 8.0f })
+							{
+								const terrain::ColumnSample column = terrainGenerator->SampleColumn(x + d, z + lateral);
+								const bool bWater = column.lakeID != 0 && column.lakeT < 1.05f && column.height < column.waterLevel + 1.0f;
+								deviation = glm::max(deviation, bWater ? 1000.0f : glm::abs(column.height - start.height));
+							}
+						}
+						if (deviation < best)
+						{
+							best = deviation;
+							outPos = glm::vec3(x, start.height, z);
+						}
+					}
+				}
+				Print("Vehicle test: flattest ground nearby varies by %.1fm\n", best);
+				return best < 100.0f;
+			}
+
+			GameObject* SpawnCar(TerrainGenerator* terrainGenerator)
+			{
+				if (!m_bMovedToFlatGround || m_DriveStart == VEC3_ZERO)
+				{
+					return g_EngineInstance->SpawnVehicleInFrontOfCamera("vehicle");
+				}
+				const PrefabID carID = g_ResourceManager->GetPrefabID("vehicle");
+				glm::vec3 pos = m_DriveStart + VEC3_UP * 3.0f;
+				glm::vec3 hitPos, hitNormal;
+				if (terrainGenerator->Raycast(m_DriveStart + VEC3_UP * 30.0f, -VEC3_UP, 100.0f, hitPos, hitNormal))
+				{
+					pos = hitPos + VEC3_UP * 1.5f;
+				}
+				// Facing +x
+				GameObject* car = GameObject::Deitemize(carID, pos, glm::angleAxis(PI_DIV_TWO, VEC3_UP), GameObjectStack::UserData{});
+				if (car != nullptr)
+				{
+					g_SceneManager->CurrentScene()->AddRootObject(car);
+				}
+				return car;
+			}
+
+			// The nearest open water (a few meters deep, away from the shore), with a boat placed on it
+			GameObject* SpawnBoatOnWater(TerrainGenerator* terrainGenerator, Player* player)
+			{
+				const glm::vec3 center = player->GetTransform()->GetWorldPosition();
+				m_SearchCenter = center;
+				const real spacing = 25.0f;
+				const i32 maxRing = 100;
+				for (i32 ring = 0; ring <= maxRing; ++ring)
+				{
+					for (i32 iz = -ring; iz <= ring; ++iz)
+					{
+						for (i32 ix = -ring; ix <= ring; ++ix)
+						{
+							if (glm::max(glm::abs(ix), glm::abs(iz)) != ring)
+							{
+								continue;
+							}
+							const real x = center.x + (real)ix * spacing;
+							const real z = center.z + (real)iz * spacing;
+							const terrain::ColumnSample column = terrainGenerator->SampleColumn(x, z);
+							if (column.lakeID == 0 || column.lakeT > 0.6f || column.waterLevel - column.height < 2.0f)
+							{
+								continue;
+							}
+							// Open water all around
+							bool bOpen = true;
+							for (u32 i = 0; i < 8 && bOpen; ++i)
+							{
+								const real angle = TWO_PI * (real)i / 8.0f;
+								const terrain::ColumnSample neighbour = terrainGenerator->SampleColumn(x + std::cos(angle) * 15.0f, z + std::sin(angle) * 15.0f);
+								bOpen = neighbour.lakeID != 0 && neighbour.lakeT < 1.0f && neighbour.height < neighbour.waterLevel - 0.5f;
+							}
+							if (!bOpen)
+							{
+								continue;
+							}
+
+							const PrefabID boatID = g_ResourceManager->GetPrefabID("row boat");
+							if (!boatID.IsValid())
+							{
+								PrintError("Boat test: no row boat prefab\n");
+								return nullptr;
+							}
+							const glm::vec3 pos(x, column.waterLevel + 0.3f, z);
+							Print("Boat test: water %.0fm away at (%.1f, %.1f, %.1f), depth %.1fm\n", glm::distance(center, pos), pos.x, pos.y, pos.z, column.waterLevel - column.height);
+							GameObject* boat = GameObject::Deitemize(boatID, pos, QUAT_IDENTITY, GameObjectStack::UserData{});
+							if (boat != nullptr)
+							{
+								g_SceneManager->CurrentScene()->AddRootObject(boat);
+							}
+							return boat;
+						}
+					}
+				}
+				PrintError("Boat test: no water within %.0fm\n", spacing * maxRing);
+				return nullptr;
+			}
+
+			bool m_bBoat;
+			State m_State = State::WAIT_FOR_GROUND;
+			sec m_Time = 0.0f;
+			GameObjectID m_VehicleID = InvalidGameObjectID;
+			std::set<KeyCode> m_KeysDown;
+			bool m_bMovedToFlatGround = false;
+			glm::vec3 m_DriveStart = VEC3_ZERO;
+			glm::vec3 m_SearchCenter = VEC3_ZERO;
+		};
+
+		VehicleTestScript* s_VehicleTest = nullptr;
 	} // anonymous namespace
 
 	SceneTestRunner* SceneTestRunner::s_Instance = nullptr;
@@ -784,6 +1695,10 @@ namespace flex
 			if (s_TraversalTest != nullptr)
 			{
 				s_TraversalTest->Update();
+			}
+			if (s_VehicleTest != nullptr)
+			{
+				s_VehicleTest->Update();
 			}
 			if (getenv("FLEX_TEST_SHOW_INVENTORY") != nullptr)
 			{
@@ -857,6 +1772,12 @@ namespace flex
 		m_bPrevDrawPhysicsWireframe = physicsDebuggingSettings.bDrawWireframe;
 		physicsDebuggingSettings.bDrawWireframe = !m_bProfile;
 
+		// e.g. FLEX_DEBUG_OVERLAY=11 shows SSAO (see config/debug_overlay_names.json)
+		if (const char* overlay = getenv("FLEX_DEBUG_OVERLAY"))
+		{
+			g_Renderer->SetDebugOverlayID(atoi(overlay));
+		}
+
 		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
 		if (terrainGenerator != nullptr)
 		{
@@ -894,7 +1815,14 @@ namespace flex
 				s_bScreenshots = m_bCaptureScreenshots;
 				// Debug lines would clutter the screenshots
 				physicsDebuggingSettings.bDrawWireframe = physicsDebuggingSettings.bDrawWireframe && !m_bCaptureScreenshots;
-				s_TraversalTest = new TraversalTestScript();
+				if (const char* vehicleTest = getenv("FLEX_VEHICLE_TEST"))
+				{
+					s_VehicleTest = new VehicleTestScript(strcmp(vehicleTest, "boat") == 0);
+				}
+				else
+				{
+					s_TraversalTest = new TraversalTestScript();
+				}
 			}
 		}
 	}
@@ -926,6 +1854,17 @@ namespace flex
 		}
 
 		*TerrainGenerator::GetShowWorldMapPtr() = m_bPrevShowTerrainMap;
+
+		if (s_VehicleTest != nullptr)
+		{
+			if (!s_VehicleTest->IsDone())
+			{
+				PrintError("Vehicle test didn't finish, run with more frames\n");
+			}
+			s_VehicleTest->Finish();
+			delete s_VehicleTest;
+			s_VehicleTest = nullptr;
+		}
 
 		if (s_TraversalTest != nullptr)
 		{

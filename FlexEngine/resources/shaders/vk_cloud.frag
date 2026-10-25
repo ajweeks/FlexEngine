@@ -164,6 +164,5 @@ void main()
     fragmentColour.xyz *= vec3(0.90, 0.96, 1.1);
 
     // Gamma correction
-	fragmentColour.xyz = pow(fragmentColour.xyz, vec3(0.4545));
-	fragmentColour.xyz = pow(fragmentColour.xyz, vec3(1.0f / 2.2f)); // Gamma correction
+	fragmentColour.xyz = LinearToSRGB(clamp(fragmentColour.xyz, 0.0, 1.0)); // (was gamma corrected twice)
 }

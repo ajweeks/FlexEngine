@@ -58,6 +58,9 @@ namespace flex
 		EDITOR_OBJECT = 1 << 1,
 		STATIC = 1 << 2,
 		DROPPED_ITEM = 1 << 3,
+		// Only hit by rays which include this group in both their filter group & mask (e.g. tree foliage, so it can be
+		// grappled to without being collided with)
+		RAYCAST_ONLY = 1 << 4,
 		EVERYTHING = ~(u32)0
 	};
 

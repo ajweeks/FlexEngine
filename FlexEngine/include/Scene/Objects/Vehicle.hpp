@@ -138,4 +138,70 @@ namespace flex
 	};
 
 	static_assert((ARRAY_LENGTH(VehicleSoundEffectNames) - 1) == (i32)Vehicle::SoundEffect::_COUNT, "VehicleSoundEffectNames length does not match the number of entries in the Vehicle::SoundEffect enum");
+
+	// Small wooden boat which floats on water (lakes, the sea & Gerstner oceans) & is rowed by the player
+	class RowBoat final : public GameObject
+	{
+	public:
+		RowBoat(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
+		virtual void Initialize() override;
+		virtual void PostInitialize() override;
+		virtual void Destroy(bool bDetachFromParent = true) override;
+		virtual void Update() override;
+		virtual void FixedUpdate() override;
+		virtual void Render() override;
+
+		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
+
+		void OnPlayerEnter();
+		void OnPlayerExit();
+		// Where the player steps out: the nearest dry land if there's some close by, otherwise beside the boat
+		glm::vec3 GetExitPosition() const;
+
+		bool IsOccupied() const { return m_bOccupied; }
+		// Fraction of the hull's buoyancy points which are under water [0, 1]
+		real GetSubmergedFraction() const { return m_SubmergedFraction; }
+		// Signed rowing input this frame ([-1, 1], positive: forwards), e.g. for sounds
+		real GetRowInput() const { return m_RowInput; }
+
+		// Height of the water surface at the given position (the Gerstner ocean, or streamed terrain's lakes & sea).
+		// Returns false if there's no water there.
+		static bool SampleWaterHeight(const glm::vec3& posWS, real& outHeight);
+
+	private:
+		void CreateMeshes();
+		void UpdateOars();
+
+		GameObject* m_Oars[2] = { nullptr, nullptr };
+		// Stroke phase of each oar (left, right) in radians
+		real m_OarPhase[2] = { 0.0f, 0.0f };
+		real m_OarInput[2] = { 0.0f, 0.0f };
+
+		real m_RowInput = 0.0f;
+		real m_TurnInput = 0.0f;
+		real m_SubmergedFraction = 0.0f;
+
+		real m_Mass = 140.0f;
+		real m_RowerMass = 75.0f;
+		real m_StrokeForce = 420.0f;
+		real m_TurnTorque = 260.0f;
+		real m_BuoyancyScale = 3.0f; // Buoyancy when fully submerged, relative to the boat's (& rower's) weight
+		real m_ForwardDrag = 45.0f;
+		real m_LateralDrag = 650.0f;
+		real m_AngularDrag = 220.0f;
+
+		bool m_bOccupied = false;
+	};
+
+	// Things the player can ride (vehicles & boats)
+	namespace Rideable
+	{
+		bool IsRideable(GameObject* object);
+		void OnPlayerEnter(GameObject* object);
+		void OnPlayerExit(GameObject* object);
+		glm::vec3 GetExitPosition(GameObject* object);
+	} // namespace Rideable
 } // namespace flex

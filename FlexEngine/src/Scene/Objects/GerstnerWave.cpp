@@ -31,6 +31,8 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
+	GerstnerWave* GerstnerWave::s_Active = nullptr;
+
 	GerstnerWave::GerstnerWave(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
 		GameObject(name, GerstnerWaveSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
@@ -126,6 +128,11 @@ namespace flex
 		meshCreateInfo.initialMaxVertexCount = (u32)m_VertexBufferCreateInfo.positions_3D.size();
 		m_Mesh->LoadFromMemory(meshCreateInfo);
 
+		if (s_Active == nullptr && !m_bIsTemplate)
+		{
+			s_Active = this;
+		}
+
 		GameObject::Initialize();
 	}
 
@@ -188,6 +195,11 @@ namespace flex
 	{
 		g_Renderer->ClearGlobalUniform(&U_OCEAN_DATA, &oceanData);
 
+		if (s_Active == this)
+		{
+			s_Active = nullptr;
+		}
+
 		GameObject::Destroy(bDetachFromParent);
 	}
 
@@ -224,7 +236,7 @@ namespace flex
 
 	glm::vec3 GerstnerWave::QueryHeightFieldFromVerts(const glm::vec3& queryPos) const
 	{
-		WaveChunk const* chunk = GetChunkAtPos(queryPos);
+		WaveChunk const* chunk = GetChunkAtPos(glm::vec2(queryPos.x, queryPos.z));
 		if (chunk)
 		{
 			glm::vec2i chunkIdx = chunk->index;
@@ -247,6 +259,23 @@ namespace flex
 
 		// No chunk corresponds with query pos
 		return VEC3_ZERO;
+	}
+
+	bool GerstnerWave::GetWaterHeight(const glm::vec3& posWS, real& outHeight) const
+	{
+		if (m_Indices.empty() || !m_bVisible)
+		{
+			return false;
+		}
+
+		// Chunks are generated in world space (around the camera), offset vertically by the object's position
+		const glm::vec3 wavePos = m_Transform.GetWorldPosition();
+		if (GetChunkAtPos(glm::vec2(posWS.x, posWS.z)) == nullptr)
+		{
+			return false;
+		}
+		outHeight = wavePos.y + QueryHeightFieldFromVerts(posWS).y;
+		return true;
 	}
 
 	void GerstnerWave::DiscoverChunks()
@@ -486,7 +515,8 @@ namespace flex
 
 	GerstnerWave::WaveChunk const* GetChunkAtPos(const glm::vec2& pos, const std::vector<GerstnerWave::WaveChunk>& waveChunks, real size)
 	{
-		glm::vec2i queryPosInt(ceil(pos.x / size + 0.5f), ceil(pos.y / size + 0.5f));
+		// Chunk i spans [(i - 0.5) * size, (i + 0.5) * size] (see UpdatePositionsForChunk)
+		glm::vec2i queryPosInt((i32)floor(pos.x / size + 0.5f), (i32)floor(pos.y / size + 0.5f));
 		for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
 		{
 			if (waveChunks[chunkIdx].index == queryPosInt)

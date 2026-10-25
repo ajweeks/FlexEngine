@@ -17,6 +17,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
+#include "GameSounds.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
@@ -29,8 +30,10 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/Objects/Lights.hpp"
 #include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Traversal.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -81,7 +84,17 @@ namespace flex
 			{
 			case BuildPieceType::TORCH:
 				outMain = GetOrCreateMaterial("Build torch handle", glm::vec4(0.32f, 0.2f, 0.11f, 1.0f), 0.9f);
-				outSecondary = GetOrCreateMaterial("Build torch flame", glm::vec4(1.0f, 0.6f, 0.2f, 1.0f), 1.0f, glm::vec4(1.0f, 0.55f, 0.15f, 1.0f) * 6.0f);
+				// Unlit, so the flame glows (pbr materials ignore emissive)
+				outSecondary = g_Renderer->GetMaterialID("Build torch flame glow");
+				if (outSecondary == InvalidMaterialID)
+				{
+					MaterialCreateInfo createInfo = {};
+					createInfo.name = "Build torch flame glow";
+					createInfo.shaderName = "colour";
+					createInfo.colourMultiplier = glm::vec4(1.0f, 0.62f, 0.2f, 1.0f);
+					createInfo.bSerializable = false;
+					outSecondary = g_Renderer->InitializeMaterial(&createInfo);
+				}
 				return;
 			case BuildPieceType::ROPE:
 				outMain = GetOrCreateMaterial("Build rope", glm::vec4(0.62f, 0.5f, 0.32f, 1.0f), 0.95f);
@@ -101,6 +114,24 @@ namespace flex
 				outMain = GetOrCreateMaterial("Build wood", glm::vec4(0.55f, 0.38f, 0.22f, 1.0f), 0.8f);
 				outSecondary = GetOrCreateMaterial("Build wood trim", glm::vec4(0.36f, 0.24f, 0.13f, 1.0f), 0.8f);
 			}
+		}
+
+		// Translucent emissive materials for placement previews
+		MaterialID GetPreviewMaterial(bool bValid)
+		{
+			const char* name = bValid ? "Build preview" : "Build preview blocked";
+			MaterialID materialID = g_Renderer->GetMaterialID(name);
+			if (materialID == InvalidMaterialID)
+			{
+				MaterialCreateInfo createInfo = {};
+				createInfo.name = name;
+				createInfo.shaderName = "hologram";
+				// Alpha is the preview's opacity
+				createInfo.constEmissive = bValid ? glm::vec4(0.55f, 0.85f, 1.6f, 0.38f) : glm::vec4(1.8f, 0.35f, 0.3f, 0.38f);
+				createInfo.bSerializable = false;
+				materialID = g_Renderer->InitializeMaterial(&createInfo);
+			}
+			return materialID;
 		}
 
 		// Closest hit along a ray against physics colliders (ignoring one object) & the terrain's density
@@ -191,8 +222,9 @@ namespace flex
 				vertexData.texCoords_UV.push_back(glm::vec2(glm::dot(local, axisU), glm::dot(local, axisV)));
 				vertexData.colours_R32G32B32A32.push_back(VEC4_ONE);
 			}
-			// Wound so the face points along its normal
-			indices.insert(indices.end(), { base, base + 2, base + 1, base, base + 3, base + 2 });
+			// Counter-clockwise seen from outside (along the normal), like the engine's other meshes. These were
+			// previously wound the other way, so back faces were culled & boxes were seen inside out.
+			indices.insert(indices.end(), { base, base + 1, base + 2, base, base + 2, base + 3 });
 		}
 	}
 
@@ -216,16 +248,17 @@ namespace flex
 		return GameObject::BuildPropertyCollection();
 	}
 
-	void BuildPiece::Setup(BuildPieceType type, BuildMaterial material, real length)
+	void BuildPiece::Setup(BuildPieceType type, BuildMaterial material, real length, real size /* = GRID_SIZE */)
 	{
 		m_PieceType = type;
 		m_Material = material;
 		m_Length = length;
+		m_Size = size;
 	}
 
-	void BuildPiece::GetBoxes(BuildPieceType type, real length, std::vector<Box>& outBoxes)
+	void BuildPiece::GetBoxes(BuildPieceType type, real length, real size, std::vector<Box>& outBoxes)
 	{
-		const real half = GRID_SIZE * 0.5f;
+		const real half = size * 0.5f;
 		const glm::quat slope = glm::angleAxis(glm::radians(-45.0f), VEC3_RIGHT);
 		switch (type)
 		{
@@ -247,9 +280,9 @@ namespace flex
 			break;
 		case BuildPieceType::STAIRS:
 		{
-			// Six steps rising towards +z (walked on as a ramp, see CreateCollisionShape)
-			const u32 stepCount = 6;
-			const real stepDepth = GRID_SIZE / (real)stepCount;
+			// Steps about half a meter high rising towards +z (walked on as a ramp, see CreateCollisionShape)
+			const u32 stepCount = (u32)glm::max(glm::round(size * 2.0f), 2.0f);
+			const real stepDepth = size / (real)stepCount;
 			for (u32 i = 0; i < stepCount; ++i)
 			{
 				const real top = stepDepth * (real)(i + 1);
@@ -285,22 +318,20 @@ namespace flex
 		}
 	}
 
-	btCollisionShape* BuildPiece::CreateCollisionShape(BuildPieceType type, real length)
+	btCollisionShape* BuildPiece::CreateCollisionShape(BuildPieceType type, real length, real size)
 	{
-		FLEX_UNUSED(length);
-
 		std::vector<Box> boxes;
 		switch (type)
 		{
 		case BuildPieceType::FLOOR:
 		case BuildPieceType::WALL:
 		case BuildPieceType::ROOF:
-			GetBoxes(type, length, boxes);
+			GetBoxes(type, length, size, boxes);
 			break;
 		case BuildPieceType::STAIRS:
 		{
 			// A smooth ramp under the step edges, which is easy to walk up
-			const real half = GRID_SIZE * 0.5f;
+			const real half = size * 0.5f;
 			boxes.push_back({ glm::vec3(0.0f, half - 0.12f, 0.0f), glm::vec3(half * 0.8f, 0.08f, half * 1.4142f), glm::angleAxis(glm::radians(-45.0f), VEC3_RIGHT), 0 });
 			// Fill underneath so it can't be walked through from the side
 			boxes.push_back({ glm::vec3(0.0f, half * 0.5f, half * 0.5f), glm::vec3(half * 0.8f, half * 0.5f, half * 0.5f), QUAT_IDENTITY, 0 });
@@ -319,41 +350,13 @@ namespace flex
 		return compound;
 	}
 
-	void BuildPiece::GetOutline(BuildPieceType type, real length, std::vector<std::pair<glm::vec3, glm::vec3>>& outLines)
-	{
-		std::vector<Box> boxes;
-		GetBoxes(type, length, boxes);
-		// Only the first (largest) few boxes are outlined to keep the preview readable
-		const u32 boxCount = glm::min((u32)boxes.size(), type == BuildPieceType::STAIRS ? 6u : 3u);
-		for (u32 b = 0; b < boxCount; ++b)
-		{
-			const Box& box = boxes[b];
-			glm::vec3 corners[8];
-			for (u32 i = 0; i < 8; ++i)
-			{
-				const glm::vec3 sign((i & 1) ? 1.0f : -1.0f, (i & 2) ? 1.0f : -1.0f, (i & 4) ? 1.0f : -1.0f);
-				corners[i] = box.center + box.rotation * (sign * box.halfExtents);
-			}
-			for (u32 i = 0; i < 8; ++i)
-			{
-				for (u32 bit = 1; bit < 8; bit <<= 1)
-				{
-					if ((i & bit) == 0)
-					{
-						outLines.emplace_back(corners[i], corners[i | bit]);
-					}
-				}
-			}
-		}
-	}
-
 	void BuildPiece::CreateMesh()
 	{
 		MaterialID mainMaterialID, secondaryMaterialID;
 		GetPieceMaterials(m_PieceType, m_Material, mainMaterialID, secondaryMaterialID);
 
 		std::vector<Box> boxes;
-		GetBoxes(m_PieceType, m_Length, boxes);
+		GetBoxes(m_PieceType, m_Length, m_Size, boxes);
 
 		Mesh* mesh = SetMesh(new Mesh(this));
 		const MaterialID materialIDs[2] = { mainMaterialID, secondaryMaterialID };
@@ -383,7 +386,7 @@ namespace flex
 
 		if (m_RigidBody == nullptr)
 		{
-			btCollisionShape* shape = CreateCollisionShape(m_PieceType, m_Length);
+			btCollisionShape* shape = CreateCollisionShape(m_PieceType, m_Length, m_Size);
 			if (shape != nullptr)
 			{
 				SetCollisionShape(shape);
@@ -447,6 +450,11 @@ namespace flex
 			}
 		}
 		std::sort(torches.begin(), torches.end(), [](const Pair<real, BuildPiece*>& a, const Pair<real, BuildPiece*>& b) { return a.first < b.first; });
+		if (!torches.empty())
+		{
+			// Quiet crackle from the nearest torch
+			GameSounds::ReportFire(torches[0].second->m_Transform.GetWorldPosition(), 0.3f);
+		}
 
 		const real time = g_SecElapsedSinceProgramStart;
 		for (u32 i = 0; i < MAX_TORCH_LIGHTS; ++i)
@@ -458,7 +466,7 @@ namespace flex
 				const glm::vec3 flamePos = torch->m_Transform.GetWorldPosition() + torch->m_Transform.GetWorldRotation() * (FLAME_OFFSET + glm::vec3(0.0f, 0.15f, 0.0f));
 				// Flicker, offset per torch so they don't pulse in unison
 				const real phase = flamePos.x * 1.7f + flamePos.z * 2.3f;
-				const real flicker = 0.85f + 0.08f * std::sin(time * 9.0f + phase) + 0.07f * std::sin(time * 23.0f + phase * 1.3f);
+				const real flicker = FireFlicker(time, phase);
 				PointLightData data = {};
 				data.pos = flamePos;
 				data.enabled = 1;
@@ -502,7 +510,8 @@ namespace flex
 	glm::vec3 BuildPiece::GetClimbBottom() const
 	{
 		const glm::vec3 pos = m_Transform.GetWorldPosition();
-		return m_PieceType == BuildPieceType::ROPE ? pos - VEC3_UP * m_Length : pos;
+		// Ropes hang along their local -y (tossed ropes may lie at an angle down a slope)
+		return m_PieceType == BuildPieceType::ROPE ? pos - (m_Transform.GetWorldRotation() * VEC3_UP) * m_Length : pos;
 	}
 
 	glm::vec3 BuildPiece::GetClimbTop() const
@@ -515,7 +524,13 @@ namespace flex
 	{
 		const glm::vec3 bottom = GetClimbBottom();
 		const glm::vec3 top = GetClimbTop();
-		return glm::vec3(bottom.x, glm::clamp(pos.y, bottom.y, top.y), bottom.z);
+		if (glm::abs(top.x - bottom.x) + glm::abs(top.z - bottom.z) < 1e-3f)
+		{
+			return glm::vec3(bottom.x, glm::clamp(pos.y, bottom.y, top.y), bottom.z);
+		}
+		// Slanted: the point at the same height
+		const real t = glm::clamp((pos.y - bottom.y) / glm::max(top.y - bottom.y, 1e-3f), 0.0f, 1.0f);
+		return glm::mix(bottom, top, t);
 	}
 
 	glm::vec3 BuildPiece::GetClimbFacing() const
@@ -544,7 +559,8 @@ namespace flex
 			{
 				continue;
 			}
-			const real distance = glm::length(glm::vec2(pos.x - bottom.x, pos.z - bottom.z));
+			const glm::vec3 axisPoint = piece->ClosestPointOnClimbAxis(pos);
+			const real distance = glm::length(glm::vec2(pos.x - axisPoint.x, pos.z - axisPoint.z));
 			if (distance < closestDistance)
 			{
 				closest = piece;
@@ -566,6 +582,10 @@ namespace flex
 			pieceObj.TryGetInt("type", type);
 			pieceObj.TryGetInt("material", material);
 			pieceObj.TryGetFloat("length", m_Length);
+			// Pieces saved before the grid was made coarser have no size
+			m_Size = LEGACY_GRID_SIZE;
+			pieceObj.TryGetFloat("size", m_Size);
+			m_Size = glm::clamp(m_Size, 0.5f, 32.0f);
 			m_PieceType = (BuildPieceType)glm::clamp(type, 0, (i32)BuildPieceType::_COUNT - 1);
 			m_Material = (BuildMaterial)glm::clamp(material, 0, (i32)BuildMaterial::_COUNT - 1);
 		}
@@ -582,6 +602,7 @@ namespace flex
 		{
 			pieceObj.fields.emplace_back("length", JSONValue(m_Length, 2));
 		}
+		pieceObj.fields.emplace_back("size", JSONValue(m_Size, 2));
 		parentObject.fields.emplace_back("build piece", JSONValue(pieceObj));
 	}
 
@@ -600,6 +621,87 @@ namespace flex
 	{
 		m_bActive = bActive;
 		m_bPlacementValid = false;
+		m_bPlacementHasPosition = false;
+		if (!bActive)
+		{
+			DestroyPreview();
+		}
+	}
+
+	void BuildMode::DestroyPreview()
+	{
+		GameObject* preview = m_PreviewID.Get();
+		if (preview != nullptr)
+		{
+			g_SceneManager->CurrentScene()->RemoveObject(preview, true);
+		}
+		m_PreviewID = InvalidGameObjectID;
+		m_PreviewType = BuildPieceType::_COUNT;
+	}
+
+	void BuildMode::UpdatePreview(bool bShow)
+	{
+		GameObject* preview = m_PreviewID.Get();
+		if (!bShow)
+		{
+			if (preview != nullptr)
+			{
+				preview->SetVisible(false);
+			}
+			return;
+		}
+
+		if (preview == nullptr)
+		{
+			// Objects are added to the scene at the start of the next frame, wait for that before making another
+			// (if it's still missing after that, it was destroyed along with the scene)
+			const i32 frame = g_Renderer->GetFramesRenderedCount();
+			if (m_PreviewID.IsValid() && frame - m_PreviewCreatedFrame < 3)
+			{
+				return;
+			}
+			m_PreviewCreatedFrame = frame;
+			preview = new GameObject("Build preview", BaseObjectSID);
+			preview->SetSerializable(false);
+			preview->SetVisibleInSceneExplorer(false);
+			preview->SetCastsShadow(false);
+			// Its mesh is built once it's in the scene
+			g_SceneManager->CurrentScene()->AddRootObject(preview);
+			m_PreviewID = preview->ID;
+			m_PreviewType = BuildPieceType::_COUNT;
+			return;
+		}
+
+		const bool bValid = m_bPlacementValid;
+		if (m_PreviewType != m_SelectedType || m_bPreviewValid != bValid || glm::abs(m_PreviewLength - m_PlacementLength) > 0.05f)
+		{
+			m_PreviewType = m_SelectedType;
+			m_bPreviewValid = bValid;
+			m_PreviewLength = m_PlacementLength;
+
+			const MaterialID materialID = GetPreviewMaterial(bValid);
+			std::vector<BuildPiece::Box> boxes;
+			BuildPiece::GetBoxes(m_SelectedType, m_PlacementLength, BuildPiece::GRID_SIZE, boxes);
+
+			VertexBufferDataCreateInfo vertexData = {};
+			vertexData.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(materialID)->shaderID)->vertexAttributes;
+			std::vector<u32> indices;
+			for (const BuildPiece::Box& box : boxes)
+			{
+				// Slightly inflated so it doesn't z-fight with pieces it lines up with
+				AppendBoxToVertexData(box.center, box.halfExtents + glm::vec3(0.01f), box.rotation, vertexData, indices);
+			}
+			Mesh* mesh = preview->SetMesh(new Mesh(preview));
+			if (!indices.empty())
+			{
+				MeshComponent::LoadFromMemory(mesh, vertexData, indices, materialID);
+				mesh->PostInitialize();
+			}
+		}
+
+		preview->GetTransform()->SetWorldPosition(m_PlacementPos, false);
+		preview->GetTransform()->SetWorldRotation(m_PlacementRot, true);
+		preview->SetVisible(true);
 	}
 
 	BuildPiece* BuildMode::GetTargetedPiece() const
@@ -662,8 +764,9 @@ namespace flex
 		return result;
 	}
 
-	bool BuildMode::ComputePlacement(glm::vec3& outPos, glm::quat& outRot, real& outLength) const
+	bool BuildMode::ComputePlacement(glm::vec3& outPos, glm::quat& outRot, real& outLength, bool& outHasPosition) const
 	{
+		outHasPosition = false;
 		BaseCamera* camera = g_CameraManager->CurrentCamera();
 		const glm::vec3 origin = camera->position;
 		const glm::vec3 dir = camera->forward;
@@ -676,6 +779,7 @@ namespace flex
 			return false;
 		}
 
+		outHasPosition = true;
 		const real grid = BuildPiece::GRID_SIZE;
 		const glm::vec3 heading = glm::normalize(glm::vec3(dir.x, 0.0f, dir.z) + glm::vec3(1e-5f, 0.0f, 0.0f));
 		outLength = 0.0f;
@@ -732,18 +836,27 @@ namespace flex
 		// aimed at, or start at the terrain's height.
 		const glm::vec3 p = hitPos + hitNormal * 0.1f;
 		real levelY;
+		// Cells line up with the world grid, or with the piece being aimed at when it's on a grid of the same size
+		// that's offset from the world's (e.g. pieces placed by scripts)
+		glm::vec2 gridOrigin(0.0f);
 		if (hitObject != nullptr && hitObject->GetTypeID() == BuildPieceSID)
 		{
-			const real pieceY = hitObject->GetTransform()->GetWorldPosition().y;
-			levelY = pieceY + glm::floor((p.y - pieceY) / grid + 0.001f) * grid;
+			BuildPiece* hitPiece = (BuildPiece*)hitObject;
+			const glm::vec3 piecePos = hitPiece->GetTransform()->GetWorldPosition();
+			const real pieceGrid = hitPiece->GetSize();
+			levelY = piecePos.y + glm::floor((p.y - piecePos.y) / pieceGrid + 0.001f) * pieceGrid;
+			if (glm::abs(pieceGrid - grid) < 0.01f)
+			{
+				gridOrigin = glm::vec2(piecePos.x, piecePos.z) - glm::vec2(grid * 0.5f);
+			}
 		}
 		else
 		{
 			levelY = glm::round(hitPos.y * 4.0f) / 4.0f;
 		}
 
-		const glm::vec2 cell(glm::floor(p.x / grid), glm::floor(p.z / grid));
-		const glm::vec3 cellCenter((cell.x + 0.5f) * grid, levelY, (cell.y + 0.5f) * grid);
+		const glm::vec2 cell(glm::floor((p.x - gridOrigin.x) / grid), glm::floor((p.z - gridOrigin.y) / grid));
+		const glm::vec3 cellCenter(gridOrigin.x + (cell.x + 0.5f) * grid, levelY, gridOrigin.y + (cell.y + 0.5f) * grid);
 
 		real yaw;
 		if (m_SelectedType == BuildPieceType::WALL)
@@ -771,6 +884,7 @@ namespace flex
 		outRot = glm::angleAxis(yaw, VEC3_UP);
 
 		// Already occupied: stack on top instead
+		const glm::vec3 firstPos = outPos;
 		for (u32 attempt = 0; attempt < 4; ++attempt)
 		{
 			bool bOccupied = false;
@@ -790,6 +904,8 @@ namespace flex
 			}
 			outPos.y += grid;
 		}
+		// Blocked: show the preview where it was aimed
+		outPos = firstPos;
 		return false;
 	}
 
@@ -806,6 +922,8 @@ namespace flex
 		if (!bCanUse)
 		{
 			m_bPlacementValid = false;
+			m_bPlacementHasPosition = false;
+			UpdatePreview(false);
 			return;
 		}
 
@@ -836,19 +954,12 @@ namespace flex
 			m_SelectedMaterial = (BuildMaterial)(((i32)m_SelectedMaterial + 1) % (i32)BuildMaterial::_COUNT);
 		}
 
-		m_bPlacementValid = ComputePlacement(m_PlacementPos, m_PlacementRot, m_PlacementLength);
+		m_bPlacementValid = ComputePlacement(m_PlacementPos, m_PlacementRot, m_PlacementLength, m_bPlacementHasPosition);
+		// Ropes are tossed rather than placed (see Traversal::TossRope)
+		const bool bTossing = m_SelectedType == BuildPieceType::ROPE;
+		UpdatePreview(m_bPlacementHasPosition && !bTossing);
 
 		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
-		if (m_bPlacementValid)
-		{
-			std::vector<std::pair<glm::vec3, glm::vec3>> lines;
-			BuildPiece::GetOutline(m_SelectedType, m_PlacementLength, lines);
-			const btVector3 colour(0.35f, 1.0f, 0.5f);
-			for (const auto& line : lines)
-			{
-				debugRenderer->drawLine(ToBtVec3(m_PlacementPos + m_PlacementRot * line.first), ToBtVec3(m_PlacementPos + m_PlacementRot * line.second), colour);
-			}
-		}
 
 		BuildPiece* targeted = GetTargetedPiece();
 		if (targeted != nullptr)
@@ -859,7 +970,12 @@ namespace flex
 
 		if (m_Cooldown <= 0.0f)
 		{
-			if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT) && m_bPlacementValid)
+			if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT) && bTossing)
+			{
+				m_Player->GetTraversal()->TossRope();
+				m_Cooldown = 0.3f;
+			}
+			else if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT) && m_bPlacementValid)
 			{
 				Place();
 				m_Cooldown = 0.15f;
@@ -882,6 +998,10 @@ namespace flex
 		piece->GetTransform()->SetWorldRotation(m_PlacementRot);
 		scene->AddRootObject(piece);
 		AudioManager::PlaySource(m_PlaceSoundID);
+		if (m_SelectedType == BuildPieceType::TORCH)
+		{
+			GameSounds::PlayTorchIgnite(m_PlacementPos);
+		}
 	}
 
 	void BuildMode::RemoveTargeted()

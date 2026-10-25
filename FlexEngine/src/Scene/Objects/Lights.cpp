@@ -27,6 +27,46 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
+	namespace
+	{
+		real FlickerHash(i32 i, u32 seed)
+		{
+			u32 x = (u32)i * 0x8da6b343u + seed * 0xd8163841u;
+			x ^= x >> 16;
+			x *= 0x7feb352du;
+			x ^= x >> 15;
+			x *= 0x846ca68bu;
+			x ^= x >> 16;
+			return (real)(x & 0xFFFFFF) / (real)0x1000000;
+		}
+
+		// Smooth 1D value noise in [0, 1]
+		real FlickerNoise(real t, u32 seed)
+		{
+			const real f = std::floor(t);
+			const real u = t - f;
+			const real s = u * u * u * (u * (u * 6.0f - 15.0f) + 10.0f);
+			const i32 i = (i32)f;
+			return glm::mix(FlickerHash(i, seed), FlickerHash(i + 1, seed), s);
+		}
+	} // anonymous namespace
+
+	real FireFlicker(real time, real seed)
+	{
+		// (keeps precision for seeds derived from large world positions)
+		seed -= std::floor(seed / 1000.0f) * 1000.0f;
+		const u32 seedBits = (u32)(i32)(seed * 977.0f);
+		// Slow swell, a lively mid frequency & fast jitter
+		const real slow = FlickerNoise(time * 1.3f + seed, seedBits);
+		const real mid = FlickerNoise(time * 4.7f + seed * 1.7f, seedBits + 1);
+		const real fast = FlickerNoise(time * 13.0f + seed * 2.3f, seedBits + 2);
+		real flicker = 0.62f + 0.18f * slow + 0.22f * mid + 0.12f * fast;
+		// Every so often the flame gutters briefly
+		const real gutter = FlickerNoise(time * 0.9f + seed * 3.1f, seedBits + 3);
+		flicker -= 0.3f * glm::smoothstep(0.8f, 0.95f, gutter);
+		return flicker;
+	}
+
 	DirectionalLight::DirectionalLight() :
 		DirectionalLight("Directional Light")
 	{

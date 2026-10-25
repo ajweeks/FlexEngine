@@ -5,6 +5,11 @@
 // Light objects (directional, point, spot & area)
 namespace flex
 {
+	// Brightness multiplier for flames (torches, campfires): smooth, layered noise around ~0.9 with occasional
+	// dips, in roughly [0.55, 1.1]. Deterministic in (time, seed), so give each fire its own seed (e.g. from its
+	// position) to keep them from flickering in unison.
+	real FireFlicker(real time, real seed);
+
 	class DirectionalLight final : public GameObject
 	{
 	public:

@@ -1,9 +1,0 @@
-{
-	"version" : 2,
-	"material" : 
-	{
-		"name" : "sphere 00",
-		"shader" : "pbr",
-		"const albedo" : "0.390,0.350,0.320"
-	}
-}

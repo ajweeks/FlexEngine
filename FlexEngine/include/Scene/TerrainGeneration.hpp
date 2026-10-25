@@ -33,7 +33,7 @@ namespace flex
 		static const u32 MAX_BIOME_COUNT = 16;
 
 		// Bump whenever generation output changes to invalidate cached chunks
-		static const u32 GENERATOR_VERSION = 13;
+		static const u32 GENERATOR_VERSION = 14;
 
 		enum class Material : u8
 		{
@@ -65,6 +65,8 @@ namespace flex
 		{
 			DIG,
 			FILL,
+			// A plant (tree or cactus) which has been cut down: center is its base. Doesn't change the density.
+			REMOVE_PLANT,
 		};
 
 		struct Edit
@@ -127,9 +129,9 @@ namespace flex
 
 			// Caves: tunnels (which entrances lead to) & occasional large caverns
 			real caveWavelength = 300.0f; // Larger = longer, straighter tunnels
-			real tunnelRadius = 12.0f; // Meters (tunnels are a little flatter than they are wide)
+			real tunnelRadius = 5.5f; // Meters (tunnels are a little flatter than they are wide)
 			real caveMaxDepth = 160.0f;
-			real cavernWavelength = 300.0f;
+			real cavernWavelength = 160.0f;
 			real cavernChance = 0.5f; // [0, 1]
 
 			// Lakes (flat water surfaces in carved basins)
@@ -367,6 +369,35 @@ namespace flex
 
 		void GenerateChunkMesh(const TerrainDensity& density, const ChunkKey& key, TransitionMask mask, const EditList& edits, ChunkMeshData& outMesh);
 
+		// Trees & cacti, which are generated as part of the terrain's chunks (deterministically from the seed)
+		enum class PlantKind : u8
+		{
+			NONE,
+			CONIFER,
+			DECIDUOUS,
+			CACTUS,
+		};
+
+		struct PlantInfo
+		{
+			PlantKind kind = PlantKind::NONE;
+			glm::vec3 base = glm::vec3(0.0f); // Where the trunk meets the ground
+			real height = 0.0f; // Overall height
+			real trunkHeight = 0.0f; // Height of the collidable trunk (from the base)
+			real trunkRadius = 0.0f; // At the base
+			u32 hash = 0; // Unique per plant, the source of its variation
+			real size01 = 0.0f;
+		};
+
+		// Plants whose bases lie within the box (as shown at full detail), excluding removed ones. Edits must include
+		// those overlapping the box.
+		void FindPlants(const TerrainDensity& density, const EditList& edits, const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<PlantInfo>& outPlants);
+		// A single plant's (full detail) mesh, in world space. Trunk triangles come first, outMesh.collisionIndexCount
+		// of them (as in chunks).
+		void BuildPlantMesh(const TerrainDensity& density, const PlantInfo& plant, ChunkMeshData& outMesh);
+		// An edit removing the given plant (so chunks are generated without it)
+		Edit MakeRemovePlantEdit(const PlantInfo& plant);
+
 		class TerrainWorkerPool
 		{
 		public:
@@ -469,6 +500,9 @@ namespace flex
 			void SetEdits(const std::vector<Edit>& edits);
 			const EditStore& Edits() const { return m_Edits; }
 
+			// Plants (not yet removed) whose bases lie within the box
+			void FindPlants(const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<PlantInfo>& outPlants) const;
+
 			// Marches along a ray against the density (including edits). Returns true on hit.
 			bool Raycast(const glm::vec3& origin, const glm::vec3& dir, real maxDistance, glm::vec3& outHitPos, glm::vec3& outHitNormal) const;
 
@@ -482,6 +516,9 @@ namespace flex
 			// Snapshots are per world, so the path should change along with the seed
 			void SetSnapshotPath(const std::string& snapshotPath) { m_SnapshotPath = snapshotPath; }
 			void WaitForSnapshotWrite();
+			// Loads the snapshot at the snapshot path in the background (call after changing world params & edits).
+			// If it matches, it replaces everything displayed at once, rather than regenerating all chunks.
+			void LoadSnapshotAsync();
 
 			std::shared_ptr<const TerrainDensity> Density() const { return m_Density; }
 			const WorldParams& Params() const { return m_Params; }
@@ -552,6 +589,9 @@ namespace flex
 				u64 handle;
 				bool bEmpty;
 				std::shared_ptr<const PackedChunk> packed;
+				// Generated with previous params or edits (e.g. the previous world), so it must be replaced even if it
+				// matches a desired chunk. Kept until then, since a batch can be superseded before it completes.
+				bool bStale = false;
 			};
 
 			struct DesiredChunks
@@ -563,6 +603,8 @@ namespace flex
 			struct Snapshot
 			{
 				bool bValid = false;
+				ms loadTime = 0.0f; // Reading & unpacking
+				ms readTime = 0.0f;
 				glm::vec3 cameraPos;
 				std::vector<std::pair<ChunkKey, TransitionMask>> keys;
 				std::vector<ChunkMeshData> meshes;
@@ -587,7 +629,7 @@ namespace flex
 			ChunkJob MakeJob(const ChunkKey& key, TransitionMask mask, real priority);
 			void GetChunkBounds(const ChunkKey& key, glm::vec3& outMin, glm::vec3& outMax) const;
 			void ApplySnapshot(Snapshot&& snapshot, std::vector<ChunkCommand>& outCommands);
-			static Snapshot LoadSnapshot(const std::string& path, u64 contentHash, u64 editsHash);
+			static Snapshot LoadSnapshot(const std::string& path, u64 contentHash, u64 editsHash, std::shared_ptr<std::atomic<bool>> cancelled);
 
 			WorldParams m_Params;
 			std::shared_ptr<const TerrainDensity> m_Density;
@@ -612,6 +654,12 @@ namespace flex
 
 			std::string m_SnapshotPath;
 			std::future<Snapshot> m_SnapshotFuture;
+			// Loads which were superseded (e.g. the menu's terrain when loading straight into a world), kept until they
+			// finish since destroying an async future blocks
+			std::vector<std::future<Snapshot>> m_DiscardedSnapshotFutures;
+			// Whether the loading snapshot replaces chunks already displayed (from a previous world)
+			bool m_bSnapshotReplacesDisplayed = false;
+			std::shared_ptr<std::atomic<bool>> m_SnapshotCancelled;
 			std::future<void> m_SnapshotWriteFuture;
 			u32 m_SnapshotChunkCount = 0;
 
@@ -630,6 +678,8 @@ namespace flex
 			real m_BatchLatency = 0.3f;
 			bool m_bForceRefresh = true;
 			bool m_bRetireAllOnNextBatch = false;
+			// Marks every displayed chunk as stale (see Displayed::bStale) & retires them all in the next batch
+			void RetireAllDisplayed();
 			u64 m_NextJobID = 1;
 			u64 m_NextHandle = 1;
 

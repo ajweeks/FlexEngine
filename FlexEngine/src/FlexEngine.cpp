@@ -46,6 +46,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/SceneManager.hpp"
 #include "SceneTestRunner.hpp"
 #include "Game.hpp"
+#include "GameSounds.hpp"
 #include "Systems/CartManager.hpp"
 #include "Systems/TrackManager.hpp"
 #include "Time.hpp"
@@ -57,6 +58,7 @@ IGNORE_WARNINGS_POP
 #if COMPILE_VULKAN
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
 #include "Scene/Objects/TerrainGenerator.hpp"
+#include "Scene/Objects/Vehicle.hpp"
 #endif
 
 // TODO: Find out equivalent for nix systems
@@ -71,6 +73,86 @@ extern "C"
 
 namespace flex
 {
+	namespace StartupTimer
+	{
+		namespace
+		{
+			// Initialized during static initialization, which is as close to process start as we can easily get
+			const std::chrono::steady_clock::time_point s_ProcessStart = std::chrono::steady_clock::now();
+
+			struct Phase
+			{
+				std::string name;
+				ms start;
+				ms end;
+				i32 depth;
+			};
+
+			std::mutex s_Mutex;
+			std::vector<Phase> s_Phases;
+			std::vector<std::string> s_Milestones;
+			i32 s_Depth = 0;
+		}
+
+		ms Elapsed()
+		{
+			return std::chrono::duration<ms, std::milli>(std::chrono::steady_clock::now() - s_ProcessStart).count();
+		}
+
+		void BeginPhase(const char* name)
+		{
+			FLEX_MUTEX_LOCK(s_Mutex);
+			s_Phases.push_back({ name, Elapsed(), -1.0f, s_Depth++ });
+		}
+
+		void EndPhase(const char* name)
+		{
+			FLEX_MUTEX_LOCK(s_Mutex);
+			for (auto iter = s_Phases.rbegin(); iter != s_Phases.rend(); ++iter)
+			{
+				if (iter->end < 0.0f && iter->name == name)
+				{
+					iter->end = Elapsed();
+					break;
+				}
+			}
+			s_Depth = glm::max(s_Depth - 1, 0);
+		}
+
+		void AddPhase(const char* name, ms start, ms end)
+		{
+			FLEX_MUTEX_LOCK(s_Mutex);
+			s_Phases.push_back({ name, start, end, 1 });
+		}
+
+		void Milestone(const char* name, const char* extraInfo /* = nullptr */)
+		{
+			{
+				FLEX_MUTEX_LOCK(s_Mutex);
+				if (Contains(s_Milestones, std::string(name)))
+				{
+					return;
+				}
+				s_Milestones.emplace_back(name);
+			}
+			Print("[Startup] %s at %.0f ms%s%s\n", name, Elapsed(), extraInfo != nullptr ? " " : "", extraInfo != nullptr ? extraInfo : "");
+		}
+
+		void PrintPhases()
+		{
+			FLEX_MUTEX_LOCK(s_Mutex);
+			// (Phases from other threads are added when they end)
+			std::stable_sort(s_Phases.begin(), s_Phases.end(), [](const Phase& a, const Phase& b) { return a.start < b.start; });
+			Print("[Startup] Phase timings (start offset, duration):\n");
+			for (const Phase& phase : s_Phases)
+			{
+				const std::string indent(phase.depth * 2, ' ');
+				Print("[Startup]   %7.1f ms %7.1f ms  %s%s\n", phase.start, phase.end >= 0.0f ? phase.end - phase.start : -1.0f, indent.c_str(), phase.name.c_str());
+			}
+			s_Phases.clear();
+		}
+	} // namespace StartupTimer
+
 	bool FlexEngine::s_bHasGLDebugExtension = false;
 
 	const u32 FlexEngine::EngineVersionMajor = 0;
@@ -207,35 +289,68 @@ namespace flex
 
 		m_FrameTimes = RollingAverage<real>(256);
 
-		Platform::Init();
+		STARTUP_PHASE("FlexEngine::Initialize");
+		// FLEX_STARTUP_PROFILE=1 prints every profiled scope's total time from startup to the first frame
+		m_bStartupProfile = getenv("FLEX_STARTUP_PROFILE") != nullptr && m_SceneTestRunner == nullptr && !Profiler::IsEnabled();
+		if (m_bStartupProfile)
+		{
+			Profiler::SetEnabled(true);
+		}
 
-		g_ConfigFileManager = new ConfigFileManager();
+		{
+			STARTUP_PHASE("Platform, config & job system");
+			Platform::Init();
 
-		JobSystem::Initialize();
+			g_ConfigFileManager = new ConfigFileManager();
+
+			JobSystem::Initialize();
+		}
 
 		g_Systems[(i32)SystemType::PROPERTY_COLLECTION_MANAGER] = new PropertyCollectionManager();
 		g_Systems[(i32)SystemType::PROPERTY_COLLECTION_MANAGER]->Initialize();
 
-		CreateWindow();
-
 #if COMPILE_VULKAN
+		vk::VulkanRenderer* renderer = nullptr;
 		{
 			PROFILE_AUTO("Create Renderer");
-			g_Renderer = new vk::VulkanRenderer();
+			renderer = new vk::VulkanRenderer();
+			// Vulkan is loaded & its instance is created while GLFW initializes & creates the window (both are slow)
+			renderer->BeginCreateInstance(WindowTitle());
 		}
 #endif
 
-		g_ResourceManager = new ResourceManager();
-		g_ResourceManager->Initialize();
+		{
+			STARTUP_PHASE("Create window");
+			CreateWindow();
+		}
+
+#if COMPILE_VULKAN
+		// (Only set once the window exists, as before, since window callbacks notify the renderer when it's set)
+		g_Renderer = renderer;
+#endif
+
+		{
+			STARTUP_PHASE("ResourceManager::Initialize");
+			g_ResourceManager = new ResourceManager();
+			g_ResourceManager->Initialize();
+		}
 
 		g_UIManager = new UIManager();
 		g_Editor = new Editor();
 		g_InputManager = new InputManager();
 		g_CameraManager = new CameraManager();
 
-		InitializeWindowAndRenderer();
+		{
+			STARTUP_PHASE("Renderer::Initialize");
+			InitializeWindowAndRenderer();
+		}
 
-		AudioManager::Initialize();
+		{
+			STARTUP_PHASE("AudioManager::Initialize");
+			AudioManager::Initialize();
+			// Synthesizes the game's sounds on worker threads
+			GameSounds::Initialize();
+		}
 
 		Print("Bullet v%d\n", btGetVersion());
 
@@ -248,6 +363,7 @@ namespace flex
 		}
 #endif
 
+		StartupTimer::BeginPhase("Physics, editor & systems");
 		g_PhysicsManager = new PhysicsManager();
 		g_PhysicsManager->Initialize();
 
@@ -269,20 +385,29 @@ namespace flex
 		g_Systems[(i32)SystemType::PARTICLE_MANAGER] = new ParticleManager();
 		g_Systems[(i32)SystemType::PARTICLE_MANAGER]->Initialize();
 
-		g_ResourceManager->DiscoverMeshes();
-		g_ResourceManager->ParseMaterialsFiles();
-		g_ResourceManager->ParseFontFile();
+		StartupTimer::EndPhase("Physics, editor & systems");
+
+		{
+			STARTUP_PHASE("Discover meshes, parse materials & fonts");
+			g_ResourceManager->DiscoverMeshes();
+			g_ResourceManager->ParseMaterialsFiles();
+			g_ResourceManager->ParseFontFile();
+		}
 
 		g_SceneManager = new SceneManager();
 
-		if (!LoadCommonSettingsFromDisk())
 		{
-			// Common file doesn't exist or is corrupt, load first present scene
-			g_SceneManager->SetNextSceneActive();
-			// Ensure config file will be written to disk this frame
-			m_CommonSettingsSaveTimer.Complete();
+			STARTUP_PHASE("Load scene");
+			if (!LoadCommonSettingsFromDisk())
+			{
+				// Common file doesn't exist or is corrupt, load first present scene
+				g_SceneManager->SetNextSceneActive();
+				// Ensure config file will be written to disk this frame
+				m_CommonSettingsSaveTimer.Complete();
+			}
 		}
 
+		StartupTimer::BeginPhase("UI & ImGui");
 		g_UIManager->Initialize();
 
 		{
@@ -290,12 +415,19 @@ namespace flex
 			ImGui::CreateContext();
 		}
 		SetupImGuiStyles();
+		StartupTimer::EndPhase("UI & ImGui");
 
-		g_ResourceManager->PostInitialize();
+		{
+			STARTUP_PHASE("ResourceManager::PostInitialize");
+			g_ResourceManager->PostInitialize();
+		}
 
 		g_Editor->PostInitialize();
 
-		g_Renderer->PostInitialize();
+		{
+			STARTUP_PHASE("Renderer::PostInitialize");
+			g_Renderer->PostInitialize();
+		}
 
 		g_InputManager->Initialize();
 
@@ -310,6 +442,7 @@ namespace flex
 		if (s_AudioSourceIDs.empty())
 		{
 			PROFILE_AUTO("Initialize audio sources");
+			STARTUP_PHASE("Initialize audio sources");
 
 			s_AudioSourceIDs.push_back(g_ResourceManager->GetOrLoadAudioSourceID(SID("dud_dud_dud_dud.wav"), true));
 			s_AudioSourceIDs.push_back(g_ResourceManager->GetOrLoadAudioSourceID(SID("drmapan.wav"), true));
@@ -548,6 +681,7 @@ namespace flex
 		}
 		else if (m_bGameMode)
 		{
+			STARTUP_PHASE("Game::Initialize");
 			g_Game = new Game();
 			g_Game->Initialize();
 		}
@@ -593,6 +727,7 @@ namespace flex
 		SaveCommonSettingsToDisk(false);
 		g_Window->SaveToConfig();
 
+		GameSounds::Destroy();
 		JobSystem::Destroy();
 
 		g_Editor->Destroy();
@@ -648,14 +783,18 @@ namespace flex
 		Print("\n");
 	}
 
+	std::string FlexEngine::WindowTitle()
+	{
+		return "Flex Engine v" + EngineVersionString();
+	}
+
 	void FlexEngine::CreateWindow()
 	{
 		PROFILE_AUTO("CreateWindow");
 
 		CHECK_EQ(g_Window, nullptr);
-		CHECK_EQ(g_Renderer, nullptr);
 
-		const std::string titleString = "Flex Engine v" + EngineVersionString();
+		const std::string titleString = WindowTitle();
 
 		if (g_Window == nullptr)
 		{
@@ -882,6 +1021,8 @@ namespace flex
 					}
 				}
 
+				GameSounds::Update();
+
 				currentScene->Render();
 
 				g_Window->Update();
@@ -944,6 +1085,21 @@ namespace flex
 			}
 
 			g_Renderer->EndOfFrame();
+
+			if (!m_bFirstFrameDrawn)
+			{
+				m_bFirstFrameDrawn = true;
+				StartupTimer::Milestone("First frame drawn");
+				StartupTimer::PrintPhases();
+				if (m_bStartupProfile)
+				{
+					Profiler::EndFrame();
+					Profiler::PrintReport(true);
+					Profiler::Reset();
+					// Continues while a world loads (printed by the game once it's playable)
+					Profiler::SetEnabled(g_Game != nullptr && g_Game->IsLoadingWorld());
+				}
+			}
 		}
 	}
 
@@ -1013,13 +1169,13 @@ namespace flex
 		colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
 	}
 
-	void FlexEngine::SpawnVehicleInFrontOfCamera()
+	GameObject* FlexEngine::SpawnVehicleInFrontOfCamera(const char* prefabName /* = "vehicle" */)
 	{
-		const PrefabID vehicleID = g_ResourceManager->GetPrefabID("vehicle");
+		const PrefabID vehicleID = g_ResourceManager->GetPrefabID(prefabName);
 		if (!vehicleID.IsValid())
 		{
-			PrintError("Failed to spawn vehicle, prefab not found\n");
-			return;
+			PrintError("Failed to spawn %s, prefab not found\n", prefabName);
+			return nullptr;
 		}
 
 		BaseCamera* camera = g_CameraManager->CurrentCamera();
@@ -1047,12 +1203,20 @@ namespace flex
 			}
 		}
 
+		// Float on water rather than sinking to its bed
+		real waterHeight;
+		if (RowBoat::SampleWaterHeight(pos, waterHeight) && waterHeight + 0.5f > pos.y)
+		{
+			pos.y = waterHeight + 0.5f;
+		}
+
 		const glm::quat rotation = glm::angleAxis(atan2(forward.x, forward.z), VEC3_UP);
 		GameObject* vehicle = GameObject::Deitemize(vehicleID, pos, rotation, GameObjectStack::UserData{});
 		if (vehicle != nullptr)
 		{
 			g_SceneManager->CurrentScene()->AddRootObject(vehicle);
 		}
+		return vehicle;
 	}
 
 	void FlexEngine::DrawImGuiObjects()
@@ -1194,6 +1358,11 @@ namespace flex
 				if (ImGui::MenuItem("Spawn vehicle"))
 				{
 					SpawnVehicleInFrontOfCamera();
+				}
+
+				if (ImGui::MenuItem("Spawn row boat"))
+				{
+					SpawnVehicleInFrontOfCamera("row boat");
 				}
 
 				if (player == nullptr && ImGui::MenuItem("Spawn player at camera"))

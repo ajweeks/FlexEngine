@@ -1,0 +1,125 @@
+{
+	"version" : 2,
+	"materials" : 
+	[
+		{
+			"name" : "sphere dielectric",
+			"shader" : "pbr",
+			"const albedo" : "0.390,0.350,0.320"
+		},
+		{
+			"name" : "sphere metal",
+			"parent" : "sphere dielectric",
+			"const albedo" : "0.388,0.349,0.322",
+			"const metallic" : 1.000000
+		},
+		{
+			"name" : "sphere 00",
+			"parent" : "sphere dielectric"
+		},
+		{
+			"name" : "sphere 01",
+			"parent" : "sphere dielectric",
+			"const roughness" : 0.090000
+		},
+		{
+			"name" : "sphere 02",
+			"parent" : "sphere dielectric",
+			"const roughness" : 0.200000
+		},
+		{
+			"name" : "sphere 03",
+			"parent" : "sphere dielectric",
+			"const roughness" : 0.300000
+		},
+		{
+			"name" : "sphere 04",
+			"parent" : "sphere dielectric",
+			"const roughness" : 0.400000
+		},
+		{
+			"name" : "sphere 05",
+			"parent" : "sphere dielectric",
+			"const roughness" : 0.500000
+		},
+		{
+			"name" : "sphere 06",
+			"parent" : "sphere dielectric",
+			"const roughness" : 0.600000
+		},
+		{
+			"name" : "sphere 07",
+			"parent" : "sphere dielectric",
+			"const roughness" : 0.700000
+		},
+		{
+			"name" : "sphere 08",
+			"parent" : "sphere dielectric",
+			"const roughness" : 0.800000
+		},
+		{
+			"name" : "sphere 09",
+			"parent" : "sphere dielectric",
+			"const roughness" : 0.900000
+		},
+		{
+			"name" : "sphere 10",
+			"parent" : "sphere dielectric",
+			"const roughness" : 1.000000
+		},
+		{
+			"name" : "sphere 11",
+			"parent" : "sphere metal",
+			"const roughness" : 0.920000
+		},
+		{
+			"name" : "sphere 12",
+			"parent" : "sphere metal",
+			"const roughness" : 0.900000
+		},
+		{
+			"name" : "sphere 13",
+			"parent" : "sphere metal",
+			"const roughness" : 0.800000
+		},
+		{
+			"name" : "sphere 14",
+			"parent" : "sphere metal",
+			"const roughness" : 0.700000
+		},
+		{
+			"name" : "sphere 15",
+			"parent" : "sphere metal",
+			"const roughness" : 0.600000
+		},
+		{
+			"name" : "sphere 16",
+			"parent" : "sphere metal",
+			"const roughness" : 0.500000
+		},
+		{
+			"name" : "sphere 17",
+			"parent" : "sphere metal",
+			"const roughness" : 0.400000
+		},
+		{
+			"name" : "sphere 18",
+			"parent" : "sphere metal",
+			"const roughness" : 0.300000
+		},
+		{
+			"name" : "sphere 19",
+			"parent" : "sphere metal",
+			"const roughness" : 0.200000
+		},
+		{
+			"name" : "sphere 20",
+			"parent" : "sphere metal",
+			"const roughness" : 0.100000
+		},
+		{
+			"name" : "sphere 21",
+			"parent" : "sphere metal"
+		}
+	]
+}

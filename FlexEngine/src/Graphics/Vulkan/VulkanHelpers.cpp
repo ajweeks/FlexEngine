@@ -1531,6 +1531,8 @@ namespace flex
 			EndSingleTimeCommands(device, queue, commandBuffer);
 		}
 
+		VkBool32(*g_PresentationSupportWithoutSurface)(VkPhysicalDevice device, u32 queueFamilyIndex) = nullptr;
+
 		VulkanQueueFamilyIndices FindQueueFamilies(VkSurfaceKHR surface, VkPhysicalDevice device)
 		{
 			PROFILE_AUTO("FindQueueFamilies");
@@ -1552,7 +1554,14 @@ namespace flex
 				}
 
 				VkBool32 presentSupport = false;
-				vkGetPhysicalDeviceSurfaceSupportKHR(device, (u32)i, surface, &presentSupport);
+				if (surface != VK_NULL_HANDLE)
+				{
+					vkGetPhysicalDeviceSurfaceSupportKHR(device, (u32)i, surface, &presentSupport);
+				}
+				else if (g_PresentationSupportWithoutSurface != nullptr)
+				{
+					presentSupport = g_PresentationSupportWithoutSurface(device, (u32)i);
+				}
 
 				if (queueFamily.queueCount > 0 && presentSupport)
 				{

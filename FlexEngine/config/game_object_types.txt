@@ -33,3 +33,5 @@ speaker
 pickaxe
 build piece
 treasure chest
+row boat
+campfire

@@ -31,6 +31,8 @@ namespace flex
 	Game* g_Game = nullptr;
 
 	const char* Game::GAMEPLAY_SCENE_NAME = "scene_world.json";
+	bool Game::s_bAutoPlay = false;
+	std::string Game::s_AutoPlayWorldName;
 
 	namespace
 	{
@@ -88,7 +90,7 @@ namespace flex
 		}
 
 		// Untextured quad drawn after the UI (so it's on top of sprites like the map), centered on a pixel position
-		void EnqueueOverlayQuad(const glm::vec2& centerPx, const glm::vec2& halfSizePx, const glm::vec4& colour, const glm::vec2& screenSize)
+		void EnqueueOverlayQuad(const glm::vec2& centerPx, const glm::vec2& halfSizePx, const glm::vec4& colour, const glm::vec2& screenSize, u32 zOrder = 90)
 		{
 			const real aspectRatio = screenSize.x / screenSize.y;
 			SpriteQuadDrawInfo drawInfo = {};
@@ -96,7 +98,7 @@ namespace flex
 			drawInfo.bScreenSpace = true;
 			drawInfo.bReadDepth = false;
 			drawInfo.bEnableAlbedoSampler = false;
-			drawInfo.zOrder = 90;
+			drawInfo.zOrder = zOrder;
 			drawInfo.colour = colour;
 			drawInfo.pos = glm::vec3((centerPx.x / screenSize.x * 2.0f - 1.0f) * aspectRatio, 1.0f - centerPx.y / screenSize.y * 2.0f, 0.0f);
 			drawInfo.scale = glm::vec3(halfSizePx.x / screenSize.y * 2.0f, halfSizePx.y / screenSize.y * 2.0f, 1.0f);
@@ -150,11 +152,183 @@ namespace flex
 		ApplySettings();
 		RefreshWorlds();
 		SetScreen(Screen::MAIN_MENU);
+		// FLEX_PLAY_DELAY=<seconds> waits on the main menu first (to test loading a world while the menu's terrain is shown)
+		if (s_bAutoPlay && getenv("FLEX_PLAY_DELAY") == nullptr)
+		{
+			AutoPlay();
+		}
 
 		m_bTour = getenv("FLEX_GAME_TOUR") != nullptr;
+		m_bBuildTest = getenv("FLEX_BUILD_TEST") != nullptr;
+		m_bTour = m_bTour || m_bBuildTest;
 		if (const char* overlay = getenv("FLEX_DEBUG_OVERLAY"))
 		{
 			g_Renderer->SetDebugOverlayID(atoi(overlay));
+		}
+	}
+
+	void Game::BuildTourHut(const glm::vec3& base, real yaw)
+	{
+		const real grid = BuildPiece::GRID_SIZE;
+		const glm::quat facing = glm::angleAxis(yaw, VEC3_UP);
+		m_BuildTestBase = base;
+		m_BuildTestYaw = yaw;
+		auto Place = [&](BuildPieceType type, BuildMaterial material, const glm::vec3& offset, real extraYaw, real length)
+		{
+			BaseScene* scene = g_SceneManager->CurrentScene();
+			BuildPiece* piece = new BuildPiece(scene->GetUniqueObjectName(std::string(BuildPieceTypeName(type)) + "_", 3));
+			piece->Setup(type, material, length);
+			piece->GetTransform()->SetWorldPosition(base + facing * offset);
+			piece->GetTransform()->SetWorldRotation(facing * glm::angleAxis(extraYaw, VEC3_UP));
+			scene->AddRootObject(piece);
+		};
+		Place(BuildPieceType::FLOOR, BuildMaterial::STONE, glm::vec3(0.0f), 0.0f, 0.0f);
+		Place(BuildPieceType::WALL, BuildMaterial::WOOD, glm::vec3(0.0f), 0.0f, 0.0f);
+		Place(BuildPieceType::WALL, BuildMaterial::WOOD, glm::vec3(0.0f), PI_DIV_TWO, 0.0f);
+		Place(BuildPieceType::WALL, BuildMaterial::WOOD, glm::vec3(0.0f), -PI_DIV_TWO, 0.0f);
+		Place(BuildPieceType::ROOF, BuildMaterial::WOOD, glm::vec3(0.0f, grid, 0.0f), PI, 0.0f);
+		Place(BuildPieceType::STAIRS, BuildMaterial::STONE, glm::vec3(grid, 0.0f, 0.0f), 0.0f, 0.0f);
+		Place(BuildPieceType::TORCH, BuildMaterial::WOOD, glm::vec3(0.0f, 0.2f, 0.0f), 0.0f, 0.0f);
+		Place(BuildPieceType::TORCH, BuildMaterial::WOOD, glm::vec3(-grid * 0.6f, 0.0f, -grid * 0.6f), 0.0f, 0.0f);
+		Place(BuildPieceType::LADDER, BuildMaterial::WOOD, glm::vec3(-grid * 0.5f - 0.12f, 0.0f, 0.5f), PI_DIV_TWO, grid * 1.5f);
+		Place(BuildPieceType::ROPE, BuildMaterial::WOOD, glm::vec3(1.0f, grid * 2.0f, -grid * 0.6f), 0.0f, grid * 2.0f);
+	}
+
+	void Game::UpdateBuildTest()
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+		if (player == nullptr || terrainGenerator == nullptr)
+		{
+			return;
+		}
+		auto Screenshot = [](const std::string& name)
+		{
+			const std::string directory = RelativePathToAbsolute(SCREENSHOT_DIRECTORY);
+			Platform::CreateDirectoryRecursive(directory);
+			g_Renderer->RequestScreenshot(directory + "build_" + name + ".png");
+		};
+		auto Next = [this]() { ++m_BuildTestStep; m_TourTime = 0.0f; };
+		// Views are from the (free) debug camera, so hills can't get in the way. Build mode aims with the current camera.
+		auto SetCamera = [player](const glm::vec3& position, const glm::vec3& target, bool bPossessPlayer)
+		{
+			g_CameraManager->SetCameraByName("debug", false);
+			BaseCamera* camera = g_CameraManager->CurrentCamera();
+			// Build mode needs a possessed player (test only, the debug camera isn't used in game)
+			if (camera->bPossessPlayer != bPossessPlayer)
+			{
+				camera->bPossessPlayer = bPossessPlayer;
+				player->UpdateIsPossessed();
+			}
+			camera->position = position;
+			camera->forward = glm::normalize(target - position);
+			camera->CalculateYawAndPitchFromForward();
+			camera->CalculateAxisVectorsFromPitchAndYaw();
+			camera->RecalculateViewProjection();
+		};
+
+		const real grid = BuildPiece::GRID_SIZE;
+		const glm::quat facing = glm::angleAxis(m_BuildTestYaw, VEC3_UP);
+		const glm::vec3 hutCenter = m_BuildTestBase + VEC3_UP * grid * 0.6f;
+		if (m_BuildTestStep == 0)
+		{
+			// The flattest spot nearby (above the sea) to build the hut on, so it can be seen from all sides
+			const glm::vec3 start = player->GetTransform()->GetWorldPosition();
+			real bestBumpiness = FLT_MAX;
+			glm::vec3 base = start;
+			for (i32 i = 0; i < 160; ++i)
+			{
+				const real angle = (real)i * 2.39996f;
+				const glm::vec3 candidate = start + glm::vec3(std::cos(angle), 0.0f, std::sin(angle)) * (glm::sqrt((real)i) * 25.0f);
+				real minY = FLT_MAX, maxY = -FLT_MAX, centerY = 0.0f;
+				bool bAllHit = true;
+				for (i32 s = 0; s < 25 && bAllHit; ++s)
+				{
+					const glm::vec3 offset((real)(s % 5 - 2) * grid * 1.5f, 0.0f, (real)(s / 5 - 2) * grid * 1.5f);
+					glm::vec3 hitPos, hitNormal;
+					bAllHit = terrainGenerator->Raycast(candidate + offset + VEC3_UP * 300.0f, -VEC3_UP, 600.0f, hitPos, hitNormal) && hitPos.y > 3.0f;
+					minY = glm::min(minY, hitPos.y);
+					maxY = glm::max(maxY, hitPos.y);
+					centerY = s == 12 ? hitPos.y : centerY;
+				}
+				if (bAllHit && maxY - minY < bestBumpiness)
+				{
+					bestBumpiness = maxY - minY;
+					base = glm::vec3(candidate.x, centerY, candidate.z);
+				}
+			}
+			Print("Build test: hut at %.1f, %.1f, %.1f (ground height range %.2fm)\n", base.x, base.y, base.z, bestBumpiness);
+			m_BuildTestBase = base;
+			player->TeleportOnTerrain(base + glm::vec3(0.0f, 2.0f, -grid * 3.0f));
+			Next();
+			return;
+		}
+		if (m_BuildTestStep == 1)
+		{
+			if (m_TourTime > 4.0f && !player->IsAwaitingTerrainCollision())
+			{
+				glm::vec3 hitPos, hitNormal;
+				glm::vec3 base = m_BuildTestBase;
+				if (terrainGenerator->Raycast(base + VEC3_UP * 30.0f, -VEC3_UP, 60.0f, hitPos, hitNormal))
+				{
+					base = hitPos;
+				}
+				BuildTourHut(base, 0.0f);
+				Next();
+			}
+			return;
+		}
+
+		// Views around the hut (the last from inside), then placement previews in the cell beside it
+		const i32 firstStep = 2;
+		const i32 step = m_BuildTestStep - firstStep;
+		const i32 viewCount = 5;
+		const BuildPieceType previewTypes[] = { BuildPieceType::FLOOR, BuildPieceType::WALL, BuildPieceType::STAIRS, BuildPieceType::ROOF };
+		const i32 previewCount = (i32)ARRAY_LENGTH(previewTypes);
+		if (step < viewCount)
+		{
+			glm::vec3 viewPos;
+			if (step < 4)
+			{
+				viewPos = hutCenter + facing * (glm::angleAxis(PI_DIV_TWO * (real)step + 0.6f, VEC3_UP) * glm::vec3(0.0f, grid * 1.2f, -grid * 3.0f));
+			}
+			else
+			{
+				viewPos = m_BuildTestBase + facing * glm::vec3(grid * 0.3f, grid * 0.45f, -grid * 0.3f);
+			}
+			SetCamera(viewPos, step < 4 ? hutCenter : m_BuildTestBase + facing * glm::vec3(-grid * 0.5f, grid * 0.3f, grid * 0.5f), false);
+			if (m_TourTime > 1.5f)
+			{
+				Screenshot("view_" + IntToString(step));
+				Next();
+			}
+		}
+		else if (step < viewCount + previewCount)
+		{
+			const i32 previewIndex = step - viewCount;
+			// The ground in the cell in front of the hut
+			glm::vec3 target = m_BuildTestBase + facing * glm::vec3(0.0f, 0.0f, -grid);
+			glm::vec3 hitPos, hitNormal;
+			if (terrainGenerator->Raycast(target + VEC3_UP * 30.0f, -VEC3_UP, 60.0f, hitPos, hitNormal))
+			{
+				target = hitPos;
+			}
+			SetCamera(target + facing * glm::vec3(grid * 0.6f, grid * 1.3f, -grid * 1.8f), target + facing * glm::vec3(0.0f, 0.0f, grid * 0.15f), true);
+			player->GetBuildMode().SetActive(true);
+			player->GetBuildMode().SetSelectedType(previewTypes[previewIndex]);
+			if (m_TourTime > 1.5f)
+			{
+				Screenshot(std::string("preview_") + BuildPieceTypeName(previewTypes[previewIndex]));
+				Next();
+			}
+		}
+		else if (m_TourTime > 1.0f)
+		{
+			player->GetBuildMode().SetActive(false);
+			g_CameraManager->CurrentCamera()->bPossessPlayer = false;
+			g_EngineInstance->Stop();
+			m_bBuildTest = false;
+			m_bTour = false;
 		}
 	}
 
@@ -168,6 +342,12 @@ namespace flex
 			g_Renderer->RequestScreenshot(directory + "tour_" + name + ".png");
 		};
 		auto Next = [this]() { ++m_TourStep; m_TourTime = 0.0f; };
+
+		if (m_bBuildTest && m_TourStep >= 8)
+		{
+			UpdateBuildTest();
+			return;
+		}
 
 		switch (m_TourStep)
 		{
@@ -187,28 +367,8 @@ namespace flex
 			{
 				const glm::vec3 look = player->GetLookDirection();
 				const glm::vec3 heading = glm::normalize(glm::vec3(look.x, 0.0f, look.z) + glm::vec3(1e-4f, 0.0f, 0.0f));
-				const glm::vec3 base = player->GetTransform()->GetWorldPosition() - VEC3_UP * (player->GetHeight() * 0.5f) + heading * 9.0f;
-				const real yaw = std::atan2(heading.x, heading.z);
-				const glm::quat facing = glm::angleAxis(yaw, VEC3_UP);
-				auto Place = [&](BuildPieceType type, BuildMaterial material, const glm::vec3& offset, real extraYaw, real length)
-				{
-					BaseScene* scene = g_SceneManager->CurrentScene();
-					BuildPiece* piece = new BuildPiece(scene->GetUniqueObjectName(std::string(BuildPieceTypeName(type)) + "_", 3));
-					piece->Setup(type, material, length);
-					piece->GetTransform()->SetWorldPosition(base + facing * offset);
-					piece->GetTransform()->SetWorldRotation(facing * glm::angleAxis(extraYaw, VEC3_UP));
-					scene->AddRootObject(piece);
-				};
-				Place(BuildPieceType::FLOOR, BuildMaterial::STONE, glm::vec3(0.0f), 0.0f, 0.0f);
-				Place(BuildPieceType::WALL, BuildMaterial::WOOD, glm::vec3(0.0f), 0.0f, 0.0f);
-				Place(BuildPieceType::WALL, BuildMaterial::WOOD, glm::vec3(0.0f), PI_DIV_TWO, 0.0f);
-				Place(BuildPieceType::WALL, BuildMaterial::WOOD, glm::vec3(0.0f), -PI_DIV_TWO, 0.0f);
-				Place(BuildPieceType::ROOF, BuildMaterial::WOOD, glm::vec3(0.0f, 3.0f, 0.0f), PI, 0.0f);
-				Place(BuildPieceType::STAIRS, BuildMaterial::STONE, glm::vec3(3.0f, 0.0f, 0.0f), 0.0f, 0.0f);
-				Place(BuildPieceType::TORCH, BuildMaterial::WOOD, glm::vec3(0.0f, 0.2f, 0.0f), 0.0f, 0.0f);
-				Place(BuildPieceType::TORCH, BuildMaterial::WOOD, glm::vec3(-1.8f, 0.0f, -1.8f), 0.0f, 0.0f);
-				Place(BuildPieceType::LADDER, BuildMaterial::WOOD, glm::vec3(-1.62f, 0.0f, 0.5f), PI_DIV_TWO, 4.5f);
-				Place(BuildPieceType::ROPE, BuildMaterial::WOOD, glm::vec3(1.0f, 6.0f, -2.0f), 0.0f, 6.0f);
+				const glm::vec3 base = player->GetTransform()->GetWorldPosition() - VEC3_UP * (player->GetHeight() * 0.5f) + heading * (BuildPiece::GRID_SIZE * 3.0f);
+				BuildTourHut(base, std::atan2(heading.x, heading.z));
 				Next();
 			}
 		} break;
@@ -260,9 +420,18 @@ namespace flex
 			glm::vec3 center;
 			real extent;
 			TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
-			if ((terrainGenerator != nullptr && terrainGenerator->GetLargeMap(textureID, center, extent) && m_TourTime > 1.0f) || m_TourTime > 20.0f)
+			const bool bMapReady = (terrainGenerator != nullptr && terrainGenerator->GetLargeMap(textureID, center, extent) && m_TourTime > 1.0f) || m_TourTime > 20.0f;
+			if (m_bMapFollowPlayer && bMapReady)
 			{
 				Screenshot("map");
+				// Then pan (as if dragged with the middle mouse button) so the player is off the view's left edge
+				m_bMapFollowPlayer = false;
+				m_MapViewCenter.x += m_MapExtent * 1.3f;
+				m_TourTime = 0.0f;
+			}
+			else if (!m_bMapFollowPlayer && m_TourTime > 1.5f)
+			{
+				Screenshot("map_panned");
 				Next();
 			}
 		} break;
@@ -368,6 +537,9 @@ namespace flex
 		case Screen::MAP:
 			g_EngineInstance->SetSimulationPaused(true);
 			g_Window->SetCursorMode(CursorMode::NORMAL);
+			// The map opens centered on the player
+			m_bMapFollowPlayer = true;
+			m_bMapPanning = false;
 			break;
 		case Screen::SETTINGS:
 			g_Window->SetCursorMode(CursorMode::NORMAL);
@@ -439,9 +611,12 @@ namespace flex
 		glm::vec3 position = target + glm::vec3(std::cos(m_MenuCameraAngle) * radius, 0.0f, std::sin(m_MenuCameraAngle) * radius);
 		position.y = glm::max(terrainGenerator->SampleHeight(glm::vec2(position.x, position.z)), 0.0f) + 160.0f;
 
+		// Fully overrides the (debug) camera's own update: it reacts to mouse drags (e.g. on a slider) by turning &
+		// rolling, & its right & up vectors would keep that roll unless they're recalculated here
 		camera->position = position;
 		camera->forward = glm::normalize(target - position);
 		camera->CalculateYawAndPitchFromForward();
+		camera->CalculateAxisVectorsFromPitchAndYaw();
 		camera->RecalculateViewProjection();
 	}
 
@@ -467,6 +642,23 @@ namespace flex
 			UpdateTour();
 		}
 		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+		if (m_Screen == Screen::MAIN_MENU && !m_bWorldLoaded)
+		{
+			if (s_bAutoPlay && m_ScreenTime > (real)atof(getenv("FLEX_PLAY_DELAY") != nullptr ? getenv("FLEX_PLAY_DELAY") : "0"))
+			{
+				AutoPlay();
+			}
+			StartupTimer::Milestone("Main menu shown");
+			if (terrainGenerator == nullptr || terrainGenerator->IsLoadComplete())
+			{
+				StartupTimer::Milestone("Main menu backdrop terrain loaded");
+				const char* exitAt = getenv("FLEX_STARTUP_EXIT");
+				if (exitAt != nullptr && strcmp(exitAt, "menu") == 0)
+				{
+					g_EngineInstance->Stop();
+				}
+			}
+		}
 		if (terrainGenerator != nullptr)
 		{
 			terrainGenerator->UpdateLargeMap();
@@ -490,6 +682,23 @@ namespace flex
 			{
 				SaveWorld();
 			}
+			// For testing world loading: FLEX_PLAY_SCREENSHOT=<seconds> saves play_<world>.png once the world has been playable
+			// that long, then quits
+			static i32 s_PlayScreenshotState = 0;
+			if (const char* screenshotDelay = getenv("FLEX_PLAY_SCREENSHOT"))
+			{
+				if (s_PlayScreenshotState == 0 && m_ScreenTime > (real)atof(screenshotDelay))
+				{
+					const std::string directory = RelativePathToAbsolute(SCREENSHOT_DIRECTORY);
+					Platform::CreateDirectoryRecursive(directory);
+					g_Renderer->RequestScreenshot(directory + "play_" + SanitizeName(m_CurrentWorld.name) + ".png");
+					s_PlayScreenshotState = 1;
+				}
+				else if (s_PlayScreenshotState > 0 && ++s_PlayScreenshotState > 5)
+				{
+					g_EngineInstance->Stop();
+				}
+			}
 			Player* player = scene->GetPlayer(0);
 			if (g_InputManager->GetKeyPressed(KeyCode::KEY_M) && player != nullptr && !player->IsAnyInventoryShowing())
 			{
@@ -504,9 +713,9 @@ namespace flex
 	void Game::DrawBackground(real opacity)
 	{
 		const real s = m_UI.Scale();
-		// Darkens the edges & bottom, leaving the world visible behind
-		m_UI.FillRectGradient(UIRect(0.0f, 0.0f, m_UI.Width(), m_UI.Height()), glm::vec4(0.02f, 0.03f, 0.05f, 0.25f * opacity), glm::vec4(0.02f, 0.03f, 0.05f, 0.75f * opacity));
-		m_UI.FillRectGradient(UIRect(0.0f, 0.0f, 760.0f * s, m_UI.Height()), glm::vec4(0.0f, 0.0f, 0.0f, 0.35f * opacity), glm::vec4(0.0f, 0.0f, 0.0f, 0.5f * opacity));
+		// Darkens the bottom & fades in from the left behind the content, leaving the world visible on the right
+		m_UI.FillRectGradient(UIRect(0.0f, 0.0f, m_UI.Width(), m_UI.Height()), UITheme::WithAlpha(UITheme::INK, 0.15f * opacity), UITheme::WithAlpha(UITheme::INK, 0.6f * opacity));
+		m_UI.FillRectGradientHorizontal(UIRect(0.0f, 0.0f, 1150.0f * s, m_UI.Height()), UITheme::WithAlpha(UITheme::INK, 0.72f * opacity), UITheme::WithAlpha(UITheme::INK, 0.0f));
 	}
 
 	void Game::DrawTitle(const std::string& title, const std::string& subtitle)
@@ -515,9 +724,10 @@ namespace flex
 		// Slides in when the screen opens
 		const real t = glm::clamp(m_ScreenTime * 3.0f, 0.0f, 1.0f);
 		const real slide = (1.0f - t * t * (3.0f - 2.0f * t)) * 40.0f * s;
-		m_UI.Text(title, 120.0f * s - slide, 220.0f * s, 80.0f * s, glm::vec4(UITheme::TEXT_MAIN.r, UITheme::TEXT_MAIN.g, UITheme::TEXT_MAIN.b, t), TextAlign::LEFT, true);
-		m_UI.FillRect(UIRect(124.0f * s - slide, 290.0f * s, 120.0f * s * t, 5.0f * s), UITheme::ACCENT, 2.5f * s);
-		m_UI.Text(subtitle, 124.0f * s - slide, 330.0f * s, 22.0f * s, glm::vec4(UITheme::TEXT_DIM.r, UITheme::TEXT_DIM.g, UITheme::TEXT_DIM.b, t));
+		const real left = UITheme::SCREEN_MARGIN * s - slide;
+		m_UI.Text(title, left, 220.0f * s, UITheme::TEXT_DISPLAY * s, UITheme::WithAlpha(UITheme::TEXT_PRIMARY, t), TextAlign::LEFT, true);
+		m_UI.FillRect(UIRect(left + 4.0f * s, 290.0f * s, 64.0f * s * t, 4.0f * s), UITheme::EMBER, 2.0f * s);
+		m_UI.Text(subtitle, left + 4.0f * s, 330.0f * s, UITheme::TEXT_BODY_LARGE * s, UITheme::WithAlpha(UITheme::TEXT_SECONDARY, t));
 	}
 
 	void Game::DrawMainMenu()
@@ -526,7 +736,7 @@ namespace flex
 		DrawBackground(1.0f);
 		DrawTitle("FLEX", "An endless world to explore, climb & build in");
 
-		UIRect column(120.0f * s, 420.0f * s, 440.0f * s, 600.0f * s);
+		UIRect column(UITheme::SCREEN_MARGIN * s, 420.0f * s, 440.0f * s, 600.0f * s);
 		const real buttonHeight = UITheme::BUTTON_HEIGHT * s;
 		const real gap = UITheme::SPACING * s;
 
@@ -567,7 +777,7 @@ namespace flex
 			g_EngineInstance->Stop();
 		}
 
-		m_UI.Text("[Esc] Back   [WASD] Move   [Space] Jump/glide   [Shift] Sprint/climb   [B] Build   [M] Map", 120.0f * s, m_UI.Height() - 50.0f * s, 15.0f * s, UITheme::TEXT_DIM);
+		m_UI.Text("[Esc] Back   [WASD] Move   [Space] Jump/glide   [Shift] Sprint/climb   [B] Build   [M] Map", UITheme::SCREEN_MARGIN * s, m_UI.Height() - 50.0f * s, UITheme::TEXT_CAPTION * s, UITheme::TEXT_SECONDARY);
 	}
 
 	void Game::DrawWorlds()
@@ -642,16 +852,16 @@ namespace flex
 		DrawBackground(1.0f);
 		DrawTitle("New world", "Name it & pick a seed (or keep the random one)");
 
-		const UIRect panel(120.0f * s, 400.0f * s, 640.0f * s, 400.0f * s);
+		const UIRect panel(UITheme::SCREEN_MARGIN * s, 400.0f * s, 640.0f * s, 344.0f * s);
 		m_UI.Panel(panel);
 		UIRect content = panel.Inset(28.0f * s);
 		const real fieldHeight = 60.0f * s;
 
-		m_UI.Text("World name", content.x, content.y + 12.0f * s, 16.0f * s, UITheme::TEXT_DIM);
+		m_UI.Text("World name", content.x, content.y + 12.0f * s, UITheme::TEXT_SMALL * s, UITheme::TEXT_SECONDARY);
 		content.CutTop(30.0f * s);
 		m_UI.TextField("name", content.CutTop(fieldHeight, 20.0f * s), &m_NewWorldName, 32, "My world");
 
-		m_UI.Text("Seed", content.x, content.y + 12.0f * s, 16.0f * s, UITheme::TEXT_DIM);
+		m_UI.Text("Seed", content.x, content.y + 12.0f * s, UITheme::TEXT_SMALL * s, UITheme::TEXT_SECONDARY);
 		content.CutTop(30.0f * s);
 		UIRect seedRow = content.CutTop(fieldHeight, 28.0f * s);
 		m_UI.TextField("seed", UIRect(seedRow.x, seedRow.y, seedRow.w - 160.0f * s, seedRow.h), &m_NewWorldSeed, 10, "Random");
@@ -696,7 +906,7 @@ namespace flex
 		const real s = m_UI.Scale();
 		if (m_ScreenBeforeSettings == Screen::PAUSED)
 		{
-			m_UI.FillRect(UIRect(0.0f, 0.0f, m_UI.Width(), m_UI.Height()), glm::vec4(0.0f, 0.0f, 0.0f, 0.55f));
+			m_UI.FillRect(UIRect(0.0f, 0.0f, m_UI.Width(), m_UI.Height()), UITheme::WithAlpha(UITheme::INK, 0.6f));
 		}
 		else
 		{
@@ -707,8 +917,8 @@ namespace flex
 		const UIRect panel(120.0f * s, 400.0f * s, 700.0f * s, 560.0f * s);
 		m_UI.Panel(panel);
 		UIRect content = panel.Inset(24.0f * s);
-		const real rowHeight = 62.0f * s;
-		const real gap = 10.0f * s;
+		const real rowHeight = UITheme::ROW_HEIGHT * s;
+		const real gap = UITheme::SPACE_S * s;
 
 		bool bChanged = false;
 		bChanged |= m_UI.Slider("fov", content.CutTop(rowHeight, gap), "Field of view", &m_Settings.fov, 50.0f, 110.0f, "%.0f deg");
@@ -719,6 +929,11 @@ namespace flex
 		{
 			m_Settings.masterVolume = volume / 100.0f;
 			bChanged = true;
+		}
+		if (m_UI.WasReleased("volume"))
+		{
+			// Lets the new volume be heard (the master gain was applied while dragging)
+			m_UI.PlayConfirm();
 		}
 		real quality = (real)m_Settings.terrainQuality;
 		static const char* qualityNames[] = { "Low", "Medium", "High", "Ultra" };
@@ -757,16 +972,61 @@ namespace flex
 		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
 		const bool bReady = player != nullptr && !player->IsAwaitingTerrainCollision() &&
 			(terrainGenerator == nullptr || terrainGenerator->IsLoadComplete());
-		if ((bReady && m_LoadingTime > 1.0f) || m_LoadingTime > 45.0f)
+		if (player != nullptr)
 		{
+			// Mouse movement (& the jump when the cursor is captured) mustn't turn the restored view
+			player->GetTransform()->SetWorldRotation(m_LoadRotation);
+			player->SetPitch(m_LoadPitch);
+			if (player->GetController() != nullptr)
+			{
+				player->GetController()->ResetLookInput();
+			}
+		}
+		if (terrainGenerator != nullptr && terrainGenerator->IsLoadComplete())
+		{
+			StartupTimer::Milestone("World terrain loaded");
+		}
+		if (player != nullptr && !player->IsAwaitingTerrainCollision())
+		{
+			StartupTimer::Milestone("Player placed on terrain");
+		}
+		// (Shown briefly at least, so it doesn't just flash)
+		if ((bReady && m_LoadingTime > 0.3f) || m_LoadingTime > 45.0f)
+		{
+			// (Only the first world loaded is a startup milestone)
+			const std::string loadInfo = "(world load took " + FloatToString(StartupTimer::Elapsed() - m_WorldLoadStartMs, 0) + " ms" + (bReady ? "" : ", timed out") + ")";
+			StartupTimer::Milestone("In world (playable)", loadInfo.c_str());
+			Print("World \"%s\" loaded in %.0f ms%s\n", m_CurrentWorld.name.c_str(), StartupTimer::Elapsed() - m_WorldLoadStartMs, bReady ? "" : " (timed out)");
+			if (player != nullptr)
+			{
+				const glm::vec3 playerPos = player->GetTransform()->GetWorldPosition();
+				const glm::vec3 forward = player->GetTransform()->GetForward();
+				Print("Player at (%.2f, %.2f, %.2f), heading %.1f deg, pitch %.1f deg\n", playerPos.x, playerPos.y, playerPos.z,
+					glm::degrees(std::atan2(forward.x, forward.z)), glm::degrees(player->GetPitch()));
+			}
+			if (getenv("FLEX_STARTUP_PROFILE") != nullptr && Profiler::IsEnabled())
+			{
+				Print("Main thread while loading the world:");
+				Profiler::PrintReport(true);
+				Profiler::SetEnabled(false);
+				Profiler::Reset();
+			}
+			// For measuring startup times: FLEX_STARTUP_EXIT=world quits as soon as the world is playable
+			if (const char* exitAt = getenv("FLEX_STARTUP_EXIT"))
+			{
+				if (strcmp(exitAt, "world") == 0)
+				{
+					g_EngineInstance->Stop();
+				}
+			}
 			SetScreen(Screen::PLAYING);
 			return;
 		}
 
-		m_UI.FillRect(UIRect(0.0f, 0.0f, m_UI.Width(), m_UI.Height()), glm::vec4(0.03f, 0.035f, 0.05f, 1.0f));
+		m_UI.FillRectGradient(UIRect(0.0f, 0.0f, m_UI.Width(), m_UI.Height()), UITheme::WithAlpha(UITheme::SURFACE, 1.0f / UITheme::SURFACE.a), UITheme::INK);
 		const glm::vec2 center(m_UI.Width() * 0.5f, m_UI.Height() * 0.5f);
-		m_UI.Text(m_CurrentWorld.name, center.x, center.y - 60.0f * s, 44.0f * s, UITheme::TEXT_MAIN, TextAlign::CENTER, true);
-		m_UI.Text("Generating terrain...", center.x, center.y + 10.0f * s, 18.0f * s, UITheme::TEXT_DIM, TextAlign::CENTER);
+		m_UI.Text(m_CurrentWorld.name, center.x, center.y - 60.0f * s, UITheme::TEXT_H1 * s, UITheme::TEXT_PRIMARY, TextAlign::CENTER, true);
+		m_UI.Text("Generating terrain...", center.x, center.y + 10.0f * s, UITheme::TEXT_BODY * s, UITheme::TEXT_SECONDARY, TextAlign::CENTER);
 
 		// Spinner: dots around a circle, the leading ones brightest
 		const u32 dotCount = 10;
@@ -784,7 +1044,7 @@ namespace flex
 	void Game::DrawPauseMenu()
 	{
 		const real s = m_UI.Scale();
-		m_UI.FillRect(UIRect(0.0f, 0.0f, m_UI.Width(), m_UI.Height()), glm::vec4(0.0f, 0.0f, 0.0f, 0.5f));
+		m_UI.FillRect(UIRect(0.0f, 0.0f, m_UI.Width(), m_UI.Height()), UITheme::WithAlpha(UITheme::INK, 0.55f));
 
 		const real panelWidth = 460.0f * s;
 		const real buttonHeight = UITheme::BUTTON_HEIGHT * s;
@@ -794,8 +1054,8 @@ namespace flex
 		const UIRect panel(m_UI.Width() * 0.5f - panelWidth * 0.5f, m_UI.Height() * 0.5f - panelHeight * 0.5f, panelWidth, panelHeight);
 		m_UI.Panel(panel);
 		UIRect content = panel.Inset(28.0f * s);
-		m_UI.Text("Paused", content.x + content.w * 0.5f, content.y + 34.0f * s, 44.0f * s, UITheme::TEXT_MAIN, TextAlign::CENTER, true);
-		m_UI.Text(m_CurrentWorld.name + " - " + FormatPlayTime(m_CurrentWorld.playTime) + " played", content.x + content.w * 0.5f, content.y + 84.0f * s, 16.0f * s, UITheme::TEXT_DIM, TextAlign::CENTER);
+		m_UI.Text("Paused", content.x + content.w * 0.5f, content.y + 34.0f * s, UITheme::TEXT_H1 * s, UITheme::TEXT_PRIMARY, TextAlign::CENTER, true);
+		m_UI.Text(m_CurrentWorld.name + "   |   " + FormatPlayTime(m_CurrentWorld.playTime) + " played", content.x + content.w * 0.5f, content.y + 84.0f * s, UITheme::TEXT_SMALL * s, UITheme::TEXT_SECONDARY, TextAlign::CENTER);
 		content.CutTop(116.0f * s);
 
 		if (m_UI.Button("resume", content.CutTop(buttonHeight, gap), "Resume", true))
@@ -839,72 +1099,141 @@ namespace flex
 			return;
 		}
 
-		m_UI.FillRect(UIRect(0.0f, 0.0f, m_UI.Width(), m_UI.Height()), glm::vec4(0.02f, 0.025f, 0.035f, 0.82f));
-
 		const glm::vec3 playerPos = player->GetTransform()->GetWorldPosition();
+		const glm::vec2 screenSize(m_UI.Width(), m_UI.Height());
+		const real mapSize = glm::min(m_UI.Width(), m_UI.Height()) * 0.78f;
+		const UIRect mapRect(m_UI.Width() * 0.5f - mapSize * 0.5f, m_UI.Height() * 0.5f - mapSize * 0.5f + 10.0f * s, mapSize, mapSize);
+		const glm::vec2 mouse = m_UI.MousePos();
 
-		// Zoom with the scroll wheel
+		// Zoom with the scroll wheel (about the map's center)
 		if (m_UI.ScrollDelta() != 0.0f)
 		{
 			m_MapExtent = glm::clamp(m_MapExtent * (m_UI.ScrollDelta() > 0.0f ? 0.8f : 1.25f), 300.0f, 24000.0f);
 		}
 
-		// Regenerate when zoomed or moved (generation happens in the background)
-		const bool bStale = m_MapRequestExtent != m_MapExtent || glm::distance(glm::vec2(m_MapRequestCenter.x, m_MapRequestCenter.z), glm::vec2(playerPos.x, playerPos.z)) > m_MapExtent * 0.1f;
-		if (bStale && !terrainGenerator->IsGeneratingLargeMap())
+		// Pan by dragging with the middle mouse button, C re-centers on the player
+		if (g_InputManager->IsMouseButtonPressed(MouseButton::MIDDLE) && mapRect.Contains(mouse))
 		{
-			m_MapRequestCenter = playerPos;
-			m_MapRequestExtent = m_MapExtent;
-			terrainGenerator->RequestLargeMap(playerPos, m_MapExtent, 320);
+			m_bMapPanning = true;
+			m_MapPanStartMouse = mouse;
+			m_MapPanStartCenter = m_MapViewCenter;
+		}
+		if (m_bMapPanning)
+		{
+			if (!g_InputManager->IsMouseButtonDown(MouseButton::MIDDLE))
+			{
+				m_bMapPanning = false;
+			}
+			else
+			{
+				const glm::vec2 delta = mouse - m_MapPanStartMouse;
+				const real metersPerPixel = 2.0f * m_MapExtent / mapSize;
+				// Screen +y is south (-z)
+				m_MapViewCenter = m_MapPanStartCenter + glm::vec2(-delta.x, delta.y) * metersPerPixel;
+				if (glm::length(delta) > 2.0f * s)
+				{
+					m_bMapFollowPlayer = false;
+				}
+			}
+		}
+		if (g_InputManager->GetKeyPressed(KeyCode::KEY_C))
+		{
+			m_bMapFollowPlayer = true;
+			m_bMapPanning = false;
+		}
+		if (m_bMapFollowPlayer && !m_bMapPanning)
+		{
+			m_MapViewCenter = glm::vec2(playerPos.x, playerPos.z);
+		}
+		const glm::vec2 viewCenter = m_MapViewCenter;
+		const real viewExtent = m_MapExtent;
+
+		// Regenerate (in the background, ~40ms) when the view changes. Until then the last map is shown moved & scaled
+		// to where it belongs, so panning & zooming respond immediately.
+		const bool bViewChanged = m_MapRequestExtent != viewExtent ||
+			glm::distance(glm::vec2(m_MapRequestCenter.x, m_MapRequestCenter.z), viewCenter) > viewExtent * 0.005f;
+		if (bViewChanged && !terrainGenerator->IsGeneratingLargeMap())
+		{
+			m_MapRequestCenter = glm::vec3(viewCenter.x, playerPos.y, viewCenter.y);
+			m_MapRequestExtent = viewExtent;
+			terrainGenerator->RequestLargeMap(m_MapRequestCenter, viewExtent, 384);
 		}
 
-		const real mapSize = glm::min(m_UI.Width(), m_UI.Height()) * 0.8f;
-		const UIRect mapRect(m_UI.Width() * 0.5f - mapSize * 0.5f, m_UI.Height() * 0.5f - mapSize * 0.5f + 20.0f * s, mapSize, mapSize);
-		m_UI.Shadow(mapRect, 30.0f * s, 6.0f * s, 0.6f);
-		m_UI.FillRect(mapRect.Inset(-6.0f * s), UITheme::PANEL_TOP, 8.0f * s);
+		// World (xz) <-> screen pixels for the current view. North (+z) is up.
+		auto WorldToMap = [&](const glm::vec2& p)
+		{
+			return glm::vec2(mapRect.x + (p.x - (viewCenter.x - viewExtent)) / (2.0f * viewExtent) * mapRect.w,
+				mapRect.y + ((viewCenter.y + viewExtent) - p.y) / (2.0f * viewExtent) * mapRect.h);
+		};
+		auto MapToWorld = [&](const glm::vec2& px)
+		{
+			return glm::vec2(viewCenter.x - viewExtent + (px.x - mapRect.x) / mapRect.w * 2.0f * viewExtent,
+				viewCenter.y + viewExtent - (px.y - mapRect.y) / mapRect.h * 2.0f * viewExtent);
+		};
 
-		m_UI.Text("Map", mapRect.x, mapRect.y - 40.0f * s, 34.0f * s, UITheme::TEXT_MAIN, TextAlign::LEFT, true);
-		m_UI.Text("[Scroll] Zoom   [Click] Teleport   [Esc / M] Close", mapRect.x + mapRect.w, mapRect.y - 40.0f * s, 16.0f * s, UITheme::TEXT_DIM, TextAlign::RIGHT);
-
+		// The map texture is drawn before the UI, & the backdrop (drawn around it with a hole for the map) hides any
+		// part of it outside the view
+		const real aspectRatio = screenSize.x / screenSize.y;
+		auto PxToSprite = [&](const glm::vec2& px) { return glm::vec3((px.x / screenSize.x * 2.0f - 1.0f) * aspectRatio, 1.0f - px.y / screenSize.y * 2.0f, 0.0f); };
+		{
+			SpriteQuadDrawInfo base = {};
+			base.anchor = AnchorPoint::CENTER;
+			base.bScreenSpace = true;
+			base.bReadDepth = false;
+			base.bEnableAlbedoSampler = false;
+			base.zOrder = 10;
+			base.colour = UITheme::Hex(0x23272E);
+			base.pos = PxToSprite(mapRect.Center());
+			base.scale = glm::vec3(mapSize / screenSize.y, mapSize / screenSize.y, 1.0f);
+			g_Renderer->EnqueueSprite(base);
+		}
 		TextureID mapTextureID;
 		glm::vec3 mapCenter;
 		real mapExtent;
-		if (!terrainGenerator->GetLargeMap(mapTextureID, mapCenter, mapExtent))
-		{
-			m_UI.Text("Mapping the area...", mapRect.x + mapRect.w * 0.5f, mapRect.y + mapRect.h * 0.5f, 22.0f * s, UITheme::TEXT_DIM, TextAlign::CENTER);
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_M))
-			{
-				SetScreen(Screen::PLAYING);
-			}
-			return;
-		}
-
-		const glm::vec2 screenSize(m_UI.Width(), m_UI.Height());
-		const real aspectRatio = screenSize.x / screenSize.y;
+		const bool bHaveMap = terrainGenerator->GetLargeMap(mapTextureID, mapCenter, mapExtent);
+		if (bHaveMap)
 		{
 			SpriteQuadDrawInfo mapSprite = {};
 			mapSprite.textureID = mapTextureID;
 			mapSprite.anchor = AnchorPoint::CENTER;
 			mapSprite.bScreenSpace = true;
 			mapSprite.bReadDepth = false;
-			mapSprite.zOrder = 80;
-			const glm::vec2 centerPx = mapRect.Center();
-			mapSprite.pos = glm::vec3((centerPx.x / screenSize.x * 2.0f - 1.0f) * aspectRatio, 1.0f - centerPx.y / screenSize.y * 2.0f, 0.0f);
-			mapSprite.scale = glm::vec3(mapSize / screenSize.y, mapSize / screenSize.y, 1.0f);
+			mapSprite.zOrder = 11;
+			mapSprite.pos = PxToSprite(WorldToMap(glm::vec2(mapCenter.x, mapCenter.z)));
+			const real halfSizePx = mapSize * 0.5f * mapExtent / viewExtent;
+			mapSprite.scale = glm::vec3(halfSizePx * 2.0f / screenSize.y, halfSizePx * 2.0f / screenSize.y, 1.0f);
 			g_Renderer->EnqueueSprite(mapSprite);
 		}
 
-		// World (xz) <-> map pixels. North (+z) is up.
-		auto WorldToMap = [&](const glm::vec3& p)
+		// Backdrop (opaque, the overlapping pieces leave no seams) & the map's frame
+		const real border = 6.0f * s;
+		const UIRect frame = mapRect.Inset(-border);
+		const glm::vec4 backdrop = UITheme::INK;
+		m_UI.FillRect(UIRect(0.0f, 0.0f, m_UI.Width(), frame.y + 1.0f), backdrop);
+		m_UI.FillRect(UIRect(0.0f, frame.y + frame.h - 1.0f, m_UI.Width(), m_UI.Height() - (frame.y + frame.h) + 1.0f), backdrop);
+		m_UI.FillRect(UIRect(0.0f, frame.y - 1.0f, frame.x + 1.0f, frame.h + 2.0f), backdrop);
+		m_UI.FillRect(UIRect(frame.x + frame.w - 1.0f, frame.y - 1.0f, m_UI.Width() - (frame.x + frame.w) + 1.0f, frame.h + 2.0f), backdrop);
+		const glm::vec4 frameColour = UITheme::WithAlpha(UITheme::SURFACE_TOP, 1.0f / UITheme::SURFACE_TOP.a);
+		m_UI.FillRect(UIRect(frame.x, frame.y, frame.w, border + 1.0f), frameColour, UITheme::RADIUS_S * s);
+		m_UI.FillRect(UIRect(frame.x, mapRect.y + mapRect.h - 1.0f, frame.w, border + 1.0f), frameColour, UITheme::RADIUS_S * s);
+		m_UI.FillRect(UIRect(frame.x, frame.y, border + 1.0f, frame.h), frameColour, UITheme::RADIUS_S * s);
+		m_UI.FillRect(UIRect(mapRect.x + mapRect.w - 1.0f, frame.y, border + 1.0f, frame.h), frameColour, UITheme::RADIUS_S * s);
+
+		m_UI.Text("Map", frame.x, frame.y - 34.0f * s, UITheme::TEXT_H2 * s, UITheme::TEXT_PRIMARY, TextAlign::LEFT, true);
+		m_UI.Text("[Scroll] Zoom   [Middle drag] Pan   [C] Re-center   [Click] Teleport   [Esc / M] Close", frame.x + frame.w, frame.y - 34.0f * s,
+			UITheme::TEXT_CAPTION * s, UITheme::TEXT_SECONDARY, TextAlign::RIGHT);
+
+		// Scale: the distance across the view
 		{
-			return glm::vec2(mapRect.x + (p.x - (mapCenter.x - mapExtent)) / (2.0f * mapExtent) * mapRect.w,
-				mapRect.y + ((mapCenter.z + mapExtent) - p.z) / (2.0f * mapExtent) * mapRect.h);
-		};
-		auto MapToWorld = [&](const glm::vec2& px)
+			char scaleText[64];
+			snprintf(scaleText, ARRAY_LENGTH(scaleText), "%.1f km across", 2.0f * viewExtent / 1000.0f);
+			m_UI.Text(scaleText, frame.x, frame.y + frame.h + 30.0f * s, UITheme::TEXT_CAPTION * s, UITheme::TEXT_SECONDARY);
+		}
+
+		if (!bHaveMap)
 		{
-			return glm::vec2(mapCenter.x - mapExtent + (px.x - mapRect.x) / mapRect.w * 2.0f * mapExtent,
-				mapCenter.z + mapExtent - (px.y - mapRect.y) / mapRect.h * 2.0f * mapExtent);
-		};
+			m_UI.Text("Mapping the area...", mapRect.x + mapRect.w * 0.5f, mapRect.y + mapRect.h * 0.5f, UITheme::TEXT_BODY_LARGE * s, UITheme::TEXT_SECONDARY, TextAlign::CENTER);
+		}
 
 		// Treasure chests found so far
 		std::vector<glm::vec3> chestPositions;
@@ -912,39 +1241,45 @@ namespace flex
 		TreasureChest::GetKnownSites(chestPositions, chestOpened);
 		for (u32 i = 0; i < (u32)chestPositions.size(); ++i)
 		{
-			const glm::vec2 px = WorldToMap(chestPositions[i]);
-			if (mapRect.Contains(px))
+			const glm::vec2 px = WorldToMap(glm::vec2(chestPositions[i].x, chestPositions[i].z));
+			if (mapRect.Inset(4.0f * s).Contains(px))
 			{
-				EnqueueOverlayQuad(px, glm::vec2(7.0f * s), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), screenSize);
-				EnqueueOverlayQuad(px, glm::vec2(5.0f * s), chestOpened[i] ? glm::vec4(0.5f, 0.45f, 0.35f, 1.0f) : glm::vec4(1.0f, 0.8f, 0.25f, 1.0f), screenSize);
+				EnqueueOverlayQuad(px, glm::vec2(7.0f * s), UITheme::INK, screenSize);
+				EnqueueOverlayQuad(px, glm::vec2(5.0f * s), chestOpened[i] ? UITheme::Hex(0x8C8273) : UITheme::GOLD, screenSize);
 			}
 		}
 
-		// The player & their heading
+		// The player & their heading (pinned to the edge when outside the view)
 		{
-			const glm::vec2 px = WorldToMap(playerPos);
+			const glm::vec2 actual = WorldToMap(glm::vec2(playerPos.x, playerPos.z));
+			const UIRect inner = mapRect.Inset(12.0f * s);
+			const glm::vec2 px = glm::clamp(actual, glm::vec2(inner.x, inner.y), glm::vec2(inner.x + inner.w, inner.y + inner.h));
+			const bool bInView = px == actual;
 			const glm::vec3 look = player->GetLookDirection();
 			glm::vec2 heading(look.x, -look.z);
 			heading = glm::length(heading) > 1e-4f ? glm::normalize(heading) : glm::vec2(0.0f, -1.0f);
-			EnqueueOverlayQuad(px, glm::vec2(8.0f * s), glm::vec4(0.0f, 0.0f, 0.0f, 1.0f), screenSize);
-			EnqueueOverlayQuad(px, glm::vec2(6.0f * s), glm::vec4(1.0f), screenSize);
-			EnqueueOverlayQuad(px + heading * 16.0f * s, glm::vec2(4.0f * s), UITheme::ACCENT, screenSize);
+			const real size = bInView ? 1.0f : 0.75f;
+			EnqueueOverlayQuad(px, glm::vec2(8.0f * s * size), UITheme::INK, screenSize);
+			EnqueueOverlayQuad(px, glm::vec2(6.0f * s * size), UITheme::TEXT_PRIMARY, screenSize);
+			if (bInView)
+			{
+				EnqueueOverlayQuad(px + heading * 16.0f * s, glm::vec2(4.0f * s), UITheme::EMBER, screenSize);
+			}
 		}
 
 		// Hovered point: what's there, & teleporting to it
-		const glm::vec2 mouse = m_UI.MousePos();
-		if (mapRect.Contains(mouse))
+		if (mapRect.Contains(mouse) && !m_bMapPanning)
 		{
 			const glm::vec2 target = MapToWorld(mouse);
-			EnqueueOverlayQuad(mouse, glm::vec2(10.0f * s, 1.0f * s), glm::vec4(1.0f, 1.0f, 1.0f, 0.8f), screenSize);
-			EnqueueOverlayQuad(mouse, glm::vec2(1.0f * s, 10.0f * s), glm::vec4(1.0f, 1.0f, 1.0f, 0.8f), screenSize);
+			EnqueueOverlayQuad(mouse, glm::vec2(10.0f * s, 1.0f * s), UITheme::WithAlpha(UITheme::TEXT_PRIMARY, 0.8f), screenSize);
+			EnqueueOverlayQuad(mouse, glm::vec2(1.0f * s, 10.0f * s), UITheme::WithAlpha(UITheme::TEXT_PRIMARY, 0.8f), screenSize);
 
 			const terrain::ColumnSample column = terrainGenerator->SampleColumn(target.x, target.y);
 			const std::string description = terrainGenerator->DescribeLocation(glm::vec3(target.x, column.height, target.y));
 			const real distance = glm::distance(glm::vec2(playerPos.x, playerPos.z), target);
 			char info[256];
 			snprintf(info, ARRAY_LENGTH(info), "%s   |   %.0fm high   |   %.1fkm away   |   Click to teleport", description.c_str(), column.height, distance / 1000.0f);
-			m_UI.Text(info, mapRect.x + mapRect.w * 0.5f, mapRect.y + mapRect.h + 30.0f * s, 16.0f * s, UITheme::TEXT_MAIN, TextAlign::CENTER);
+			m_UI.Text(info, frame.x + frame.w, frame.y + frame.h + 30.0f * s, UITheme::TEXT_SMALL * s, UITheme::TEXT_PRIMARY, TextAlign::RIGHT);
 
 			if (m_UI.IsMousePressed())
 			{
@@ -984,6 +1319,49 @@ namespace flex
 		g_EngineInstance->SetRenderImGui(true);
 		g_EngineInstance->SetRenderingEditorObjects(true);
 		SetScreen(Screen::NONE);
+	}
+
+	void Game::RequestAutoPlay(const std::string& worldName)
+	{
+		s_bAutoPlay = true;
+		s_AutoPlayWorldName = worldName;
+	}
+
+	void Game::AutoPlay()
+	{
+		s_bAutoPlay = false;
+
+		// Matches world names or folder names, ignoring case
+		auto Lower = [](std::string str) { return ToLower(str); };
+		const std::string wanted = Lower(s_AutoPlayWorldName);
+		const std::string wantedFolder = Lower(SanitizeName(s_AutoPlayWorldName));
+		for (const WorldInfo& world : m_Worlds)
+		{
+			std::string folderName = world.directory;
+			while (!folderName.empty() && (folderName.back() == '/' || folderName.back() == '\\'))
+			{
+				folderName.pop_back();
+			}
+			folderName = Lower(folderName.substr(folderName.find_last_of("/\\") + 1));
+			if (wanted.empty() || Lower(world.name) == wanted || folderName == wanted || folderName == wantedFolder)
+			{
+				Print("Playing world \"%s\" (%s)\n", world.name.c_str(), world.directory.c_str());
+				PlayWorld(world);
+				return;
+			}
+		}
+
+		if (!wanted.empty())
+		{
+			// Doesn't exist yet: create it
+			Print("No world named \"%s\", creating it\n", s_AutoPlayWorldName.c_str());
+			CreateWorld(s_AutoPlayWorldName, RandomSeed());
+		}
+		else if (m_Worlds.empty())
+		{
+			Print("No worlds to play, creating one\n");
+			CreateWorld("World 1", RandomSeed());
+		}
 	}
 
 	void Game::RefreshWorlds()
@@ -1089,6 +1467,7 @@ namespace flex
 			return;
 		}
 
+		m_WorldLoadStartMs = StartupTimer::Elapsed();
 		m_CurrentWorld = world;
 		m_bWorldLoaded = true;
 		m_AutosaveTimer = 0.0f;
@@ -1142,7 +1521,21 @@ namespace flex
 		if (bHasPlayer)
 		{
 			playerObj.TryGetVec3("position", position);
-			playerObj.TryGetQuat("rotation", rotation);
+			// Saved as a quaternion (x, y, z, w). JSONObject::GetQuat expects euler angles (as transforms are saved),
+			// so this is read directly.
+			for (const JSONField& field : playerObj.fields)
+			{
+				if (field.label == "rotation" && field.value.type == ValueType::VEC4)
+				{
+					const glm::vec4& v = field.value.vecValue;
+					const glm::vec3 forward = glm::quat(v.w, v.x, v.y, v.z) * VEC3_FORWARD;
+					// Only the yaw (the player is always upright)
+					if (glm::length(glm::vec2(forward.x, forward.z)) > 1e-4f)
+					{
+						rotation = glm::angleAxis(std::atan2(forward.x, forward.z), VEC3_UP);
+					}
+				}
+			}
 			playerObj.TryGetFloat("pitch", pitch);
 		}
 		else if (terrainGenerator != nullptr)
@@ -1165,7 +1558,10 @@ namespace flex
 		player->GetTransform()->SetWorldPosition(position);
 		player->GetTransform()->SetWorldRotation(rotation);
 		player->SetPitch(pitch);
-		player->TeleportOnTerrain(position);
+		m_LoadRotation = rotation;
+		m_LoadPitch = pitch;
+		// A saved position is kept exactly where it's clear of the terrain (it may be on top of something built)
+		player->TeleportOnTerrain(position, bHasPlayer);
 		player->UpdateIsPossessed();
 
 		JSONObject inventoryObj;
@@ -1263,6 +1659,12 @@ namespace flex
 	void Game::LeaveWorld()
 	{
 		SaveWorld();
+		if (TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive())
+		{
+			// So the world shows up immediately next time it's played (& not overwritten by terrain around the menu's
+			// camera on shutdown)
+			terrainGenerator->SaveSnapshot(true);
+		}
 		ClearWorldObjects();
 		m_bWorldLoaded = false;
 

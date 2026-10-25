@@ -3,6 +3,7 @@
 #include "Scene/TerrainGeneration.hpp"
 
 #include "Platform/Platform.hpp"
+#include "Systems/JobSystem.hpp"
 
 #include <chrono>
 #include <fstream>
@@ -1460,20 +1461,21 @@ namespace flex
 						const real qx = px * inv;
 						const real qy = py * inv;
 						const real qz = pz * inv;
-						// Tunnels stay well below the surface except at occasional entrances (otherwise tunnels running
-						// just below the surface open up into long trenches)
-						const real topStart = Lerp(m_Params.tunnelRadius * 2.5f, -8.0f, column.caveEntrance);
-						const real top = Smoothstep(topStart, topStart + 12.0f, depth);
-						const real mask = Smoothstep(-0.4f, -0.05f, GradientNoise3(qx * 0.3f, qy * 0.3f, qz * 0.3f, DeriveSeed(m_Seed, SEED_CAVE_MASK)));
-						// Tunnels reach full size quickly (rather than narrowing over long distances, which makes them impassable)
-						const real presence = Smoothstep(0.0f, 0.3f, caveStrength * top * bottom * mask);
-						if (presence > 0.0f)
-						{
-							// Width varies slowly along tunnels, but never narrows enough to become impassable
-							const real sizeVariation = 0.85f + 0.3f * GradientNoise3(px * 0.006f, py * 0.006f, pz * 0.006f, DeriveSeed(m_Seed, SEED_TUNNEL_SIZE));
-							// Fully closed (rather than a zero width crack) where tunnels fade out
-							const real radius = m_Params.tunnelRadius * sizeVariation * presence - (1.0f - presence) * 3.0f;
+						const real minGradient = 0.25f;
 
+						// Tunnels exist where a mask noise is above a threshold (rising in biomes with fewer caves, to above the
+						// noise's range (~[-1, 1]) where caveStrength reaches 0.01, so skipping caves below that is exact).
+						// Rather than narrowing as they fade out (leaving long, impassable cracks), tunnels keep their full
+						// size until a few meters from where they end, so the distance to the threshold is estimated (in meters).
+						real mgx, mgy, mgz;
+						const real maskNoise = GradientNoise3D(qx * 0.3f, qy * 0.3f, qz * 0.3f, DeriveSeed(m_Seed, SEED_CAVE_MASK), mgx, mgy, mgz);
+						const real maskThreshold = Lerp(1.2f, -0.3f, Smoothstep(0.01f, 0.6f, caveStrength));
+						const real maskGradient = Max(std::sqrt(mgx * mgx + mgy * mgy + mgz * mgz), minGradient) * 0.3f * inv;
+						const real maskDist = (maskNoise - maskThreshold) / maskGradient;
+						// Width of the band over which tunnels close up (meters)
+						const real closeDistance = 5.0f;
+						if (maskDist > 0.0f)
+						{
 							// Tunnels follow the curves where two noise isosurfaces intersect. Stretching the noise vertically
 							// flattens the isosurfaces, so tunnels run mostly horizontally (gentle, walkable slopes).
 							const real verticalStretch = 2.2f;
@@ -1481,16 +1483,46 @@ namespace flex
 							const real n0 = GradientNoise3D(qx, qy * verticalStretch, qz, DeriveSeed(m_Seed, SEED_CAVE_0), g0x, g0y, g0z);
 							const real n1 = GradientNoise3D(qx - 13.1f, qy * verticalStretch + 47.9f, qz + 23.3f, DeriveSeed(m_Seed, SEED_CAVE_1), g1x, g1y, g1z);
 
-							// Distance (in meters) to each isosurface, estimated by dividing by the gradient length. Vertical
-							// distances are weighted more heavily so tunnels are a little flatter than they are wide. Without this
-							// normalization, tunnel width would vary with the noise gradient (pinching shut in places).
-							const real flatten = 1.35f;
-							const real sy = verticalStretch / flatten;
-							const real minGradient = 0.25f;
-							const real len0 = Max(std::sqrt(g0x * g0x + g0y * g0y * sy * sy + g0z * g0z), minGradient) * inv;
-							const real len1 = Max(std::sqrt(g1x * g1x + g1y * g1y * sy * sy + g1z * g1z), minGradient) * inv;
-							const real tube = Length2(n0 / len0, n1 / len1) - radius;
-							d = SmoothMax(d, -tube, 4.0f);
+							// The tunnel's axis (where both noises are zero) is estimated with one Newton step, to find how
+							// deep it is: tunnels are closed off by depth along their axis, so whole cross sections end
+							// together (rather than the ceiling being cut off first, flattening the tunnel into a crack)
+							const real w0x = g0x * inv, w0y = g0y * verticalStretch * inv, w0z = g0z * inv;
+							const real w1x = g1x * inv, w1y = g1y * verticalStretch * inv, w1z = g1z * inv;
+							const real a = w0x * w0x + w0y * w0y + w0z * w0z;
+							const real b = w0x * w1x + w0y * w1y + w0z * w1z;
+							const real c = w1x * w1x + w1y * w1y + w1z * w1z;
+							const real det = Max(a * c - b * b, 0.05f * a * c + 1e-12f);
+							const real l0 = (c * n0 - b * n1) / det;
+							const real l1 = (a * n1 - b * n0) / det;
+							const real maxOffset = m_Params.tunnelRadius * 2.0f;
+							const real axisOffsetY = Clamp(l0 * w0y + l1 * w1y, -maxOffset, maxOffset); // Of the point above the axis
+							const real axisDepth = depth + axisOffsetY;
+
+							// Tunnels stay well below the surface except at occasional entrances (otherwise tunnels running
+							// just below the surface open up into long trenches), & above the maximum depth
+							const real topStart = Lerp(m_Params.tunnelRadius * 2.0f + 6.0f, -8.0f, column.caveEntrance);
+							const real topDist = (axisDepth - topStart) * 2.0f;
+							const real bottomDist = (caveMaxDepth * 0.8f - axisDepth) * 2.0f;
+							const real openness = Smoothstep(0.0f, closeDistance, Min(maskDist, Min(topDist, bottomDist)));
+							if (openness > 0.0f)
+							{
+								// Width varies slowly along tunnels, but never narrows enough to become impassable
+								const real sizeVariation = Max(0.95f + 0.55f * GradientNoise3(px * 0.006f, py * 0.006f, pz * 0.006f, DeriveSeed(m_Seed, SEED_TUNNEL_SIZE)), 0.6f);
+								// Fully closed (by a margin larger than SmoothMax's, so skipping closed tunnels never changes
+								// the surface) where tunnels end
+								const real radius = Lerp(-8.0f, m_Params.tunnelRadius * sizeVariation, openness);
+
+								// Distance (in meters) to each isosurface, estimated by dividing by the gradient length.
+								// Vertical distances are weighted more heavily so tunnels are a little flatter than they are
+								// wide. Without this normalization, tunnel width would vary with the noise gradient (pinching
+								// shut in places).
+								const real flatten = 1.2f;
+								const real sy = verticalStretch / flatten;
+								const real len0 = Max(std::sqrt(g0x * g0x + g0y * g0y * sy * sy + g0z * g0z), minGradient) * inv;
+								const real len1 = Max(std::sqrt(g1x * g1x + g1y * g1y * sy * sy + g1z * g1z), minGradient) * inv;
+								const real tube = Length2(n0 / len0, n1 / len1) - radius;
+								d = SmoothMax(d, -tube, 4.0f);
+							}
 						}
 					}
 
@@ -1519,7 +1551,7 @@ namespace flex
 			{
 				const Edit& edit = edits.edits[i];
 				const real dist = Length3(px - edit.center.x, py - edit.center.y, pz - edit.center.z);
-				if (dist >= edit.radius + band)
+				if (dist >= edit.radius + band || edit.type == EditType::REMOVE_PLANT)
 				{
 					continue;
 				}
@@ -1576,7 +1608,7 @@ namespace flex
 				const Edit& edit = edits.edits[i];
 				const real dist = glm::distance(pos, edit.center);
 				const real tolerance = edit.radius * 0.05f + m_Params.voxelSize * 0.5f;
-				if (dist > edit.radius + tolerance)
+				if (dist > edit.radius + tolerance || edit.type == EditType::REMOVE_PLANT)
 				{
 					continue;
 				}
@@ -1857,6 +1889,149 @@ namespace flex
 
 		// Trees & cacti, generated with the terrain (so they stream, LOD & collide along with it). Placed on a jittered
 		// grid, each candidate is decided by the biome's climate, a forest density pattern & the ground's slope.
+		static constexpr real PLANT_CELL_SIZE = 7.0f;
+
+		static PlantKind ChoosePlantKind(const ColumnSample& column, real x, real z, real chance, u32 forestSeed)
+		{
+			// Forests grow in patches, with clearings between them
+			const real forestNoise = GradientNoise3(x / 700.0f, 0.0f, z / 700.0f, forestSeed) + 0.4f * GradientNoise3(x / 180.0f, 0.5f, z / 180.0f, forestSeed + 1);
+			const real forest = Smoothstep(-0.25f, 0.45f, forestNoise);
+			const real t = column.temperature;
+			const real grass = column.grassiness;
+
+			if (t > 0.55f && grass < 0.25f)
+			{
+				// Deserts: scattered cacti
+				return chance < 0.05f * (1.0f - grass * 3.0f) ? PlantKind::CACTUS : PlantKind::NONE;
+			}
+			if (t < -0.7f)
+			{
+				// Tundra: the odd stunted conifer
+				return chance < 0.03f * grass ? PlantKind::CONIFER : PlantKind::NONE;
+			}
+
+			const real density = grass * (0.04f + 0.42f * forest);
+			if (chance >= density)
+			{
+				return PlantKind::NONE;
+			}
+			// Conifers in the cold & up mountains, broadleaf trees in milder climates, mixed in between
+			const real coniferness = Smoothstep(0.15f, -0.25f, t) + Smoothstep(column.peakHeight - 600.0f, column.peakHeight - 250.0f, column.height);
+			return HashToUnit(HashU32((u32)(chance * 16777216.0f) + 77u)) < coniferness ? PlantKind::CONIFER : PlantKind::DECIDUOUS;
+		}
+
+		// Sizes of a plant's parts (matching VegetationBuilder::AddPlant)
+		static void ComputePlantDimensions(PlantInfo& plant)
+		{
+			const real s = plant.size01;
+			switch (plant.kind)
+			{
+			case PlantKind::CONIFER:
+				plant.height = 9.0f + 12.0f * s;
+				plant.trunkHeight = plant.height * 0.35f - 0.3f;
+				plant.trunkRadius = 0.22f + 0.15f * s;
+				break;
+			case PlantKind::DECIDUOUS:
+				plant.height = 7.0f + 7.0f * s;
+				plant.trunkHeight = plant.height * 0.55f - 0.3f;
+				plant.trunkRadius = 0.3f + 0.15f * s;
+				break;
+			case PlantKind::CACTUS:
+				plant.height = 3.0f + 3.5f * s;
+				plant.trunkHeight = plant.height;
+				plant.trunkRadius = 0.28f + 0.1f * s;
+				break;
+			default:
+				break;
+			}
+		}
+
+		static bool IsPlantRemoved(const EditList& edits, real x, real z)
+		{
+			for (u32 i = 0; i < edits.count; ++i)
+			{
+				const Edit& edit = edits.edits[i];
+				if (edit.type == EditType::REMOVE_PLANT && Abs(edit.center.x - x) < 0.05f && Abs(edit.center.z - z) < 0.05f)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
+		// Calls func(const PlantInfo&) for each plant whose base lies within the given box. Levels >= 2 skip small plants.
+		template<typename Func>
+		static void ForEachPlant(const TerrainDensity& density, const EditList& edits, const glm::vec3& boxMin, const glm::vec3& boxMax, i32 level, Func func)
+		{
+			const u32 seed = DeriveSeed(density.Seed(), SEED_TREES);
+			const u32 forestSeed = DeriveSeed(density.Seed(), SEED_FOREST);
+			const i32 minCellX = (i32)glm::floor(boxMin.x / PLANT_CELL_SIZE);
+			const i32 maxCellX = (i32)glm::floor((boxMax.x - 1e-3f) / PLANT_CELL_SIZE);
+			const i32 minCellZ = (i32)glm::floor(boxMin.z / PLANT_CELL_SIZE);
+			const i32 maxCellZ = (i32)glm::floor((boxMax.z - 1e-3f) / PLANT_CELL_SIZE);
+			for (i32 cz = minCellZ; cz <= maxCellZ; ++cz)
+			{
+				for (i32 cx = minCellX; cx <= maxCellX; ++cx)
+				{
+					const u32 h = HashCoords(cx, cz, seed);
+					// Distant chunks only show the larger plants
+					const real size01 = HashToUnit(HashU32(h + 5));
+					if (level >= 2 && size01 < 0.4f)
+					{
+						continue;
+					}
+
+					const real x = ((real)cx + 0.1f + 0.8f * HashToUnit(HashU32(h + 1))) * PLANT_CELL_SIZE;
+					const real z = ((real)cz + 0.1f + 0.8f * HashToUnit(HashU32(h + 2))) * PLANT_CELL_SIZE;
+					if (x < boxMin.x || x >= boxMax.x || z < boxMin.z || z >= boxMax.z)
+					{
+						continue;
+					}
+
+					const ColumnSample column = density.SampleColumn(x, z);
+					const PlantKind kind = ChoosePlantKind(column, x, z, HashToUnit(h), forestSeed);
+					if (kind == PlantKind::NONE || IsPlantRemoved(edits, x, z))
+					{
+						continue;
+					}
+
+					real groundY;
+					if (!density.FindTopSurface(x, z, boxMin.y, boxMax.y, column, edits, groundY))
+					{
+						continue;
+					}
+					const glm::vec3 base(x, groundY, z);
+					if (column.lakeID != 0 && column.lakeT < 1.05f && groundY < column.waterLevel + 0.5f)
+					{
+						continue;
+					}
+					if (groundY > column.peakHeight - 30.0f || SkyVisibility(base, column) < 0.95f)
+					{
+						continue;
+					}
+					// Not on steep slopes
+					const real e = 1.0f;
+					const glm::vec3 gradient(
+						density.Sample(base + glm::vec3(e, 0, 0), column, edits) - density.Sample(base - glm::vec3(e, 0, 0), column, edits),
+						density.Sample(base + glm::vec3(0, e, 0), column, edits) - density.Sample(base - glm::vec3(0, e, 0), column, edits),
+						density.Sample(base + glm::vec3(0, 0, e), column, edits) - density.Sample(base - glm::vec3(0, 0, e), column, edits));
+					const real gradientLength = glm::length(gradient);
+					if (gradientLength < 1e-5f || gradient.y / gradientLength < 0.8f)
+					{
+						continue;
+					}
+
+					PlantInfo plant;
+					plant.kind = kind;
+					plant.base = base;
+					plant.hash = h;
+					plant.size01 = size01;
+					ComputePlantDimensions(plant);
+					func(plant);
+				}
+			}
+		}
+
 		class VegetationBuilder
 		{
 		public:
@@ -1882,108 +2057,20 @@ namespace flex
 			// Adds the plants whose bases lie within the given box
 			void Build(const glm::vec3& boxMin, const glm::vec3& boxMax)
 			{
-				const u32 seed = DeriveSeed(m_Density.Seed(), SEED_TREES);
-				const u32 forestSeed = DeriveSeed(m_Density.Seed(), SEED_FOREST);
-				const i32 minCellX = (i32)glm::floor(boxMin.x / CELL_SIZE);
-				const i32 maxCellX = (i32)glm::floor((boxMax.x - 1e-3f) / CELL_SIZE);
-				const i32 minCellZ = (i32)glm::floor(boxMin.z / CELL_SIZE);
-				const i32 maxCellZ = (i32)glm::floor((boxMax.z - 1e-3f) / CELL_SIZE);
-				for (i32 cz = minCellZ; cz <= maxCellZ; ++cz)
+				ForEachPlant(m_Density, m_Edits, boxMin, boxMax, m_Level, [this](const PlantInfo& plant)
 				{
-					for (i32 cx = minCellX; cx <= maxCellX; ++cx)
-					{
-						const u32 h = HashCoords(cx, cz, seed);
-						// Distant chunks only show the larger plants
-						const real size01 = HashToUnit(HashU32(h + 5));
-						if (m_Level >= 2 && size01 < 0.4f)
-						{
-							continue;
-						}
+					AddPlant(plant.kind, plant.base - glm::vec3(0.0f, 0.3f, 0.0f), plant.hash, plant.size01);
+				});
+			}
 
-						const real x = ((real)cx + 0.1f + 0.8f * HashToUnit(HashU32(h + 1))) * CELL_SIZE;
-						const real z = ((real)cz + 0.1f + 0.8f * HashToUnit(HashU32(h + 2))) * CELL_SIZE;
-						if (x < boxMin.x || x >= boxMax.x || z < boxMin.z || z >= boxMax.z)
-						{
-							continue;
-						}
-
-						const ColumnSample column = m_Density.SampleColumn(x, z);
-						const Kind kind = ChooseKind(column, x, z, HashToUnit(h), forestSeed);
-						if (kind == Kind::NONE)
-						{
-							continue;
-						}
-
-						real groundY;
-						if (!m_Density.FindTopSurface(x, z, boxMin.y, boxMax.y, column, m_Edits, groundY))
-						{
-							continue;
-						}
-						const glm::vec3 base(x, groundY, z);
-						if (column.lakeID != 0 && column.lakeT < 1.05f && groundY < column.waterLevel + 0.5f)
-						{
-							continue;
-						}
-						if (groundY > column.peakHeight - 30.0f || SkyVisibility(base, column) < 0.95f)
-						{
-							continue;
-						}
-						// Not on steep slopes
-						const real e = 1.0f;
-						const glm::vec3 gradient(
-							m_Density.Sample(base + glm::vec3(e, 0, 0), column, m_Edits) - m_Density.Sample(base - glm::vec3(e, 0, 0), column, m_Edits),
-							m_Density.Sample(base + glm::vec3(0, e, 0), column, m_Edits) - m_Density.Sample(base - glm::vec3(0, e, 0), column, m_Edits),
-							m_Density.Sample(base + glm::vec3(0, 0, e), column, m_Edits) - m_Density.Sample(base - glm::vec3(0, 0, e), column, m_Edits));
-						const real gradientLength = glm::length(gradient);
-						if (gradientLength < 1e-5f || gradient.y / gradientLength < 0.8f)
-						{
-							continue;
-						}
-
-						AddPlant(kind, base - glm::vec3(0.0f, 0.3f, 0.0f), h, size01);
-					}
-				}
+			// A single plant (at full detail)
+			void BuildSingle(const PlantInfo& plant)
+			{
+				AddPlant(plant.kind, plant.base - glm::vec3(0.0f, 0.3f, 0.0f), plant.hash, plant.size01);
 			}
 
 		private:
-			enum class Kind
-			{
-				NONE,
-				CONIFER,
-				DECIDUOUS,
-				CACTUS,
-			};
-
-			static constexpr real CELL_SIZE = 7.0f;
-
-			Kind ChooseKind(const ColumnSample& column, real x, real z, real chance, u32 forestSeed) const
-			{
-				// Forests grow in patches, with clearings between them
-				const real forestNoise = GradientNoise3(x / 700.0f, 0.0f, z / 700.0f, forestSeed) + 0.4f * GradientNoise3(x / 180.0f, 0.5f, z / 180.0f, forestSeed + 1);
-				const real forest = Smoothstep(-0.25f, 0.45f, forestNoise);
-				const real t = column.temperature;
-				const real grass = column.grassiness;
-
-				if (t > 0.55f && grass < 0.25f)
-				{
-					// Deserts: scattered cacti
-					return chance < 0.05f * (1.0f - grass * 3.0f) ? Kind::CACTUS : Kind::NONE;
-				}
-				if (t < -0.7f)
-				{
-					// Tundra: the odd stunted conifer
-					return chance < 0.03f * grass ? Kind::CONIFER : Kind::NONE;
-				}
-
-				const real density = grass * (0.04f + 0.42f * forest);
-				if (chance >= density)
-				{
-					return Kind::NONE;
-				}
-				// Conifers in the cold & up mountains, broadleaf trees in milder climates, mixed in between
-				const real coniferness = Smoothstep(0.15f, -0.25f, t) + Smoothstep(column.peakHeight - 600.0f, column.peakHeight - 250.0f, column.height);
-				return HashToUnit(HashU32((u32)(chance * 16777216.0f) + 77u)) < coniferness ? Kind::CONIFER : Kind::DECIDUOUS;
-			}
+			using Kind = PlantKind;
 
 			void Append(const ChunkMeshData& part)
 			{
@@ -2891,6 +2978,39 @@ namespace flex
 			mesher.Run();
 		}
 
+		void FindPlants(const TerrainDensity& density, const EditList& edits, const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<PlantInfo>& outPlants)
+		{
+			ForEachPlant(density, edits, boxMin, boxMax, 0, [&outPlants](const PlantInfo& plant)
+			{
+				outPlants.push_back(plant);
+			});
+		}
+
+		void BuildPlantMesh(const TerrainDensity& density, const PlantInfo& plant, ChunkMeshData& outMesh)
+		{
+			outMesh.Clear();
+			const EditList noEdits = {};
+			VegetationBuilder builder(density, noEdits, outMesh, 0);
+			builder.BuildSingle(plant);
+			builder.Finish();
+			if (outMesh.collisionIndexCount == ~0u)
+			{
+				outMesh.collisionIndexCount = (u32)outMesh.indices.size();
+			}
+		}
+
+		Edit MakeRemovePlantEdit(const PlantInfo& plant)
+		{
+			Edit edit = {};
+			edit.center = plant.base;
+			// Large enough that the chunk the plant was generated in (& any it could later be found in after digging
+			// below it) gathers this edit
+			edit.radius = 3.0f;
+			edit.type = EditType::REMOVE_PLANT;
+			edit.material = Material::SOIL;
+			return edit;
+		}
+
 		void ChunkMeshData::Clear()
 		{
 			positions.clear();
@@ -3376,7 +3496,7 @@ namespace flex
 					outEdits.clear();
 					return false;
 				}
-				edit.type = type == (u8)EditType::FILL ? EditType::FILL : EditType::DIG;
+				edit.type = type <= (u8)EditType::REMOVE_PLANT ? (EditType)type : EditType::DIG;
 				edit.material = material < (u8)Material::_COUNT ? (Material)material : Material::SOIL;
 				outEdits.push_back(edit);
 			}
@@ -3569,17 +3689,34 @@ namespace flex
 			SetParams(params);
 
 			m_SnapshotPath = snapshotPath;
-			if (!m_SnapshotPath.empty())
+			// Show the chunks saved last session immediately (if nothing has changed since)
+			LoadSnapshotAsync();
+		}
+
+		void TerrainStreamer::LoadSnapshotAsync()
+		{
+			if (m_SnapshotPath.empty())
 			{
-				// Show the chunks saved last session immediately (if nothing has changed since)
-				const std::string path = m_SnapshotPath;
-				const u64 contentHash = m_Params.ContentHash();
-				const u64 editsHash = m_Edits.Hash();
-				m_SnapshotFuture = std::async(std::launch::async, [path, contentHash, editsHash]()
-				{
-					return LoadSnapshot(path, contentHash, editsHash);
-				});
+				return;
 			}
+
+			if (m_SnapshotFuture.valid())
+			{
+				// Stops as soon as it can
+				*m_SnapshotCancelled = true;
+				m_DiscardedSnapshotFutures.emplace_back(std::move(m_SnapshotFuture));
+			}
+
+			const std::string path = m_SnapshotPath;
+			const u64 contentHash = m_Params.ContentHash();
+			const u64 editsHash = m_Edits.Hash();
+			m_bSnapshotReplacesDisplayed = !m_Displayed.empty();
+			m_SnapshotCancelled = std::make_shared<std::atomic<bool>>(false);
+			std::shared_ptr<std::atomic<bool>> cancelled = m_SnapshotCancelled;
+			m_SnapshotFuture = std::async(std::launch::async, [path, contentHash, editsHash, cancelled]()
+			{
+				return LoadSnapshot(path, contentHash, editsHash, cancelled);
+			});
 		}
 
 		void TerrainStreamer::Stop()
@@ -3590,6 +3727,7 @@ namespace flex
 				m_SnapshotFuture.wait();
 				m_SnapshotFuture = {};
 			}
+			m_DiscardedSnapshotFutures.clear();
 			WaitForSnapshotWrite();
 			m_Pool.Stop();
 			m_Pending.clear();
@@ -3612,7 +3750,7 @@ namespace flex
 			m_Params = m_Density->Params();
 
 			// Displayed chunks remain until all of their replacements are ready
-			m_bRetireAllOnNextBatch = true;
+			RetireAllDisplayed();
 			m_SwapGroups.clear();
 			m_RetiringCount = 0;
 			m_Pending.clear();
@@ -3933,7 +4071,7 @@ namespace flex
 			for (auto& pair : m_Displayed)
 			{
 				auto iter = desired.find(pair.first);
-				if (bRetireAll || iter == desired.end() || iter->second != pair.second.mask)
+				if (bRetireAll || pair.second.bStale || iter == desired.end() || iter->second != pair.second.mask)
 				{
 					retiring.push_back(pair.first);
 				}
@@ -3947,7 +4085,7 @@ namespace flex
 			for (auto& pair : desired)
 			{
 				auto displayedIter = m_Displayed.find(pair.first);
-				if (!bRetireAll && displayedIter != m_Displayed.end() && displayedIter->second.mask == pair.second)
+				if (!bRetireAll && displayedIter != m_Displayed.end() && !displayedIter->second.bStale && displayedIter->second.mask == pair.second)
 				{
 					continue;
 				}
@@ -4333,9 +4471,20 @@ namespace flex
 				m_RetiringCount = 0;
 				m_Pool.SetJobs({});
 				m_bBatchInFlight = false;
-				m_bRetireAllOnNextBatch = true;
+				RetireAllDisplayed();
 				m_bForceRefresh = true;
 			}
+		}
+
+		void TerrainStreamer::RetireAllDisplayed()
+		{
+			// A flag alone isn't enough: the batch it applies to can be superseded (e.g. when the camera teleports, as
+			// it does when a world is loaded from the menu) by one which would keep old chunks matching desired keys
+			for (auto& pair : m_Displayed)
+			{
+				pair.second.bStale = true;
+			}
+			m_bRetireAllOnNextBatch = true;
 		}
 
 		bool TerrainStreamer::Raycast(const glm::vec3& origin, const glm::vec3& dir, real maxDistance, glm::vec3& outHitPos, glm::vec3& outHitNormal) const
@@ -4407,6 +4556,22 @@ namespace flex
 			}
 
 			return false;
+		}
+
+		void TerrainStreamer::FindPlants(const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<PlantInfo>& outPlants) const
+		{
+			if (m_Density == nullptr)
+			{
+				return;
+			}
+
+			std::vector<Edit> edits;
+			const real margin = m_Density->EditBand() + 4.0f;
+			m_Edits.Gather(boxMin - margin, boxMax + margin, edits);
+			EditList editList;
+			editList.edits = edits.data();
+			editList.count = (u32)edits.size();
+			terrain::FindPlants(*m_Density, editList, boxMin, boxMax, outPlants);
 		}
 
 		real TerrainStreamer::SampleDensity(const glm::vec3& pos) const
@@ -4530,15 +4695,35 @@ namespace flex
 			});
 		}
 
-		TerrainStreamer::Snapshot TerrainStreamer::LoadSnapshot(const std::string& path, u64 contentHash, u64 editsHash)
+		TerrainStreamer::Snapshot TerrainStreamer::LoadSnapshot(const std::string& path, u64 contentHash, u64 editsHash, std::shared_ptr<std::atomic<bool>> cancelled)
 		{
 			Snapshot snapshot = {};
+			const std::chrono::steady_clock::time_point loadStart = std::chrono::steady_clock::now();
+
+			{
+				// Check the header before reading the whole (large) file
+				std::ifstream file(path, std::ios::binary);
+				u8 headerBytes[sizeof(u32) * 2 + sizeof(u64) * 2] = {};
+				if (!file || !file.read((char*)headerBytes, sizeof(headerBytes)))
+				{
+					return snapshot;
+				}
+				ByteReader headerReader(headerBytes, sizeof(headerBytes));
+				u32 magic, version;
+				u64 fileContentHash, fileEditsHash;
+				if (!headerReader.Read(magic) || !headerReader.Read(version) || !headerReader.Read(fileContentHash) || !headerReader.Read(fileEditsHash) ||
+					magic != SNAPSHOT_FILE_MAGIC || version != SNAPSHOT_FILE_VERSION || fileContentHash != contentHash || fileEditsHash != editsHash)
+				{
+					return snapshot;
+				}
+			}
 
 			std::vector<u8> bytes;
-			if (!ReadWholeFile(path, bytes))
+			if (cancelled->load() || !ReadWholeFile(path, bytes) || cancelled->load())
 			{
 				return snapshot;
 			}
+			const ms readTime = std::chrono::duration<ms, std::milli>(std::chrono::steady_clock::now() - loadStart).count();
 
 			ByteReader reader(bytes.data(), bytes.size());
 			u32 magic, version, chunkCount;
@@ -4555,9 +4740,9 @@ namespace flex
 				return snapshot;
 			}
 
+			std::vector<std::pair<const u8*, u32>> chunkData;
+			chunkData.reserve(chunkCount);
 			snapshot.keys.reserve(chunkCount);
-			snapshot.meshes.reserve(chunkCount);
-			snapshot.packed.reserve(chunkCount);
 			for (u32 i = 0; i < chunkCount; ++i)
 			{
 				ChunkKey key;
@@ -4575,27 +4760,73 @@ namespace flex
 					return Snapshot{};
 				}
 
-				ChunkMeshData mesh;
-				if (!UnpackChunkMesh(data, size, mesh))
-				{
-					return Snapshot{};
-				}
-
 				snapshot.keys.emplace_back(key, mask);
-				snapshot.meshes.emplace_back(std::move(mesh));
-				snapshot.packed.emplace_back(std::make_shared<const PackedChunk>(data, data + size));
+				chunkData.emplace_back(data, size);
+			}
+
+			// Unpacking is most of the work, so it's spread over the job system's workers
+			snapshot.meshes.resize(chunkCount);
+			snapshot.packed.resize(chunkCount);
+			std::atomic<bool> bFailed{ false };
+			auto Unpack = [&](u32 i)
+			{
+				const u8* data = chunkData[i].first;
+				const u32 size = chunkData[i].second;
+				if (bFailed.load(std::memory_order_relaxed) || cancelled->load(std::memory_order_relaxed))
+				{
+					return;
+				}
+				if (!UnpackChunkMesh(data, size, snapshot.meshes[i]))
+				{
+					bFailed = true;
+					return;
+				}
+				snapshot.packed[i] = std::make_shared<const PackedChunk>(data, data + size);
+			};
+			if (JobSystem::GetThreadCount() > 0)
+			{
+				JobSystem::Context context;
+				JobSystem::Dispatch(context, chunkCount, 32, [&](JobSystem::JobArgs args) { Unpack(args.jobIndex); });
+				JobSystem::Wait(context);
+			}
+			else
+			{
+				// (Shutting down)
+				for (u32 i = 0; i < chunkCount; ++i)
+				{
+					Unpack(i);
+				}
+			}
+			if (bFailed || cancelled->load())
+			{
+				return Snapshot{};
 			}
 
 			snapshot.bValid = true;
+			snapshot.readTime = readTime;
+			snapshot.loadTime = std::chrono::duration<ms, std::milli>(std::chrono::steady_clock::now() - loadStart).count();
 			return snapshot;
 		}
 
 		void TerrainStreamer::ApplySnapshot(Snapshot&& snapshot, std::vector<ChunkCommand>& outCommands)
 		{
-			if (!snapshot.bValid || !m_Displayed.empty())
+			const bool bReplaceDisplayed = m_bSnapshotReplacesDisplayed;
+			m_bSnapshotReplacesDisplayed = false;
+			if (!snapshot.bValid)
 			{
 				return;
 			}
+			if (!m_Displayed.empty())
+			{
+				if (!bReplaceDisplayed)
+				{
+					return;
+				}
+				// The previous world's chunks (which would otherwise remain until all of their replacements were
+				// generated)
+				HideAll(outCommands);
+			}
+			Print("Terrain snapshot: %u chunks loaded in %.0f ms (%.0f ms reading)\n", (u32)snapshot.keys.size(), snapshot.loadTime, snapshot.readTime);
 
 			for (size_t i = 0; i < snapshot.keys.size(); ++i)
 			{
@@ -4619,6 +4850,11 @@ namespace flex
 			PROFILE_AUTO("TerrainStreamer Update");
 
 			UpdateVelocity(cameraPos);
+
+			for (auto iter = m_DiscardedSnapshotFutures.begin(); iter != m_DiscardedSnapshotFutures.end();)
+			{
+				iter = iter->wait_for(std::chrono::seconds(0)) == std::future_status::ready ? m_DiscardedSnapshotFutures.erase(iter) : iter + 1;
+			}
 
 			if (m_SnapshotFuture.valid())
 			{

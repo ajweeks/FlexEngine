@@ -45,8 +45,8 @@ namespace flex
 
 		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
-		// Must be called before Initialize (when not loaded from a file)
-		void Setup(BuildPieceType type, BuildMaterial material, real length);
+		// Must be called before Initialize (when not loaded from a file). size: grid cell size (defaults to GRID_SIZE)
+		void Setup(BuildPieceType type, BuildMaterial material, real length, real size = GRID_SIZE);
 
 		virtual void Initialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
@@ -55,6 +55,8 @@ namespace flex
 		BuildPieceType GetPieceType() const { return m_PieceType; }
 		BuildMaterial GetBuildMaterial() const { return m_Material; }
 		real GetLength() const { return m_Length; }
+		// Grid cell size the piece was built for (pieces saved before the grid changed keep their old size)
+		real GetSize() const { return m_Size; }
 
 		// Ladders & ropes
 		bool IsClimbable() const;
@@ -69,10 +71,20 @@ namespace flex
 		static BuildPiece* FindClimbable(const glm::vec3& pos, real maxDistance);
 		static const std::vector<BuildPiece*>& GetAllPieces() { return s_Pieces; }
 
-		// Edges of the piece's boxes (local space), used to preview placement
-		static void GetOutline(BuildPieceType type, real length, std::vector<std::pair<glm::vec3, glm::vec3>>& outLines);
+		struct Box
+		{
+			glm::vec3 center;
+			glm::vec3 halfExtents;
+			glm::quat rotation;
+			u32 materialSlot; // 0: main, 1: secondary (e.g. a torch's flame)
+		};
 
-		static constexpr real GRID_SIZE = 3.0f;
+		// The boxes making up a piece (local space), used for its mesh & placement previews
+		static void GetBoxes(BuildPieceType type, real length, real size, std::vector<Box>& outBoxes);
+
+		static constexpr real GRID_SIZE = 4.0f;
+		// Grid size used before it was made coarser: pieces saved without a size were built on it
+		static constexpr real LEGACY_GRID_SIZE = 3.0f;
 		static constexpr real DEFAULT_LADDER_LENGTH = 4.5f;
 
 		// Chooses which torches get one of the renderer's (limited) point lights: the ones nearest the camera
@@ -84,22 +96,14 @@ namespace flex
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
 
 	private:
-		struct Box
-		{
-			glm::vec3 center;
-			glm::vec3 halfExtents;
-			glm::quat rotation;
-			u32 materialSlot; // 0: main, 1: secondary (e.g. a torch's flame)
-		};
-
-		static void GetBoxes(BuildPieceType type, real length, std::vector<Box>& outBoxes);
 		// Collision for the piece (null for pieces without any)
-		static btCollisionShape* CreateCollisionShape(BuildPieceType type, real length);
+		static btCollisionShape* CreateCollisionShape(BuildPieceType type, real length, real size);
 		void CreateMesh();
 
 		BuildPieceType m_PieceType = BuildPieceType::FLOOR;
 		BuildMaterial m_Material = BuildMaterial::WOOD;
 		real m_Length = 0.0f; // Ladders & ropes
+		real m_Size = GRID_SIZE;
 
 		static std::vector<BuildPiece*> s_Pieces;
 	};
@@ -112,13 +116,19 @@ namespace flex
 
 		void SetActive(bool bActive);
 		bool IsActive() const { return m_bActive; }
+		void SetSelectedType(BuildPieceType type) { m_SelectedType = type; }
 
 		// Input & placement preview, called every frame
 		void Update();
 		void DrawHUD() const;
 
 	private:
-		bool ComputePlacement(glm::vec3& outPos, glm::quat& outRot, real& outLength) const;
+		// Returns whether the piece can be placed. outHasPosition is set when there's somewhere to show a preview
+		// (even if placing there isn't allowed, e.g. the spot is already taken)
+		bool ComputePlacement(glm::vec3& outPos, glm::quat& outRot, real& outLength, bool& outHasPosition) const;
+		// Translucent, emissive copy of the selected piece where it would be placed
+		void UpdatePreview(bool bShow);
+		void DestroyPreview();
 		BuildPiece* GetTargetedPiece() const;
 		void Place();
 		void RemoveTargeted();
@@ -134,6 +144,14 @@ namespace flex
 		glm::vec3 m_PlacementPos = VEC3_ZERO;
 		glm::quat m_PlacementRot = QUAT_IDENTITY;
 		real m_PlacementLength = 0.0f;
+		bool m_bPlacementHasPosition = false;
+
+		GameObjectID m_PreviewID = InvalidGameObjectID;
+		i32 m_PreviewCreatedFrame = 0;
+		// What the preview's mesh was last built for, so it's only rebuilt when that changes
+		BuildPieceType m_PreviewType = BuildPieceType::_COUNT;
+		real m_PreviewLength = -1.0f;
+		bool m_bPreviewValid = false;
 
 		real m_Reach = 10.0f;
 		AudioSourceID m_PlaceSoundID = InvalidAudioSourceID;

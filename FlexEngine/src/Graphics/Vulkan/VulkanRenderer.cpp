@@ -5,6 +5,9 @@
 
 IGNORE_WARNINGS_PUSH
 #include <vulkan/vulkan.hpp>
+#ifdef _WINDOWS
+#include <vulkan/vulkan_win32.h>
+#endif
 
 #include "stb_image.h"
 
@@ -94,26 +97,20 @@ namespace flex
 
 			m_RenderObjects.resize(MAX_NUM_RENDER_OBJECTS);
 
+			bool bCreatedInstance = false;
+			if (m_InstanceFuture.valid())
 			{
-				PROFILE_AUTO("Volk Initialize");
-
-				VkResult res = volkInitialize();
-				if (res != VK_SUCCESS)
-				{
-					PrintError("No valid Vulkan loader found on the system. Exiting...\n");
-					exit(-1);
-					return;
-				}
+				// Started by BeginCreateInstance
+				STARTUP_PHASE("Wait for Vulkan instance");
+				bCreatedInstance = m_InstanceFuture.get();
 			}
-
-#if COMPILE_VULKAN
-			if (!glfwVulkanSupported())
+			else
 			{
-				PrintError("Vulkan is not supported on this platform. Exiting...\n");
+				m_ApplicationName = g_Window->GetTitle();
+				STARTUP_PHASE("Load Vulkan & create instance");
+				bCreatedInstance = LoadVulkanAndCreateInstance();
 			}
-#endif
-
-			if (!CreateInstance())
+			if (!bCreatedInstance)
 			{
 				// TODO: Try disabling more layers/extensions
 				PrintError("Failed to create Vulkan instance. All hope is lost.\n");
@@ -123,48 +120,31 @@ namespace flex
 
 			SetupDebugCallback();
 			CreateSurface();
-			VkPhysicalDevice physicalDevice = PickPhysicalDevice();
-			VulkanDevice::CreateInfo deviceCreateInfo = {};
-			deviceCreateInfo.physicalDevice = physicalDevice;
-			deviceCreateInfo.surface = m_Surface;
-			deviceCreateInfo.requiredExtensions = &m_RequiredDeviceExtensions;
-
-			std::vector<const char*> optionalDeviceExtensions;
-			for (const VkExtensionPair& extensionPair : m_OptionalDeviceExtensions)
+			if (m_VulkanDevice == nullptr)
 			{
-				if (g_bDebugBuild || !extensionPair.bDebugOnly)
+				STARTUP_PHASE("Pick physical device & create device");
+				VkPhysicalDevice pickedDevice = PickPhysicalDevice();
+				if (pickedDevice == VK_NULL_HANDLE)
 				{
-					optionalDeviceExtensions.emplace_back(extensionPair.extensionName);
+					exit(-1);
+					return;
+				}
+				CreateLogicalDevice(pickedDevice);
+			}
+			else
+			{
+				// Created before the window existed (see BeginCreateInstance), so check it can present to it
+				VkBool32 bPresentSupported = VK_FALSE;
+				vkGetPhysicalDeviceSurfaceSupportKHR(m_VulkanDevice->m_PhysicalDevice, (u32)m_VulkanDevice->m_QueueFamilyIndices.presentFamily, m_Surface, &bPresentSupported);
+				const VulkanSwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(m_VulkanDevice->m_PhysicalDevice);
+				if (!bPresentSupported || swapChainSupport.formats.empty() || swapChainSupport.presentModes.empty())
+				{
+					PrintError("The Vulkan device can't present to the window. Exiting...\n");
+					exit(-1);
+					return;
 				}
 			}
-			deviceCreateInfo.optionalExtensions = &optionalDeviceExtensions;
-
-			deviceCreateInfo.bTryEnableRayTracing = m_bTryEnableRayTracing;
-
-			std::vector<const char*> rayTracingDeviceExtensions;
-			if (m_bTryEnableRayTracing)
-			{
-				rayTracingDeviceExtensions.emplace_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-				rayTracingDeviceExtensions.emplace_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
-				rayTracingDeviceExtensions.emplace_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
-				rayTracingDeviceExtensions.emplace_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
-				rayTracingDeviceExtensions.emplace_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-				rayTracingDeviceExtensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
-				//rayTracingDeviceExtensions.emplace_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
-				//rayTracingDeviceExtensions.emplace_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
-			}
-
-			deviceCreateInfo.rayTracingExtensions = &rayTracingDeviceExtensions;
-			// TODO: If device creation fails, try again without validation layers enabled
-			deviceCreateInfo.bEnableValidationLayers = m_bEnableValidationLayers;
-			m_VulkanDevice = new VulkanDevice(deviceCreateInfo);
-
-			m_bRayTracingEnabled = m_VulkanDevice->ExtensionEnabled(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) &&
-				m_VulkanDevice->ExtensionEnabled(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
-			//Print("Ray tracing %s\n", m_bRayTracingEnabled ? "enabled" : "_not_ enabled");
-
-			m_bDiagnosticCheckpointsEnabled = m_VulkanDevice->ExtensionEnabled(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME);
-			m_bMemoryBudgetExtensionEnabled = m_VulkanDevice->ExtensionEnabled(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+			const VkPhysicalDevice physicalDevice = m_VulkanDevice->m_PhysicalDevice;
 
 			CreatePipelineCache();
 
@@ -5762,6 +5742,121 @@ namespace flex
 			CHECK_EQ(m_ParticleSystems[particleSystem->ID], particleSystem);
 		}
 
+		void VulkanRenderer::CreateLogicalDevice(VkPhysicalDevice physicalDevice)
+		{
+			PROFILE_AUTO("CreateLogicalDevice");
+
+			VulkanDevice::CreateInfo deviceCreateInfo = {};
+			deviceCreateInfo.physicalDevice = physicalDevice;
+			// (Null when created before the window, see BeginCreateInstance)
+			deviceCreateInfo.surface = m_Surface;
+			deviceCreateInfo.requiredExtensions = &m_RequiredDeviceExtensions;
+
+			std::vector<const char*> optionalDeviceExtensions;
+			for (const VkExtensionPair& extensionPair : m_OptionalDeviceExtensions)
+			{
+				if (g_bDebugBuild || !extensionPair.bDebugOnly)
+				{
+					optionalDeviceExtensions.emplace_back(extensionPair.extensionName);
+				}
+			}
+			deviceCreateInfo.optionalExtensions = &optionalDeviceExtensions;
+
+			deviceCreateInfo.bTryEnableRayTracing = m_bTryEnableRayTracing;
+
+			std::vector<const char*> rayTracingDeviceExtensions;
+			if (m_bTryEnableRayTracing)
+			{
+				rayTracingDeviceExtensions.emplace_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+				rayTracingDeviceExtensions.emplace_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+				rayTracingDeviceExtensions.emplace_back(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+				rayTracingDeviceExtensions.emplace_back(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
+				rayTracingDeviceExtensions.emplace_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+				rayTracingDeviceExtensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+				//rayTracingDeviceExtensions.emplace_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+				//rayTracingDeviceExtensions.emplace_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
+			}
+
+			deviceCreateInfo.rayTracingExtensions = &rayTracingDeviceExtensions;
+			// TODO: If device creation fails, try again without validation layers enabled
+			deviceCreateInfo.bEnableValidationLayers = m_bEnableValidationLayers;
+			m_VulkanDevice = new VulkanDevice(deviceCreateInfo);
+
+			m_bRayTracingEnabled = m_VulkanDevice->ExtensionEnabled(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) &&
+				m_VulkanDevice->ExtensionEnabled(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+			//Print("Ray tracing %s\n", m_bRayTracingEnabled ? "enabled" : "_not_ enabled");
+
+			m_bDiagnosticCheckpointsEnabled = m_VulkanDevice->ExtensionEnabled(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME);
+			m_bMemoryBudgetExtensionEnabled = m_VulkanDevice->ExtensionEnabled(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
+		}
+
+		void VulkanRenderer::BeginCreateInstance(const std::string& applicationName)
+		{
+#ifdef _WINDOWS
+			CHECK(!m_InstanceFuture.valid());
+			m_ApplicationName = applicationName;
+			m_InstanceFuture = std::async(std::launch::async, [this]()
+			{
+				const ms start = StartupTimer::Elapsed();
+				const bool bResult = LoadVulkanAndCreateInstance();
+				StartupTimer::AddPhase("Load Vulkan, create instance & device (background thread)", start, StartupTimer::Elapsed());
+				return bResult;
+			});
+#else
+			FLEX_UNUSED(applicationName);
+#endif
+		}
+
+		bool VulkanRenderer::LoadVulkanAndCreateInstance()
+		{
+			{
+				PROFILE_AUTO("Volk Initialize");
+
+				VkResult res = volkInitialize();
+				if (res != VK_SUCCESS)
+				{
+					PrintError("No valid Vulkan loader found on the system. Exiting...\n");
+					return false;
+				}
+			}
+
+#if COMPILE_VULKAN && !defined(_WINDOWS)
+			// (On Windows this would initialize GLFW's Vulkan support, which is slow & only needed for the surface, which is
+			// created directly instead)
+			if (!glfwVulkanSupported())
+			{
+				PrintError("Vulkan is not supported on this platform. Exiting...\n");
+			}
+#endif
+
+			if (!CreateInstance())
+			{
+				return false;
+			}
+
+#ifdef _WINDOWS
+			if (m_Surface == VK_NULL_HANDLE)
+			{
+				// The window doesn't exist yet, so the device is picked & created without a surface (presenting to it is
+				// checked once it exists)
+				static PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR s_GetWin32PresentationSupport = nullptr;
+				s_GetWin32PresentationSupport = (PFN_vkGetPhysicalDeviceWin32PresentationSupportKHR)vkGetInstanceProcAddr(m_Instance, "vkGetPhysicalDeviceWin32PresentationSupportKHR");
+				if (s_GetWin32PresentationSupport != nullptr)
+				{
+					g_PresentationSupportWithoutSurface = [](VkPhysicalDevice device, u32 queueFamilyIndex) { return s_GetWin32PresentationSupport(device, queueFamilyIndex); };
+					VkPhysicalDevice physicalDevice = PickPhysicalDevice();
+					if (physicalDevice != VK_NULL_HANDLE)
+					{
+						CreateLogicalDevice(physicalDevice);
+					}
+					// (Otherwise picked again once the surface exists)
+				}
+			}
+#endif
+
+			return true;
+		}
+
 		bool VulkanRenderer::CreateInstance()
 		{
 			PROFILE_AUTO("CreateInstance");
@@ -5772,8 +5867,7 @@ namespace flex
 
 			VkApplicationInfo appInfo = {};
 			appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-			std::string applicationName = g_Window->GetTitle();
-			appInfo.pApplicationName = applicationName.c_str();
+			appInfo.pApplicationName = m_ApplicationName.c_str();
 			appInfo.applicationVersion = requestedVkVersion;
 			appInfo.pEngineName = "Flex Engine";
 			appInfo.engineVersion = FLEX_VERSION(FlexEngine::EngineVersionMajor, FlexEngine::EngineVersionMinor, FlexEngine::EngineVersionPatch);
@@ -5911,7 +6005,18 @@ namespace flex
 			PROFILE_AUTO("CreateSurface");
 
 			CHECK_EQ(m_Surface, (VkSurfaceKHR)VK_NULL_HANDLE);
+#ifdef _WINDOWS
+			// Created directly rather than with glfwCreateWindowSurface, which would first load Vulkan again (slowly)
+			PFN_vkCreateWin32SurfaceKHR createWin32Surface = (PFN_vkCreateWin32SurfaceKHR)vkGetInstanceProcAddr(m_Instance, "vkCreateWin32SurfaceKHR");
+			CHECK_NE(createWin32Surface, nullptr);
+			VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {};
+			surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+			surfaceCreateInfo.hinstance = GetModuleHandle(nullptr);
+			surfaceCreateInfo.hwnd = glfwGetWin32Window(static_cast<GLFWWindowWrapper*>(g_Window)->GetWindow());
+			VK_CHECK_RESULT(createWin32Surface(m_Instance, &surfaceCreateInfo, nullptr, &m_Surface));
+#else
 			VK_CHECK_RESULT(glfwCreateWindowSurface(m_Instance, static_cast<GLFWWindowWrapper*>(g_Window)->GetWindow(), nullptr, &m_Surface));
+#endif
 		}
 
 		VkPhysicalDevice VulkanRenderer::PickPhysicalDevice()
@@ -10393,7 +10498,12 @@ namespace flex
 			bool extensionsSupported = VulkanDevice::CheckDeviceSupportsExtensions(device, m_RequiredDeviceExtensions);
 
 			bool swapChainAdequate = false;
-			if (extensionsSupported)
+			if (extensionsSupported && m_Surface == VK_NULL_HANDLE)
+			{
+				// Checked once the surface exists
+				swapChainAdequate = true;
+			}
+			else if (extensionsSupported)
 			{
 				VulkanSwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(device);
 				swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
@@ -10410,6 +10520,12 @@ namespace flex
 		{
 			std::vector<const char*> extensions;
 
+#ifdef _WINDOWS
+			// What glfwGetRequiredInstanceExtensions returns on Windows (which can't be called before GLFW is initialized,
+			// & loads Vulkan itself, slowly)
+			extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+			extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#else
 			u32 glfwExtensionCount = 0;
 			const char** glfwExtensions;
 			// TODO: Don't call glfw functions directly in renderer
@@ -10419,6 +10535,7 @@ namespace flex
 			{
 				extensions.push_back(glfwExtensions[i]);
 			}
+#endif
 
 			// TODO: Mark up debug-only extensions to only be enabled in debug
 			for (u32 i = 0; i < m_RequiredInstanceExtensions.size(); ++i)
@@ -10487,6 +10604,8 @@ namespace flex
 			glm::vec4 screenSize(windowSize.x, windowSize.y, 1.0f / windowSize.x, 1.0f / windowSize.y);
 
 			static OceanData defaultOceanData = { glm::vec4(1, 0, 0, 0), glm::vec4(0, 1, 0, 0), glm::vec4(0, 0, 1, 0), 1.0f, 3.0f, 1.0f, 1.0f, 1.0f, { } };
+			// No volumes unless something (e.g. a boat) sets this as a global uniform
+			static WaterClipData defaultWaterClipData = {};
 			static DirLightData defaultDirLightData = { VEC3_RIGHT, 0, VEC3_ONE, 0.0f, 0, 0.0f, { 0.0f, 0.0f } };
 
 			TerrainGenConstantData* terrainGenConstantData = m_Terrain != nullptr ? &m_Terrain->constantData : nullptr;
@@ -10531,6 +10650,7 @@ namespace flex
 				case U_EXPOSURE_ID: dataStart = (void*)&exposure; break;
 				case U_TIME_ID: dataStart = (void*)&time; break;
 				case U_OCEAN_DATA_ID: dataStart = (void*)&defaultOceanData; break;
+				case U_WATER_CLIP_DATA_ID: dataStart = (void*)&defaultWaterClipData; break;
 				case U_SKYBOX_DATA_ID: dataStart = (void*)&skyboxData; break;
 				case U_SHADOW_SAMPLING_DATA_ID: dataStart = (void*)&m_ShadowSamplingData; break;
 				case U_NEAR_FAR_PLANES_ID: dataStart = (void*)&nearFarPlanes; break;

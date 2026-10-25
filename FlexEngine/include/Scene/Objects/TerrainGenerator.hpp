@@ -36,6 +36,17 @@ namespace flex
 		// Removes small fragments left floating by the dig (unless bRemoveFragments is false)
 		void Dig(const glm::vec3& center, real radius, bool bRemoveFragments = true);
 		void Fill(const glm::vec3& center, real radius, terrain::Material material);
+
+		// Trees & cacti (generated as part of the terrain) whose bases lie within the box. Plants are found from the
+		// density, so they're available whether or not their chunk has loaded.
+		void FindPlants(const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<terrain::PlantInfo>& outPlants) const;
+		// Removes a plant for good (saved with the terrain's edits), regenerating its chunks without it, & has it fall
+		// over (dropping wood). fallDirection: horizontal direction to topple towards (zero: away from the player).
+		void FellPlant(const terrain::PlantInfo& plant, const glm::vec3& fallDirection);
+		// A plant's (full detail, world space) mesh, as shown in the terrain
+		void BuildPlantMesh(const terrain::PlantInfo& plant, terrain::ChunkMeshData& outMesh) const;
+		// Called whenever plants are felled (by FellPlant, or by digging out the ground below them)
+		static void (*s_OnPlantFelled)(const terrain::PlantInfo& plant, const glm::vec3& fallDirection);
 		// Number of edit jobs in flight (edits are applied a few frames after being made)
 		bool IsApplyingEdits() const;
 
@@ -60,8 +71,16 @@ namespace flex
 		void SetWorld(i32 seed, const std::string& saveDirectory);
 		// Writes any unsaved edits to disk now
 		void FlushEdits();
+		// Writes the displayed chunks to disk (in the background), so they're shown immediately when this world is
+		// next loaded. Call after FlushEdits (snapshots are only used with matching edits). bFinal prevents saving
+		// again (e.g. on shutdown) until the world changes, for when the camera is about to leave the player.
+		void SaveSnapshot(bool bFinal = false);
+		// Applies world param changes (restarting generation) if there are any
+		void ApplyParamsIfDirty();
 		// Whether the chunks around the camera have all been generated since the last regeneration
 		bool IsLoadComplete() const { return m_bLoadComplete && !m_bParamsDirty; }
+		// True between SetWorld/Regenerate & the next Update, while sampling functions still use the previous world
+		bool IsWorldChangePending() const { return m_bParamsDirty; }
 
 		// A map of a large area (for the in game map screen), generated in the background. UpdateLargeMap must be
 		// called every frame while it's in use (even while the game is paused).
@@ -98,6 +117,11 @@ namespace flex
 			RigidBody* rigidBody = nullptr;
 			btCollisionShape* collisionShape = nullptr;
 			u32 collisionIndexCount = ~0u;
+			// Foliage (after collisionIndexCount), which nothing collides with but rays can hit (see
+			// CollisionType::RAYCAST_ONLY), so trees can be aimed at
+			btTriangleIndexVertexArray* foliageTriangleIndexVertexArray = nullptr;
+			RigidBody* foliageRigidBody = nullptr;
+			btCollisionShape* foliageCollisionShape = nullptr;
 		};
 
 		void UpdateRoadSegments();
@@ -110,6 +134,8 @@ namespace flex
 		void DestroyChunk(Chunk& chunk);
 		void DestroyAllChunks();
 		void CreateChunkRigidBody(Chunk& chunk);
+		// The expensive part of CreateChunkRigidBody, which can run on any thread
+		static void BuildChunkCollisionShapes(Chunk& chunk);
 		void DestroyChunkRigidBody(Chunk& chunk);
 		void UpdateRigidBodies();
 		void UpdateEditorBrush();
@@ -143,6 +169,8 @@ namespace flex
 
 		GameObjectID m_RoadGameObjectID = InvalidGameObjectID;
 		MaterialID m_TerrainMatID = InvalidMaterialID;
+		// Water surfaces use a variant of the terrain shader which hides water inside boats
+		MaterialID m_WaterMatID = InvalidMaterialID;
 
 		// Map of chunk index to overlapping road segments
 		std::map<glm::ivec3, std::vector<RoadSegment*>, iVec3Compare> m_RoadSegments;
@@ -198,7 +226,8 @@ namespace flex
 			std::vector<u32> colours; // ABGR, row major (z, x), +z first
 			bool bValid = false;
 		};
-		static std::future<WorldMap> GenerateMap(std::shared_ptr<const terrain::TerrainDensity> density, const glm::vec3& center, real extent, u32 resolution);
+		// bParallel spreads the work over the job system (for maps the player is waiting on)
+		static std::future<WorldMap> GenerateMap(std::shared_ptr<const terrain::TerrainDensity> density, const glm::vec3& center, real extent, u32 resolution, bool bParallel = false);
 		WorldMap m_WorldMap;
 		std::future<WorldMap> m_WorldMapFuture;
 		real m_WorldMapZoom = 1.0f;
@@ -211,13 +240,15 @@ namespace flex
 		TextureID m_LargeMapTextureID = InvalidTextureID;
 		std::string m_SaveDirectory;
 		bool m_bReloadEdits = false;
+		bool m_bSnapshotFinal = false; // See SaveSnapshot
 
 		WorldMap m_Minimap;
 		std::future<WorldMap> m_MinimapFuture;
 		TextureID m_MinimapTextureID = InvalidTextureID;
 		// Replaced textures are destroyed once the GPU is no longer using them
 		std::vector<Pair<TextureID, u32>> m_RetiredMinimapTextures;
-		real m_MinimapExtent = 1500.0f; // Half width (meters)
+		real m_MinimapExtent = 800.0f; // Half width (meters)
+		static const u32 MINIMAP_RESOLUTION = 160;
 
 		static TerrainGenerator* s_Active;
 		static bool s_bShowWorldMap;

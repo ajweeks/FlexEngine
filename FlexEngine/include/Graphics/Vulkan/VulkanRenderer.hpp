@@ -37,6 +37,10 @@ namespace flex
 			VulkanRenderer& operator=(VulkanRenderer&&) = delete;
 
 			virtual void Initialize() override;
+			// Loads Vulkan & creates the instance on a background thread, overlapping with window creation (call before
+			// Initialize, which waits for it). Only supported on Windows, where the instance extensions needed for
+			// window surfaces are known before GLFW is initialized.
+			void BeginCreateInstance(const std::string& applicationName);
 			virtual void PostInitialize() override;
 
 			virtual void Destroy() override;
@@ -236,6 +240,11 @@ namespace flex
 			void InsertNewParticleSystem(VulkanParticleSystem* particleSystem);
 
 			bool CreateInstance();
+			bool LoadVulkanAndCreateInstance();
+			// Creates m_VulkanDevice
+			void CreateLogicalDevice(VkPhysicalDevice physicalDevice);
+			std::future<bool> m_InstanceFuture;
+			std::string m_ApplicationName;
 			void SetupDebugCallback();
 			void CreateSurface();
 			VkPhysicalDevice PickPhysicalDevice();
@@ -466,7 +475,8 @@ namespace flex
 			bool m_bEnableDebugPrintf = true;
 #endif
 
-			bool m_bTryEnableRayTracing = true;
+			// Nothing uses ray tracing yet, & enabling its extensions makes device creation slower
+			bool m_bTryEnableRayTracing = false;
 			bool m_bRayTracingEnabled = false;
 
 			struct Version

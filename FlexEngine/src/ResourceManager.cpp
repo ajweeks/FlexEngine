@@ -887,6 +887,19 @@ namespace flex
 
 		parsedMaterialInfos.clear();
 
+		// A material file holds either one material ("material" object) or a family of them ("materials" array).
+		// Any material may name a "parent" (in any file) whose fields it inherits, overriding only what it sets.
+		struct MaterialEntry
+		{
+			JSONObject object;
+			std::string name;
+			std::string parentName;
+			std::string filePath;
+			i32 fileVersion;
+			bool bSharedFile;
+		};
+		std::vector<MaterialEntry> entries;
+
 		std::vector<std::string> filePaths;
 		if (Platform::FindFilesInDirectory(MATERIALS_DIRECTORY, filePaths, "*", false))
 		{
@@ -897,11 +910,24 @@ namespace flex
 				{
 					i32 fileVersion = parentObj.GetInt("version");
 
-					MaterialCreateInfo matCreateInfo = {};
-					JSONObject materialObj = parentObj.GetObject("material");
-					Material::ParseJSONObject(materialObj, matCreateInfo, fileVersion);
+					std::vector<JSONObject> materialObjs;
+					const bool bSharedFile = parentObj.TryGetObjectArray("materials", materialObjs);
+					if (!bSharedFile)
+					{
+						materialObjs.push_back(parentObj.GetObject("material"));
+					}
 
-					parsedMaterialInfos.push_back(matCreateInfo);
+					for (const JSONObject& materialObj : materialObjs)
+					{
+						MaterialEntry entry = { materialObj, materialObj.GetString("name"), "", filePath, fileVersion, bSharedFile };
+						materialObj.TryGetString("parent", entry.parentName);
+						if (entry.name.empty())
+						{
+							PrintError("Material without a name in %s\n", filePath.c_str());
+							continue;
+						}
+						entries.push_back(entry);
+					}
 				}
 				else
 				{
@@ -913,6 +939,60 @@ namespace flex
 		{
 			PrintError("Failed to find any material files in %s\n", MATERIALS_DIRECTORY);
 			return;
+		}
+
+		std::map<std::string, u32> entryIndices;
+		for (u32 i = 0; i < (u32)entries.size(); ++i)
+		{
+			if (!entryIndices.emplace(entries[i].name, i).second)
+			{
+				PrintError("Material \"%s\" is defined more than once (%s & %s)\n", entries[i].name.c_str(),
+					entries[entryIndices[entries[i].name]].filePath.c_str(), entries[i].filePath.c_str());
+			}
+		}
+
+		// 0: unresolved, 1: resolving (to detect cycles), 2: resolved
+		std::vector<u8> states(entries.size(), 0);
+		std::vector<MaterialCreateInfo> resolvedInfos(entries.size());
+		std::function<void(u32)> Resolve = [&](u32 index)
+		{
+			if (states[index] == 2)
+			{
+				return;
+			}
+			const MaterialEntry& entry = entries[index];
+			states[index] = 1;
+			MaterialCreateInfo createInfo = {};
+			if (!entry.parentName.empty())
+			{
+				auto parentIter = entryIndices.find(entry.parentName);
+				if (parentIter == entryIndices.end())
+				{
+					PrintError("Material \"%s\" has an unknown parent \"%s\"\n", entry.name.c_str(), entry.parentName.c_str());
+				}
+				else if (states[parentIter->second] == 1)
+				{
+					PrintError("Material \"%s\" inherits from itself (via \"%s\")\n", entry.name.c_str(), entry.parentName.c_str());
+				}
+				else
+				{
+					Resolve(parentIter->second);
+					createInfo = resolvedInfos[parentIter->second];
+				}
+			}
+			createInfo.parentName.clear();
+			Material::ParseJSONObject(entry.object, createInfo, entry.fileVersion);
+			createInfo.sourceFilePath = entry.filePath;
+			createInfo.bSharedSourceFile = entry.bSharedFile;
+			resolvedInfos[index] = createInfo;
+			states[index] = 2;
+		};
+
+		parsedMaterialInfos.reserve(entries.size());
+		for (u32 i = 0; i < (u32)entries.size(); ++i)
+		{
+			Resolve(i);
+			parsedMaterialInfos.push_back(resolvedInfos[i]);
 		}
 
 		if (g_bEnableLogging_Loading)
@@ -962,18 +1042,205 @@ namespace flex
 	{
 		if (material->bSerializable)
 		{
-			JSONObject materialObj = material->Serialize();
-			std::string fileContents = materialObj.ToString();
+			JSONObject fileObj = material->Serialize();
+
+			const MaterialCreateInfo* sourceInfo = nullptr;
+			for (const MaterialCreateInfo& parsedMatInfo : parsedMaterialInfos)
+			{
+				if (parsedMatInfo.name == material->name)
+				{
+					sourceInfo = &parsedMatInfo;
+					break;
+				}
+			}
+
+			if (sourceInfo != nullptr && !sourceInfo->sourceFilePath.empty())
+			{
+				JSONObject materialObj = fileObj.GetObject("material");
+				materialObj = MakeMaterialObjectRelativeToSource(materialObj, *material, *sourceInfo);
+
+				JSONObject sourceFileObj;
+				if (sourceInfo->bSharedSourceFile && JSONParser::ParseFromFile(sourceInfo->sourceFilePath, sourceFileObj))
+				{
+					// Replace this material's entry, keeping the rest of the family as it is
+					for (JSONField& field : sourceFileObj.fields)
+					{
+						if (field.label == "materials" && field.value.type == ValueType::OBJECT_ARRAY)
+						{
+							for (JSONObject& entry : field.value.objectArrayValue)
+							{
+								if (entry.GetString("name") == material->name)
+								{
+									entry = materialObj;
+								}
+							}
+						}
+					}
+					fileObj = sourceFileObj;
+				}
+				else
+				{
+					for (JSONField& field : fileObj.fields)
+					{
+						if (field.label == "material")
+						{
+							field.value = JSONValue(materialObj);
+						}
+					}
+				}
+
+				if (!WriteFile(sourceInfo->sourceFilePath, fileObj.ToString(), false))
+				{
+					PrintWarn("Failed to serialize material %s to file %s\n", material->name.c_str(), sourceInfo->sourceFilePath.c_str());
+					return false;
+				}
+				return true;
+			}
 
 			std::string hypenatedName = Replace(material->name, ' ', '-');
 			const std::string fileName = MATERIALS_DIRECTORY + hypenatedName + ".json";
-			if (!WriteFile(fileName, fileContents, false))
+			if (!WriteFile(fileName, fileObj.ToString(), false))
 			{
 				PrintWarn("Failed to serialize material %s to file %s\n", material->name.c_str(), fileName.c_str());
 				return false;
 			}
 		}
 		return true;
+	}
+
+	JSONObject ResourceManager::MakeMaterialObjectRelativeToSource(const JSONObject& materialObj, const Material& material, const MaterialCreateInfo& sourceInfo) const
+	{
+		// The material's fields as written in its file (to keep values like "#RRGGBB" colours as they were written)
+		JSONObject originalObj;
+		{
+			JSONObject sourceFileObj;
+			if (JSONParser::ParseFromFile(sourceInfo.sourceFilePath, sourceFileObj))
+			{
+				std::vector<JSONObject> entries;
+				if (!sourceFileObj.TryGetObjectArray("materials", entries))
+				{
+					entries.push_back(sourceFileObj.GetObject("material"));
+				}
+				for (const JSONObject& entry : entries)
+				{
+					if (entry.GetString("name") == material.name)
+					{
+						originalObj = entry;
+					}
+				}
+			}
+		}
+
+		// Fields the parent chain sets (closest ancestor wins)
+		JSONObject inheritedObj;
+		{
+			std::string ancestorName = sourceInfo.parentName;
+			std::vector<std::string> visited;
+			while (!ancestorName.empty() && !Contains(visited, ancestorName))
+			{
+				visited.push_back(ancestorName);
+				const MaterialCreateInfo* ancestorInfo = nullptr;
+				for (const MaterialCreateInfo& parsedMatInfo : parsedMaterialInfos)
+				{
+					if (parsedMatInfo.name == ancestorName)
+					{
+						ancestorInfo = &parsedMatInfo;
+						break;
+					}
+				}
+				JSONObject ancestorFileObj;
+				if (ancestorInfo == nullptr || !JSONParser::ParseFromFile(ancestorInfo->sourceFilePath, ancestorFileObj))
+				{
+					break;
+				}
+				std::vector<JSONObject> entries;
+				if (!ancestorFileObj.TryGetObjectArray("materials", entries))
+				{
+					entries.push_back(ancestorFileObj.GetObject("material"));
+				}
+				for (const JSONObject& entry : entries)
+				{
+					if (entry.GetString("name") == ancestorName)
+					{
+						for (const JSONField& field : entry.fields)
+						{
+							if (!inheritedObj.HasField(field.label))
+							{
+								inheritedObj.fields.push_back(field);
+							}
+						}
+					}
+				}
+				ancestorName = ancestorInfo->parentName;
+			}
+		}
+
+		JSONObject result;
+		result.fields.emplace_back("name", JSONValue(material.name));
+		if (!sourceInfo.parentName.empty())
+		{
+			result.fields.emplace_back("parent", JSONValue(sourceInfo.parentName));
+		}
+
+		auto FindField = [](const JSONObject& obj, const std::string& label) -> const JSONField*
+		{
+			for (const JSONField& field : obj.fields)
+			{
+				if (field.label == label)
+				{
+					return &field;
+				}
+			}
+			return nullptr;
+		};
+
+		for (const JSONField& field : materialObj.fields)
+		{
+			if (field.label == "name" || field.label == "parent")
+			{
+				continue;
+			}
+			const JSONField* inheritedField = FindField(inheritedObj, field.label);
+			const JSONField* originalField = FindField(originalObj, field.label);
+			if (inheritedField != nullptr && Material::FieldValuesEqual(inheritedField->value, field.value) &&
+				(originalField == nullptr || Material::FieldValuesEqual(originalField->value, field.value)))
+			{
+				continue; // Inherited unchanged
+			}
+			if (originalField != nullptr && Material::FieldValuesEqual(originalField->value, field.value))
+			{
+				result.fields.push_back(*originalField);
+			}
+			else
+			{
+				result.fields.push_back(field);
+			}
+		}
+
+		// Serialize() leaves out values at their defaults, which would otherwise be overridden by a parent's value
+		const std::pair<const char*, JSONValue> defaultableFields[] = {
+			{ "const albedo", JSONValue((glm::vec3)material.constAlbedo, 3) },
+			{ "const emissive", JSONValue((glm::vec3)material.constEmissive, 3) },
+			{ "const metallic", JSONValue(material.constMetallic) },
+			{ "const roughness", JSONValue(material.constRoughness) },
+			{ "texture scale", JSONValue(material.textureScale) },
+			{ "enable albedo sampler", JSONValue(material.enableAlbedoSampler) },
+			{ "enable emissive sampler", JSONValue(material.enableEmissiveSampler) },
+			{ "enable metallic sampler", JSONValue(material.enableMetallicSampler) },
+			{ "enable roughness sampler", JSONValue(material.enableRoughnessSampler) },
+			{ "enable normal sampler", JSONValue(material.enableNormalSampler) },
+		};
+		for (const auto& defaultable : defaultableFields)
+		{
+			const JSONField* inheritedField = FindField(inheritedObj, defaultable.first);
+			if (inheritedField != nullptr && FindField(result, defaultable.first) == nullptr && FindField(materialObj, defaultable.first) == nullptr &&
+				!Material::FieldValuesEqual(inheritedField->value, defaultable.second))
+			{
+				result.fields.emplace_back(defaultable.first, defaultable.second);
+			}
+		}
+
+		return result;
 	}
 
 	void ResourceManager::ParseDebugOverlayNamesFile()

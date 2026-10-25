@@ -44,6 +44,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/SceneManager.hpp"
 #include "Systems/TrackManager.hpp"
 #include "Traversal.hpp"
+#include "Woodcraft.hpp"
 
 namespace flex
 {
@@ -128,6 +129,8 @@ namespace flex
 
 		m_Traversal = new Traversal();
 		m_Traversal->Initialize(this);
+		m_Woodcraft = new WoodcraftController();
+		m_Woodcraft->Initialize(this);
 
 		m_BuildMode.Initialize(this);
 
@@ -163,6 +166,13 @@ namespace flex
 
 	void Player::Destroy(bool bDetachFromParent /* = true */)
 	{
+		if (m_Woodcraft != nullptr)
+		{
+			m_Woodcraft->Destroy();
+			delete m_Woodcraft;
+			m_Woodcraft = nullptr;
+		}
+
 		if (m_Traversal != nullptr)
 		{
 			m_Traversal->Destroy();
@@ -204,6 +214,8 @@ namespace flex
 		}
 		m_BuildMode.Update();
 
+		// Chopping & campfires (before the pickaxe, which it takes the mouse buttons from while aiming at a plant)
+		m_Woodcraft->Update();
 		UpdateTerrainTool();
 
 		if (TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive())
@@ -253,7 +265,7 @@ namespace flex
 
 		if (m_RidingVehicleID.IsValid())
 		{
-			Vehicle* vehicle = (Vehicle*)m_RidingVehicleID.Get();
+			GameObject* vehicle = m_RidingVehicleID.Get();
 
 			const glm::vec3 posOffset = glm::vec3(0.0f, 1.5f, 0.0f);
 
@@ -675,13 +687,13 @@ namespace flex
 		}
 	}
 
-	void Player::SetRidingVehicle(Vehicle* vehicle)
+	void Player::SetRidingVehicle(GameObject* vehicle)
 	{
 		if (vehicle != nullptr)
 		{
 			CHECK(!m_RidingVehicleID.IsValid());
 
-			vehicle->OnPlayerEnter();
+			Rideable::OnPlayerEnter(vehicle);
 
 			m_RidingVehicleID = vehicle->ID;
 
@@ -705,8 +717,8 @@ namespace flex
 		}
 		else
 		{
-			Vehicle* ridingVehicle = (Vehicle*)m_RidingVehicleID.Get();
-			ridingVehicle->OnPlayerExit();
+			GameObject* ridingVehicle = m_RidingVehicleID.Get();
+			Rideable::OnPlayerExit(ridingVehicle);
 
 			m_RidingVehicleID = InvalidGameObjectID;
 
@@ -715,12 +727,11 @@ namespace flex
 			rbInternal->setGravity(g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->getGravity());
 			rbInternal->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
 
-			// Step out beside the vehicle
-			Transform* vehicleTransform = ridingVehicle->GetTransform();
-			const glm::vec3 exitPos = vehicleTransform->GetWorldPosition() - vehicleTransform->GetRight() * 2.5f + VEC3_UP * 1.0f;
+			// Step out beside the vehicle (boats find somewhere dry, or stand up in the boat)
+			const glm::vec3 exitPos = Rideable::GetExitPosition(ridingVehicle);
 			m_RigidBody->SetWorldPosition(exitPos);
 			m_Transform.SetWorldPosition(exitPos);
-			if (TerrainGenerator::GetActive() != nullptr)
+			if (TerrainGenerator::GetActive() != nullptr && ridingVehicle->GetTypeID() != RowBoatSID)
 			{
 				// Make sure that's not inside a hill
 				m_bTerrainPlacementPending = true;
@@ -898,6 +909,7 @@ namespace flex
 			{
 			case TreasureChestSID: prompt = "[E] Open chest"; break;
 			case VehicleSID: prompt = "[E] Drive"; break;
+			case RowBoatSID: prompt = "[E] Row"; break;
 			case TerminalSID: prompt = "[E] Use terminal"; break;
 			default: break;
 			}

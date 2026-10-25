@@ -18,6 +18,65 @@ layout (constant_id = 5) const int ENABLE_FOG = 1;
 
 const float PI = 3.14159265359;
 
+// Colour pipeline
+// - Material colours (const albedo, textures sampled through SRGBToLinear, vertex colours) & lighting are linear.
+// - Lit shaders convert their final linear radiance with LinearToDisplay (exposure, tone map, sRGB encoding) and
+//   write display values. The sky, fog, clouds & unlit shaders (colour, emissive, sprites, text) work in display
+//   space directly.
+// - Post processing only grades (an identity matrix by default) & the swapchain is UNORM, so display values reach the
+//   screen unchanged.
+const float DISPLAY_EXPOSURE = 1.0;
+
+float LinearToSRGB(float v)
+{
+	return v <= 0.0031308 ? v * 12.92 : 1.055 * pow(v, 1.0 / 2.4) - 0.055;
+}
+
+vec3 LinearToSRGB(vec3 v)
+{
+	return vec3(LinearToSRGB(v.r), LinearToSRGB(v.g), LinearToSRGB(v.b));
+}
+
+float SRGBToLinear(float v)
+{
+	return v <= 0.04045 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4);
+}
+
+vec3 SRGBToLinear(vec3 v)
+{
+	return vec3(SRGBToLinear(v.r), SRGBToLinear(v.g), SRGBToLinear(v.b));
+}
+
+// Khronos PBR Neutral tone mapping: leaves colours below ~0.76 untouched (so base colours reproduce faithfully) &
+// smoothly compresses highlights towards white
+vec3 ToneMapPBRNeutral(vec3 colour)
+{
+	const float startCompression = 0.8 - 0.04;
+	const float desaturation = 0.15;
+
+	float x = min(colour.r, min(colour.g, colour.b));
+	float offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
+	colour -= offset;
+
+	float peak = max(colour.r, max(colour.g, colour.b));
+	if (peak < startCompression)
+	{
+		return colour;
+	}
+
+	const float d = 1.0 - startCompression;
+	float newPeak = 1.0 - d * d / (peak + d - startCompression);
+	colour *= newPeak / peak;
+
+	float g = 1.0 - 1.0 / (desaturation * (peak - newPeak) + 1.0);
+	return mix(colour, vec3(newPeak), g);
+}
+
+vec3 LinearToDisplay(vec3 radiance)
+{
+	return LinearToSRGB(clamp(ToneMapPBRNeutral(max(radiance * DISPLAY_EXPOSURE, vec3(0.0))), 0.0, 1.0));
+}
+
 const mat4 biasMat = mat4( 
 	0.5, 0.0, 0.0, 0.0,
 	0.0, 0.5, 0.0, 0.0,
@@ -95,6 +154,42 @@ struct SkyboxData
 	vec4 sunColour; // rgb: colour of sunlight reaching the ground (display space), w: star visibility [0, 1]
 	vec4 weather; // x: cloudiness of the current weather [0, 1], y: regional variation, zw: weather pattern offset
 };
+
+// Volumes (e.g. the inside of a boat's hull) in which water surfaces aren't drawn. Each is a stack of ellipses in
+// its local space whose semi-axes grow linearly from the bottom to the top. Must match WaterClipData on the CPU.
+struct WaterClipVolume
+{
+	mat4 worldToLocal;
+	vec4 extents; // x: half width (top), y: half length (top), z: bottom y, w: top y
+	vec4 bottomScale; // x: width scale at the bottom, y: length scale at the bottom
+};
+
+struct WaterClipData
+{
+	WaterClipVolume volumes[4];
+	vec4 count; // x: number of volumes in use
+};
+
+bool IsInWaterClipVolume(WaterClipData data, vec3 posWS)
+{
+	int count = int(data.count.x);
+	for (int i = 0; i < count; ++i)
+	{
+		vec3 p = (data.volumes[i].worldToLocal * vec4(posWS, 1.0)).xyz;
+		vec4 e = data.volumes[i].extents;
+		float t = (p.y - e.z) / max(e.w - e.z, 0.0001);
+		if (t >= 0.0 && t <= 1.0)
+		{
+			vec2 scale = mix(data.volumes[i].bottomScale.xy, vec2(1.0), t);
+			vec2 q = p.xz / (e.xy * scale);
+			if (dot(q, q) < 1.0)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
 
 // Functions
 vec3 FresnelSchlick(float cosTheta, vec3 F0)
@@ -431,7 +526,8 @@ vec3 AtmosphereRadiance(vec3 dir, vec3 lightDir, float intensity, float altitude
 
 vec3 AtmosphereToDisplay(vec3 radiance)
 {
-	return 1.0 - exp(-radiance * ATMOS_WHITE_BALANCE * ATMOS_EXPOSURE);
+	// Same display transform as lit surfaces (must match atmosphere::ToDisplay in BaseScene.cpp)
+	return LinearToDisplay(radiance * ATMOS_WHITE_BALANCE * ATMOS_EXPOSURE);
 }
 
 // Clouds: a layer of procedural noise at a fixed altitude, drifting with the wind. Shared by the skybox (which

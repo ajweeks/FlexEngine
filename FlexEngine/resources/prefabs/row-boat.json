@@ -1,0 +1,11 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "EFE88C7D06124108AFC60C4108ABD9AC",
+	"root" : 
+	{
+		"id" : "03C56A6801414A46A9E983B9C1CCE92B",
+		"name" : "row boat",
+		"type" : "row boat"
+	}
+}

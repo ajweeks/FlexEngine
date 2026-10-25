@@ -28,22 +28,85 @@ namespace flex
 		RIGHT
 	};
 
-	// Colours & sizes shared by all screens
+	// The game's visual design: colours, type sizes & spacing shared by every screen & the HUD. See docs/visual_design.md
+	// for the roles & rules. Colours are written as sRGB hex (as displayed). Sizes are pixels at 1080p (multiply by
+	// GameUI::Scale()).
 	namespace UITheme
 	{
-		const glm::vec4 PANEL(0.06f, 0.07f, 0.09f, 0.86f);
-		const glm::vec4 PANEL_TOP(0.11f, 0.12f, 0.15f, 0.9f);
-		const glm::vec4 WIDGET(0.16f, 0.17f, 0.21f, 0.92f);
-		const glm::vec4 WIDGET_HOVER(0.24f, 0.26f, 0.32f, 0.95f);
-		const glm::vec4 ACCENT(0.98f, 0.66f, 0.24f, 1.0f);
-		const glm::vec4 ACCENT_DARK(0.78f, 0.45f, 0.12f, 1.0f);
-		const glm::vec4 DANGER(0.82f, 0.28f, 0.24f, 1.0f);
-		const glm::vec4 TEXT_MAIN(0.95f, 0.95f, 0.96f, 1.0f);
-		const glm::vec4 TEXT_DIM(0.65f, 0.67f, 0.72f, 1.0f);
-		const glm::vec4 TEXT_DARK(0.08f, 0.08f, 0.1f, 1.0f);
-		const real CORNER_RADIUS = 10.0f;
+		inline glm::vec4 Hex(u32 rgb, real alpha = 1.0f)
+		{
+			return glm::vec4((real)((rgb >> 16) & 0xFF) / 255.0f, (real)((rgb >> 8) & 0xFF) / 255.0f, (real)(rgb & 0xFF) / 255.0f, alpha);
+		}
+		inline glm::vec4 WithAlpha(const glm::vec4& colour, real alpha)
+		{
+			return glm::vec4(colour.r, colour.g, colour.b, colour.a * alpha);
+		}
+
+		// Surfaces: warm, slightly blue-green "night" neutrals (never pure black)
+		const glm::vec4 INK = Hex(0x111318); // Scrims & backdrops (used translucent)
+		const glm::vec4 SURFACE = Hex(0x1A1D23, 0.90f); // Panels
+		const glm::vec4 SURFACE_TOP = Hex(0x23272E, 0.92f); // Top of a panel's gradient
+		const glm::vec4 RAISED = Hex(0x2A2F37, 0.94f); // Widgets on a panel
+		const glm::vec4 RAISED_HOVER = Hex(0x363C46, 0.96f);
+		const glm::vec4 OUTLINE = Hex(0x48505C); // Tracks, dividers, hairlines
+
+		// Text
+		const glm::vec4 TEXT_PRIMARY = Hex(0xF3EFE7); // Warm white
+		const glm::vec4 TEXT_SECONDARY = Hex(0xADA9A0); // Labels, values, hints
+		const glm::vec4 TEXT_DISABLED = Hex(0x6E6B66);
+		const glm::vec4 TEXT_ON_ACCENT = Hex(0x1C140B); // On ember fills
+
+		// Accent: ember (the one colour that means "act here / you are here")
+		const glm::vec4 EMBER = Hex(0xF4A23C);
+		const glm::vec4 EMBER_DEEP = Hex(0xD9822B); // Resting primary buttons, gradients' lower half
+		const glm::vec4 EMBER_GLOW = Hex(0xFFC56E); // Hovered primary buttons, highlights
+
+		// Semantic
+		const glm::vec4 SKY = Hex(0x6CB6D9); // Information, water, cool status
+		const glm::vec4 MOSS = Hex(0x86C07A); // Success, confirmations
+		const glm::vec4 CLAY = Hex(0xE0614F); // Danger, destructive actions, damage
+		const glm::vec4 GOLD = Hex(0xF5CE5E); // Treasure & rewards
+
+		// Older names, kept for existing code
+		const glm::vec4 PANEL = SURFACE;
+		const glm::vec4 PANEL_TOP = SURFACE_TOP;
+		const glm::vec4 WIDGET = RAISED;
+		const glm::vec4 WIDGET_HOVER = RAISED_HOVER;
+		const glm::vec4 ACCENT = EMBER;
+		const glm::vec4 ACCENT_DARK = EMBER_DEEP;
+		const glm::vec4 DANGER = CLAY;
+		const glm::vec4 TEXT_MAIN = TEXT_PRIMARY;
+		const glm::vec4 TEXT_DIM = TEXT_SECONDARY;
+		const glm::vec4 TEXT_DARK = TEXT_ON_ACCENT;
+
+		// Type scale (cap height in pixels)
+		const real TEXT_DISPLAY = 80.0f; // Screen titles (heading font)
+		const real TEXT_H1 = 44.0f; // Dialog titles (heading font)
+		const real TEXT_H2 = 32.0f; // Section titles (heading font)
+		const real TEXT_BODY_LARGE = 20.0f; // Buttons, list titles
+		const real TEXT_BODY = 18.0f; // Widget labels & values
+		const real TEXT_SMALL = 16.0f; // Hints, subtitles
+		const real TEXT_CAPTION = 14.0f; // Metadata, key legends
+
+		// Spacing (a 4px grid)
+		const real SPACE_XS = 4.0f;
+		const real SPACE_S = 8.0f;
+		const real SPACE_M = 12.0f;
+		const real SPACE_L = 16.0f;
+		const real SPACE_XL = 24.0f;
+		const real SPACE_XXL = 32.0f;
+		const real SCREEN_MARGIN = 120.0f; // Left edge of menu content
+		const real HUD_MARGIN = 32.0f; // Distance of HUD elements from the screen's edges
+
+		// Corner radii
+		const real RADIUS_S = 4.0f; // Bars, markers
+		const real RADIUS_M = 10.0f; // Widgets
+		const real RADIUS_L = 16.0f; // Panels, HUD plates
+
+		const real CORNER_RADIUS = RADIUS_M;
 		const real BUTTON_HEIGHT = 56.0f;
-		const real SPACING = 12.0f;
+		const real ROW_HEIGHT = 62.0f; // Settings rows, text fields
+		const real SPACING = SPACE_M;
 	}
 
 	class GameUI final
@@ -64,6 +127,7 @@ namespace flex
 		// Drawing
 		void FillRect(const UIRect& rect, const glm::vec4& colour, real cornerRadius = 0.0f);
 		void FillRectGradient(const UIRect& rect, const glm::vec4& top, const glm::vec4& bottom, real cornerRadius = 0.0f);
+		void FillRectGradientHorizontal(const UIRect& rect, const glm::vec4& left, const glm::vec4& right, real cornerRadius = 0.0f);
 		// Soft drop shadow behind a rect
 		void Shadow(const UIRect& rect, real blur, real cornerRadius, real opacity = 0.45f);
 		void Panel(const UIRect& rect);
@@ -77,7 +141,7 @@ namespace flex
 		// Widgets, identified by their id (which must be unique on the screen)
 		bool Button(const char* id, const UIRect& rect, const std::string& label, bool bPrimary = false, bool bEnabled = true);
 		bool Checkbox(const char* id, const UIRect& rect, const std::string& label, bool* value);
-		// Returns true while the value is being changed
+		// Returns true while the value is being changed (see WasReleased for when dragging ends)
 		bool Slider(const char* id, const UIRect& rect, const std::string& label, real* value, real min, real max, const char* format);
 		// Returns true when enter is pressed
 		bool TextField(const char* id, const UIRect& rect, std::string* text, u32 maxLength, const std::string& placeholder = "");
@@ -85,6 +149,13 @@ namespace flex
 		bool ListItem(const char* id, const UIRect& rect, const std::string& title, const std::string& subtitle, bool bSelected);
 
 		void ClearFocus() { m_FocusedID = 0; }
+		// True on the frame the mouse is released after dragging the widget (e.g. a slider)
+		bool WasReleased(const char* id) const;
+		// True while a widget is being dragged
+		bool IsDragging() const { return m_ActiveID != 0; }
+
+		// Short, soft tone confirming a change (e.g. played when the volume slider is released, at the new volume)
+		void PlayConfirm();
 
 		// Draws a rounded rect without a GameUI instance (e.g. from the inventory UI), in pixels from the top left
 		static void DrawRoundedRect(const UIRect& rect, const glm::vec4& top, const glm::vec4& bottom, real cornerRadius);
@@ -93,6 +164,7 @@ namespace flex
 		// Smoothly animated hover amount for a widget
 		real HoverAmount(u64 id, bool bHovered);
 		void PlayClick();
+		void FillRectGradientInternal(const UIRect& rect, const glm::vec4& from, const glm::vec4& to, real cornerRadius, bool bHorizontal);
 
 		real m_Width = 1.0f;
 		real m_Height = 1.0f;
@@ -103,9 +175,11 @@ namespace flex
 		real m_Scroll = 0.0f;
 
 		u64 m_ActiveID = 0; // Widget being dragged
+		u64 m_ReleasedID = 0; // Widget whose drag ended this frame
 		u64 m_FocusedID = 0; // Text field receiving keyboard input
 		std::map<u64, real> m_HoverAmounts;
 		sec m_Time = 0.0f;
 		AudioSourceID m_ClickSoundID = InvalidAudioSourceID;
+		AudioSourceID m_ConfirmSoundID = InvalidAudioSourceID;
 	};
 } // namespace flex

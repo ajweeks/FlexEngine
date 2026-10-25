@@ -433,6 +433,8 @@ namespace flex
 		VkCommandBuffer BeginSingleTimeCommands(VulkanDevice* device);
 		void EndSingleTimeCommands(VulkanDevice* device, VkQueue graqueuephicsQueue, VkCommandBuffer commandBuffer);
 
+		// With no surface (when the device is created before the window), present support is queried with this instead
+		extern VkBool32(*g_PresentationSupportWithoutSurface)(VkPhysicalDevice device, u32 queueFamilyIndex);
 		VulkanQueueFamilyIndices FindQueueFamilies(VkSurfaceKHR surface, VkPhysicalDevice device);
 
 		struct VulkanShader final : public Shader

@@ -12,6 +12,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
+#include "GameSounds.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
@@ -41,11 +42,17 @@ namespace flex
 		// Closest hit, ignoring one object (the player's own capsule)
 		struct IgnoreObjectRayCallback final : public btCollisionWorld::ClosestRayResultCallback
 		{
-			IgnoreObjectRayCallback(const btVector3& from, const btVector3& to, const btCollisionObject* ignored) :
+			IgnoreObjectRayCallback(const btVector3& from, const btVector3& to, const btCollisionObject* ignored, bool bIncludeRaycastOnly = false) :
 				ClosestRayResultCallback(from, to),
 				ignored(ignored)
 			{
 				m_collisionFilterMask = (i32)CollisionType::STATIC | (i32)CollisionType::DEFAULT;
+				if (bIncludeRaycastOnly)
+				{
+					// Raycast only objects (tree foliage) must be in both the group & the mask
+					m_collisionFilterGroup |= (i32)CollisionType::RAYCAST_ONLY;
+					m_collisionFilterMask |= (i32)CollisionType::RAYCAST_ONLY;
+				}
 			}
 
 			virtual bool needsCollision(btBroadphaseProxy* proxy) const override
@@ -282,6 +289,8 @@ namespace flex
 		m_bStaminaExhausted = false;
 		m_bJumpQueued = false;
 		m_bLeapQueued = false;
+		m_RopeToss = {};
+		m_MantleCooldown = 0.0f;
 	}
 
 	bool Traversal::CanControl() const
@@ -351,6 +360,10 @@ namespace flex
 		{
 			AudioManager::PlaySource(m_DeployID);
 		}
+		else if (m_Mode == Mode::GLIDING && mode != Mode::WINGSUIT)
+		{
+			GameSounds::PlayGliderStow();
+		}
 
 		m_Mode = mode;
 		if (mode != Mode::CLIMBING)
@@ -363,14 +376,14 @@ namespace flex
 		SetGravityEnabled(mode != Mode::GLIDING && mode != Mode::WINGSUIT && mode != Mode::CLIMBING);
 	}
 
-	bool Traversal::Raycast(const glm::vec3& from, const glm::vec3& to, glm::vec3& outHitPos, glm::vec3& outHitNormal) const
+	bool Traversal::Raycast(const glm::vec3& from, const glm::vec3& to, glm::vec3& outHitPos, glm::vec3& outHitNormal, u32 flags /* = 0 */) const
 	{
 		bool bHit = false;
 		real closestDistance = glm::distance(from, to);
 
 		const btVector3 btFrom = ToBtVec3(from);
 		const btVector3 btTo = ToBtVec3(to);
-		IgnoreObjectRayCallback callback(btFrom, btTo, m_Player->GetRigidBody()->GetRigidBodyInternal());
+		IgnoreObjectRayCallback callback(btFrom, btTo, m_Player->GetRigidBody()->GetRigidBodyInternal(), (flags & RAYCAST_FOLIAGE) != 0);
 		g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->rayTest(btFrom, btTo, callback);
 		if (callback.hasHit())
 		{
@@ -378,6 +391,11 @@ namespace flex
 			outHitPos = ToVec3(callback.m_hitPointWorld);
 			outHitNormal = ToVec3(callback.m_hitNormalWorld);
 			closestDistance = glm::distance(from, outHitPos);
+		}
+
+		if (flags & RAYCAST_PHYSICS_ONLY)
+		{
+			return bHit;
 		}
 
 		// Terrain collision only exists near the player, so also test against the terrain itself
@@ -559,6 +577,7 @@ namespace flex
 		UpdateSurroundings();
 		UpdateInput();
 		UpdateHook();
+		UpdateRopeToss();
 		UpdateSounds();
 
 		// Camera feedback: widen the view with speed, & bank into turns while flying
@@ -732,7 +751,8 @@ namespace flex
 		const glm::vec3 dir = GetLookDirection();
 
 		glm::vec3 hitPos, hitNormal;
-		if (!Raycast(origin, origin + dir * m_Settings.hookRange, hitPos, hitNormal))
+		// Trees can be grappled to (their foliage too, which nothing else collides with)
+		if (!Raycast(origin, origin + dir * m_Settings.hookRange, hitPos, hitNormal, RAYCAST_FOLIAGE))
 		{
 			// Nothing in range: fling the hook out & reel it back in
 			hitPos = origin + dir * m_Settings.hookRange;
@@ -743,8 +763,11 @@ namespace flex
 		else
 		{
 			m_Hook.target = hitPos;
+			m_Hook.targetNormal = hitNormal;
 			m_Hook.state = HookState::FLYING;
 			m_Hook.ropeLength = 0.0f;
+			m_Hook.anchorCheckTimer = 0.0f;
+			m_Hook.anchorMissCount = 0;
 		}
 
 		m_Hook.pos = GetHandPos();
@@ -816,11 +839,311 @@ namespace flex
 			if (glm::distance(m_Player->GetTransform()->GetWorldPosition(), m_Hook.pos) > m_Settings.hookRange * 1.25f)
 			{
 				ReleaseHook();
+				break;
+			}
+
+			// Let go if what the hook's caught on disappears (a tree being chopped down, or the terrain dug away)
+			m_Hook.anchorCheckTimer -= dt;
+			if (m_Hook.anchorCheckTimer <= 0.0f)
+			{
+				m_Hook.anchorCheckTimer = 0.25f;
+				const glm::vec3 normal = SafeNormalize(m_Hook.targetNormal, VEC3_UP);
+				glm::vec3 hitPos, hitNormal;
+				// Generously long (the terrain's density & its mesh differ by up to a voxel)
+				TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+				const bool bInTerrain = terrainGenerator != nullptr &&
+					(terrainGenerator->SampleDensity(m_Hook.pos - normal * 0.5f) < 0.0f || terrainGenerator->SampleDensity(m_Hook.pos - normal * 1.2f) < 0.0f);
+				if (bInTerrain || Raycast(m_Hook.pos + normal * 1.5f, m_Hook.pos - normal * 1.5f, hitPos, hitNormal, RAYCAST_FOLIAGE))
+				{
+					m_Hook.anchorMissCount = 0;
+				}
+				else if (++m_Hook.anchorMissCount >= 3)
+				{
+					if (getenv("FLEX_TRAVERSAL_DEBUG") != nullptr)
+					{
+						Print("Traversal: grappling hook's anchor disappeared, releasing\n");
+					}
+					ReleaseHook();
+				}
 			}
 		} break;
 		default:
 			break;
 		}
+	}
+
+	bool Traversal::TossRope()
+	{
+		if (m_RopeToss.state != RopeTossState::NONE)
+		{
+			return false;
+		}
+
+		// Thrown a little upwards of where the player's looking
+		m_RopeToss = {};
+		m_RopeTossFailure.clear();
+		m_RopeToss.state = RopeTossState::FLYING;
+		m_RopeToss.pos = GetHandPos();
+		m_RopeToss.velocity = GetLookDirection() * m_Settings.ropeTossSpeed + VEC3_UP * 2.0f;
+		AudioManager::PlaySource(m_HookFireID);
+		return true;
+	}
+
+	void Traversal::UpdateRopeToss()
+	{
+		const sec dt = glm::min(g_DeltaTime, 0.05f);
+		if (dt <= 0.0f)
+		{
+			return;
+		}
+
+		switch (m_RopeToss.state)
+		{
+		case RopeTossState::FLYING:
+		{
+			m_RopeToss.time += dt;
+			const glm::vec3 newPos = m_RopeToss.pos + m_RopeToss.velocity * dt;
+			m_RopeToss.velocity += GRAVITY * dt;
+			glm::vec3 hitPos, hitNormal;
+			if (Raycast(m_RopeToss.pos, newPos, hitPos, hitNormal))
+			{
+				glm::vec3 anchor, mid, bottom;
+				if (ComputeRopeHang(hitPos, hitNormal, anchor, mid, bottom))
+				{
+					m_RopeToss.state = RopeTossState::FALLING;
+					m_RopeToss.anchor = anchor;
+					m_RopeToss.mid = mid;
+					m_RopeToss.bottom = bottom;
+					m_RopeToss.pos = anchor;
+					m_RopeToss.time = 0.0f;
+					AudioManager::PlaySource(m_HookAttachID);
+				}
+				else
+				{
+					// Nothing to hang from (e.g. it landed on flat ground)
+					m_RopeToss.state = RopeTossState::NONE;
+					char buffer[160];
+					snprintf(buffer, ARRAY_LENGTH(buffer), "nothing to hang from where it landed (%.1f, %.1f, %.1f), normal (%.2f, %.2f, %.2f)",
+						hitPos.x, hitPos.y, hitPos.z, hitNormal.x, hitNormal.y, hitNormal.z);
+					m_RopeTossFailure = buffer;
+				}
+			}
+			else if (m_RopeToss.time > 4.0f)
+			{
+				m_RopeToss.state = RopeTossState::NONE;
+				m_RopeTossFailure = "didn't land on anything";
+			}
+			else
+			{
+				m_RopeToss.pos = newPos;
+			}
+		} break;
+		case RopeTossState::FALLING:
+		{
+			// The free end drops down, unrolling the rope
+			m_RopeToss.time += dt;
+			const real upperLength = glm::distance(m_RopeToss.anchor, m_RopeToss.mid);
+			const real lowerLength = glm::distance(m_RopeToss.mid, m_RopeToss.bottom);
+			const real dropped = 0.5f * 9.81f * m_RopeToss.time * m_RopeToss.time + 2.0f * m_RopeToss.time;
+			if (dropped >= upperLength + lowerLength)
+			{
+				SpawnTossedRope();
+				m_RopeToss.state = RopeTossState::NONE;
+			}
+			else if (dropped < upperLength)
+			{
+				m_RopeToss.pos = glm::mix(m_RopeToss.anchor, m_RopeToss.mid, dropped / glm::max(upperLength, 1e-3f));
+			}
+			else
+			{
+				m_RopeToss.pos = glm::mix(m_RopeToss.mid, m_RopeToss.bottom, (dropped - upperLength) / glm::max(lowerLength, 1e-3f));
+			}
+		} break;
+		default:
+			break;
+		}
+	}
+
+	bool Traversal::ComputeRopeHang(const glm::vec3& hitPos, const glm::vec3& hitNormal, glm::vec3& outTop, glm::vec3& outMid, glm::vec3& outBottom) const
+	{
+		const glm::vec3 playerPos = m_Player->GetTransform()->GetWorldPosition();
+		const glm::vec3 towardsPlayer = SafeNormalize(glm::vec3(playerPos.x - hitPos.x, 0.0f, playerPos.z - hitPos.z), -GetHeadingXZ());
+		glm::vec3 p, n;
+
+		// Where the rope hangs from, & the (horizontal) direction it falls away from the surface in
+		glm::vec3 anchor;
+		glm::vec3 outwards;
+		glm::vec3 lipSearchStart = hitPos;
+		bool bOnTop = hitNormal.y > 0.5f;
+		if (!bOnTop && hitNormal.y > -0.5f)
+		{
+			// Hit a wall: if its top is just above, hang over that instead of from the wall itself
+			const glm::vec3 wallOut = SafeNormalize(glm::vec3(hitNormal.x, 0.0f, hitNormal.z), towardsPlayer);
+			for (real h = 0.5f; h <= 3.01f; h += 0.5f)
+			{
+				const glm::vec3 from = hitPos + wallOut * 0.3f + VEC3_UP * h;
+				if (!Raycast(from, from - wallOut * 1.0f, p, n))
+				{
+					// Open above the wall, find its top
+					const glm::vec3 above = hitPos - wallOut * 0.4f + VEC3_UP * (h + 0.3f);
+					if (Raycast(above, above - VEC3_UP * (h + 0.5f), p, n) && n.y > 0.5f)
+					{
+						lipSearchStart = p;
+						bOnTop = true;
+					}
+					break;
+				}
+			}
+			if (!bOnTop)
+			{
+				// Snagged on the wall
+				outwards = wallOut;
+				anchor = hitPos + wallOut * 0.3f;
+			}
+		}
+		else if (!bOnTop)
+		{
+			// Caught on a ceiling
+			outwards = towardsPlayer;
+			anchor = hitPos - VEC3_UP * 0.15f;
+		}
+
+		if (bOnTop)
+		{
+			// Landed on top of something: walk towards the player to find the edge it can hang over
+			outwards = towardsPlayer;
+			real topY = lipSearchStart.y;
+			bool bFoundEdge = false;
+			for (real s = 0.25f; s <= 8.0f; s += 0.25f)
+			{
+				const glm::vec3 q = lipSearchStart + outwards * s;
+				// The edge is where the ground drops away steeply (or ends)
+				if (!Raycast(q + VEC3_UP * 1.5f, q - VEC3_UP * 1.5f, p, n) || p.y < topY - 0.3f)
+				{
+					// Just past the last point on top
+					anchor = lipSearchStart + outwards * (s - 0.15f);
+					anchor.y = topY + 0.08f;
+					bFoundEdge = true;
+					break;
+				}
+				if (p.y > topY + 1.0f)
+				{
+					// Rising towards the player (it's a slope or a step up, not a ledge)
+					break;
+				}
+				topY = p.y;
+			}
+			if (!bFoundEdge)
+			{
+				return false;
+			}
+		}
+
+		// The rope follows the ground's profile outwards from the anchor until it reaches a drop (where it hangs
+		// straight down from), or the foot of a slope. Over a rounded lip that's two straight pieces: one lying over
+		// the lip, & one hanging down from where the drop begins.
+		const real sampleSpacing = 0.25f;
+		const u32 sampleCount = 64;
+		const real maxLength = m_Settings.ropeMaxLength;
+		glm::vec3 prev = anchor - VEC3_UP * 0.1f; // Ground under the previous sample
+		glm::vec3 mid = anchor;
+		glm::vec3 bottom = anchor;
+		bool bFound = false;
+		for (u32 i = 1; i <= sampleCount; ++i)
+		{
+			const glm::vec3 q = anchor + outwards * (sampleSpacing * (real)i);
+			const bool bHit = Raycast(q + VEC3_UP * 0.5f, q - VEC3_UP * maxLength, p, n);
+			const glm::vec3 ground = bHit ? p : q - VEC3_UP * maxLength;
+			if (prev.y - ground.y > sampleSpacing * 3.0f)
+			{
+				// A drop (steeper than ~70 degrees): hang straight down from just over its edge (the ray down to the
+				// ground here was clear)
+				mid = glm::vec3(q.x, glm::max(prev.y + 0.1f, ground.y), q.z);
+				bottom = ground;
+				bFound = true;
+				break;
+			}
+			if (anchor.y - ground.y > 2.0f && prev.y - ground.y < sampleSpacing * 0.6f)
+			{
+				// Reached gentle ground at the foot of a slope
+				mid = anchor;
+				bottom = ground;
+				bFound = true;
+				break;
+			}
+			prev = ground;
+		}
+		if (!bFound)
+		{
+			if (anchor.y - prev.y < 1.5f)
+			{
+				return false;
+			}
+			mid = anchor;
+			bottom = prev;
+		}
+		// Ends just above the ground
+		bottom += VEC3_UP * 0.3f;
+
+		if (glm::distance(anchor, mid) < 0.75f)
+		{
+			// Hanging straight down from the anchor (moved over the drop)
+			mid.y = anchor.y;
+			outTop = mid;
+			outMid = mid;
+		}
+		else
+		{
+			outTop = anchor;
+			outMid = mid;
+		}
+		// No longer than the rope
+		const real upperLength = glm::distance(outTop, outMid);
+		const real lowerLength = glm::distance(outMid, bottom);
+		if (upperLength + lowerLength < 1.5f || upperLength > maxLength)
+		{
+			return false;
+		}
+		const real maxLowerLength = maxLength - upperLength;
+		outBottom = lowerLength > maxLowerLength ? outMid + (bottom - outMid) * (maxLowerLength / lowerLength) : bottom;
+		return true;
+	}
+
+	void Traversal::SpawnTossedRope()
+	{
+		// One piece per straight section (ropes over a rounded lip have two), climbed one after the other
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		const glm::vec3 points[] = { m_RopeToss.anchor, m_RopeToss.mid, m_RopeToss.bottom };
+		for (u32 i = 0; i < 2; ++i)
+		{
+			const glm::vec3 toBottom = points[i + 1] - points[i];
+			const real length = glm::length(toBottom);
+			if (length < 0.3f)
+			{
+				continue;
+			}
+			BuildPiece* rope = new BuildPiece(scene->GetUniqueObjectName("Rope_", 3));
+			rope->Setup(BuildPieceType::ROPE, BuildMaterial::WOOD, length);
+			rope->GetTransform()->SetWorldPosition(points[i]);
+			// Ropes hang along their local -y
+			rope->GetTransform()->SetWorldRotation(glm::rotation(-VEC3_UP, toBottom / length));
+			scene->AddRootObject(rope);
+			m_LastTossedRopeID = rope->ID;
+		}
+	}
+
+	BuildPiece* Traversal::FindConnectedRope(BuildPiece* rope, bool bAbove) const
+	{
+		const glm::vec3 end = bAbove ? rope->GetClimbTop() : rope->GetClimbBottom();
+		for (BuildPiece* piece : BuildPiece::GetAllPieces())
+		{
+			if (piece != rope && piece->GetPieceType() == BuildPieceType::ROPE &&
+				glm::distance(bAbove ? piece->GetClimbBottom() : piece->GetClimbTop(), end) < 0.4f)
+			{
+				return piece;
+			}
+		}
+		return nullptr;
 	}
 
 	bool Traversal::FixedUpdate()
@@ -871,6 +1194,7 @@ namespace flex
 				m_TimeSinceGrounded = m_Settings.coyoteTime;
 				m_TimeSinceJump = 0.0f;
 				m_bGrounded = false;
+				GameSounds::PlayJump();
 			}
 			else
 			{
@@ -881,6 +1205,13 @@ namespace flex
 					m_bJumpQueued = false;
 				}
 			}
+		}
+
+		// Pull up over steep lips & ledges being walked/jumped into (before the mode is handled, so it starts this step)
+		m_MantleCooldown = glm::max(m_MantleCooldown - dt, 0.0f);
+		if (m_Mode == Mode::NONE && m_Hook.state != HookState::ATTACHED)
+		{
+			TryAutoMantle(velocity);
 		}
 
 		bool bControlled = false;
@@ -1010,7 +1341,8 @@ namespace flex
 		const glm::vec3 pos = m_Player->GetTransform()->GetWorldPosition();
 		const real halfHeight = m_Player->GetHeight() * 0.5f;
 		const real radius = m_Player->GetRadius();
-		for (real inset : { radius + 0.35f, radius + 0.8f, radius + 1.3f })
+		const glm::vec3 inwards = SafeNormalize(glm::vec3(-wallNormal.x, 0.0f, -wallNormal.z), -wallNormal);
+		for (real inset : { radius + 0.35f, radius + 0.8f, radius + 1.3f, radius + 1.9f })
 		{
 			const glm::vec3 top = pos + VEC3_UP * (halfHeight + 1.4f) - wallNormal * inset;
 			glm::vec3 hitPos, hitNormal;
@@ -1019,7 +1351,7 @@ namespace flex
 			{
 				continue;
 			}
-			if (Raycast(top, top - VEC3_UP * (halfHeight * 2.0f + 1.6f), hitPos, hitNormal) && hitNormal.y > 0.5f)
+			if (Raycast(top, top - VEC3_UP * (halfHeight * 2.0f + 1.6f), hitPos, hitNormal) && hitNormal.y > 0.5f && HasFooting(hitPos, hitNormal, inwards))
 			{
 				outStandPos = hitPos + VEC3_UP * (halfHeight + 0.1f);
 				// Not a ledge if it's below where the player already is
@@ -1031,6 +1363,177 @@ namespace flex
 			}
 		}
 		return false;
+	}
+
+	bool Traversal::HasFooting(const glm::vec3& groundPos, const glm::vec3& groundNormal, const glm::vec3& dir) const
+	{
+		// Solid footing, not just a sliver of flat ground on a slope (which the player would slide straight off): the
+		// ground under the whole capsule must be walkable
+		if (groundNormal.y < Player::WALKABLE_NORMAL_Y + 0.1f)
+		{
+			return false;
+		}
+		const real radius = m_Player->GetRadius();
+		const glm::vec3 forward = SafeNormalize(glm::vec3(dir.x, 0.0f, dir.z), VEC3_FORWARD) * radius;
+		const glm::vec3 side = glm::cross(forward, VEC3_UP);
+		for (const glm::vec3& offset : { forward, side, -side, -forward })
+		{
+			const glm::vec3 probe = groundPos + offset;
+			glm::vec3 footPos, footNormal;
+			if (!Raycast(probe + VEC3_UP * 0.6f, probe - VEC3_UP * 0.6f, footPos, footNormal, RAYCAST_PHYSICS_ONLY) || footNormal.y < Player::WALKABLE_NORMAL_Y)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	void Traversal::StartMantle(const glm::vec3& standPos)
+	{
+		const glm::vec3 pos = m_Player->GetTransform()->GetWorldPosition();
+		const real halfHeight = m_Player->GetHeight() * 0.5f;
+
+		// Rise until the bottom of the body clears the highest ground between here & the target (rounded lips are
+		// often higher than the point being climbed onto)
+		m_MantleClearY = standPos.y;
+		const glm::vec3 delta(standPos.x - pos.x, 0.0f, standPos.z - pos.z);
+		const real probeTop = glm::max(standPos.y, pos.y) + halfHeight + 0.4f;
+		for (u32 i = 1; i <= 6; ++i)
+		{
+			const glm::vec3 q = pos + delta * ((real)i / 6.0f);
+			glm::vec3 hitPos, hitNormal;
+			if (Raycast(glm::vec3(q.x, probeTop, q.z), glm::vec3(q.x, standPos.y - halfHeight - 0.5f, q.z), hitPos, hitNormal, RAYCAST_PHYSICS_ONLY))
+			{
+				m_MantleClearY = glm::max(m_MantleClearY, hitPos.y + halfHeight + 0.08f);
+			}
+		}
+		m_MantleClearY = glm::min(m_MantleClearY, standPos.y + 1.0f);
+		if (getenv("FLEX_TRAVERSAL_DEBUG") != nullptr)
+		{
+			Print("Traversal: mantling from (%.1f, %.1f, %.1f) onto (%.1f, %.1f, %.1f), clearing %.1f\n", pos.x, pos.y, pos.z, standPos.x, standPos.y, standPos.z, m_MantleClearY);
+		}
+
+		if (m_Hook.state != HookState::NONE)
+		{
+			ReleaseHook();
+		}
+		SetMode(Mode::CLIMBING);
+		m_ClimbObjectID = InvalidGameObjectID;
+		m_bMantling = true;
+		m_MantleTime = 0.0f;
+		m_MantleLastY = pos.y;
+		m_MantleTarget = standPos;
+		m_WallNormal = SafeNormalize(-delta, m_WallNormal);
+	}
+
+	bool Traversal::FindMantleTarget(const glm::vec3& dir, real minHeight, real maxHeight, glm::vec3& outStandPos) const
+	{
+		const glm::vec3 pos = m_Player->GetTransform()->GetWorldPosition();
+		const real height = m_Player->GetHeight();
+		const real halfHeight = height * 0.5f;
+		const real radius = m_Player->GetRadius();
+		const real feetY = pos.y - halfHeight;
+		const real topY = feetY + maxHeight + 0.35f;
+		glm::vec3 hitPos, hitNormal;
+
+		// Room above the player's head to rise into
+		if (topY > pos.y && Raycast(pos, glm::vec3(pos.x, topY + 0.2f, pos.z), hitPos, hitNormal, RAYCAST_PHYSICS_ONLY))
+		{
+			return false;
+		}
+
+		const glm::vec3 topStart(pos.x, topY, pos.z);
+		for (real inset : { radius + 0.3f, radius + 0.6f, radius + 0.95f, radius + 1.35f, radius + 1.9f, radius + 2.5f })
+		{
+			const glm::vec3 top = topStart + dir * inset;
+			// The way over the lip must be open (otherwise the wall continues up past reach)
+			if (Raycast(topStart, top, hitPos, hitNormal, RAYCAST_PHYSICS_ONLY))
+			{
+				return false;
+			}
+			if (!Raycast(top, glm::vec3(top.x, feetY + minHeight - 0.05f, top.z), hitPos, hitNormal, RAYCAST_PHYSICS_ONLY))
+			{
+				continue;
+			}
+			const real ledgeHeight = hitPos.y - feetY;
+			if (hitNormal.y < Player::WALKABLE_NORMAL_Y || ledgeHeight < minHeight || ledgeHeight > maxHeight)
+			{
+				continue;
+			}
+			// Room to stand there
+			glm::vec3 ceilingPos, ceilingNormal;
+			if (Raycast(hitPos + VEC3_UP * 0.05f, hitPos + VEC3_UP * (height + 0.1f), ceilingPos, ceilingNormal, RAYCAST_PHYSICS_ONLY))
+			{
+				continue;
+			}
+			if (!HasFooting(hitPos, hitNormal, dir))
+			{
+				continue;
+			}
+			outStandPos = hitPos + VEC3_UP * (halfHeight + 0.05f);
+			return true;
+		}
+		return false;
+	}
+
+	bool Traversal::TryAutoMantle(const glm::vec3& velocity)
+	{
+		if (m_MantleCooldown > 0.0f || !CanControl())
+		{
+			return false;
+		}
+
+		// Only when moving forwards into something (mantling while backing or strafing would be surprising)
+		const glm::vec3 heading = GetHeadingXZ();
+		const glm::vec3 right = glm::cross(heading, VEC3_UP);
+		glm::vec3 moveDir = heading * GetMoveForward() + right * GetMoveRight();
+		const real moveLength = glm::length(moveDir);
+		if (moveLength < 0.5f)
+		{
+			return false;
+		}
+		moveDir /= moveLength;
+		if (glm::dot(moveDir, heading) < 0.3f || velocity.y < -12.0f)
+		{
+			return false;
+		}
+
+		// Something steep in the way, at knee or chest height
+		const glm::vec3 pos = m_Player->GetTransform()->GetWorldPosition();
+		const real feetY = pos.y - m_Player->GetHeight() * 0.5f;
+		const real reach = m_Player->GetRadius() + 0.45f;
+		glm::vec3 hitPos, hitNormal;
+		bool bBlocked = false;
+		for (real height : { 0.4f, 1.1f })
+		{
+			const glm::vec3 from(pos.x, feetY + height, pos.z);
+			if (Raycast(from, from + moveDir * reach, hitPos, hitNormal, RAYCAST_PHYSICS_ONLY) &&
+				hitNormal.y < Player::WALKABLE_NORMAL_Y && hitNormal.y > -0.3f)
+			{
+				bBlocked = true;
+				break;
+			}
+		}
+		if (!bBlocked)
+		{
+			return false;
+		}
+
+		// Climb towards the wall (rather than along the move direction, so glancing approaches still work)
+		const glm::vec3 wallDir = SafeNormalize(glm::vec3(-hitNormal.x, 0.0f, -hitNormal.z), moveDir);
+		const glm::vec3 dir = SafeNormalize(wallDir + moveDir, wallDir);
+		// Hands reach higher while in the air (jumping, falling or sliding down a steep slope) than a step up
+		const bool bReaching = !m_bGrounded || m_bJumpHeld;
+		const real maxHeight = bReaching ? m_Settings.mantleReach : m_Settings.stepAssistHeight;
+		glm::vec3 standPos;
+		if (!FindMantleTarget(dir, 0.35f, maxHeight, standPos))
+		{
+			return false;
+		}
+
+		m_bJumpQueued = false;
+		StartMantle(standPos);
+		return true;
 	}
 
 	bool Traversal::TryStartClimbingObject(bool bClimbHeld)
@@ -1097,6 +1600,9 @@ namespace flex
 			facing = SafeNormalize(glm::vec3(pos.x - axisPoint.x, 0.0f, pos.z - axisPoint.z), -GetHeadingXZ());
 		}
 		m_WallNormal = facing;
+		// Tossed ropes may lie at an angle (down a slope)
+		const glm::vec3 axisDir = SafeNormalize(climbable->GetClimbTop() - climbable->GetClimbBottom(), VEC3_UP);
+		const glm::vec3 holdDir = SafeNormalize(facing - axisDir * glm::dot(facing, axisDir), facing);
 
 		if (m_bLeapQueued)
 		{
@@ -1111,16 +1617,27 @@ namespace flex
 		const glm::vec3 bottom = climbable->GetClimbBottom();
 		const real feetY = pos.y - halfHeight;
 
-		// Climbed off the top: step onto whatever the ladder leads to
-		if (forward > 0.0f && feetY > top.y - 0.6f)
+		// Tossed ropes laid over a rounded lip are in two pieces: carry on onto the next one
+		if (bRope && forward != 0.0f && (forward > 0.0f ? pos.y > top.y - 0.1f : pos.y < bottom.y + 0.1f))
+		{
+			BuildPiece* next = FindConnectedRope(climbable, forward > 0.0f);
+			if (next != nullptr)
+			{
+				m_ClimbObjectID = next->ID;
+				return FixedUpdateClimbObject(velocity);
+			}
+		}
+
+		// Climbed off the top: step onto whatever the ladder leads to (checked from a little below where climbing up
+		// stops, see below)
+		if (forward > 0.0f && (feetY > top.y - 0.6f || pos.y > top.y))
 		{
 			glm::vec3 standPos;
-			if (FindLedge(facing, standPos))
+			// Ropes may be anchored on a rounded lip, with somewhere flat to stand a little further up & over
+			if (FindLedge(facing, standPos) ||
+				(bRope && FindMantleTarget(SafeNormalize(glm::vec3(-facing.x, 0.0f, -facing.z), GetHeadingXZ()), 0.0f, m_Settings.mantleReach + 1.0f, standPos)))
 			{
-				m_ClimbObjectID = InvalidGameObjectID;
-				m_bMantling = true;
-				m_MantleTime = 0.0f;
-				m_MantleTarget = standPos;
+				StartMantle(standPos);
 				velocity = VEC3_UP * 3.0f;
 				return true;
 			}
@@ -1146,12 +1663,15 @@ namespace flex
 		}
 
 		const real climbSpeed = bRope ? m_Settings.climbSpeed * 1.1f : m_Settings.climbSpeed * 1.6f;
-		const glm::vec3 holdPos = axisPoint + facing * (m_Player->GetRadius() + 0.15f);
-		velocity = glm::vec3((holdPos.x - pos.x) * 12.0f, forward * climbSpeed, (holdPos.z - pos.z) * 12.0f);
+		const glm::vec3 holdPos = axisPoint + holdDir * (m_Player->GetRadius() + 0.15f);
+		// Along the rope/ladder, & pulled towards it
+		real alongSpeed = forward * climbSpeed;
 		if (forward > 0.0f && pos.y > top.y + halfHeight * 0.2f)
 		{
-			velocity.y = 0.0f;
+			alongSpeed = 0.0f;
 		}
+		const glm::vec3 toHold = holdPos - pos;
+		velocity = axisDir * alongSpeed + (toHold - axisDir * glm::dot(toHold, axisDir)) * 12.0f;
 
 		if (bRope)
 		{
@@ -1186,21 +1706,39 @@ namespace flex
 			m_MantleTime += dt;
 			const glm::vec3 toTarget = m_MantleTarget - pos;
 			const real horizontalDist = glm::length(glm::vec2(toTarget.x, toTarget.z));
-			if (horizontalDist < 0.2f || m_MantleTime > 1.5f)
+			const real clearY = glm::max(m_MantleClearY, m_MantleTarget.y);
+			const bool bTimedOut = m_MantleTime > 1.6f;
+			if (horizontalDist < 0.2f || bTimedOut)
 			{
 				m_bMantling = false;
 				SetMode(Mode::NONE);
-				velocity = glm::vec3(toTarget.x, 0.0f, toTarget.z) * 2.0f;
+				// Step on a little so the whole body is over the ledge
+				velocity = SafeNormalize(glm::vec3(toTarget.x, 0.0f, toTarget.z), -m_WallNormal) * 1.5f;
+				if (bTimedOut)
+				{
+					// Something was in the way, don't immediately try again
+					m_MantleCooldown = 0.75f;
+				}
+				else
+				{
+					++m_MantleCount;
+					// Settle before another (pulling up onto a sliver on a slope could otherwise repeat)
+					m_MantleCooldown = 0.4f;
+				}
 				return true;
 			}
 			const glm::vec3 horizontal = SafeNormalize(glm::vec3(toTarget.x, 0.0f, toTarget.z), -m_WallNormal);
-			if (toTarget.y > 0.05f)
+			if (pos.y < clearY - 0.05f)
 			{
-				velocity = VEC3_UP * glm::clamp(toTarget.y * 10.0f, 2.0f, 6.0f) + horizontal * 0.8f;
+				// Pressing into the wall a little keeps the body against it as it rises over a rounded lip. If an
+				// overhanging lip stops it rising, lean back out from under it.
+				const bool bStalled = m_MantleTime > 0.1f && pos.y - m_MantleLastY < 0.005f;
+				m_MantleLastY = pos.y;
+				velocity = VEC3_UP * glm::clamp((clearY - pos.y) * 10.0f, 2.5f, 7.0f) + horizontal * (bStalled ? -2.0f : 0.8f);
 			}
 			else
 			{
-				velocity = horizontal * glm::clamp(horizontalDist * 8.0f, 2.0f, 5.0f) + VEC3_UP * glm::max(toTarget.y * 8.0f, 0.0f);
+				velocity = horizontal * glm::clamp(horizontalDist * 8.0f, 2.0f, 5.0f) + VEC3_UP * glm::max((clearY - pos.y) * 8.0f, 0.0f);
 			}
 			return true;
 		}
@@ -1215,9 +1753,7 @@ namespace flex
 			glm::vec3 standPos;
 			if (forward > 0.0f && FindLedge(bHit ? SafeNormalize(m_WallNormal + hitNormal, m_WallNormal) : m_WallNormal, standPos))
 			{
-				m_bMantling = true;
-				m_MantleTime = 0.0f;
-				m_MantleTarget = standPos;
+				StartMantle(standPos);
 				velocity = VEC3_UP * 3.0f;
 				return true;
 			}
@@ -1431,6 +1967,29 @@ namespace flex
 			m_RopeMesh->AddTube(hookPoints, 2, 0.12f, 6);
 		}
 
+		// A tossed rope, while flying (trailing back to the hand) & falling (unrolling from its anchor)
+		if (m_RopeToss.state == RopeTossState::FLYING)
+		{
+			const glm::vec3 handPos = GetHandPos();
+			const u32 pointCount = 12;
+			glm::vec3 points[pointCount];
+			for (u32 i = 0; i < pointCount; ++i)
+			{
+				const real t = (real)i / (real)(pointCount - 1);
+				points[i] = glm::mix(handPos, m_RopeToss.pos, t) - VEC3_UP * (2.0f * t * (1.0f - t));
+			}
+			m_RopeMesh->AddTube(points, pointCount, 0.03f, 5);
+			const glm::vec3 knot[] = { m_RopeToss.pos - VEC3_UP * 0.1f, m_RopeToss.pos + VEC3_UP * 0.1f };
+			m_RopeMesh->AddTube(knot, 2, 0.1f, 6);
+		}
+		else if (m_RopeToss.state == RopeTossState::FALLING)
+		{
+			const real upperLength = glm::distance(m_RopeToss.anchor, m_RopeToss.mid);
+			const bool bPastMid = glm::distance(m_RopeToss.anchor, m_RopeToss.pos) > upperLength - 1e-3f && upperLength > 1e-3f;
+			const glm::vec3 points[] = { m_RopeToss.anchor, bPastMid ? m_RopeToss.mid : m_RopeToss.pos, m_RopeToss.pos };
+			m_RopeMesh->AddTube(points, bPastMid ? 3 : 2, 0.03f, 5);
+		}
+
 		// Glider canopy & its lines
 		const sec dt = g_DeltaTime;
 		const real targetOpenness = m_Mode == Mode::GLIDING ? 1.0f : 0.0f;
@@ -1616,6 +2175,10 @@ namespace flex
 			lines.push_back("[Release Ctrl] Open glider");
 			break;
 		case Mode::CLIMBING:
+			if (m_bMantling)
+			{
+				break;
+			}
 			lines.push_back("CLIMBING");
 			lines.push_back("[WASD] Climb   [Space] Leap   [Release Shift] Let go");
 			break;

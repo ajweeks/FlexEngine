@@ -84,6 +84,7 @@ namespace flex
 		const LootEntry s_LootTable[] =
 		{
 			{ "dune buggy", 1, 1, 0.35f },
+			{ "row boat", 1, 1, 0.35f },
 			{ "headlamp", 1, 1, 0.5f },
 			{ "solar panel", 1, 2, 0.35f },
 			{ "battery", 1, 3, 0.4f },

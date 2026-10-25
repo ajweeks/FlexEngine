@@ -23,6 +23,128 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
+	namespace
+	{
+		bool s_bStatsEnabled = getenv("FLEX_VEHICLE_CAM_STATS") != nullptr;
+		VehicleCamera::JitterStats s_Stats;
+		// Set to reset the history (so a gap in sampling doesn't register as a jump)
+		bool s_bStatsHistoryReset = true;
+	}
+
+	void VehicleCamera::SetStatsEnabled(bool bEnabled)
+	{
+		s_bStatsEnabled = bEnabled;
+		ResetStats();
+	}
+
+	void VehicleCamera::ResetStats()
+	{
+		s_Stats = {};
+		s_bStatsHistoryReset = true;
+	}
+
+	void VehicleCamera::PrintStats(const char* label)
+	{
+		const JitterStats& s = s_Stats;
+		if (s.frameCount < 3)
+		{
+			Print("Vehicle camera stats (%s): not enough frames\n", label);
+			return;
+		}
+		const real n = (real)s.frameCount;
+		const real dtMean = s.dtSum / n;
+		const real dtStd = glm::sqrt(glm::max(s.dtSqrSum / n - dtMean * dtMean, 0.0f));
+		const glm::vec3 offsetMean = s.offsetDeltaSum / n;
+		const glm::vec3 offsetVar = glm::max(s.offsetDeltaSqrSum / n - offsetMean * offsetMean, VEC3_ZERO);
+		Print("Vehicle camera stats (%s): %u frames (%u near hitches skipped), dt %.2fms (std %.2fms) | target on screen 2nd diff: rms %.2fmm max %.2fmm | "
+			"cam-target offset delta std: %.2fmm (x %.2f y %.2f z %.2f) | cam accel: rms %.2f max %.2f m/s^2\n",
+			label, s.frameCount, s.hitchFrameCount, dtMean * 1000.0f, dtStd * 1000.0f,
+			glm::sqrt(s.viewSecondDiffSqrSum / n) * 1000.0f, s.viewSecondDiffMax * 1000.0f,
+			glm::sqrt(offsetVar.x + offsetVar.y + offsetVar.z) * 1000.0f,
+			glm::sqrt(offsetVar.x) * 1000.0f, glm::sqrt(offsetVar.y) * 1000.0f, glm::sqrt(offsetVar.z) * 1000.0f,
+			glm::sqrt(s.camAccelSqrSum / n), s.camAccelMax);
+	}
+
+	void VehicleCamera::UpdateStats()
+	{
+		if (!s_bStatsEnabled || m_TrackedVehicle == nullptr || g_DeltaTime <= 0.0f)
+		{
+			return;
+		}
+
+		// Per frame values for offline analysis
+		static FILE* csv = nullptr;
+		if (csv == nullptr && getenv("FLEX_VEHICLE_CAM_CSV") != nullptr)
+		{
+			csv = fopen("vehicle_cam.csv", "w");
+			if (csv != nullptr)
+			{
+				fprintf(csv, "dt,alpha,tx,ty,tz,cx,cy,cz,lx,ly,lz,fx,fy,fz,speed\n");
+			}
+		}
+		if (csv != nullptr)
+		{
+			PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+			const glm::vec3 t = m_TrackedVehicle->GetTransform()->GetWorldPosition();
+			fprintf(csv, "%.6f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.4f,%.3f\n", g_DeltaTime,
+				physicsWorld != nullptr ? physicsWorld->GetInterpolationAlpha() : -1.0f,
+				t.x, t.y, t.z, position.x, position.y, position.z, m_TargetLookAtPos.x, m_TargetLookAtPos.y, m_TargetLookAtPos.z,
+				forward.x, forward.y, forward.z, m_TargetVelMagnitudeRollingAvg.currentAverage);
+		}
+
+		StatsHistory& h = m_StatsHistory;
+		if (s_bStatsHistoryReset)
+		{
+			h.count = 0;
+			s_bStatsHistoryReset = false;
+		}
+
+		// The vehicle's rendered (interpolated) pose
+		const glm::vec3 targetPos = m_TrackedVehicle->GetTransform()->GetWorldPosition();
+		const glm::vec3 viewPos = glm::vec3(GetView() * glm::vec4(targetPos, 1.0f));
+		const glm::vec3 offset = position - targetPos;
+		const glm::vec3 camVel = (position - h.camPos) / g_DeltaTime;
+
+		// Frame times which differ a lot from the recent average (streaming hitches) aren't representative
+		const bool bHitch = h.dtAverage > 0.0f && (g_DeltaTime > h.dtAverage * 1.5f || g_DeltaTime < h.dtAverage / 1.5f);
+		h.dtAverage = h.dtAverage > 0.0f ? Lerp(h.dtAverage, g_DeltaTime, 0.05f) : g_DeltaTime;
+		h.framesSinceHitch = bHitch ? 0 : h.framesSinceHitch + 1;
+		if (h.count >= 2 && h.framesSinceHitch < 3)
+		{
+			++s_Stats.hitchFrameCount;
+		}
+		else if (h.count >= 2)
+		{
+			const real secondDiff = glm::length(viewPos - 2.0f * h.viewPos[0] + h.viewPos[1]);
+			const glm::vec3 offsetDelta = offset - h.offset;
+			const real camAccel = glm::length(camVel - h.camVel) / g_DeltaTime;
+
+			JitterStats& s = s_Stats;
+			++s.frameCount;
+			s.dtSum += g_DeltaTime;
+			s.dtSqrSum += g_DeltaTime * g_DeltaTime;
+			s.viewSecondDiffSqrSum += secondDiff * secondDiff;
+			s.viewSecondDiffMax = glm::max(s.viewSecondDiffMax, secondDiff);
+			s.offsetDeltaSum += offsetDelta;
+			s.offsetDeltaSqrSum += offsetDelta * offsetDelta;
+			s.camAccelSqrSum += camAccel * camAccel;
+			s.camAccelMax = glm::max(s.camAccelMax, camAccel);
+		}
+
+		h.viewPos[1] = h.viewPos[0];
+		h.viewPos[0] = viewPos;
+		h.offset = offset;
+		h.camPos = position;
+		h.camVel = camVel;
+		h.count = glm::min(h.count + 1, 3u);
+	}
+
+	void VehicleCamera::AddPitchOffset(real radians)
+	{
+		// The final angle is clamped too (the default angle varies with speed), this just stops it winding up
+		m_PitchOffset = glm::clamp(m_PitchOffset + radians, m_MinElevation - m_MaxDownwardAngle, m_MaxElevation);
+	}
+
 	VehicleCamera::VehicleCamera(real FOV) :
 		BaseCamera("vehicle", CameraType::VEHICLE, true, FOV),
 		m_SpeedFactors(256),
@@ -85,6 +207,8 @@ namespace flex
 		m_CurrTargetPosAvg = m_TargetPosRollingAvg.currentAverage;
 		m_PrevTargetForwardAvg = m_CurrTargetForwardAvg;
 		m_CurrTargetForwardAvg = m_TargetForwardRollingAvg.currentAverage;
+		m_PrevTargetSpeedAvg = m_CurrTargetSpeedAvg;
+		m_CurrTargetSpeedAvg = m_TargetVelMagnitudeRollingAvg.currentAverage;
 	}
 
 	void VehicleCamera::Update()
@@ -94,6 +218,16 @@ namespace flex
 		if (m_TrackedVehicle == nullptr)
 		{
 			return;
+		}
+
+		// Mouse Y tilts the camera (moving the mouse down looks further down at the vehicle, like first person)
+		if (g_Window->GetCursorMode() == CursorMode::DISABLED && g_Window->HasFocus() && bIsGameplayCam)
+		{
+			const real mouseDeltaY = g_InputManager->GetMouseMovement().y;
+			if (mouseDeltaY != 0.0f)
+			{
+				AddPitchOffset(mouseDeltaY * m_MousePitchSensitivity);
+			}
 		}
 
 		real newLookOffsetH = -g_InputManager->GetActionAxisValue(Action::VEHICLE_LOOK_LEFT) + g_InputManager->GetActionAxisValue(Action::VEHICLE_LOOK_RIGHT);
@@ -110,19 +244,23 @@ namespace flex
 			real alpha = (physicsWorld != nullptr) ? physicsWorld->GetInterpolationAlpha() : 1.0f;
 			m_TargetLookAtPos = glm::mix(m_PrevTargetPosAvg, m_CurrTargetPosAvg, alpha);
 			glm::vec3 targetForward = glm::mix(m_PrevTargetForwardAvg, m_CurrTargetForwardAvg, alpha);
+			// The speed (which sets the follow distance & angle) is interpolated too, otherwise they step at the physics rate
+			m_TargetSpeed = Lerp(m_PrevTargetSpeedAvg, m_CurrTargetSpeedAvg, alpha);
 
 #if THOROUGH_CHECKS
 			ENSURE(!IsNanOrInf(m_TargetLookAtPos));
 #endif
 
+			// Position first, then aim from there. (Aiming from last frame's position made the view direction lag
+			// by a frame, by an amount which varied with the frame time: the main cause of the jitter, especially
+			// while turning.)
+			position = GetOffsetPosition(m_TargetLookAtPos, targetForward);
 			SetLookAt();
-
-			glm::vec3 desiredPos = GetOffsetPosition(m_TargetLookAtPos, targetForward);
-			position = desiredPos;
 
 			CalculateYawAndPitchFromForward();
 			RecalculateViewProjection();
 
+			UpdateStats();
 		}
 
 		BaseCamera::LateUpdate();
@@ -156,6 +294,8 @@ namespace flex
 				ImGui::SliderFloat("Max downward angle", &m_MaxDownwardAngle, 0.0f, 3.0f);
 
 				ImGui::SliderFloat("Look dist lerp speed", &m_LookDistLerpSpeed, 0.0f, 50.0f);
+				ImGui::SliderFloat("Pitch offset", &m_PitchOffset, m_MinElevation - m_MaxDownwardAngle, m_MaxElevation);
+				ImGui::SliderFloat("Mouse pitch sensitivity", &m_MousePitchSensitivity, 0.0f, 0.02f);
 				ImGui::SliderFloat("Look offset magnitude", &m_LookOffsetMagnitude, 0.0f, 10.0f);
 
 				m_SpeedFactors.DrawImGui();
@@ -178,13 +318,26 @@ namespace flex
 
 		// TODO: Check for collisions
 
-		real speedFactor = glm::clamp((m_TargetVelMagnitudeRollingAvg.currentAverage - m_MinSpeed) / (m_MaxSpeed - m_MinSpeed), 0.0f, 1.0f);
+		real speedFactor = glm::clamp((m_TargetSpeed - m_MinSpeed) / (m_MaxSpeed - m_MinSpeed), 0.0f, 1.0f);
 		glm::vec3 upward = VEC3_UP * Lerp(m_MaxDownwardAngle, m_MinDownwardAngle, speedFactor);
 		real targetFollowDistance = Lerp(m_ClosestDist, m_FurthestDist, speedFactor);
-		real previousFollowDistance = glm::distance(position, lookAtPos);
-		real distUpdateDelta = glm::clamp(1.0f - g_DeltaTime * m_DistanceUpdateSpeed / 1000.0f, 0.0f, 1.0f);
-		real followDistance = Lerp(previousFollowDistance, targetFollowDistance, distUpdateDelta);
-		glm::vec3 offsetVec = glm::normalize(upward + backward) * followDistance;
+		// Frame rate independent smoothing
+		if (m_FollowDistance < 0.0f)
+		{
+			m_FollowDistance = targetFollowDistance;
+		}
+		m_FollowDistance = Lerp(m_FollowDistance, targetFollowDistance, 1.0f - glm::exp(-g_DeltaTime * m_DistanceUpdateSpeed));
+		real followDistance = m_FollowDistance;
+		glm::vec3 offsetDir = glm::normalize(upward + backward);
+		if (m_PitchOffset != 0.0f)
+		{
+			// Tilt about the camera's horizontal axis by the player's pitch offset
+			glm::vec3 horizontal = glm::vec3(offsetDir.x, 0.0f, offsetDir.z);
+			horizontal = glm::length(horizontal) > 1e-4f ? glm::normalize(horizontal) : -VEC3_FORWARD;
+			const real elevation = glm::clamp(glm::asin(glm::clamp(offsetDir.y, -1.0f, 1.0f)) + m_PitchOffset, m_MinElevation, m_MaxElevation);
+			offsetDir = horizontal * glm::cos(elevation) + VEC3_UP * glm::sin(elevation);
+		}
+		glm::vec3 offsetVec = offsetDir * followDistance;
 
 		m_SpeedFactors.AddElement(speedFactor);
 		m_TargetFollowDist.AddElement(glm::length(offsetVec));
@@ -225,6 +378,8 @@ namespace flex
 	{
 		m_CurrTargetPosAvg = m_PrevTargetPosAvg = m_TargetPosRollingAvg.currentAverage;
 		m_CurrTargetForwardAvg = m_PrevTargetForwardAvg = m_TargetForwardRollingAvg.currentAverage;
+		m_CurrTargetSpeedAvg = m_PrevTargetSpeedAvg = m_TargetSpeed = m_TargetVelMagnitudeRollingAvg.currentAverage;
+		m_FollowDistance = -1.0f;
 	}
 
 	void VehicleCamera::FindActiveVehicle()
@@ -232,7 +387,7 @@ namespace flex
 		Player* player0 = g_SceneManager->CurrentScene()->GetPlayer(0);
 		if (player0 != nullptr)
 		{
-			m_TrackedVehicle = (Vehicle*)player0->GetRidingVehicleID().Get();
+			m_TrackedVehicle = player0->GetRidingVehicleID().Get();
 		}
 		else
 		{
@@ -246,6 +401,8 @@ namespace flex
 
 		m_Vel = VEC3_ZERO;
 		pitch = -PI_DIV_FOUR;
+		m_FollowDistance = -1.0f;
+		m_TargetVelMagnitudeRollingAvg.Reset();
 		SetPosAndLookAt();
 
 		if (m_TrackedVehicle != nullptr)

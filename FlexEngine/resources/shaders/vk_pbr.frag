@@ -37,9 +37,15 @@ layout (binding = 5) uniform sampler2D normalSampler;
 layout (location = 0) out vec4 outNormalRoughness;
 layout (location = 1) out vec4 outAlbedoMetallic;
 
+// Albedo textures are sRGB encoded (but are loaded as UNORM)
+vec3 SRGBToLinear(vec3 v)
+{
+	return mix(v / 12.92, pow((v + 0.055) / 1.055, vec3(2.4)), step(0.04045, v));
+}
+
 void main() 
 {
-	vec3 albedo = uboDynamic.enableAlbedoSampler ? texture(albedoSampler, ex_TexCoord).rgb : vec3(uboDynamic.constAlbedo);
+	vec3 albedo = uboDynamic.enableAlbedoSampler ? SRGBToLinear(texture(albedoSampler, ex_TexCoord).rgb) : vec3(uboDynamic.constAlbedo);
 	float metallic = uboDynamic.enableMetallicSampler ? texture(metallicSampler, ex_TexCoord).r : uboDynamic.constMetallic;
 	float roughness = uboDynamic.enableRoughnessSampler ? texture(roughnessSampler, ex_TexCoord).r : uboDynamic.constRoughness;
 	vec3 N = uboDynamic.enableNormalSampler ? (ex_TBN * (texture(normalSampler, ex_TexCoord).xyz * 2 - 1)) : ex_TBN[2];

@@ -156,8 +156,9 @@ void main()
 
 	vec3 colour = ambient + Lo;
 
-	colour = colour / (colour + vec3(1.0f)); // Reinhard tone-mapping
-	colour = pow(colour, vec3(1.0f / 2.2f)); // Gamma correction
+	// Matches LinearToDisplay in vk_misc.glsl (approximately: Reinhard rather than PBR Neutral, sRGB encoded)
+	colour = colour / (colour + vec3(1.0f));
+	colour = mix(colour * 12.92, 1.055 * pow(colour, vec3(1.0 / 2.4)) - 0.055, step(0.0031308, colour));
 
 	fragColour = vec4(colour, 1.0);
 

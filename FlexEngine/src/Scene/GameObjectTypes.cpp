@@ -4,6 +4,7 @@
 
 #include "Player.hpp"
 #include "Scene/Objects/Building.hpp"
+#include "Scene/Objects/Campfire.hpp"
 #include "Scene/Objects/Treasure.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Objects/Carts.hpp"
@@ -58,6 +59,7 @@ namespace flex
 			TYPE(SpringObject, PROCEDURAL),
 			TYPE(SoftBody, 0),
 			TYPE(Vehicle, 0),
+			TYPE(RowBoat, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
 			TYPE(Road, PROCEDURAL),
 			TYPE(SolarPanel, 0),
 			TYPE(HeadLamp, 0),
@@ -68,6 +70,7 @@ namespace flex
 			TYPE(PickAxe, 0),
 			TYPE(BuildPiece, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
 			TYPE(TreasureChest, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
+			TYPE(Campfire, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
 		};
 
 #undef TYPE

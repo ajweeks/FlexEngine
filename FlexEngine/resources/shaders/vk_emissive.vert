@@ -25,9 +25,13 @@ layout (binding = 1) uniform UBODynamic
 {
 	mat4 model;
 
+	// (see vk_emissive.frag)
 	vec4 constAlbedo;
-	vec4 constEmissive;
 	float constRoughness;
+	float constEmissiveR;
+	float constEmissiveG;
+	float constEmissiveB;
+	float constEmissiveA;
 
 	bool enableAlbedoSampler;
 	bool enableNormalSampler;

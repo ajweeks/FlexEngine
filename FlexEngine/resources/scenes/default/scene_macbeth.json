@@ -1,0 +1,807 @@
+{
+	"version" : 7,
+	"name" : "scene_macbeth",
+	"spawn player" : false,
+	"cloud coverage" : 0.000000,
+	"camera" : {
+		"type" : "debug",
+		"near plane" : 0.500000,
+		"far plane" : 1000.000000,
+		"fov" : 0.785398,
+		"aperture" : 1.000000,
+		"shutter speed" : 0.125000,
+		"light sensitivity" : 800.000000,
+		"exposure" : 1.200000,
+		"move speed" : 18.000000,
+		"transform" : {
+			"position" : "0.000, 22.000, 0.000",
+			"pitch" : -1.570000,
+			"yaw" : 0.000000
+		}
+	},
+	"objects" : 
+	[
+		{
+			"id" : "E1F407B4AC4BF9C008E26AE2C1B067F9",
+			"name" : "Skybox",
+			"type" : "skybox",
+			"casts shadow" : false,
+			"materials" : 
+			[
+				"skybox 01"
+			]
+		},
+		{
+			"id" : "8DA843FF65205A61374B09B81ED0FA35",
+			"name" : "Reflection Probe",
+			"type" : "reflection probe",
+			"transform" : {
+				"pos" : "0.000, 30.000, 0.000"
+			},
+			"visible" : false
+		},
+		{
+			"id" : "EBD556E6DFC99DBED29675CE1C6C68E5",
+			"name" : "Directional Light",
+			"type" : "directional light",
+			"transform" : {
+				"pos" : "60.000, 0.000, 0.000"
+			},
+			"directional light info" : {
+				"brightness" : 5.000000,
+				"colour" : "1.00,1.00,1.00"
+			}
+		},
+		{
+			"id" : "CFC126BE5C3F5C76FB082AA773F24B3D",
+			"name" : "Unlit",
+			"type" : "object",
+			"children" : 
+			[
+				{
+					"id" : "23F4F34251DB59820EDB3651DAD9B461",
+					"name" : "Unlit 01",
+					"type" : "object",
+					"transform" : {
+						"pos" : "1.875, 0.000, -9.875",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 01"
+					]
+				},
+				{
+					"id" : "5E9A987321E93CCFCEF1BDB8C8B68077",
+					"name" : "Unlit 02",
+					"type" : "object",
+					"transform" : {
+						"pos" : "1.875, 0.000, -11.125",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 02"
+					]
+				},
+				{
+					"id" : "13D58CFF0CB4AF92F59D633E0A45C9B4",
+					"name" : "Unlit 03",
+					"type" : "object",
+					"transform" : {
+						"pos" : "1.875, 0.000, -12.375",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 03"
+					]
+				},
+				{
+					"id" : "8113026DA2BB07582492F99CBA389ED3",
+					"name" : "Unlit 04",
+					"type" : "object",
+					"transform" : {
+						"pos" : "1.875, 0.000, -13.625",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 04"
+					]
+				},
+				{
+					"id" : "7DF605CB783AF90C2A08BB0D735F0200",
+					"name" : "Unlit 05",
+					"type" : "object",
+					"transform" : {
+						"pos" : "1.875, 0.000, -14.875",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 05"
+					]
+				},
+				{
+					"id" : "BB52438486EA675E6ED675362C1EDFA5",
+					"name" : "Unlit 06",
+					"type" : "object",
+					"transform" : {
+						"pos" : "1.875, 0.000, -16.125",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 06"
+					]
+				},
+				{
+					"id" : "CE5230C931212CD30CAC24CAD2DD356B",
+					"name" : "Unlit 07",
+					"type" : "object",
+					"transform" : {
+						"pos" : "0.625, 0.000, -9.875",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 07"
+					]
+				},
+				{
+					"id" : "EE3916E638632F171A2CFEBCD4AA3B82",
+					"name" : "Unlit 08",
+					"type" : "object",
+					"transform" : {
+						"pos" : "0.625, 0.000, -11.125",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 08"
+					]
+				},
+				{
+					"id" : "322E78FBEF6F1D9BCFEB0058F0C884C1",
+					"name" : "Unlit 09",
+					"type" : "object",
+					"transform" : {
+						"pos" : "0.625, 0.000, -12.375",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 09"
+					]
+				},
+				{
+					"id" : "C18EEC05D7289F3C193A2E908802B55D",
+					"name" : "Unlit 10",
+					"type" : "object",
+					"transform" : {
+						"pos" : "0.625, 0.000, -13.625",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 10"
+					]
+				},
+				{
+					"id" : "02E724EF6F28E9C0EBD8AC4D12C5DAB5",
+					"name" : "Unlit 11",
+					"type" : "object",
+					"transform" : {
+						"pos" : "0.625, 0.000, -14.875",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 11"
+					]
+				},
+				{
+					"id" : "25ED2637C606D0A4FAE93B4790E8C0B0",
+					"name" : "Unlit 12",
+					"type" : "object",
+					"transform" : {
+						"pos" : "0.625, 0.000, -16.125",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 12"
+					]
+				},
+				{
+					"id" : "1016EBAF136AFD2562E5680E872B6419",
+					"name" : "Unlit 13",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-0.625, 0.000, -9.875",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 13"
+					]
+				},
+				{
+					"id" : "5CA22E3E61BFB8A560F84AA407F96D33",
+					"name" : "Unlit 14",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-0.625, 0.000, -11.125",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 14"
+					]
+				},
+				{
+					"id" : "239AA96729FE9B988DE324C0AB2AB4C1",
+					"name" : "Unlit 15",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-0.625, 0.000, -12.375",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 15"
+					]
+				},
+				{
+					"id" : "BFD26394E3D16B8DA0FBDEE28C26A46C",
+					"name" : "Unlit 16",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-0.625, 0.000, -13.625",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 16"
+					]
+				},
+				{
+					"id" : "1BA393F49E5C17C4F68936AA9F5A9DD4",
+					"name" : "Unlit 17",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-0.625, 0.000, -14.875",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 17"
+					]
+				},
+				{
+					"id" : "ED13C5C91CEF1D59D11A2F7C29393A43",
+					"name" : "Unlit 18",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-0.625, 0.000, -16.125",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 18"
+					]
+				},
+				{
+					"id" : "FFCEBED8EAC4315FB3AA1125D34476BF",
+					"name" : "Unlit 19",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-1.875, 0.000, -9.875",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 19"
+					]
+				},
+				{
+					"id" : "FD2517CE03A1666B91D49A9500F4191E",
+					"name" : "Unlit 20",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-1.875, 0.000, -11.125",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 20"
+					]
+				},
+				{
+					"id" : "69F092A4E8D36A8838DC918CE765AC8B",
+					"name" : "Unlit 21",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-1.875, 0.000, -12.375",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 21"
+					]
+				},
+				{
+					"id" : "0473A6F3F0EA368D8ACD63C220AFEE50",
+					"name" : "Unlit 22",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-1.875, 0.000, -13.625",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 22"
+					]
+				},
+				{
+					"id" : "D4F4C0BC4AC28C3F435AF8DB2493C64B",
+					"name" : "Unlit 23",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-1.875, 0.000, -14.875",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 23"
+					]
+				},
+				{
+					"id" : "6024EB9422CD56C680B73139EE8CFBDB",
+					"name" : "Unlit 24",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-1.875, 0.000, -16.125",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth unlit 24"
+					]
+				}
+			]
+		},
+		{
+			"id" : "E5E556ECF935270736F5E46E73DB06E4",
+			"name" : "Lit",
+			"type" : "object",
+			"children" : 
+			[
+				{
+					"id" : "DEE52ADB38B0F628D5ADC0618F9E2119",
+					"name" : "Lit 01",
+					"type" : "object",
+					"transform" : {
+						"pos" : "1.875, 0.000, -1.375",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 01"
+					]
+				},
+				{
+					"id" : "6A2BBC337B74CFDF4094C2DE1B7A0DCA",
+					"name" : "Lit 02",
+					"type" : "object",
+					"transform" : {
+						"pos" : "1.875, 0.000, -2.625",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 02"
+					]
+				},
+				{
+					"id" : "2F7CE3353C20F9C8F5C37E2AA16FEE11",
+					"name" : "Lit 03",
+					"type" : "object",
+					"transform" : {
+						"pos" : "1.875, 0.000, -3.875",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 03"
+					]
+				},
+				{
+					"id" : "4A22152BC24B5E2B2E6D65661832DF31",
+					"name" : "Lit 04",
+					"type" : "object",
+					"transform" : {
+						"pos" : "1.875, 0.000, -5.125",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 04"
+					]
+				},
+				{
+					"id" : "5BC22B054E817C5960FF8456580C0106",
+					"name" : "Lit 05",
+					"type" : "object",
+					"transform" : {
+						"pos" : "1.875, 0.000, -6.375",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 05"
+					]
+				},
+				{
+					"id" : "F40CD41126327517A11723F3598A1F27",
+					"name" : "Lit 06",
+					"type" : "object",
+					"transform" : {
+						"pos" : "1.875, 0.000, -7.625",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 06"
+					]
+				},
+				{
+					"id" : "1B55E01F580F9C597254803BC294C61E",
+					"name" : "Lit 07",
+					"type" : "object",
+					"transform" : {
+						"pos" : "0.625, 0.000, -1.375",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 07"
+					]
+				},
+				{
+					"id" : "883FDA5C08783C01BE86BB9F8B71AD1B",
+					"name" : "Lit 08",
+					"type" : "object",
+					"transform" : {
+						"pos" : "0.625, 0.000, -2.625",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 08"
+					]
+				},
+				{
+					"id" : "875E692F456914E3B025AE79B3474B11",
+					"name" : "Lit 09",
+					"type" : "object",
+					"transform" : {
+						"pos" : "0.625, 0.000, -3.875",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 09"
+					]
+				},
+				{
+					"id" : "6640507287FA46EEE9DE2E927DF75422",
+					"name" : "Lit 10",
+					"type" : "object",
+					"transform" : {
+						"pos" : "0.625, 0.000, -5.125",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 10"
+					]
+				},
+				{
+					"id" : "9DDFECE199CED592FE2153C6A6B2E830",
+					"name" : "Lit 11",
+					"type" : "object",
+					"transform" : {
+						"pos" : "0.625, 0.000, -6.375",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 11"
+					]
+				},
+				{
+					"id" : "1D76BAAF6AC6F91CA8EDA05AEDE3BD69",
+					"name" : "Lit 12",
+					"type" : "object",
+					"transform" : {
+						"pos" : "0.625, 0.000, -7.625",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 12"
+					]
+				},
+				{
+					"id" : "783800DCAC0DC63AF8E29869CEB146CF",
+					"name" : "Lit 13",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-0.625, 0.000, -1.375",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 13"
+					]
+				},
+				{
+					"id" : "DC9E4D3D8E5053A1C4500FDCE8D6FFF2",
+					"name" : "Lit 14",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-0.625, 0.000, -2.625",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 14"
+					]
+				},
+				{
+					"id" : "270EC4D931D021D4C2185E07914FBB36",
+					"name" : "Lit 15",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-0.625, 0.000, -3.875",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 15"
+					]
+				},
+				{
+					"id" : "23AD2BFE534E956082782D65CF0C8B80",
+					"name" : "Lit 16",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-0.625, 0.000, -5.125",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 16"
+					]
+				},
+				{
+					"id" : "641EA3A5D4A9FFA681433354384B8E5A",
+					"name" : "Lit 17",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-0.625, 0.000, -6.375",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 17"
+					]
+				},
+				{
+					"id" : "876E402706E377D2041C9456F3F73BEE",
+					"name" : "Lit 18",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-0.625, 0.000, -7.625",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 18"
+					]
+				},
+				{
+					"id" : "D77EB8D2BE05FDA7F2F2A70D2ACCBB7D",
+					"name" : "Lit 19",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-1.875, 0.000, -1.375",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 19"
+					]
+				},
+				{
+					"id" : "C96148FC1ADF05FAC49119D98C7EE1BC",
+					"name" : "Lit 20",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-1.875, 0.000, -2.625",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 20"
+					]
+				},
+				{
+					"id" : "8CBBB6F29FE3598523E1AF8A03D86EB3",
+					"name" : "Lit 21",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-1.875, 0.000, -3.875",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 21"
+					]
+				},
+				{
+					"id" : "C4EA6D9552AA9E3EED41523E9B08BC07",
+					"name" : "Lit 22",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-1.875, 0.000, -5.125",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 22"
+					]
+				},
+				{
+					"id" : "968BBE9471F73AFF2FF6D168812DCE30",
+					"name" : "Lit 23",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-1.875, 0.000, -6.375",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 23"
+					]
+				},
+				{
+					"id" : "8D53E1D105E752C7D3F9C9A79B4EF9C1",
+					"name" : "Lit 24",
+					"type" : "object",
+					"transform" : {
+						"pos" : "-1.875, 0.000, -7.625",
+						"scale" : "1.000, 1.000, 1.000"
+					},
+					"casts shadow" : false,
+					"mesh" : "unit-plane.glb",
+					"materials" : 
+					[
+						"macbeth lit 24"
+					]
+				}
+			]
+		},
+		{
+			"id" : "CF9BFA738EA86237A1BBC5C6373DAA82",
+			"name" : "Textured",
+			"type" : "object",
+			"transform" : {
+				"pos" : "0.000, 0.000, 5.000",
+				"scale" : "5.000, 1.000, 7.500"
+			},
+			"casts shadow" : false,
+			"mesh" : "unit-plane.glb",
+			"materials" : 
+			[
+				"macbeth textured"
+			]
+		}
+	]
+}

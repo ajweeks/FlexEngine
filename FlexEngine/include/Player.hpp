@@ -13,6 +13,7 @@ namespace flex
 {
 	class PlayerController;
 	class Traversal;
+	class WoodcraftController;
 
 	enum class InventoryType
 	{
@@ -116,7 +117,8 @@ namespace flex
 		void ResetInventory();
 
 		void SetInteractingWithTerminal(Terminal* terminal);
-		void SetRidingVehicle(Vehicle* vehicle);
+		// Any rideable object (vehicle or boat, see Rideable), nullptr to get out
+		void SetRidingVehicle(GameObject* vehicle);
 
 		bool PickupWithFreeHand(GameObject* object);
 		bool IsHolding(GameObject* object);
@@ -156,10 +158,15 @@ namespace flex
 		// until collision has loaded below), & moves them back to the surface if they end up inside the terrain
 		void UpdateTerrainSafety();
 		void PlaceOnTerrain(bool bKeepHeight);
+		// Holds the player at holdPos until there's terrain collision below it
+		void HoldUntilTerrainCollision(const glm::vec3& holdPos);
+		// Whether there's something to stand on just below a capsule centered at pos
+		bool IsSupportedBelow(const glm::vec3& pos) const;
 		void DrawTerrainToolHUD() const;
 		void DrawTraversalHUD() const;
 
 		Traversal* GetTraversal() { return m_Traversal; }
+		WoodcraftController* GetWoodcraft() { return m_Woodcraft; }
 		BuildMode& GetBuildMode() { return m_BuildMode; }
 		bool IsBuilding() const { return m_BuildMode.IsActive(); }
 		void DrawBuildModeHUD() const { m_BuildMode.DrawHUD(); }
@@ -169,8 +176,10 @@ namespace flex
 		void DrawNotifications() const;
 		bool IsGrounded() const { return m_bGrounded; }
 		const glm::vec3& GetGroundNormal() const { return m_GroundNormal; }
-		// Moves the player to the ground near pos (in streamed terrain), waiting there until collision has loaded
-		void TeleportOnTerrain(const glm::vec3& pos);
+		// Moves the player to the ground near pos (in streamed terrain), waiting there until collision has loaded.
+		// bKeepExactPosition (for restoring saved positions) stays at pos if it's clear of the terrain (e.g. when
+		// standing on something built) rather than dropping to the ground below.
+		void TeleportOnTerrain(const glm::vec3& pos, bool bKeepExactPosition = false);
 		// Whether the player is being held in place until terrain collision loads below them
 		bool IsAwaitingTerrainCollision() const { return m_bAwaitingTerrainCollision || m_bTerrainPlacementPending; }
 		// Called once the player's render pose (interpolated between physics steps) has been applied
@@ -208,6 +217,7 @@ namespace flex
 	private:
 		friend class PlayerController;
 		friend class Traversal;
+		friend class WoodcraftController;
 
 		void CreateDroppedItemFromStack(GameObjectStack* stack);
 
@@ -266,6 +276,7 @@ namespace flex
 
 		PlayerController* m_Controller = nullptr;
 		Traversal* m_Traversal = nullptr;
+		WoodcraftController* m_Woodcraft = nullptr;
 		BuildMode m_BuildMode;
 
 		struct Notification
@@ -332,6 +343,7 @@ namespace flex
 		real m_TerrainDigRadius = 1.6f;
 
 		bool m_bTerrainPlacementPending = true;
+		bool m_bTerrainPlacementExact = false;
 		bool m_bAwaitingTerrainCollision = false;
 		glm::vec3 m_TerrainHoldPos = VEC3_ZERO;
 		sec m_AwaitingTerrainCollisionTime = 0.0f;

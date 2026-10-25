@@ -2,6 +2,8 @@
 
 #include "vk_misc.glsl"
 
+layout (constant_id = 6) const int ENABLE_WATER_CLIP = 0;
+
 layout (binding = 0) uniform UBOConstant
 {
 	mat4 view;
@@ -12,6 +14,7 @@ layout (binding = 0) uniform UBOConstant
 	AreaLight areaLights[NUM_AREA_LIGHTS];
 	SkyboxData skyboxData;
 	ShadowSamplingData shadowSamplingData;
+	WaterClipData waterClipData;
 	float zNear;
 	float zFar;
 } uboConstant;
@@ -122,6 +125,11 @@ void main()
 	}
 
 	bool bWater = ex_Colour.a < -0.5;
+	// Water isn't drawn inside boats (only in the terrain_water shader: a discard would disable early depth testing)
+	if (ENABLE_WATER_CLIP != 0 && bWater && IsInWaterClipVolume(uboConstant.waterClipData, ex_PositionWS))
+	{
+		discard;
+	}
 
 	vec3 N = normalize(ex_NormalWS);
 	if (!gl_FrontFacing && bWater)
@@ -358,8 +366,7 @@ void main()
 		ApplyFog(linDepth, uboConstant.skyboxData.colourFog.xyz, /* inout */ fragmentColour.xyz);
 	}
 
-	fragmentColour.rgb = fragmentColour.rgb / (fragmentColour.rgb + vec3(1.0)); // Reinhard tone-mapping
-	fragmentColour.rgb = pow(fragmentColour.rgb, vec3(1.0 / 2.2f)); // Gamma correction
+	fragmentColour.rgb = LinearToDisplay(fragmentColour.rgb);
 
 	if (bWater)
 	{

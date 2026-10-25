@@ -75,7 +75,7 @@
 				"cave max depth" : 160.0,
 				"cave wavelength" : 300.0,
 				"cavern chance" : 0.50,
-				"cavern wavelength" : 300.0,
+				"cavern wavelength" : 160.0,
 				"cells per chunk axis" : 24,
 				"climate wavelength" : 40000.0,
 				"continent amplitude" : 200.0,
@@ -103,7 +103,7 @@
 				"seed" : 1234124,
 				"shadow distance" : 1500.0,
 				"thread count" : 0,
-				"tunnel radius" : 12.00,
+				"tunnel radius" : 5.50,
 				"view distance" : 40000.0,
 				"voxel size" : 2.00,
 				"biomes" : 

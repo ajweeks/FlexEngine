@@ -1,0 +1,263 @@
+{
+	"version" : 2,
+	"materials" : 
+	[
+		{
+			"name" : "macbeth lit",
+			"shader" : "pbr",
+			"const metallic" : 0.000000,
+			"const roughness" : 1.000000
+		},
+		{
+			"name" : "macbeth unlit",
+			"shader" : "emissive",
+			"const albedo" : "1.000,1.000,1.000"
+		},
+		{
+			"name" : "macbeth lit 01",
+			"parent" : "macbeth lit",
+			"const albedo" : "#735244"
+		},
+		{
+			"name" : "macbeth lit 02",
+			"parent" : "macbeth lit",
+			"const albedo" : "#C29682"
+		},
+		{
+			"name" : "macbeth lit 03",
+			"parent" : "macbeth lit",
+			"const albedo" : "#627A9D"
+		},
+		{
+			"name" : "macbeth lit 04",
+			"parent" : "macbeth lit",
+			"const albedo" : "#576C43"
+		},
+		{
+			"name" : "macbeth lit 05",
+			"parent" : "macbeth lit",
+			"const albedo" : "#8580B1"
+		},
+		{
+			"name" : "macbeth lit 06",
+			"parent" : "macbeth lit",
+			"const albedo" : "#67BDAA"
+		},
+		{
+			"name" : "macbeth lit 07",
+			"parent" : "macbeth lit",
+			"const albedo" : "#D67E2C"
+		},
+		{
+			"name" : "macbeth lit 08",
+			"parent" : "macbeth lit",
+			"const albedo" : "#505BA6"
+		},
+		{
+			"name" : "macbeth lit 09",
+			"parent" : "macbeth lit",
+			"const albedo" : "#C15A63"
+		},
+		{
+			"name" : "macbeth lit 10",
+			"parent" : "macbeth lit",
+			"const albedo" : "#5E3C6C"
+		},
+		{
+			"name" : "macbeth lit 11",
+			"parent" : "macbeth lit",
+			"const albedo" : "#9DBC40"
+		},
+		{
+			"name" : "macbeth lit 12",
+			"parent" : "macbeth lit",
+			"const albedo" : "#E0A32E"
+		},
+		{
+			"name" : "macbeth lit 13",
+			"parent" : "macbeth lit",
+			"const albedo" : "#383D96"
+		},
+		{
+			"name" : "macbeth lit 14",
+			"parent" : "macbeth lit",
+			"const albedo" : "#469449"
+		},
+		{
+			"name" : "macbeth lit 15",
+			"parent" : "macbeth lit",
+			"const albedo" : "#AF363C"
+		},
+		{
+			"name" : "macbeth lit 16",
+			"parent" : "macbeth lit",
+			"const albedo" : "#E7C71F"
+		},
+		{
+			"name" : "macbeth lit 17",
+			"parent" : "macbeth lit",
+			"const albedo" : "#BB5695"
+		},
+		{
+			"name" : "macbeth lit 18",
+			"parent" : "macbeth lit",
+			"const albedo" : "#0885A1"
+		},
+		{
+			"name" : "macbeth lit 19",
+			"parent" : "macbeth lit",
+			"const albedo" : "#F3F3F2"
+		},
+		{
+			"name" : "macbeth lit 20",
+			"parent" : "macbeth lit",
+			"const albedo" : "#C8C8C8"
+		},
+		{
+			"name" : "macbeth lit 21",
+			"parent" : "macbeth lit",
+			"const albedo" : "#A0A0A0"
+		},
+		{
+			"name" : "macbeth lit 22",
+			"parent" : "macbeth lit",
+			"const albedo" : "#7A7A79"
+		},
+		{
+			"name" : "macbeth lit 23",
+			"parent" : "macbeth lit",
+			"const albedo" : "#555555"
+		},
+		{
+			"name" : "macbeth lit 24",
+			"parent" : "macbeth lit",
+			"const albedo" : "#343434"
+		},
+		{
+			"name" : "macbeth unlit 01",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.4510,0.3216,0.2667"
+		},
+		{
+			"name" : "macbeth unlit 02",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.7608,0.5882,0.5098"
+		},
+		{
+			"name" : "macbeth unlit 03",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.3843,0.4784,0.6157"
+		},
+		{
+			"name" : "macbeth unlit 04",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.3412,0.4235,0.2627"
+		},
+		{
+			"name" : "macbeth unlit 05",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.5216,0.5020,0.6941"
+		},
+		{
+			"name" : "macbeth unlit 06",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.4039,0.7412,0.6667"
+		},
+		{
+			"name" : "macbeth unlit 07",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.8392,0.4941,0.1725"
+		},
+		{
+			"name" : "macbeth unlit 08",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.3137,0.3569,0.6510"
+		},
+		{
+			"name" : "macbeth unlit 09",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.7569,0.3529,0.3882"
+		},
+		{
+			"name" : "macbeth unlit 10",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.3686,0.2353,0.4235"
+		},
+		{
+			"name" : "macbeth unlit 11",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.6157,0.7373,0.2510"
+		},
+		{
+			"name" : "macbeth unlit 12",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.8784,0.6392,0.1804"
+		},
+		{
+			"name" : "macbeth unlit 13",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.2196,0.2392,0.5882"
+		},
+		{
+			"name" : "macbeth unlit 14",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.2745,0.5804,0.2863"
+		},
+		{
+			"name" : "macbeth unlit 15",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.6863,0.2118,0.2353"
+		},
+		{
+			"name" : "macbeth unlit 16",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.9059,0.7804,0.1216"
+		},
+		{
+			"name" : "macbeth unlit 17",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.7333,0.3373,0.5843"
+		},
+		{
+			"name" : "macbeth unlit 18",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.0314,0.5216,0.6314"
+		},
+		{
+			"name" : "macbeth unlit 19",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.9529,0.9529,0.9490"
+		},
+		{
+			"name" : "macbeth unlit 20",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.7843,0.7843,0.7843"
+		},
+		{
+			"name" : "macbeth unlit 21",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.6275,0.6275,0.6275"
+		},
+		{
+			"name" : "macbeth unlit 22",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.4784,0.4784,0.4745"
+		},
+		{
+			"name" : "macbeth unlit 23",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.3333,0.3333,0.3333"
+		},
+		{
+			"name" : "macbeth unlit 24",
+			"parent" : "macbeth unlit",
+			"const emissive" : "0.2039,0.2039,0.2039"
+		},
+		{
+			"name" : "macbeth textured",
+			"parent" : "macbeth lit",
+			"enable albedo sampler" : true,
+			"albedo texture filepath" : "macbeth_chart.png"
+		}
+	]
+}

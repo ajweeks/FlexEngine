@@ -2057,6 +2057,9 @@ namespace flex
 			{ "particle_sim", "", "", "", "vk_simulate_particles_comp.spv" },
 			{ "particles", "vk_particles_vert.spv", "vk_particles_frag.spv", "vk_particles_geom.spv", "" },
 			{ "terrain", "vk_terrain_vert.spv", "vk_terrain_frag.spv", "", "" },
+			// Terrain water surfaces: same shader, but specialized to hide water inside boats (a discard in the
+			// regular terrain shader would disable early depth testing for all terrain)
+			{ "terrain_water", "vk_terrain_vert.spv", "vk_terrain_frag.spv", "", "" },
 			{ "water", "vk_water_vert.spv", "vk_water_frag.spv", "", "" },
 			{ "wireframe", "vk_wireframe_vert.spv", "vk_wireframe_frag.spv", "vk_wireframe_geom.spv", "" },
 			{ "emissive", "vk_emissive_vert.spv", "vk_emissive_frag.spv", "", "" },
@@ -2585,6 +2588,35 @@ namespace flex
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_AREA_LIGHTS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SKYBOX_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SHADOW_SAMPLING_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_WATER_CLIP_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_NEAR_FAR_PLANES);
+
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SHADOW_CASCADES_SAMPLER);
+		++shaderID;
+
+		// Terrain water (as above, with the enable_water_clip specialization constant set)
+		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
+		m_Shaders[shaderID]->bDepthWriteEnable = true;
+		m_Shaders[shaderID]->maxObjectCount = 1024; // Grows on demand
+		// Water surfaces are only a few polygons per chunk
+		m_Shaders[shaderID]->dynamicVertexBufferSize = 8 * 1024 * 1024;
+		m_Shaders[shaderID]->vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::NORMAL |
+			(u32)VertexAttribute::COLOUR_R32G32B32A32_SFLOAT |
+			(u32)VertexAttribute::EXTRA_VEC4;
+
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_DIR_LIGHT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_POINT_LIGHTS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SPOT_LIGHTS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_AREA_LIGHTS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SKYBOX_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SHADOW_SAMPLING_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_WATER_CLIP_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_NEAR_FAR_PLANES);
 
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
@@ -2609,6 +2641,7 @@ namespace flex
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_OCEAN_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SKYBOX_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TIME);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_WATER_CLIP_DATA);
 
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
@@ -2908,10 +2941,15 @@ namespace flex
 		real lineHeight = -2.0f * SetFont(SID("editor-02"))->GetMetric('W')->height / (real)g_Window->GetSize().y;
 
 		static const glm::vec4 offWhite(0.95f);
-		DrawStringSS("FLEX ENGINE", offWhite, AnchorPoint::TOP_RIGHT, glm::vec2(topRightX, topRightOffset), 1.5f, 0.6f);
-		topRightOffset += lineHeight;
+		// Engine status is hidden in the game (which hides editor objects), where it would overlap the HUD & menus
+		const bool bShowEngineStatus = g_EngineInstance->IsRenderingEditorObjects();
+		if (bShowEngineStatus)
+		{
+			DrawStringSS("FLEX ENGINE", offWhite, AnchorPoint::TOP_RIGHT, glm::vec2(topRightX, topRightOffset), 1.5f, 0.6f);
+			topRightOffset += lineHeight;
+		}
 
-		if (g_EngineInstance->IsSimulationPaused())
+		if (bShowEngineStatus && g_EngineInstance->IsSimulationPaused())
 		{
 			DrawStringSS("PAUSED", offWhite, AnchorPoint::TOP_RIGHT, glm::vec2(topRightX, topRightOffset), 0.0f, 0.6f);
 			topRightOffset += lineHeight;

@@ -1283,11 +1283,11 @@ namespace flex
 				bInteracted = true;
 			} break;
 			case VehicleSID:
+			case RowBoatSID:
 			{
 				if (!m_Player->GetRidingVehicleID().IsValid())
 				{
-					Vehicle* vehicle = (Vehicle*)nearbyInteractable;
-					m_Player->SetRidingVehicle(vehicle);
+					m_Player->SetRidingVehicle(nearbyInteractable);
 					m_bAttemptInteractLeftHand = false;
 					m_bAttemptInteractRightHand = false;
 					bInteracted = true;

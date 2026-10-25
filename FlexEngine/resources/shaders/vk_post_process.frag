@@ -47,9 +47,8 @@ void main()
 
 	vec4 colour = texture(in_Texture, ex_TexCoord);
 
+	// The scene is already tone mapped & in display space (see vk_misc.glsl), so only grade it here
 	colour.rgb = (uboDynamic.contrastBrightnessSaturation * vec4(colour.rgb, 1)).rgb;
-
-	colour.rgb = colour.rgb / (colour.rgb + vec3(1.0f)); // Reinhard tone-mapping
 
 	out_Colour = uboDynamic.colourMultiplier * colour;
 }

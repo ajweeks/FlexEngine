@@ -40,6 +40,10 @@ namespace flex
 		// Whether the selected quick access item can be placed in the world (the place button jumps otherwise)
 		bool IsPlaceableItemSelected() const;
 
+		// Discards mouse/stick look input which hasn't been applied yet (e.g. after loading, so the restored view
+		// direction isn't changed by mouse movement during the loading screen)
+		void ResetLookInput() { m_MouseLookAccum = VEC2_ZERO; m_PendingLook = VEC2_ZERO; }
+
 	private:
 		void SnapPosToTrack(real pDistAlongTrack, bool bMovingBackwards, real travelSign);
 		void UpdateLook();

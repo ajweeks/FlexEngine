@@ -150,7 +150,7 @@ namespace flex
 			s_FrameStart = std::chrono::high_resolution_clock::now();
 		}
 
-		void PrintReport()
+		void PrintReport(bool bTotals /* = false */)
 		{
 			if (s_FrameCount == 0)
 			{
@@ -175,9 +175,9 @@ namespace flex
 			}
 			std::sort(sorted.begin(), sorted.end(), [](const Stats* a, const Stats* b) { return a->totalTime > b->totalTime; });
 
-			const real invFrames = 1.0f / (real)s_FrameCount;
-			Print("\n=== Profile (%u frames, avg %.2fms/frame, max %.2fms) ===\n", s_FrameCount, s_TotalFrameTime * invFrames / 1e6f, s_MaxFrameTime / 1e6f);
-			Print("  %9s %9s %9s %9s  %s\n", "avg ms", "self ms", "max ms", "calls/f", "scope");
+			const real invFrames = bTotals ? 1.0f : 1.0f / (real)s_FrameCount;
+			Print("\n=== Profile (%u frames, avg %.2fms/frame, max %.2fms) ===\n", s_FrameCount, s_TotalFrameTime / (real)s_FrameCount / 1e6f, s_MaxFrameTime / 1e6f);
+			Print("  %9s %9s %9s %9s  %s\n", bTotals ? "total ms" : "avg ms", "self ms", "max ms", bTotals ? "calls" : "calls/f", "scope");
 			const u32 maxLines = 60;
 			for (u32 i = 0; i < (u32)sorted.size() && i < maxLines; ++i)
 			{

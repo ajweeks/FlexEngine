@@ -28,6 +28,7 @@ namespace flex
 	{
 		glfwSetErrorCallback(GLFWErrorCallback);
 
+		STARTUP_PHASE("glfwInit");
 		if (!glfwInit())
 		{
 			PrintError("Failed to initialize glfw! Exiting...\n");
@@ -41,6 +42,7 @@ namespace flex
 			Print("GLFW v%d.%d.%d\n", maj, min, rev);
 		}
 
+		STARTUP_PHASE("Joystick enumeration");
 		i32 numJoysticksConnected = 0;
 		for (i32 i = 0; i < MAX_JOYSTICK_COUNT; ++i)
 		{
@@ -130,7 +132,10 @@ namespace flex
 			monitor = glfwGetPrimaryMonitor();
 		}
 
-		m_Window = glfwCreateWindow(m_Size.x, m_Size.y, m_TitleString.c_str(), monitor, NULL);
+		{
+			STARTUP_PHASE("glfwCreateWindow");
+			m_Window = glfwCreateWindow(m_Size.x, m_Size.y, m_TitleString.c_str(), monitor, NULL);
+		}
 		if (!m_Window)
 		{
 			PrintError("Failed to create glfw Window! Exiting...\n");

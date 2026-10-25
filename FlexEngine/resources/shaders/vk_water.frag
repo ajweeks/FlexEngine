@@ -50,6 +50,42 @@ struct SkyboxData
 	vec4 weather;
 };
 
+// Volumes (e.g. the inside of a boat's hull) in which water surfaces aren't drawn. Each is a stack of ellipses in
+// its local space whose semi-axes grow linearly from the bottom to the top. Must match WaterClipData on the CPU.
+struct WaterClipVolume
+{
+	mat4 worldToLocal;
+	vec4 extents; // x: half width (top), y: half length (top), z: bottom y, w: top y
+	vec4 bottomScale; // x: width scale at the bottom, y: length scale at the bottom
+};
+
+struct WaterClipData
+{
+	WaterClipVolume volumes[4];
+	vec4 count; // x: number of volumes in use
+};
+
+bool IsInWaterClipVolume(WaterClipData data, vec3 posWS)
+{
+	int count = int(data.count.x);
+	for (int i = 0; i < count; ++i)
+	{
+		vec3 p = (data.volumes[i].worldToLocal * vec4(posWS, 1.0)).xyz;
+		vec4 e = data.volumes[i].extents;
+		float t = (p.y - e.z) / max(e.w - e.z, 0.0001);
+		if (t >= 0.0 && t <= 1.0)
+		{
+			vec2 scale = mix(data.volumes[i].bottomScale.xy, vec2(1.0), t);
+			vec2 q = p.xz / (e.xy * scale);
+			if (dot(q, q) < 1.0)
+			{
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
 layout (binding = 0) uniform UBOConstant
 {
 	vec4 camPos;
@@ -59,6 +95,7 @@ layout (binding = 0) uniform UBOConstant
 	OceanData oceanData;
 	SkyboxData skyboxData;
 	vec4 time; // X: seconds elapsed since program start, Y: time of day [0,1]
+	WaterClipData waterClipData;
 } uboConstant;
 
 // Just needed for binding
@@ -86,6 +123,12 @@ vec3 SampleSkybox(vec3 dir)
 
 void main()
 {
+	// Not drawn inside boats
+	if (IsInWaterClipVolume(uboConstant.waterClipData, ex_PositionWS))
+	{
+		discard;
+	}
+
 	vec2 uv0 = ex_TexCoord;
 	vec2 uv1 = 3.5 * (ex_TexCoord);//; + vec2(-0.015 * uboConstant.time.x, 0.005 * uboConstant.time.x));
 	vec2 uv2 = 3.0 * (ex_TexCoord + vec2(-0.014 * uboConstant.time.x, 0.011 * uboConstant.time.x));

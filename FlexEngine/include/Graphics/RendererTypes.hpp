@@ -207,6 +207,24 @@ namespace flex
 		glm::vec4 weather; // 128, x: cloudiness [0, 1], y: regional variation, zw: weather pattern offset
 	};
 
+	static const i32 MAX_WATER_CLIP_VOLUMES = 4;
+
+	// Volumes (e.g. the inside of a boat's hull) in which water surfaces aren't drawn. Each volume is a stack of
+	// ellipses in its local space, whose semi-axes grow linearly from the bottom to the top.
+	// Must match WaterClipData in vk_misc.glsl
+	struct WaterClipVolume
+	{
+		glm::mat4 worldToLocal;	// 0
+		glm::vec4 extents;		// 64, x: half width (top), y: half length (top), z: bottom y, w: top y
+		glm::vec4 bottomScale;	// 80, x: width scale at the bottom, y: length scale at the bottom
+	};
+
+	struct WaterClipData
+	{
+		WaterClipVolume volumes[MAX_WATER_CLIP_VOLUMES];	// 0
+		glm::vec4 count;									// 384, x: number of volumes in use
+	};
+
 	// 64 bytes
 	struct BezierCurve3D_GPU
 	{
@@ -362,6 +380,7 @@ namespace flex
 	DECL_UNIFORM(U_SSAO_BLUR_DATA_DYNAMIC, "ssaoBlurDataDynamic", sizeof(SSAOBlurDataDynamic));
 	DECL_UNIFORM(U_SSAO_BLUR_DATA_CONSTANT, "ssaoBlurDataConstant", sizeof(SSAOBlurDataConstant));
 	DECL_UNIFORM(U_SSAO_SAMPLING_DATA, "ssaoData", sizeof(SSAOSamplingData));
+	DECL_UNIFORM(U_WATER_CLIP_DATA, "waterClipData", sizeof(WaterClipData)); // Before nearFarPlanes so it stays 16 byte aligned
 	DECL_UNIFORM(U_NEAR_FAR_PLANES, "nearFarPlanes", sizeof(glm::vec2));
 	DECL_UNIFORM(U_POST_PROCESS_MAT, "postProcessMatrix", sizeof(glm::mat4));
 	DECL_UNIFORM(U_LAST_FRAME_VIEWPROJ, "lastFrameViewProj", sizeof(glm::mat4));
@@ -877,6 +896,12 @@ namespace flex
 
 		bool persistent = false;
 		bool bEditorMaterial = false;
+
+		// Where this material was defined (empty for materials created in code). Material files can hold several
+		// materials ("materials" array) & a material can inherit every field it doesn't set from a "parent".
+		std::string parentName;
+		std::string sourceFilePath;
+		bool bSharedSourceFile = false;
 	};
 
 	using HTextureSampler = void*;
@@ -1181,6 +1206,12 @@ namespace flex
 		bool Equals(const Material& other);
 
 		static void ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut, i32 fileVersion);
+		// Parses "r,g,b[,a]" (linear) or "#RRGGBB[AA]" (sRGB encoded, returned linearized)
+		static bool TryParseColour(const JSONValue& value, glm::vec4& outColour);
+		// Whether two material file field values are equivalent (numbers & colours compared with a tolerance)
+		static bool FieldValuesEqual(const JSONValue& a, const JSONValue& b);
+		static real SRGBToLinear(real value);
+		static real LinearToSRGB(real value);
 		FLEX_NO_DISCARD JSONObject Serialize() const;
 
 		static FLEX_NO_DISCARD std::vector<MaterialID> ParseMaterialArrayJSON(const JSONObject& object, i32 fileVersion);

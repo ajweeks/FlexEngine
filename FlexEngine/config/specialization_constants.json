@@ -58,5 +58,15 @@
 			0,
 			3
 		]
+	},
+	"enable_water_clip" : 
+	{
+		"id" : 6,
+		"default_value" : 1,
+		"range" : 
+		[
+			0,
+			1
+		]
 	}
 }

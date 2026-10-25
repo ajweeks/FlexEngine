@@ -208,6 +208,12 @@ namespace flex
 		static AudioSourceID SynthesizeMelody(real bpm = 340.0f);
 		static void SetListenerPos(const glm::vec3& posWS);
 		static void SetListenerVel(const glm::vec3& velocity);
+		static void SetListenerOrientation(const glm::vec3& forward, const glm::vec3& up);
+
+		// Creates a source from mono 16 bit samples (copied). Must be called on the main thread.
+		static AudioSourceID CreateSourceFromSamples(const i16* samples, u32 sampleCount, u32 sampleRate, bool b2D, const std::string& debugName);
+		// Distance attenuation of 3D sources: full volume within referenceDistance, no further falloff past maxDistance
+		static void SetSourceRolloff(AudioSourceID sourceID, real referenceDistance, real maxDistance, real rolloffFactor = 1.0f);
 
 		/* [0.0, 1.0] logarithmic */
 		static void SetMasterGain(real masterGain);

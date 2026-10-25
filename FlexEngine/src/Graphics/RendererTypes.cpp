@@ -336,12 +336,104 @@ namespace flex
 		return equal;
 	}
 
+	bool Material::TryParseColour(const JSONValue& value, glm::vec4& outColour)
+	{
+		switch (value.type)
+		{
+		case ValueType::VEC3: // (alpha is left as 0, as it always has been for three component colours)
+		case ValueType::VEC4:
+			outColour = value.vecValue;
+			return true;
+		case ValueType::STRING:
+		{
+			// "#RRGGBB" or "#RRGGBBAA": an sRGB encoded colour (as shown by colour pickers & paint programs),
+			// converted to the linear values materials store
+			const std::string& str = value.strValue;
+			if ((str.size() != 7 && str.size() != 9) || str[0] != '#')
+			{
+				return false;
+			}
+			for (u32 i = 1; i < (u32)str.size(); ++i)
+			{
+				if (!isxdigit((unsigned char)str[i]))
+				{
+					return false;
+				}
+			}
+			real channels[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+			for (u32 c = 0; c < (u32)(str.size() - 1) / 2; ++c)
+			{
+				channels[c] = (real)strtol(str.substr(1 + c * 2, 2).c_str(), nullptr, 16) / 255.0f;
+			}
+			for (u32 c = 0; c < 3; ++c)
+			{
+				channels[c] = SRGBToLinear(channels[c]);
+			}
+			outColour = glm::vec4(channels[0], channels[1], channels[2], channels[3]);
+			return true;
+		}
+		default:
+			return false;
+		}
+	}
+
+	real Material::SRGBToLinear(real value)
+	{
+		return value <= 0.04045f ? value / 12.92f : std::pow((value + 0.055f) / 1.055f, 2.4f);
+	}
+
+	real Material::LinearToSRGB(real value)
+	{
+		return value <= 0.0031308f ? value * 12.92f : 1.055f * std::pow(value, 1.0f / 2.4f) - 0.055f;
+	}
+
+	bool Material::FieldValuesEqual(const JSONValue& a, const JSONValue& b)
+	{
+		glm::vec4 colourA, colourB;
+		if (TryParseColour(a, colourA) && TryParseColour(b, colourB))
+		{
+			// (hex colours only have 8 bits of precision, & three component colours have no meaningful alpha)
+			const bool bCompareAlpha = a.type == ValueType::VEC4 && b.type == ValueType::VEC4;
+			const glm::vec4 diff = glm::abs(colourA - colourB);
+			return diff.x < 0.0025f && diff.y < 0.0025f && diff.z < 0.0025f && (!bCompareAlpha || diff.w < 0.0025f);
+		}
+
+		auto IsNumber = [](const JSONValue& value)
+		{
+			return value.type == ValueType::FLOAT || value.type == ValueType::INT || value.type == ValueType::UINT;
+		};
+		auto ToReal = [](const JSONValue& value)
+		{
+			return value.type == ValueType::FLOAT ? value.floatValue : value.type == ValueType::INT ? (real)value.intValue : (real)value.uintValue;
+		};
+		if (IsNumber(a) && IsNumber(b))
+		{
+			return std::abs(ToReal(a) - ToReal(b)) < 0.0005f;
+		}
+
+		if (a.type != b.type)
+		{
+			return false;
+		}
+
+		switch (a.type)
+		{
+		case ValueType::BOOL: return a.AsBool() == b.AsBool();
+		case ValueType::STRING: return a.strValue == b.strValue;
+		case ValueType::VEC2: return glm::all(glm::lessThan(glm::abs(a.vecValue - b.vecValue), glm::vec4(0.0005f)));
+		default: return false;
+		}
+	}
+
 	void Material::ParseJSONObject(const JSONObject& material, MaterialCreateInfo& createInfoOut, i32 fileVersion)
 	{
 		FLEX_UNUSED(fileVersion);
 
+		// Fields that aren't present are left untouched, so createInfoOut can be pre-filled with a parent's values
+
 		material.TryGetString("name", createInfoOut.name);
 		material.TryGetString("shader", createInfoOut.shaderName);
+		material.TryGetString("parent", createInfoOut.parentName);
 
 		struct FilePathMaterialParam
 		{
@@ -390,9 +482,23 @@ namespace flex
 		material.TryGetVec2("generated irradiance cubemap size", createInfoOut.generatedIrradianceCubemapSize);
 		material.TryGetVec2("generated prefiltered map size", createInfoOut.generatedPrefilteredCubemapSize);
 		material.TryGetVec2("generated cubemap size", createInfoOut.generatedCubemapSize);
-		material.TryGetVec4("colour multiplier", createInfoOut.colourMultiplier);
-		material.TryGetVec4("const albedo", createInfoOut.constAlbedo);
-		material.TryGetVec4("const emissive", createInfoOut.constEmissive);
+		// Colours are linear, or sRGB encoded when written as "#RRGGBB"
+		const char* colourFieldNames[] = { "colour multiplier", "const albedo", "const emissive" };
+		glm::vec4* colourFields[] = { &createInfoOut.colourMultiplier, &createInfoOut.constAlbedo, &createInfoOut.constEmissive };
+		for (u32 i = 0; i < (u32)ARRAY_LENGTH(colourFieldNames); ++i)
+		{
+			for (const JSONField& field : material.fields)
+			{
+				if (field.label == colourFieldNames[i])
+				{
+					if (!TryParseColour(field.value, *colourFields[i]))
+					{
+						PrintError("Invalid colour for \"%s\" in material %s\n", colourFieldNames[i], createInfoOut.name.c_str());
+					}
+					break;
+				}
+			}
+		}
 
 		material.TryGetFloat("const metallic", createInfoOut.constMetallic);
 		material.TryGetFloat("const roughness", createInfoOut.constRoughness);

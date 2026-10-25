@@ -22,6 +22,12 @@ namespace flex
 		void AddWave();
 		void RemoveWave(i32 index);
 
+		// Height of the water surface (in world space) at the given position. Only valid near the camera, where the
+		// surface is generated. Returns false when there is no surface there.
+		bool GetWaterHeight(const glm::vec3& posWS, real& outHeight) const;
+		// The first ocean in the current scene (if any)
+		static GerstnerWave* GetActive() { return s_Active; }
+
 		struct WaveInfo
 		{
 			bool enabled = true;
@@ -125,6 +131,8 @@ namespace flex
 		Spring<real> bobberTarget;
 
 		u32 DEBUG_lastUsedVertCount = 0;
+
+		static GerstnerWave* s_Active;
 	};
 
 	bool operator==(const GerstnerWave::WaveInfo& lhs, const GerstnerWave::WaveInfo& rhs);

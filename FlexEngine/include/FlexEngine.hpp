@@ -47,6 +47,7 @@ namespace flex
 		bool InstallShaderDirectoryWatch() const;
 
 		static std::string EngineVersionString();
+		static std::string WindowTitle();
 
 		std::string GetShaderEditorPath();
 
@@ -151,6 +152,9 @@ namespace flex
 		void TriggerRenderDocCaptureOnNextFrame();
 #endif
 
+		// Spawns a vehicle (from the given prefab, e.g. "vehicle" or "row boat") on the ground (or water) in front of the camera
+		GameObject* SpawnVehicleInFrontOfCamera(const char* prefabName = "vehicle");
+
 	private:
 		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);
 		MouseButtonCallback<FlexEngine> m_MouseButtonCallback;
@@ -176,8 +180,6 @@ namespace flex
 		void DestroyWindowAndRenderer();
 		void SetupImGuiStyles();
 		void DrawImGuiObjects();
-		// Spawns a vehicle (from the vehicle prefab) on the ground in front of the camera
-		void SpawnVehicleInFrontOfCamera();
 
 		void PrintAllConsoleCommands();
 
@@ -294,6 +296,9 @@ namespace flex
 		// When non-zero we should override g_DeltaTime
 		// Used when doing expensive operations (like scene loading)
 		// to prevent massive dt values messing systems up
+		bool m_bFirstFrameDrawn = false;
+		bool m_bStartupProfile = false;
+
 		i32 m_FramesToFakeDT = 3;
 		sec m_FakeDT = 1.0f / 60.0f;
 
@@ -303,4 +308,28 @@ namespace flex
 		FlexEngine(const FlexEngine&) = delete;
 		FlexEngine& operator=(const FlexEngine&) = delete;
 	};
+
+	// Cold start timing (wall clock, relative to process start). Phases are printed as a table once the first
+	// frame has been drawn; milestones (menu ready, in world) are printed as they happen.
+	namespace StartupTimer
+	{
+		// Milliseconds since the process started
+		ms Elapsed();
+		void BeginPhase(const char* name);
+		void EndPhase(const char* name);
+		// For phases on other threads (BeginPhase/EndPhase track nesting on the main thread)
+		void AddPhase(const char* name, ms start, ms end);
+		// Prints "[Startup] <name> at X ms" once per name
+		void Milestone(const char* name, const char* extraInfo = nullptr);
+		void PrintPhases();
+
+		struct Scope
+		{
+			explicit Scope(const char* name) : m_Name(name) { BeginPhase(name); }
+			~Scope() { EndPhase(m_Name); }
+			const char* m_Name;
+		};
+	} // namespace StartupTimer
 } // namespace flex
+
+#define STARTUP_PHASE(name) ::flex::StartupTimer::Scope TOKEN_PASTE(startupPhase, __LINE__)(name)

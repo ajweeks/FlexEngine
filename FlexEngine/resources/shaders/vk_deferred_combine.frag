@@ -489,7 +489,8 @@ void main()
 	vec3 kS = F;
     vec3 kD = 1.0 - kS;
     kD *= 1.0 - metallic;	  
-    vec3 irradiance = mix(texture(irradianceSampler, N).rgb, skyColour, 0.2);
+    // (the irradiance map is convolved from a capture of display values)
+    vec3 irradiance = mix(SRGBToLinear(texture(irradianceSampler, N).rgb), skyColour, 0.2);
     vec3 diffuse = irradiance * albedo;
 
 	// Specular ambient term (IBL)
@@ -511,14 +512,18 @@ void main()
 	float skyBrightness = clamp(skyLuminance / 0.22, 0.03, 1.2);
 	vec3 ambient = (kD * diffuse + specular) * uboConstant.ssaoData.ambientIntensity * ssao * ambientShadow * skyBrightness;
 
+	// Contact shadowing: SSAO also darkens direct light a little, which grounds objects far better than occluding
+	// the (comparatively dim) ambient light alone
+	const float SSAO_DIRECT_LIGHT_AMOUNT = 0.6;
+	Lo *= mix(1.0, ssao, SSAO_DIRECT_LIGHT_AMOUNT);
+
 	vec3 colour = ambient + Lo;
 	if (!IsDistanceFogEnabled(uboConstant.skyboxData))
 	{
 		ApplyFog(linDepth, uboConstant.skyboxData.colourFog.xyz, /* inout */ colour);
 	}
 
-	colour = colour / (colour + vec3(1.0f)); // Reinhard tone-mapping
-	colour = pow(colour, vec3(1.0f / 2.2f)); // Gamma correction
+	colour = LinearToDisplay(colour);
 
 	vec3 viewVec = posWS - uboConstant.camPos.xyz;
 	ApplyDistanceFog(length(viewVec), viewVec / max(length(viewVec), 0.0001), uboConstant.skyboxData, /* inout */ colour);

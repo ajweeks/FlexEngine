@@ -977,6 +977,50 @@ namespace flex
 		DisplayALError("SetListenerVel", alGetError());
 	}
 
+	void AudioManager::SetListenerOrientation(const glm::vec3& forward, const glm::vec3& up)
+	{
+		const ALfloat orientation[6] = { forward.x, forward.y, forward.z, up.x, up.y, up.z };
+		alListenerfv(AL_ORIENTATION, orientation);
+		DisplayALError("SetListenerOrientation", alGetError());
+	}
+
+	AudioSourceID AudioManager::CreateSourceFromSamples(const i16* samples, u32 sampleCount, u32 sampleRate, bool b2D, const std::string& debugName)
+	{
+		AudioSourceID newID = GetNextAvailableSourceAndBufferIndex();
+		if (newID == InvalidAudioSourceID)
+		{
+			PrintError("Failed to add new audio source! All %d buffers are in use\n", NUM_BUFFERS);
+			return InvalidAudioSourceID;
+		}
+
+		const u32 bufferSize = sampleCount * sizeof(i16);
+		i16* data = (i16*)malloc(bufferSize);
+		CHECK_NE(data, nullptr);
+		memcpy(data, samples, bufferSize);
+
+		// Takes ownership of data
+		newID = SynthesizeSoundCommon(newID, data, bufferSize, sampleRate, AL_FORMAT_MONO16, b2D);
+		if (newID != InvalidAudioSourceID)
+		{
+			s_Sources[newID].length = (real)sampleCount / (real)sampleRate;
+			s_Sources[newID].fileName = debugName;
+		}
+		return newID;
+	}
+
+	void AudioManager::SetSourceRolloff(AudioSourceID sourceID, real referenceDistance, real maxDistance, real rolloffFactor /* = 1.0f */)
+	{
+		if (sourceID >= s_Sources.size() || s_Sources[sourceID].source == InvalidAudioSourceID)
+		{
+			return;
+		}
+
+		alSourcef(s_Sources[sourceID].source, AL_REFERENCE_DISTANCE, referenceDistance);
+		alSourcef(s_Sources[sourceID].source, AL_MAX_DISTANCE, maxDistance);
+		alSourcef(s_Sources[sourceID].source, AL_ROLLOFF_FACTOR, rolloffFactor);
+		DisplayALError("SetSourceRolloff", alGetError());
+	}
+
 	void AudioManager::SetMasterGain(real masterGain)
 	{
 		s_MasterGain = glm::clamp(masterGain, 0.0f, 1.0f);
@@ -1494,7 +1538,7 @@ namespace flex
 
 		alGetSourcef(s_Sources[newID].source, AL_SEC_OFFSET, &s_Sources[newID].length);
 
-		alSource3i(s_Sources[newID].source, AL_AUXILIARY_SEND_FILTER, SLOT_DEFAULT_2D, 0, AL_FILTER_NULL);
+		alSource3i(s_Sources[newID].source, AL_AUXILIARY_SEND_FILTER, b2D ? SLOT_DEFAULT_2D : SLOT_DEFAULT_3D, 0, AL_FILTER_NULL);
 		DisplayALError("Failed to connect to slot", alGetError());
 
 		return newID;

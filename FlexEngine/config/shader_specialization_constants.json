@@ -14,6 +14,12 @@
 	[
 		"taa_sample_count"
 	],
+	"terrain_water" : 
+	[
+		"debug_overlay_index",
+		"enable_fog",
+		"enable_water_clip"
+	],
 	"terrain" : 
 	[
 		"debug_overlay_index",

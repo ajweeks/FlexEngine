@@ -251,6 +251,8 @@ namespace flex
 	private:
 		bool PrefabTemplateContainsChildRecursive(GameObject* prefabTemplate, GameObject* child) const;
 		bool SerializeMaterial(Material* material) const;
+		// Strips fields a material inherits unchanged from its parent & keeps fields as originally written where unchanged
+		JSONObject MakeMaterialObjectRelativeToSource(const JSONObject& materialObj, const Material& material, const MaterialCreateInfo& sourceInfo) const;
 
 		std::string m_FontsFilePathAbs;
 		std::string m_FontImageExtension = ".png";

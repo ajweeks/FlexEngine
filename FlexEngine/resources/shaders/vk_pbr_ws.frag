@@ -41,6 +41,12 @@ layout (binding = 5) uniform sampler2D normalSampler;
 layout (location = 0) out vec4 outNormalRoughness;
 layout (location = 1) out vec4 outAlbedoMetallic;
 
+// Albedo textures are sRGB encoded (but are loaded as UNORM)
+vec3 SRGBToLinear(vec3 v)
+{
+	return mix(v / 12.92, pow((v + 0.055) / 1.055, vec3(2.4)), step(0.04045, v));
+}
+
 void main() 
 {
     vec2 uvX = ex_WorldPos.zy * uboDynamic.textureScale;
@@ -52,9 +58,9 @@ void main()
 	vec3 albedo;
     if (uboDynamic.enableAlbedoSampler)
     {
-		vec3 albedoX = texture(albedoSampler, uvX).rgb * uboDynamic.constAlbedo.rgb;
-		vec3 albedoY = texture(albedoSampler, uvY).rgb * uboDynamic.constAlbedo.rgb;
-		vec3 albedoZ = texture(albedoSampler, uvZ).rgb * uboDynamic.constAlbedo.rgb;
+		vec3 albedoX = SRGBToLinear(texture(albedoSampler, uvX).rgb) * uboDynamic.constAlbedo.rgb;
+		vec3 albedoY = SRGBToLinear(texture(albedoSampler, uvY).rgb) * uboDynamic.constAlbedo.rgb;
+		vec3 albedoZ = SRGBToLinear(texture(albedoSampler, uvZ).rgb) * uboDynamic.constAlbedo.rgb;
 		vec3 blendWeights = pow(abs(geomNorm), vec3(uboDynamic.blendSharpness));
 		blendWeights = blendWeights / max(blendWeights.x + blendWeights.y + blendWeights.z, 0.001);
 		albedo = clamp(

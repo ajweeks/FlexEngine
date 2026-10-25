@@ -50,9 +50,15 @@ layout (binding = 1) uniform UBODynamic
 {
 	mat4 model;
 
+	// The CPU packs uniforms tightly in declaration order (see RendererTypes.hpp), which puts constEmissive at
+	// offset 84 - not a valid vec4 offset - so it's read as four floats. (Declared as a vec4 it was read from the
+	// wrong offset & emissive surfaces rendered black.) Must match vk_emissive.vert.
 	vec4 constAlbedo;
 	float constRoughness;
-	vec4 constEmissive;
+	float constEmissiveR;
+	float constEmissiveG;
+	float constEmissiveB;
+	float constEmissiveA;
 
 	bool enableAlbedoSampler;
 	bool enableNormalSampler;
@@ -71,7 +77,7 @@ layout (location = 0) out vec4 outColour;
 void main() 
 {
 	vec3 albedo = uboDynamic.enableAlbedoSampler ? texture(albedoSampler, ex_TexCoord).rgb : uboDynamic.constAlbedo.xyz;
-	vec3 emissive = uboDynamic.enableEmissiveSampler ? texture(emissiveSampler, ex_TexCoord).rgb : uboDynamic.constEmissive.xyz;
+	vec3 emissive = uboDynamic.enableEmissiveSampler ? texture(emissiveSampler, ex_TexCoord).rgb : vec3(uboDynamic.constEmissiveR, uboDynamic.constEmissiveG, uboDynamic.constEmissiveB);
 
 	outColour = vec4(albedo * emissive * ex_Colour.xyz, 1.0);
 }

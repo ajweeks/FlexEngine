@@ -11,7 +11,9 @@ layout (binding = 0) uniform UBOConstant
 	mat4 projection;
 	mat4 invProj;
 	// SSAO Gen Data
-	vec4 samples[SSAO_KERNEL_SIZE];
+	// Always sized for the largest kernel (SSAOGenData's layout): sizing it by SSAO_KERNEL_SIZE moved ssaoRadius,
+	// so smaller kernels read a sample's x component as the radius & occlusion barely reached past creases
+	vec4 samples[64];
 	float ssaoRadius;
 } uboConstant;
 

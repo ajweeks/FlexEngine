@@ -1,34 +1,15 @@
 #version 450
 
+// Final copy of the graded scene. Shaders already write display (sRGB encoded) values (see vk_misc.glsl), so this
+// must not encode them again (doing so, after a second tone map in post processing, washed out the whole image).
+
 layout (binding = 0) uniform sampler2D in_Texture;
 
 layout (location = 0) in vec2 ex_TexCoord;
 
 layout (location = 0) out vec4 out_Colour;
 
-float LinearToSRGB(float val)
-{
-	if (val < 0.0031308f)
-    {
-    	val *= 12.92f;
-    }
-    else
-    {
-    	val = 1.055f * pow(val,1.0f/2.4f) - 0.055f;
-    }
-    return val;
-}
-
-vec3 LinearToSRGB(vec3 val)
-{
-    return vec3(LinearToSRGB(val.x), LinearToSRGB(val.y), LinearToSRGB(val.z));
-}
-
 void main()
 {
-	vec4 colour = texture(in_Texture, ex_TexCoord);
-
-	colour.rgb = LinearToSRGB(colour.rgb);
-
-	out_Colour = colour;
+	out_Colour = texture(in_Texture, ex_TexCoord);
 }

@@ -6,6 +6,7 @@ IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
 #include <BulletCollision/CollisionDispatch/btManifoldResult.h>
 
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 
 #include <glm/gtx/rotate_vector.hpp>
@@ -22,13 +23,17 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
 #include "Inventory.hpp"
+#include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "ResourceManager.hpp"
+#include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Objects/Industry.hpp"
 #include "Scene/Objects/TerrainGenerator.hpp"
+#include "Scene/SceneManager.hpp"
 #include "Systems/TrackManager.hpp"
 #include "Traversal.hpp"
+#include "Woodcraft.hpp"
 #include "Window/Window.hpp"
 
 // The player in streamed terrain: digging/filling with the pickaxe, & staying on top of the terrain
@@ -48,7 +53,8 @@ namespace flex
 			m_TrackRidingID != InvalidTrackID ||
 			IsPlacingTrack() ||
 			IsEditingTrack() ||
-			g_EngineInstance->IsSimulationPaused())
+			g_EngineInstance->IsSimulationPaused() ||
+			(m_Woodcraft != nullptr && m_Woodcraft->BlocksTerrainTool()))
 		{
 			return;
 		}
@@ -110,11 +116,12 @@ namespace flex
 		}
 	}
 
-	void Player::TeleportOnTerrain(const glm::vec3& pos)
+	void Player::TeleportOnTerrain(const glm::vec3& pos, bool bKeepExactPosition /* = false */)
 	{
 		m_Transform.SetWorldPosition(pos);
 		m_RigidBody->GetRigidBodyInternal()->setLinearVelocity(btVector3(0, 0, 0));
 		m_bTerrainPlacementPending = true;
+		m_bTerrainPlacementExact = bKeepExactPosition;
 	}
 
 	void Player::PlaceOnTerrain(bool bKeepHeight)
@@ -128,7 +135,49 @@ namespace flex
 		}
 
 		// The capsule's center is half its height above its feet
-		m_TerrainHoldPos = groundPos + glm::vec3(0.0f, m_Height * 0.5f + 0.25f, 0.0f);
+		HoldUntilTerrainCollision(groundPos + glm::vec3(0.0f, m_Height * 0.5f + 0.25f, 0.0f));
+	}
+
+	bool Player::IsSupportedBelow(const glm::vec3& pos) const
+	{
+		// Feet, plus some slack
+		const real maxDrop = m_Height * 0.5f + 1.0f;
+		const glm::vec3 down(0.0f, -1.0f, 0.0f);
+
+		// Terrain (its collision may not have loaded yet, so this uses the density)
+		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+		glm::vec3 hitPos, hitNormal;
+		if (terrainGenerator != nullptr && terrainGenerator->Raycast(pos, down, maxDrop, hitPos, hitNormal))
+		{
+			return true;
+		}
+
+		// Anything else solid (e.g. something built), other than the player
+		struct IgnoreObjectCallback : public btCollisionWorld::ClosestRayResultCallback
+		{
+			IgnoreObjectCallback(const btVector3& from, const btVector3& to, const btCollisionObject* ignored) :
+				btCollisionWorld::ClosestRayResultCallback(from, to), ignored(ignored) {}
+			btScalar addSingleResult(btCollisionWorld::LocalRayResult& rayResult, bool bNormalInWorldSpace) override
+			{
+				if (rayResult.m_collisionObject == ignored)
+				{
+					return 1.0f;
+				}
+				return btCollisionWorld::ClosestRayResultCallback::addSingleResult(rayResult, bNormalInWorldSpace);
+			}
+			const btCollisionObject* ignored;
+		};
+		const btVector3 rayStart = ToBtVec3(pos);
+		const btVector3 rayEnd = ToBtVec3(pos + down * maxDrop);
+		IgnoreObjectCallback rayCallback(rayStart, rayEnd, m_RigidBody->GetRigidBodyInternal());
+		rayCallback.m_collisionFilterMask = (i32)CollisionType::STATIC;
+		g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->rayTest(rayStart, rayEnd, rayCallback);
+		return rayCallback.hasHit();
+	}
+
+	void Player::HoldUntilTerrainCollision(const glm::vec3& holdPos)
+	{
+		m_TerrainHoldPos = holdPos;
 		m_Transform.SetWorldPosition(m_TerrainHoldPos);
 		btRigidBody* rigidBodyInternal = m_RigidBody->GetRigidBodyInternal();
 		rigidBodyInternal->clearForces();
@@ -149,10 +198,39 @@ namespace flex
 		}
 
 		const glm::vec3 pos = m_Transform.GetWorldPosition();
+		if (m_bTerrainPlacementPending && terrainGenerator->IsWorldChangePending())
+		{
+			// The density still describes the previous world (e.g. just after loading a world), so wait for it
+			btRigidBody* rigidBodyInternal = m_RigidBody->GetRigidBodyInternal();
+			rigidBodyInternal->clearForces();
+			rigidBodyInternal->setLinearVelocity(btVector3(0, 0, 0));
+			m_RigidBody->SetWorldPosition(pos);
+			return;
+		}
+
 		if (m_bTerrainPlacementPending)
 		{
 			m_bTerrainPlacementPending = false;
-			PlaceOnTerrain(true);
+			// Restoring a saved position: keep it if the whole capsule is in open air & standing on something (it
+			// may be on a building, so the terrain below isn't necessarily the ground)
+			bool bKeepExact = false;
+			if (m_bTerrainPlacementExact)
+			{
+				const real axisHalfLength = glm::max(m_Height * 0.5f - m_Radius, 0.0f);
+				const bool bClear = terrainGenerator->SampleDensity(pos) > 0.0f &&
+					terrainGenerator->SampleDensity(pos - VEC3_UP * axisHalfLength) > 0.0f &&
+					terrainGenerator->SampleDensity(pos + VEC3_UP * axisHalfLength) > 0.0f;
+				bKeepExact = bClear && IsSupportedBelow(pos);
+			}
+			if (bKeepExact)
+			{
+				HoldUntilTerrainCollision(pos);
+			}
+			else
+			{
+				PlaceOnTerrain(true);
+			}
+			m_bTerrainPlacementExact = false;
 		}
 		else if (!m_bAwaitingTerrainCollision)
 		{
@@ -193,6 +271,11 @@ namespace flex
 
 	void Player::DrawTerrainToolHUD() const
 	{
+		if (m_Woodcraft != nullptr)
+		{
+			m_Woodcraft->DrawHUD();
+		}
+
 		if (!m_bTerrainToolActive)
 		{
 			return;

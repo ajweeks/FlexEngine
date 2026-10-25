@@ -38,10 +38,12 @@ namespace flex
 	static constexpr StringID SpringObjectSID = SID("spring");
 	static constexpr StringID SoftBodySID = SID("soft body");
 	static constexpr StringID VehicleSID = SID("vehicle");
+	static constexpr StringID RowBoatSID = SID("row boat");
 	static constexpr StringID RoadSID = SID("road");
 	static constexpr StringID PlayerSID = SID("player");
 	static constexpr StringID BuildPieceSID = SID("build piece");
 	static constexpr StringID TreasureChestSID = SID("treasure chest");
+	static constexpr StringID CampfireSID = SID("campfire");
 	static constexpr StringID ParticleSystemSID = SID("particle system");
 
 	class GameObject;
