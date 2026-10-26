@@ -204,23 +204,35 @@ namespace flex
 			return true;
 		}
 
-		i32 status = 0;
 		mode_t mode = S_IRWXU; // RWX for owner (see https://jameshfisher.com/2017/02/24/what-is-mode_t/)
-		struct stat st;
-		if (stat(absoluteDirectoryPath.c_str(), &st) != 0)
+		// Create each missing parent in turn
+		size_t end = 0;
+		while (end != std::string::npos)
 		{
-			if (mkdir(absoluteDirectoryPath.c_str(), mode) != 0 && errno != EEXIST)
+			end = absoluteDirectoryPath.find('/', end + 1);
+			const std::string path = absoluteDirectoryPath.substr(0, end);
+			if (path.empty())
 			{
-				status = -1;
+				continue;
+			}
+
+			struct stat st;
+			if (stat(path.c_str(), &st) != 0)
+			{
+				if (mkdir(path.c_str(), mode) != 0 && errno != EEXIST)
+				{
+					PrintError("Failed to create directory %s (errno: %d)\n", path.c_str(), errno);
+					return false;
+				}
+			}
+			else if (!S_ISDIR(st.st_mode))
+			{
+				errno = ENOTDIR;
+				return false;
 			}
 		}
-		else if (!S_ISDIR(st.st_mode))
-		{
-			errno = ENOTDIR;
-			status = -1;
-		}
 
-		return status != -1;
+		return true;
 	}
 
 	void Platform::OpenFileExplorer(const char* absoluteDirectory)
