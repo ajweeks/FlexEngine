@@ -2290,7 +2290,11 @@ namespace flex
 				const char* directories[] = { RESOURCE_DIRECTORY "scenes/", PREFAB_DIRECTORY, SAVED_DIRECTORY "worlds/" };
 				for (const char* directory : directories)
 				{
-					Platform::FindFilesInDirectory(directory, filePaths, "*", true);
+					// (There are no saved worlds on CI)
+					if (Platform::DirectoryExists(RelativePathToAbsolute(directory)))
+					{
+						Platform::FindFilesInDirectory(directory, filePaths, "*", true);
+					}
 				}
 				std::vector<std::string> jsonFiles;
 				for (const std::string& filePath : filePaths)
@@ -2328,6 +2332,8 @@ namespace flex
 					binarySize += bytes.size();
 					compressedSize += Compress(bytes.data(), bytes.size(), compressed) ? compressed.size() : bytes.size();
 				}
+				// (Fails if the resources aren't found, rather than silently testing nothing)
+				SAVE_CHECK(fileCount > 0);
 				Print("  Binary JSON matches text for %u files (text %u KB, binary %u KB, compressed %u KB)\n", fileCount,
 					(u32)(textSize / 1024), (u32)(binarySize / 1024), (u32)(compressedSize / 1024));
 			}
@@ -2343,6 +2349,13 @@ namespace flex
 					Platform::DeleteFile(filePath, false);
 				}
 				return directory;
+			}
+
+			// Sections are merged back in their own order, so a world's root fields are compared by name
+			static JSONObject SortedFields(JSONObject object)
+			{
+				std::stable_sort(object.fields.begin(), object.fields.end(), [](const JSONField& a, const JSONField& b) { return a.label < b.label; });
+				return object;
 			}
 
 			static void TestWorldFiles(TestContext& ctx, TestRandom& random)
@@ -2365,12 +2378,6 @@ namespace flex
 				SAVE_CHECK(FileExists(directory + WORLD_FILE_NAME) && !FileExists(directory + LEGACY_WORLD_FILE_NAME) && FileExists(directory + LEGACY_WORLD_FILE_NAME + ".bak"));
 				JSONObject fromBinary;
 				SAVE_CHECK(ReadWorldFile(directory, fromBinary, false) == WorldFileSource::BINARY);
-				// (Sections are merged back in their own order, so the root's fields are compared by name)
-				auto SortedFields = [](JSONObject object)
-				{
-					std::stable_sort(object.fields.begin(), object.fields.end(), [](const JSONField& a, const JSONField& b) { return a.label < b.label; });
-					return object;
-				};
 				std::string difference;
 				SAVE_CHECK(JSONEquivalent(SortedFields(fromText), SortedFields(fromBinary), &difference));
 				if (!difference.empty())
@@ -2533,6 +2540,92 @@ namespace flex
 				TestDirectory();
 			}
 
+			static bool CopyFixture(const std::string& fixtureDirectory, const std::string& fileName, const std::string& directory)
+			{
+				std::vector<u8> bytes;
+				return ReadFileBytes(fixtureDirectory + fileName, bytes) && WriteFileAtomic(directory + fileName, bytes.data(), bytes.size(), false);
+			}
+
+			// Checks an edits file read from a real save, & that it survives being rewritten
+			static void CheckFixtureEdits(TestContext& ctx, const std::string& filePath, i32 seed, u32 expectedCount)
+			{
+				std::vector<terrain::Edit> read;
+				SAVE_CHECK(terrain::ReadEdits(filePath, seed, read) && read.size() == expectedCount);
+				{
+					QuietLog quiet; // (Logs that the file is damaged)
+					SAVE_CHECK(!terrain::ReadEdits(filePath, seed + 1, read));
+				}
+				std::vector<terrain::Edit> original;
+				terrain::ReadEdits(filePath, seed, original);
+				SAVE_CHECK(terrain::WriteEdits(filePath, seed, original));
+				SAVE_CHECK(terrain::ReadEdits(filePath, seed, read) && EditsEqual(read, original));
+			}
+
+			// Real saves written by earlier versions of the game (in resources/tests/save_files/) must still load
+			static void TestFixtures(TestContext& ctx)
+			{
+				const std::string fixtures = RelativePathToAbsolute(RESOURCE_DIRECTORY "tests/save_files/");
+
+				// A world from before binary saves: world.json & version 1 terrain edits
+				{
+					const std::string fixtureDirectory = fixtures + "legacy_world/";
+					const std::string directory = TestDirectory();
+					SAVE_CHECK(CopyFixture(fixtureDirectory, LEGACY_WORLD_FILE_NAME, directory));
+					SAVE_CHECK(CopyFixture(fixtureDirectory, "terrain_1336491604.edits", directory));
+
+					JSONObject fromText;
+					SAVE_CHECK(ReadWorldFile(directory, fromText, false) == WorldFileSource::LEGACY_JSON);
+					SAVE_CHECK(fromText.GetString("name") == "World 2" && fromText.GetInt("seed") == 1336491604 && fromText.HasField("player") && fromText.HasField("inventory"));
+					SAVE_CHECK(WriteWorldFile(directory, fromText));
+					JSONObject fromBinary;
+					SAVE_CHECK(ReadWorldFile(directory, fromBinary, false) == WorldFileSource::BINARY);
+					std::string difference;
+					SAVE_CHECK(JSONEquivalent(SortedFields(fromText), SortedFields(fromBinary), &difference));
+					if (!difference.empty())
+					{
+						PrintError("  %s\n", difference.c_str());
+					}
+					CheckFixtureEdits(ctx, directory + "terrain_1336491604.edits", 1336491604, 561);
+				}
+
+				// A binary world & version 2 terrain edits. expected.json is what it decoded to when it was added
+				{
+					const std::string fixtureDirectory = fixtures + "binary_world/";
+					const std::string directory = TestDirectory();
+					SAVE_CHECK(CopyFixture(fixtureDirectory, WORLD_FILE_NAME, directory));
+					SAVE_CHECK(CopyFixture(fixtureDirectory, "terrain_80177481.edits", directory));
+
+					JSONObject world;
+					SAVE_CHECK(ReadWorldFile(directory, world, false) == WorldFileSource::BINARY);
+					JSONObject expected;
+					if (!FileExists(fixtureDirectory + "expected.json"))
+					{
+						// (New fixture: write out what it decodes to now, to check by hand & commit)
+						WriteFile(fixtureDirectory + "expected.json", world.ToString(), false);
+						SAVE_CHECK(!"binary_world/expected.json was missing");
+					}
+					SAVE_CHECK(JSONParser::ParseFromFile(fixtureDirectory + "expected.json", expected));
+					std::string difference;
+					SAVE_CHECK(JSONEquivalent(SortedFields(expected), SortedFields(world), &difference));
+					if (!difference.empty())
+					{
+						PrintError("  %s\n", difference.c_str());
+					}
+
+					JSONObject metadata;
+					SAVE_CHECK(ReadWorldFile(directory, metadata, true) == WorldFileSource::BINARY);
+					SAVE_CHECK(metadata.HasField("name") && metadata.HasField("seed") && !metadata.HasField("player") && !metadata.HasField("objects"));
+
+					// Resaving with the current version reads back the same
+					SAVE_CHECK(WriteWorldFile(directory, world));
+					JSONObject resaved;
+					SAVE_CHECK(ReadWorldFile(directory, resaved, false) == WorldFileSource::BINARY);
+					SAVE_CHECK(JSONEquivalent(SortedFields(expected), SortedFields(resaved)));
+					CheckFixtureEdits(ctx, directory + "terrain_80177481.edits", 80177481, 145);
+				}
+				TestDirectory();
+			}
+
 			// Old (text) vs new (binary) format: size & time to save & load
 			static void Benchmark(TestRandom& random)
 			{
@@ -2662,6 +2755,7 @@ namespace flex
 			TestRealFiles(ctx);
 			TestWorldFiles(ctx, random);
 			TestTerrainEdits(ctx, random);
+			TestFixtures(ctx);
 			if (getenv("FLEX_SAVE_BENCHMARK") != nullptr)
 			{
 				Benchmark(random);

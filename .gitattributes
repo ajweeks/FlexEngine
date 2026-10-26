@@ -20,3 +20,6 @@ FlexEngine/dependencies/* linguist-vendored
 
 FlexEngine/include/ThirdParty/* linguist-vendored
 FlexEngine/src/ThirdParty/* linguist-vendored
+
+# Save file test fixtures must stay byte for byte
+FlexEngine/resources/tests/save_files/** -text

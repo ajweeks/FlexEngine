@@ -1,0 +1,875 @@
+{
+	"version" : 1,
+	"name" : "World 2",
+	"seed" : 1336491604,
+	"last played" : "2026-10-25_17-11-15",
+	"play time" : 1399.2,
+	"time of day" : 0.0412,
+	"player" : 
+	{
+		"position" : "-3489.288, 878.117, 53504.574",
+		"rotation" : "0.0000, 0.6660, 0.0000, 0.7459",
+		"pitch" : 0.470
+	},
+	"inventory" : 
+	{
+		"slots" : 
+		[
+		],
+		"quick access slots" : 
+		[
+			{
+				"prefab id" : "07F5D8C7F068B2804EAB0770F53DF477",
+				"count" : 1,
+				"index" : 0
+			},
+			{
+				"prefab id" : "88996A92663F46EAA44D9E96EF691ACD",
+				"count" : 8,
+				"index" : 1
+			}
+		],
+		"wearable slots" : 
+		[
+		]
+	},
+	"objects" : 
+	[
+		{
+			"id" : "E5B1441ED04E1388456BEF139C9EE40A",
+			"name" : "Torch_000",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15763.547, 73.451, 20999.084",
+				"rot" : "-0.535, -0.101, -0.364"
+			},
+			"build piece" : 
+			{
+				"type" : 4,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "78050718ADBEFC8345169922BA3CFEB8",
+			"name" : "Torch_001",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15760.324, 73.556, 20987.072",
+				"rot" : "0.634, -0.073, 0.222"
+			},
+			"build piece" : 
+			{
+				"type" : 4,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "D59C2DDC1129459A45D62C0F7E91F155",
+			"name" : "Torch_002",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15769.758, 55.069, 20990.221",
+				"rot" : "-0.392, -0.109, -0.537"
+			},
+			"build piece" : 
+			{
+				"type" : 4,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "F992C1B1A91C0BA948FC0AC8B210D1F4",
+			"name" : "Torch_003",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15858.848, -12.023, 20986.180"
+			},
+			"build piece" : 
+			{
+				"type" : 4,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "546BF787B1C2B6A040C09AE4EA9FBE77",
+			"name" : "Torch_004",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15866.117, -10.948, 20993.660"
+			},
+			"build piece" : 
+			{
+				"type" : 4,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "C80EF8715F32F8B348E968241C20F82D",
+			"name" : "Torch_005",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15856.775, 8.637, 21024.709",
+				"rot" : "0.339, -0.110, 0.620"
+			},
+			"build piece" : 
+			{
+				"type" : 4,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "B23E39E6B0B7D2A94F85B4727F2A2FDB",
+			"name" : "Torch_006",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15880.604, 12.977, 21045.812"
+			},
+			"build piece" : 
+			{
+				"type" : 4,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "83276B1CDEA8CF8244F5E74A3863B831",
+			"name" : "Torch_007",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15931.682, 15.505, 21052.926"
+			},
+			"build piece" : 
+			{
+				"type" : 4,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "1B8BC4EC04AA6A934F0B77AE080F5F67",
+			"name" : "Torch_008",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15925.541, 65.684, 21053.398",
+				"rot" : "0.516, 0.081, -0.304"
+			},
+			"build piece" : 
+			{
+				"type" : 4,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "0682F578B6B9DAB5480E7758A472A502",
+			"name" : "Floor_000",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15952.500, 15.750, 21052.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "F69D43D3F6CAC28248C39979586E1026",
+			"name" : "Floor_001",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15952.500, 16.000, 21055.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "32EE44E1741A568641293894573989BB",
+			"name" : "Floor_002",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15949.500, 16.250, 21058.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "D994F172F3C0A3B4431062BA031C836C",
+			"name" : "Floor_003",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15949.500, 15.750, 21052.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "7040007A4B4DFF9B4F9C5709BD5DD9BD",
+			"name" : "Floor_004",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15949.500, 15.750, 21055.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "E9C99094AD7876A440E4595B3ACCD63C",
+			"name" : "Floor_005",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15946.500, 15.750, 21055.500",
+				"rot" : "-3.141, -0.000, -3.141"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "664515F82C64208F474A5449D4A39623",
+			"name" : "Floor_006",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15946.500, 15.750, 21052.500",
+				"rot" : "-3.141, -0.000, -3.141"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "32965931EDD84DBF440867649AD354EB",
+			"name" : "Floor_007",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15955.500, 15.750, 21052.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "1BDB00E4C37E43884063A7B37A0EEB91",
+			"name" : "Floor_008",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15955.500, 16.000, 21055.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "8DEB62C801F047A042E87AFD28333DDB",
+			"name" : "Floor_009",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15952.500, 16.250, 21058.500"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "7523B725FF5AA0B543937573A5C4D486",
+			"name" : "Floor_010",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15955.500, 16.250, 21058.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "D2FC571F607EED854FC0F4F0DE6BC6D6",
+			"name" : "Floor_011",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15952.500, 17.000, 21058.500"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "BE6E05B68F7993A9467DC830737D1A08",
+			"name" : "Floor_012",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15943.500, 17.000, 21061.500",
+				"rot" : "0.000, -1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "415D246AC8CEB4B54A8D62975ACA619F",
+			"name" : "Floor_013",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15952.500, 17.000, 21055.500"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "A4C6D7CF316633BE42C5CA8CE19D1B20",
+			"name" : "Floor_014",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15949.500, 16.750, 21058.500"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "554BE11856F71E914125195DA4B80E23",
+			"name" : "Wall_001",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15952.500, 17.250, 21061.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 1,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "93E07F36A18B40AF48CBD85A560799BE",
+			"name" : "Wall_002",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15952.500, 17.000, 21058.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 1,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "95CFEED681BEC49A47F57D6B91F0D4BC",
+			"name" : "Wall_003",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15952.500, 17.000, 21058.500"
+			},
+			"build piece" : 
+			{
+				"type" : 1,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "974EA72ABF7861B24984EA2AEC262BF6",
+			"name" : "Wall_000",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15949.500, 17.000, 21061.500",
+				"rot" : "-3.141, -0.000, -3.141"
+			},
+			"build piece" : 
+			{
+				"type" : 1,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "AACB3A87343738AD47CD1B52D95CEA50",
+			"name" : "Stairs_000",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15949.500, 17.000, 21061.500"
+			},
+			"build piece" : 
+			{
+				"type" : 3,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "61DE5713F35E908C476EE1D185CA079C",
+			"name" : "Stairs_001",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15946.500, 17.000, 21061.500"
+			},
+			"build piece" : 
+			{
+				"type" : 3,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "BEE0B0CC944DBD9D40645658480A6B78",
+			"name" : "Stairs_002",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15946.500, 20.000, 21061.500"
+			},
+			"build piece" : 
+			{
+				"type" : 3,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "2FE75CF02D3076AA43AD6CDD11A2805D",
+			"name" : "Stairs_003",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15943.500, 17.000, 21058.500"
+			},
+			"build piece" : 
+			{
+				"type" : 3,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "D5F5B3830D3FC8B746D70CEE8A82F8DF",
+			"name" : "Stairs_004",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15940.500, 16.000, 21052.500",
+				"rot" : "0.000, -1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 3,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "1EB99C30355A558F45D57BB5D5A918B1",
+			"name" : "Roof_000",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15937.500, 19.000, 21049.500",
+				"rot" : "-3.141, -0.000, -3.141"
+			},
+			"build piece" : 
+			{
+				"type" : 2,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "AA9C832E2956549C484189AACD5171B9",
+			"name" : "Roof_001",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15943.500, 20.000, 21049.500",
+				"rot" : "-3.141, -0.000, -3.141"
+			},
+			"build piece" : 
+			{
+				"type" : 2,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "4B3A36B0A0A14B9143C96600852FF55B",
+			"name" : "Roof_002",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15940.500, 20.500, 21049.500",
+				"rot" : "-3.141, -0.000, -3.141"
+			},
+			"build piece" : 
+			{
+				"type" : 2,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "515F6666BE8199AC438055956A5E681E",
+			"name" : "Ladder_000",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15931.490, 17.143, 21049.615",
+				"rot" : "0.000, -0.010, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 5,
+				"material" : 0,
+				"length" : 2.00,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "E3FD79DF7D2B9A934EE43CC8C743582A",
+			"name" : "Ladder_001",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15931.117, 18.235, 21048.789",
+				"rot" : "0.000, -0.005, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 5,
+				"material" : 0,
+				"length" : 2.27,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "B61FAFD81E1296A54EC7E2008D8ADEE0",
+			"name" : "Rope_000",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15927.664, 18.750, 21048.961"
+			},
+			"build piece" : 
+			{
+				"type" : 6,
+				"material" : 0,
+				"length" : 1.50,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "6496CCD448B828BB4B94D07F9B8BB12D",
+			"name" : "Rope_001",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15928.340, 16.643, 21050.613"
+			},
+			"build piece" : 
+			{
+				"type" : 6,
+				"material" : 0,
+				"length" : 1.50,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "FB51F5196899029D413D113AACC4F14E",
+			"name" : "Floor_015",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15937.500, 16.000, 21058.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "0FCDCFA3EC35539F4D8A9960FC0F1F50",
+			"name" : "Floor_016",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15934.500, 16.250, 21058.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 0,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "98796C52EB64F3B547BEE0D0C6B718AD",
+			"name" : "Floor_017",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15937.500, 16.000, 21055.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 1,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "2FFDD8ADF63DC7A941BF5A69CCC8D345",
+			"name" : "Floor_018",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15934.500, 13.000, 21055.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 1,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "FEAC3146A3976C8649E255325879DF79",
+			"name" : "Floor_019",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15937.500, 15.750, 21055.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 1,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "8BAB28CD33D127BA431D9E2040D31044",
+			"name" : "Floor_020",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "15934.500, 15.750, 21055.500",
+				"rot" : "0.000, 1.570, 0.000"
+			},
+			"build piece" : 
+			{
+				"type" : 0,
+				"material" : 1,
+				"size" : 3.00
+			}
+		},
+		{
+			"id" : "38302EBF47A3B38F4148F0D49AC5CE09",
+			"name" : "Campfire_000",
+			"type" : "campfire",
+			"transform" : 
+			{
+				"pos" : "-3978.776, 311.917, 53052.629",
+				"rot" : "3.142, 0.981, 3.142"
+			},
+			"campfire" : 
+			{
+				"state" : 1,
+				"burn time remaining" : 199.8
+			}
+		},
+		{
+			"id" : "5120D6119EBEDA974253283D27F2A6C4",
+			"name" : "Torch_009",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "-3974.738, 312.389, 53062.352"
+			},
+			"build piece" : 
+			{
+				"type" : 4,
+				"material" : 0,
+				"size" : 4.00
+			}
+		},
+		{
+			"id" : "2720D192148C06B544585D1DA9D96D8B",
+			"name" : "Torch_010",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "-3974.879, 313.629, 53038.223",
+				"rot" : "0.177, -0.049, 0.539"
+			},
+			"build piece" : 
+			{
+				"type" : 4,
+				"material" : 0,
+				"size" : 4.00
+			}
+		},
+		{
+			"id" : "4AE3CB4482C2A4A9496D9F0567D2A329",
+			"name" : "Torch_011",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "-3988.589, 307.699, 53037.621"
+			},
+			"build piece" : 
+			{
+				"type" : 4,
+				"material" : 0,
+				"size" : 4.00
+			}
+		},
+		{
+			"id" : "88EA1792793F4AAC4C0265FF627D7436",
+			"name" : "Torch_012",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "-4000.584, 306.956, 53045.305",
+				"rot" : "0.214, 0.059, -0.539"
+			},
+			"build piece" : 
+			{
+				"type" : 4,
+				"material" : 0,
+				"size" : 4.00
+			}
+		},
+		{
+			"id" : "E9FDDBEB4DF905A741DFD2E7F03AFBE1",
+			"name" : "Torch_013",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "-4002.790, 306.687, 53058.902",
+				"rot" : "0.231, 0.065, -0.545"
+			},
+			"build piece" : 
+			{
+				"type" : 4,
+				"material" : 0,
+				"size" : 4.00
+			}
+		},
+		{
+			"id" : "4A8E85A90622208D4688CCC0D98D8CBB",
+			"name" : "Torch_014",
+			"type" : "build piece",
+			"transform" : 
+			{
+				"pos" : "-4004.526, 305.927, 53078.445"
+			},
+			"build piece" : 
+			{
+				"type" : 4,
+				"material" : 0,
+				"size" : 4.00
+			}
+		}
+	],
+	"opened chests" : 
+	[
+	]
+}

@@ -61,34 +61,6 @@ jobs:
       - name: build
         run: ninja -C build/debug64
 
-      - name: compress-artifacts
-        run: zip -r Flex.zip -j bin/Debug_x64/FlexEngine/
-
-      - name: upload-artifacts
-        uses: actions/upload-artifact@v6
-        with:
-          name: flex-linux
-          path: Flex.zip
-          retention-days: 2
-          if-no-files-found: error
-
-  test:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: install-deps
-        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libopenal1
-
-      - name: download-artifacts
-        uses: actions/download-artifact@v7
-        with:
-          name: flex-linux
-          path: .
-
-      - name: decompress-artifacts
-        run: unzip Flex.zip
-
-      - name: run-tests
-        run: |
-          chmod +x Flex
-          ./Flex --test --headless
+      # The tests read real scenes, prefabs & save files (resources/tests/) through the same relative paths as the game
+      - name: test
+        run: cd bin/Debug_x64/FlexEngine && ./Flex --test --headless
