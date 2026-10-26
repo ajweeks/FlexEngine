@@ -147,6 +147,9 @@ namespace flex
 		bool TextField(const char* id, const UIRect& rect, std::string* text, u32 maxLength, const std::string& placeholder = "");
 		// Selectable row in a list
 		bool ListItem(const char* id, const UIRect& rect, const std::string& title, const std::string& subtitle, bool bSelected);
+		// Vertical scrollbar for a list showing viewSize of contentSize (in any unit, e.g. rows). *scroll (0 to
+		// contentSize - viewSize) is changed by dragging the thumb or clicking the track. Returns true while dragging.
+		bool Scrollbar(const char* id, const UIRect& rect, real contentSize, real viewSize, real* scroll);
 
 		void ClearFocus() { m_FocusedID = 0; }
 		// True on the frame the mouse is released after dragging the widget (e.g. a slider)
@@ -175,6 +178,7 @@ namespace flex
 		real m_Scroll = 0.0f;
 
 		u64 m_ActiveID = 0; // Widget being dragged
+		real m_DragOffset = 0.0f; // From the dragged widget's handle to the mouse
 		u64 m_ReleasedID = 0; // Widget whose drag ended this frame
 		u64 m_FocusedID = 0; // Text field receiving keyboard input
 		std::map<u64, real> m_HoverAmounts;

@@ -1,9 +1,11 @@
 #pragma once
 
+#include "FuzzTests.hpp"
 #include "Helpers.hpp"
 #include "JSONParser.hpp"
 #include "Pair.hpp"
 #include "PoolAllocator.hpp"
+#include "SaveFile.hpp"
 #include "Systems/TrackManager.hpp"
 #include "Track/BezierCurve3D.hpp"
 
@@ -2247,7 +2249,7 @@ namespace flex
 		{
 			std::string result = PrettifyLargeNumber(999'999'999'999, 1);
 
-			EXPECT(result.c_str(), "1000.0T");
+			EXPECT(result.c_str(), "1.0T");
 		}
 		UNIT_TEST_END;
 
@@ -2255,7 +2257,7 @@ namespace flex
 		{
 			std::string result = PrettifyLargeNumber(999'999'999'999'999, 1);
 
-			EXPECT(result.c_str(), "1000.0Q");
+			EXPECT(result.c_str(), "1.0Q");
 		}
 		UNIT_TEST_END;
 
@@ -2263,7 +2265,7 @@ namespace flex
 		{
 			std::string result = PrettifyLargeNumber(100'000'015, 2);
 
-			EXPECT(result.c_str(), "100.0M");
+			EXPECT(result.c_str(), "100.00M");
 		}
 		UNIT_TEST_END;
 
@@ -2515,6 +2517,13 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		// Short deterministic fuzz run (use `Flex --fuzz [iterations] [seed]` for longer runs)
+		UNIT_TEST(FuzzTestsShort)
+		{
+			EXPECT(fuzz::Run(2000, 1) == 0, true);
+		}
+		UNIT_TEST_END;
+
 		UNIT_TEST(BezierCurveFromStringKeepsFractions)
 		{
 			BezierCurve3D curve(glm::vec3(1.5f, 0.25f, -2.75f), glm::vec3(3.125f, 0.0f, 1.0f), glm::vec3(-4.5f, 1.0f, 7.75f), glm::vec3(10.0f, -0.5f, 0.125f));
@@ -2583,6 +2592,12 @@ namespace flex
 				// Track tests
 				TrackThroughNodesPassesThroughNodes, TrackThroughNodesAlignsWithForcedDir, BezierCurveFromStringKeepsFractions,
 				LoopedTracksLeadInJoinsLoop, LoopedTracksClosedLoop, SmoothTrackMirrorsHandles, RemoveInteriorNodeKeepsEnds, JunctionExitSteering, JunctionExitsSeparateParallelBranch,
+
+				// Save files (binary format, compression, corruption handling)
+				save::RunSelfTests,
+
+				// Randomized robustness tests (JSON parser, string & number helpers, WAV parser, binary save files)
+				FuzzTestsShort,
 			};
 
 			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));

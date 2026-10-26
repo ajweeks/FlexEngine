@@ -195,6 +195,11 @@ project "Flex"
 			"copy \"$(VCToolsInstallDir)bin\\Hostx64\\x64\\clang_rt.asan_dynamic-x86_64.dll\" \"$(OutDir)\\\""
 		}
 	configuration { "linux*", "Sanitize" }
+		-- Sanitizers must be enabled when compiling too (link-only flags just pull in the runtime)
+		buildoptions {
+			"-fsanitize=undefined,address",
+			"-fno-omit-frame-pointer",
+		}
 		linkoptions {
 			"-fsanitize=undefined,address", -- TODO: try memory
 			"-fno-omit-frame-pointer",

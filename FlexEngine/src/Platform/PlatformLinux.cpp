@@ -245,12 +245,17 @@ namespace flex
 		}
 
 		struct stat st;
-		if (stat(absoluteDirectoryPath.c_str(), &st) != 0)
+		if (stat(absoluteDirectoryPath.c_str(), &st) == 0)
 		{
 			return S_ISDIR(st.st_mode);
 		}
 
 		return false;
+	}
+
+	bool Platform::DeleteEmptyDirectory(const std::string& directoryPath)
+	{
+		return rmdir(directoryPath.c_str()) == 0;
 	}
 
 	bool Platform::DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure /* = true */)

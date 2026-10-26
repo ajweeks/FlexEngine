@@ -50,6 +50,8 @@ namespace flex
 
 			VkPhysicalDeviceProperties m_PhysicalDeviceProperties;
 			VkPhysicalDeviceFeatures m_PhysicalDeviceFeatures;
+			// Features actually enabled on the logical device
+			VkPhysicalDeviceFeatures m_EnabledFeatures = {};
 			VkPhysicalDeviceMemoryProperties m_MemoryProperties;
 			VkPhysicalDeviceMemoryProperties2 m_MemoryProperties2;
 			std::vector<VkQueueFamilyProperties> m_QueueFamilyProperties;

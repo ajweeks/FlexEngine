@@ -34,6 +34,7 @@ General lessons for working in this repo (not task specifics).
 - Game object types live in `Scene/Objects/*` (one file per family). New types must be added to the table in `Scene/GameObjectTypes.cpp`, which is the factory, the property collection registration & the serialization flags, and their names to `config/game_object_types.txt` (CRLF), or they serialize without a type.
 - New source files need the projects regenerated: `scripts/genie --file=genie.lua ninja` & `scripts/genie.exe --file=genie.lua vs2026` (run from `scripts/`).
 - `Game` (`src/Game.cpp`) owns the menus, worlds (`saved/worlds/<name>/`, each with its own terrain edits) & settings; `GameUI` is the immediate mode UI toolkit it draws with.
+- World saves (`world.bin`) & terrain edits use the tagged binary container in `SaveFile.hpp` (sections, crc, zlib, atomic writes with a `.bak`). Fields added to the world's JSON object in `Game::SaveWorld` are saved automatically (small ones in the `META` section that world listing reads). Old `world.json` saves are still read & migrated on the next save. `--test` runs its round-trip & corruption tests (`FLEX_SAVE_BENCHMARK=1` adds timings).
 - Per-frame parallel work uses `JobSystem::Dispatch` + `Wait`. Long running background work (terrain generation) has its own pool at background priority. Don't spawn threads directly.
 - Player movement abilities are in `Traversal` (owned by `Player`). When it controls the player's velocity, `PlayerController` skips walking.
 

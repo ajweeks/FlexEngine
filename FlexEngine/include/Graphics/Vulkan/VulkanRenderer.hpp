@@ -377,7 +377,8 @@ namespace flex
 			u32 SubmitOffscreenWork();
 			void SubmitSceneRenderingWork(u32 nextImageIndex);
 
-			void BindDescriptorSet(const VulkanMaterial* material, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS) const;
+			// Returns false (& binds offset 0) if dynamicOffset is out of the material's dynamic buffer's range
+			bool BindDescriptorSet(const VulkanMaterial* material, u32 dynamicOffsetOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet, VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS) const;
 			void RecreateSwapChain();
 
 			void BeginDebugMarkerRegionInternal(VkCommandBuffer cmdBuf, const char* markerName, const glm::vec4& colour);
@@ -453,6 +454,10 @@ namespace flex
 			void DestroyTerrain();
 
 			void UpdateShaderMaxObjectCount(ShaderID shaderID, i32 newMax);
+			// Grows the dynamic UBOs of every material using shaderID (geometrically) if they have fewer than
+			// requiredSlotCount slots. Returns true if they grew (all their previous contents are kept).
+			// Must not be called while command buffers are being recorded.
+			bool EnsureDynamicUBOCapacity(ShaderID shaderID, u32 requiredSlotCount);
 
 			void CreateBRDFTexture();
 
@@ -608,7 +613,21 @@ namespace flex
 				u32 textureLayer;
 			};
 
-			std::map<TextureID, SpriteDescSet> m_SpriteDescSets;
+			// Sets reference both the texture (& layer) and the material's dynamic UBO, so they're unique per combination
+			struct SpriteDescSetKey
+			{
+				TextureID textureID;
+				MaterialID materialID;
+				u32 textureLayer;
+
+				bool operator<(const SpriteDescSetKey& other) const
+				{
+					if (textureID != other.textureID) return textureID < other.textureID;
+					if (materialID != other.materialID) return materialID < other.materialID;
+					return textureLayer < other.textureLayer;
+				}
+			};
+			std::map<SpriteDescSetKey, SpriteDescSet> m_SpriteDescSets;
 			// Number of dynamic UBO slots used by sprites this frame, per material (each material has its own buffer)
 			std::map<MaterialID, u32> m_SpriteDynamicUBOSlotCounts;
 

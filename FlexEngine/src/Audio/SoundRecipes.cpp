@@ -777,9 +777,9 @@ namespace flex
 				const sec loopLength = 6.0f;
 				const sec crossfade = 0.6f;
 				Buffer out(loopLength + crossfade);
-				BrownNoise brown(rng.NextU32());
+				// No low rumble layer: it read as a running fan. Only a faint hiss under the crackle.
+				rng.NextU32(); // keep the RNG stream (pop timing) unchanged
 				PinkNoise pink(rng.NextU32());
-				Biquad roar(BQ::LOWPASS, 380.0f, 0.7f);
 				Biquad hiss(BQ::BANDPASS, 2600.0f, 0.6f);
 				OnePoleLowpass flicker;
 				flicker.SetCutoff(3.0f);
@@ -787,7 +787,7 @@ namespace flex
 				for (u32 i = 0; i < out.Count(); ++i)
 				{
 					const real f = 0.6f + 2.5f * flicker.Process(flickerNoise.Next());
-					out.samples[i] = roar.Process(brown.Next()) * 0.9f * f + hiss.Process(pink.Next()) * 0.25f * f;
+					out.samples[i] = hiss.Process(pink.Next()) * 0.12f * f;
 				}
 				MakeSeamlessLoop(out, crossfade);
 

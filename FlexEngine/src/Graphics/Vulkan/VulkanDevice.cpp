@@ -129,6 +129,7 @@ namespace flex
 			}
 
 			VkPhysicalDeviceFeatures deviceFeatures = GetEnabledFeatures();
+			m_EnabledFeatures = deviceFeatures;
 
 			VkPhysicalDeviceFeatures2 enabledFeatures2 = {};
 			enabledFeatures2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
@@ -257,6 +258,11 @@ namespace flex
 			if (supportedFeatures.wideLines)
 			{
 				enabledFeatures.wideLines = VK_TRUE;
+			}
+
+			if (supportedFeatures.depthBiasClamp)
+			{
+				enabledFeatures.depthBiasClamp = VK_TRUE;
 			}
 
 			if (supportedFeatures.multiDrawIndirect)

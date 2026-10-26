@@ -249,6 +249,9 @@ namespace flex
 		}
 		std::ifstream file(filePath, fileMode);
 
+		// (Callers may reuse a string, which shouldn't keep its old contents when the file is empty)
+		outFileContents.clear();
+
 		if (!file)
 		{
 			PrintError("Unable to read file: %s\n", filePath);
@@ -266,6 +269,8 @@ namespace flex
 
 			file.seekg(0, std::ios::beg);
 			file.read(&outFileContents[0], fileLen);
+			// Only keep what was actually read (in case the file changed in the meantime)
+			outFileContents.resize((size_t)file.gcount());
 			file.close();
 
 			// Remove extra null terminators caused by Windows line endings
@@ -304,11 +309,19 @@ namespace flex
 		}
 
 		std::streampos length = file.tellg();
+		if (length < 0)
+		{
+			PrintError("Unable to get size of file: %s\n", filePath);
+			vec.clear();
+			return false;
+		}
 
 		vec.resize((size_t)length);
 
 		file.seekg(0, std::ios::beg);
 		file.read(vec.data(), length);
+		// Text mode reads fewer characters than the file's size when line endings are converted
+		vec.resize((size_t)file.gcount());
 		file.close();
 
 		return true;
@@ -333,8 +346,15 @@ namespace flex
 
 		if (fileStream.is_open())
 		{
-			fileStream.write(&vec[0], vec.size());
+			// (&vec[0] is invalid for empty vectors)
+			fileStream.write(vec.data(), (std::streamsize)vec.size());
 			fileStream.close();
+
+			if (fileStream.fail())
+			{
+				PrintError("Failed to write file: %s\n", filePath.c_str());
+				return false;
+			}
 
 			return true;
 		}
@@ -361,7 +381,17 @@ namespace flex
 			return false;
 		}
 
-		if (dataArray.size() < 12)
+		return ParseWAVData(dataArray, filePath, format, data, size, freq, outErrorStr);
+	}
+
+	bool ParseWAVData(const std::vector<char>& dataArray, const std::string& filePath, i32* format, u8** data, u32* size, u32* freq, StringBuilder& outErrorStr)
+	{
+		*data = nullptr;
+		*size = 0;
+
+		// RIFF header (12 bytes) + fmt chunk (24 bytes) + data chunk header (8 bytes)
+		const u32 headerSize = 44;
+		if (dataArray.size() < headerSize)
 		{
 			outErrorStr.Append("Invalid WAV file:\n");
 			outErrorStr.AppendLine(filePath);
@@ -420,12 +450,69 @@ namespace flex
 		}
 
 		u32 subChunk2Size = Parse32u(&dataArray[dataIndex]); dataIndex += 4;
-		*data = new u8[subChunk2Size];
-		for (u32 i = 0; i < subChunk2Size; ++i)
+		if (subChunk2Size > (u32)dataArray.size() - dataIndex)
 		{
-			(*data)[i] = dataArray[dataIndex];
-			++dataIndex;
+			// Truncated file (or corrupt size), only read the data that exists
+			PrintWarn("WAVE file data chunk is larger than the file (%u > %u bytes): %s\n", subChunk2Size, (u32)dataArray.size() - dataIndex, filePath.c_str());
+			subChunk2Size = (u32)dataArray.size() - dataIndex;
 		}
+
+		bool bValidFormat = true;
+		switch (channelCount)
+		{
+		case 1:
+		{
+			switch (bitsPerSample)
+			{
+			case 8:
+				*format = AL_FORMAT_MONO8;
+				break;
+			case 16:
+				*format = AL_FORMAT_MONO16;
+				break;
+			default:
+				bValidFormat = false;
+				outErrorStr.Append("WAVE file contains invalid bitsPerSample (must be 8 or 16): ");
+				outErrorStr.AppendLine((u32)bitsPerSample);
+				PrintError("%s\n", outErrorStr.ToCString());
+				break;
+			}
+		} break;
+		case 2:
+		{
+			switch (bitsPerSample)
+			{
+			case 8:
+				*format = AL_FORMAT_STEREO8;
+				break;
+			case 16:
+				*format = AL_FORMAT_STEREO16;
+				break;
+			default:
+				bValidFormat = false;
+				outErrorStr.Append("WAVE file contains invalid bitsPerSample (must be 8 or 16): ");
+				outErrorStr.AppendLine((u32)bitsPerSample);
+				PrintError("%s\n", outErrorStr.ToCString());
+				break;
+			}
+		} break;
+		default:
+		{
+			bValidFormat = false;
+			outErrorStr.Append("WAVE file contains invalid channel count (must be 1 or 2): ");
+			outErrorStr.AppendLine((u32)channelCount);
+			PrintError("%s\n", outErrorStr.ToCString());
+		} break;
+		}
+
+		if (!bValidFormat)
+		{
+			// format would otherwise be left uninitialized
+			return false;
+		}
+
+		*data = new u8[subChunk2Size];
+		memcpy(*data, dataArray.data() + dataIndex, subChunk2Size); // (&dataArray[size] is invalid when the data is empty)
 
 		constexpr bool bPrintWavStats = false;
 		if (bPrintWavStats)
@@ -444,50 +531,6 @@ namespace flex
 				subChunk2Size);
 		}
 
-		switch (channelCount)
-		{
-		case 1:
-		{
-			switch (bitsPerSample)
-			{
-			case 8:
-				*format = AL_FORMAT_MONO8;
-				break;
-			case 16:
-				*format = AL_FORMAT_MONO16;
-				break;
-			default:
-				outErrorStr.Append("WAVE file contains invalid bitsPerSample (must be 8 or 16): ");
-				outErrorStr.AppendLine(bitsPerSample);
-				PrintError("%s\n", outErrorStr.ToCString());
-				break;
-			}
-		} break;
-		case 2:
-		{
-			switch (bitsPerSample)
-			{
-			case 8:
-				*format = AL_FORMAT_STEREO8;
-				break;
-			case 16:
-				*format = AL_FORMAT_STEREO16;
-				break;
-			default:
-				outErrorStr.Append("WAVE file contains invalid bitsPerSample (must be 8 or 16): ");
-				outErrorStr.AppendLine(bitsPerSample);
-				PrintError("%s\n", outErrorStr.ToCString());
-				break;
-			}
-		} break;
-		default:
-		{
-			outErrorStr.Append("WAVE file contains invalid channel count (must be 1 or 2): ");
-			outErrorStr.AppendLine(channelCount);
-			PrintError("%s\n", outErrorStr.ToCString());
-		} break;
-		}
-
 		*size = subChunk2Size;
 		*freq = samplesPerSec;
 
@@ -502,22 +545,26 @@ namespace flex
 		}
 
 		static const char suffixes[] = { 'k', 'M', 'B', 'T', 'Q' };
+		precision = glm::min(precision, 9u);
+		const double scale = pow(10.0, (double)precision);
 
-		for (u32 i = 1; i < ARRAY_LENGTH(suffixes) + 1; ++i)
+		u64 divisor = 1;
+		for (u32 i = 0; i < (u32)ARRAY_LENGTH(suffixes); ++i)
 		{
-			if (num < (u64)glm::pow(1000, i + 1))
+			divisor *= 1000;
+			const bool bLastSuffix = (i == (u32)ARRAY_LENGTH(suffixes) - 1);
+			if (num / divisor < 1000 || bLastSuffix)
 			{
-				real shortenedNum = (real)num / (real)glm::pow(1000, i);
-				bool bRoundedToNextCategory = (shortenedNum == 1000.0f);
-				std::string result = std::to_string((u32)shortenedNum);
-				if (precision > 0)
+				double rounded = floor((double)num / (double)divisor * scale + 0.5) / scale;
+				if (rounded >= 1000.0 && !bLastSuffix)
 				{
-					result += ".";
-					u32 precisionValues = (u32)((shortenedNum - (u32)shortenedNum) * (real)glm::pow(10, precision) + 0.5f);
-					result += std::to_string(precisionValues);
+					// Rounds up into the next suffix (e.g. 999.96k -> 1.0M)
+					continue;
 				}
-				result += suffixes[i - 1 + (bRoundedToNextCategory ? 1 : 0)];
-				return result;
+
+				char buffer[64];
+				snprintf(buffer, sizeof(buffer), "%.*f%c", (i32)precision, rounded, suffixes[i]);
+				return buffer;
 			}
 		}
 
@@ -608,58 +655,29 @@ namespace flex
 
 	std::string Trim(const std::string& str)
 	{
-		if (str.empty())
-		{
-			return str;
-		}
-
-		auto iter = str.begin();
-		auto riter = str.end() - 1;
-		while (iter != riter && IsSpace(*iter))
-		{
-			++iter;
-		}
-
-		while (riter != iter && IsSpace(*riter))
-		{
-			--riter;
-		}
-
-		return std::string(iter, riter + 1);
+		return TrimTrailingWhitespace(TrimLeadingWhitespace(str));
 	}
 
 	std::string TrimLeadingWhitespace(const std::string& str)
 	{
-		if (str.empty())
+		size_t start = 0;
+		while (start < str.size() && IsSpace(str[start]))
 		{
-			return str;
+			++start;
 		}
 
-		auto iter = str.begin();
-		auto riter = str.end() - 1;
-		while (iter != riter && IsSpace(*iter))
-		{
-			++iter;
-		}
-
-		return std::string(iter, str.end());
+		return str.substr(start);
 	}
 
 	std::string TrimTrailingWhitespace(const std::string& str)
 	{
-		if (str.empty())
+		size_t end = str.size();
+		while (end > 0 && IsSpace(str[end - 1]))
 		{
-			return str;
+			--end;
 		}
 
-		auto iter = str.begin();
-		auto riter = str.end() - 1;
-		while (riter != iter && IsSpace(*riter))
-		{
-			--riter;
-		}
-
-		return std::string(iter, riter + 1);
+		return str.substr(0, end);
 	}
 
 	std::vector<std::string> Split(const std::string& str, char delim)
@@ -693,29 +711,32 @@ namespace flex
 
 	std::vector<std::string> Split(const std::string& str, const char* delim)
 	{
+		// Returns the non-empty parts between delimiters
 		std::vector<std::string> result;
-		size_t i = 0;
-
-		size_t strLen = str.size();
 		size_t delimLen = strlen(delim);
-		while (i < (strLen - delimLen))
+		if (delimLen == 0)
 		{
-			while (i < (strLen - delimLen) && memcmp((void*)&str[i], (void*)delim, delimLen) == 0)
+			if (!str.empty())
 			{
-				i += delimLen;
+				result.push_back(str);
+			}
+			return result;
+		}
+
+		size_t start = 0;
+		while (start < str.size())
+		{
+			size_t end = str.find(delim, start, delimLen);
+			if (end == std::string::npos)
+			{
+				end = str.size();
 			}
 
-			size_t j = i;
-			while (j < (strLen - delimLen) && memcmp((void*)&str[j], (void*)delim, delimLen) != 0)
+			if (end > start)
 			{
-				++j;
+				result.push_back(str.substr(start, end - start));
 			}
-
-			if (i != j)
-			{
-				result.push_back(str.substr(i, j - i));
-				i = j;
-			}
+			start = end + delimLen;
 		}
 
 		return result;
@@ -745,22 +766,27 @@ namespace flex
 
 	std::vector<std::string> SplitNoStrip(const std::string& str, const char* delim)
 	{
+		// Returns every part between delimiters (including empty ones)
 		std::vector<std::string> result;
-		size_t i = 0;
-		size_t j = 0;
-
-		size_t strLen = str.size();
 		size_t delimLen = strlen(delim);
-		while (i < (strLen - delimLen))
+		if (delimLen == 0)
 		{
-			while (i < (strLen - delimLen) && memcmp((void*)&str[i], (void*)delim, delimLen) != 0)
+			result.push_back(str);
+			return result;
+		}
+
+		size_t start = 0;
+		while (true)
+		{
+			size_t end = str.find(delim, start, delimLen);
+			if (end == std::string::npos)
 			{
-				++i;
+				result.push_back(str.substr(start));
+				break;
 			}
 
-			result.push_back(str.substr(j, i - j));
-			i += delimLen;
-			j = i;
+			result.push_back(str.substr(start, end - start));
+			start = end + delimLen;
 		}
 
 		return result;
@@ -826,7 +852,8 @@ namespace flex
 
 		while ((chars_compared < maxNumCompares) && (*str1 || *str2))
 		{
-			ret_code = tolower((int)(*str1)) - tolower((int)(*str2));
+			// (tolower is undefined for negative values, which non-ASCII chars are when char is signed)
+			ret_code = tolower((unsigned char)(*str1)) - tolower((unsigned char)(*str2));
 			if (ret_code != 0)
 			{
 				break;
@@ -853,7 +880,7 @@ namespace flex
 	{
 		while (offset < (i32)str.size())
 		{
-			if (!isdigit(str[offset]) && !isalpha(str[offset]))
+			if (!IsDigit(str[offset]) && !IsLetter(str[offset]))
 			{
 				return offset;
 			}
@@ -997,12 +1024,13 @@ namespace flex
 
 	u32 Parse32u(const char* ptr)
 	{
-		return ((u8)ptr[0]) + ((u8)ptr[1] << 8) + ((u8)ptr[2] << 16) + ((u8)ptr[3] << 24);
+		// Shifting a promoted (signed) int into the sign bit is undefined, so widen first
+		return ((u32)(u8)ptr[0]) | ((u32)(u8)ptr[1] << 8) | ((u32)(u8)ptr[2] << 16) | ((u32)(u8)ptr[3] << 24);
 	}
 
 	u16 Parse16u(const char* ptr)
 	{
-		return ((u8)ptr[0]) + ((u8)ptr[1] << 8);
+		return (u16)(((u32)(u8)ptr[0]) | ((u32)(u8)ptr[1] << 8));
 	}
 
 	u8 ParseByte(const char* ptr)
@@ -1020,9 +1048,11 @@ namespace flex
 		return strcmp(intStr, "true") == 0;
 	}
 
+	// (strtol & strtoul aren't used since long is 32 bits on Windows but 64 on Linux, so out of range values would be
+	// clamped on one & truncated on the other)
 	i32 ParseInt(const char* intStr)
 	{
-		return (i32)strtol(intStr, NULL, 10);
+		return (i32)glm::clamp((i64)strtoll(intStr, NULL, 10), (i64)INT_MIN, (i64)INT_MAX);
 	}
 
 	i32 ParseInt(const std::string& intStr)
@@ -1032,7 +1062,9 @@ namespace flex
 
 	u32 ParseUInt(const char* intStr)
 	{
-		return (u32)strtoul(intStr, NULL, 10);
+		const u64 value = (u64)strtoull(intStr, NULL, 10);
+		// Negative values wrap around (as before), larger values are clamped
+		return value > (u64)UINT_MAX && value < (u64)0xFFFFFFFF00000000ull ? UINT_MAX : (u32)value;
 	}
 
 	u32 ParseUInt(const std::string& intStr)
@@ -1559,11 +1591,12 @@ namespace flex
 		return result;
 	}
 
+	// (The ctype functions are undefined for negative values, which non-ASCII chars are when char is signed)
 	std::string& ToLower(std::string& str)
 	{
 		for (char& c : str)
 		{
-			c = (char)tolower(c);
+			c = (char)tolower((unsigned char)c);
 		}
 		return str;
 	}
@@ -1572,7 +1605,7 @@ namespace flex
 	{
 		for (u32 i = 0; i < strlen(str); ++i)
 		{
-			str[i] = (char)tolower(str[i]);
+			str[i] = (char)tolower((unsigned char)str[i]);
 		}
 		return str;
 	}
@@ -1581,7 +1614,7 @@ namespace flex
 	{
 		for (char c : str)
 		{
-			if (isalpha(c) && !islower(c))
+			if (isalpha((unsigned char)c) && !islower((unsigned char)c))
 			{
 				return false;
 			}
@@ -1593,7 +1626,7 @@ namespace flex
 	{
 		for (char c : str)
 		{
-			if (isalpha(c) && !isupper(c))
+			if (isalpha((unsigned char)c) && !isupper((unsigned char)c))
 			{
 				return false;
 			}
@@ -1725,7 +1758,7 @@ namespace flex
 	{
 		for (char& c : str)
 		{
-			c = (char)toupper(c);
+			c = (char)toupper((unsigned char)c);
 		}
 		return str;
 	}
@@ -1786,23 +1819,24 @@ namespace flex
 			return -1;
 		}
 
-		i16 strLen = (i16)str.size();
+		i32 strLen = (i32)str.size();
 
-		if (!isdigit(str[strLen - 1]))
+		if (!IsDigit(str[strLen - 1]))
 		{
 			outNumNumericalChars = 0;
 			return -1;
 		}
 
-		i16 firstDigit = strLen - 1;
-		while (firstDigit >= 0 && isdigit(str[firstDigit]))
+		// Only consider the last 9 digits so the number fits in an i32 (& can be incremented)
+		i32 firstDigit = strLen - 1;
+		while (firstDigit >= 0 && IsDigit(str[firstDigit]) && (strLen - firstDigit) <= 9)
 		{
 			firstDigit--;
 		}
 		firstDigit++;
 
-		i32 num = (i32)strtol(str.substr(firstDigit).c_str(), NULL, 10);
-		outNumNumericalChars = (strLen - firstDigit);
+		i32 num = ParseInt(str.substr(firstDigit));
+		outNumNumericalChars = (i16)(strLen - firstDigit);
 
 		return num;
 	}
@@ -1845,16 +1879,19 @@ namespace flex
 
 			while (nextDoubleDot != std::string::npos)
 			{
-				if (nextDoubleDot > 0 && relativePath[nextDoubleDot - 1] == '/')
+				bool bRemoved = false;
+				if (nextDoubleDot > 1 && relativePath[nextDoubleDot - 1] == '/')
 				{
 					size_t precedingSlash = relativePath.rfind('/', nextDoubleDot - 2);
 					if (precedingSlash != std::string::npos)
 					{
 						relativePath = relativePath.substr(0, precedingSlash) + relativePath.substr(nextDoubleDot + 2);
+						bRemoved = true;
 					}
 				}
 
-				nextDoubleDot = relativePath.find("..");
+				// Skip double dots which can't be removed (e.g. "C:/../" or "file..txt"), which previously looped forever
+				nextDoubleDot = bRemoved ? relativePath.find("..") : relativePath.find("..", nextDoubleDot + 2);
 			}
 
 			return relativePath;
@@ -1872,7 +1909,8 @@ namespace flex
 			}
 			else
 			{
-				size_t lastSlash2 = (nextDoubleDot == 0 ? std::string::npos : relativePath.rfind('/', nextDoubleDot - 2));
+				// (nextDoubleDot - 2 would wrap around when nextDoubleDot is 1)
+				size_t lastSlash2 = (nextDoubleDot < 2 ? std::string::npos : relativePath.rfind('/', nextDoubleDot - 2));
 				if (lastSlash2 == std::string::npos && nextDoubleDot != 0)
 				{
 					lastSlash2 = 0;
@@ -1916,7 +1954,7 @@ namespace flex
 			else
 			{
 				pathPrefix = pathPrefix.substr(0, lastSlash); // remove final directory in string
-				relativePath = relativePath.substr(nextDoubleDot + 3); // remove "../" prefix
+				relativePath = relativePath.substr(glm::min(nextDoubleDot + 3, relativePath.size())); // remove "../" prefix
 				nextDoubleDot = relativePath.find("..");
 			}
 		}
@@ -1928,7 +1966,7 @@ namespace flex
 
 	std::string EnsureTrailingSlash(const std::string& str)
 	{
-		if (str[str.size() - 1] != '/')
+		if (str.empty() || str[str.size() - 1] != '/')
 		{
 			return str + '/';
 		}
@@ -1940,15 +1978,21 @@ namespace flex
 	{
 		std::string result(str);
 
-		u32 i = 0;
+		if (pattern.empty())
+		{
+			// Every position would match (& the loop below would never end)
+			return result;
+		}
+
+		size_t i = 0;
 
 		while (i < result.length())
 		{
-			size_t findIndex = result.find(pattern.c_str(), i);
+			size_t findIndex = result.find(pattern, i); // (Not pattern.c_str(), which stops at embedded nulls)
 			if (findIndex != std::string::npos)
 			{
 				result.replace(result.begin() + findIndex, result.begin() + findIndex + pattern.length(), replacement.begin(), replacement.end());
-				i = (u32)(findIndex + replacement.length());
+				i = findIndex + replacement.length();
 			}
 			else
 			{
@@ -1985,7 +2029,11 @@ namespace flex
 	i32 RandomInt(i32 min, i32 max)
 	{
 		// TODO: CLEANUP: FIXME: Don't use rand, for the love of God
-		i32 value = rand() % (max - min) + min;
+		if (max <= min)
+		{
+			return min;
+		}
+		i32 value = (i32)((i64)rand() % ((i64)max - (i64)min) + (i64)min);
 		return value;
 	}
 
@@ -2082,7 +2130,7 @@ namespace flex
 		const char* suffixes[] = { "B", "KB", "MB", "GB", "TB", "PB" };
 		u32 s = 0;
 		double count = (double)bytes;
-		while (count >= 1024 && s < 6)
+		while (count >= 1024 && s < (u32)ARRAY_LENGTH(suffixes) - 1)
 		{
 			s++;
 			count /= 1024;
@@ -2090,14 +2138,11 @@ namespace flex
 
 		if (count - floor(count) == 0.0)
 		{
-			snprintf(buf, bufSize, "%d%s", (int)count, suffixes[s]);
+			snprintf(buf, bufSize, "%u%s", (u32)count, suffixes[s]);
 		}
 		else
 		{
-			static char formatBuf[7];
-			strcpy(formatBuf, "%.Xf%s");
-			formatBuf[2] = (char)precision + '0';
-			snprintf(buf, bufSize, formatBuf, count, suffixes[s]);
+			snprintf(buf, bufSize, "%.*f%s", (int)precision, count, suffixes[s]);
 		}
 	}
 

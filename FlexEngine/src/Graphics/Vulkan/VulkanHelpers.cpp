@@ -1620,6 +1620,7 @@ namespace flex
 			result += (u64)(depthWriteEnable ? 1613u : 259u);
 			result += (u64)depthCompareOp * 45u;
 			result += (u64)(stencilTestEnable ? 869u : 199u);
+			result += (u64)(bDynamicDepthBias ? 3307u : 0u);
 
 			return result;
 		}

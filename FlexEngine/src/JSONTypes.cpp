@@ -38,7 +38,7 @@ namespace flex
 		default:
 		{
 			// Check if number
-			bool isDigit = (isdigit(c) != 0);
+			bool isDigit = (c >= '0' && c <= '9'); // (isdigit is undefined for negative chars)
 			bool isDecimal = (c == '.');
 			bool isNegation = (c == '-');
 
@@ -1007,22 +1007,43 @@ namespace flex
 		return label == other.label && value == other.value;
 	}
 
-	std::string JSONField::ToString(i32 tabCount) const
+	// Quotes & backslashes are escaped so that strings containing them survive being parsed back in (see JSONParser)
+	static std::string EscapeJSONString(const std::string& str)
+	{
+		if (str.find_first_of("\"\\") == std::string::npos)
+		{
+			return str;
+		}
+
+		std::string result;
+		result.reserve(str.size() + 8);
+		for (char c : str)
+		{
+			if (c == '\"' || c == '\\')
+			{
+				result.push_back('\\');
+			}
+			result.push_back(c);
+		}
+		return result;
+	}
+
+	std::string JSONField::ToString(i32 tabCount, bool bAlwaysWriteLabel /* = false */) const
 	{
 		const std::string tabs(tabCount, '\t');
 
 		// TODO: Use StringBuilder
 		std::string result(tabs);
 
-		if (!label.empty())
+		if (!label.empty() || bAlwaysWriteLabel)
 		{
-			result += '\"' + label + "\" : ";
+			result += '\"' + EscapeJSONString(label) + "\" : ";
 		}
 
 		switch (value.type)
 		{
 		case ValueType::STRING:
-			result += '\"' + value.strValue + '\"';
+			result += '\"' + EscapeJSONString(value.strValue) + '\"';
 			break;
 		case ValueType::INT:
 			result += IntToString(value.intValue);
@@ -1037,7 +1058,8 @@ namespace flex
 			result += ULongToString(value.ulongValue);
 			break;
 		case ValueType::FLOAT:
-			result += FloatToString(value.floatValue, value.floatPrecision);
+			// NaN & inf would be written as unquoted text, which can't be parsed back in (and breaks the rest of the file)
+			result += FloatToString(IsNanOrInf(value.floatValue) ? 0.0f : value.floatValue, value.floatPrecision);
 			break;
 		case ValueType::BOOL:
 			result += (value.uintValue ? "true" : "false");
@@ -1127,7 +1149,7 @@ namespace flex
 			result += '\n' + tabs + "{\n";
 			for (u32 i = 0; i < value.objectValue.fields.size(); ++i)
 			{
-				result += value.objectValue.fields[i].ToString(tabCount + 1);
+				result += value.objectValue.fields[i].ToString(tabCount + 1, true);
 				if (i != value.objectValue.fields.size() - 1)
 				{
 					result += ",\n";
@@ -1195,7 +1217,7 @@ namespace flex
 
 		for (u32 i = 0; i < fields.size(); ++i)
 		{
-			result += fields[i].ToString(tabCount + 1);
+			result += fields[i].ToString(tabCount + 1, true);
 			if (i != fields.size() - 1)
 			{
 				result += ",\n";

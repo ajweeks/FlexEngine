@@ -27,6 +27,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/Objects/Building.hpp" // For AppendBoxToVertexData
 #include "Scene/Objects/Wires.hpp"
 #include "Scene/SceneManager.hpp"
 
@@ -1071,13 +1072,343 @@ namespace flex
 	}
 
 	//
-	// PickAxe
+	// Hand tools
 	//
-	PickAxe::PickAxe(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
-		GameObject(name, PickAxeSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
+	namespace
+	{
+		// Static (non dynamic) pbr material with constant values. albedo is linear (see the colour notes in vk_misc.glsl).
+		MaterialID GetOrCreateToolMaterial(const char* name, const glm::vec3& linearAlbedo, real roughness)
+		{
+			MaterialID materialID = g_Renderer->GetMaterialID(name);
+			if (materialID == InvalidMaterialID)
+			{
+				MaterialCreateInfo createInfo = {};
+				createInfo.name = name;
+				createInfo.shaderName = "pbr";
+				createInfo.constAlbedo = glm::vec4(linearAlbedo, 1.0f);
+				createInfo.constRoughness = roughness;
+				createInfo.constMetallic = 0.0f;
+				createInfo.bSerializable = false;
+				materialID = g_Renderer->InitializeMaterial(&createInfo);
+			}
+			return materialID;
+		}
+
+		// One submesh (one material) of a tool
+		struct ToolPart
+		{
+			explicit ToolPart(MaterialID materialID) :
+				materialID(materialID)
+			{
+				vertexData.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(materialID)->shaderID)->vertexAttributes;
+			}
+
+			void Vertex(const glm::vec3& pos, const glm::vec3& normal, const glm::vec3& tangent, const glm::vec2& uv)
+			{
+				vertexData.positions_3D.push_back(pos);
+				vertexData.normals.push_back(normal);
+				vertexData.tangents.push_back(tangent);
+				vertexData.texCoords_UV.push_back(uv);
+				vertexData.colours_R32G32B32A32.push_back(VEC4_ONE);
+			}
+
+			void Box(const glm::vec3& center, const glm::vec3& halfExtents, const glm::quat& rotation = QUAT_IDENTITY)
+			{
+				AppendBoxToVertexData(center, halfExtents, rotation, vertexData, indices);
+			}
+
+			// Flat shaded quad, wound to face away from interiorPoint
+			void Quad(glm::vec3 a, glm::vec3 b, glm::vec3 c, glm::vec3 d, const glm::vec3& interiorPoint)
+			{
+				glm::vec3 normal = glm::cross(b - a, c - a);
+				if (glm::length2(normal) < 1e-12f)
+				{
+					normal = glm::cross(c - a, d - a);
+				}
+				if (glm::dot(normal, (a + b + c + d) * 0.25f - interiorPoint) < 0.0f)
+				{
+					std::swap(b, d);
+					normal = -normal;
+				}
+				normal = glm::normalize(normal);
+				const glm::vec3 tangent = glm::normalize(b - a);
+				const u32 base = (u32)vertexData.positions_3D.size();
+				Vertex(a, normal, tangent, glm::vec2(0.0f, 0.0f));
+				Vertex(b, normal, tangent, glm::vec2(1.0f, 0.0f));
+				Vertex(c, normal, tangent, glm::vec2(1.0f, 1.0f));
+				Vertex(d, normal, tangent, glm::vec2(0.0f, 1.0f));
+				indices.insert(indices.end(), { base, base + 1, base + 2, base, base + 2, base + 3 });
+			}
+
+			// Convex hexahedron: corners 0-3 are one face & 4-7 the opposite one (in the same order)
+			void Hexahedron(const glm::vec3 (&c)[8])
+			{
+				glm::vec3 center(0.0f);
+				for (const glm::vec3& corner : c)
+				{
+					center += corner * 0.125f;
+				}
+				Quad(c[0], c[1], c[2], c[3], center);
+				Quad(c[4], c[5], c[6], c[7], center);
+				for (u32 i = 0; i < 4; ++i)
+				{
+					const u32 j = (i + 1) % 4;
+					Quad(c[i], c[j], c[j + 4], c[i + 4], center);
+				}
+			}
+
+			// Smooth sided (tapered) cylinder from a to b, with flat caps
+			void Cylinder(const glm::vec3& a, const glm::vec3& b, real radiusA, real radiusB, u32 segments = 10)
+			{
+				const glm::vec3 axis = glm::normalize(b - a);
+				const glm::vec3 helper = glm::abs(axis.y) < 0.9f ? VEC3_UP : VEC3_RIGHT;
+				const glm::vec3 u = glm::normalize(glm::cross(axis, helper));
+				const glm::vec3 v = glm::cross(axis, u);
+				// Sides lean in/out with the taper
+				const real slope = (radiusA - radiusB) / glm::distance(a, b);
+
+				const u32 sideBase = (u32)vertexData.positions_3D.size();
+				for (u32 i = 0; i <= segments; ++i)
+				{
+					const real angle = TWO_PI * (real)i / (real)segments;
+					const glm::vec3 radial = u * std::cos(angle) + v * std::sin(angle);
+					const glm::vec3 tangent = -u * std::sin(angle) + v * std::cos(angle);
+					const glm::vec3 normal = glm::normalize(radial + axis * slope);
+					const real uvU = (real)i / (real)segments;
+					Vertex(a + radial * radiusA, normal, tangent, glm::vec2(uvU, 0.0f));
+					Vertex(b + radial * radiusB, normal, tangent, glm::vec2(uvU, 1.0f));
+				}
+				for (u32 i = 0; i < segments; ++i)
+				{
+					const u32 b0 = sideBase + i * 2;
+					const u32 t0 = b0 + 1;
+					const u32 b1 = b0 + 2;
+					const u32 t1 = b0 + 3;
+					indices.insert(indices.end(), { b0, b1, t1, b0, t1, t0 });
+				}
+
+				// Caps
+				for (u32 cap = 0; cap < 2; ++cap)
+				{
+					const glm::vec3 center = cap == 0 ? a : b;
+					const real radius = cap == 0 ? radiusA : radiusB;
+					const glm::vec3 normal = cap == 0 ? -axis : axis;
+					const u32 centerIndex = (u32)vertexData.positions_3D.size();
+					Vertex(center, normal, u, glm::vec2(0.5f));
+					for (u32 i = 0; i < segments; ++i)
+					{
+						const real angle = TWO_PI * (real)i / (real)segments;
+						const glm::vec3 radial = u * std::cos(angle) + v * std::sin(angle);
+						Vertex(center + radial * radius, normal, u, glm::vec2(0.5f) + glm::vec2(std::cos(angle), std::sin(angle)) * 0.5f);
+					}
+					for (u32 i = 0; i < segments; ++i)
+					{
+						const u32 i0 = centerIndex + 1 + i;
+						const u32 i1 = centerIndex + 1 + (i + 1) % segments;
+						if (cap == 0)
+						{
+							indices.insert(indices.end(), { centerIndex, i1, i0 });
+						}
+						else
+						{
+							indices.insert(indices.end(), { centerIndex, i0, i1 });
+						}
+					}
+				}
+			}
+
+			void AddTo(GameObject* object)
+			{
+				if (indices.empty())
+				{
+					return;
+				}
+				Mesh* mesh = object->GetMesh();
+				if (mesh == nullptr)
+				{
+					mesh = object->SetMesh(new Mesh(object));
+				}
+				MeshComponent::LoadFromMemory(mesh, vertexData, indices, materialID);
+			}
+
+			MaterialID materialID;
+			VertexBufferDataCreateInfo vertexData;
+			std::vector<u32> indices;
+		};
+
+		// Rope lashing the head to the handle (a few bands around the handle)
+		void AddLashing(ToolPart& part, real y, real radius, real height)
+		{
+			const u32 bandCount = 3;
+			const real bandHeight = height / (real)bandCount;
+			for (u32 i = 0; i < bandCount; ++i)
+			{
+				const real y0 = y - height * 0.5f + bandHeight * (real)i;
+				part.Cylinder(glm::vec3(0.0f, y0 + bandHeight * 0.08f, 0.0f), glm::vec3(0.0f, y0 + bandHeight * 0.92f, 0.0f), radius, radius, 10);
+			}
+		}
+	} // anonymous namespace
+
+	bool IsHandToolType(StringID typeID)
+	{
+		return typeID == PickAxeSID || typeID == AxeSID || typeID == ShovelSID;
+	}
+
+	bool BuildHandToolMesh(GameObject* object, StringID typeID)
+	{
+		if (!IsHandToolType(typeID))
+		{
+			return false;
+		}
+
+		// Linear albedos: oiled ash/oak handle, grey flint-like stone & tan rope
+		ToolPart wood(GetOrCreateToolMaterial("Tool handle wood", glm::vec3(0.21f, 0.105f, 0.042f), 0.62f));
+		ToolPart stone(GetOrCreateToolMaterial("Tool stone", glm::vec3(0.17f, 0.165f, 0.155f), 0.82f));
+		ToolPart rope(GetOrCreateToolMaterial("Tool lashing", glm::vec3(0.36f, 0.27f, 0.15f), 0.95f));
+
+		switch (typeID)
+		{
+		case PickAxeSID:
+		{
+			wood.Cylinder(glm::vec3(0.0f, -1.1f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), 0.075f, 0.062f);
+			// Head: a central block with two arms curving down to points
+			const real headY = 0.82f;
+			stone.Box(glm::vec3(0.0f, headY, 0.0f), glm::vec3(0.1f, 0.1f, 0.14f));
+			for (real side : { -1.0f, 1.0f })
+			{
+				const u32 segmentCount = 4;
+				glm::vec3 pos(0.0f, headY, side * 0.12f);
+				real angle = 0.0f;
+				for (u32 i = 0; i < segmentCount; ++i)
+				{
+					const real t = (real)i / (real)(segmentCount - 1);
+					const real halfLength = 0.1f;
+					const real thickness = Lerp(0.085f, 0.03f, t);
+					angle += glm::radians(9.0f);
+					const glm::quat rotation = glm::angleAxis(side * angle, VEC3_RIGHT);
+					const glm::vec3 dir = rotation * glm::vec3(0.0f, 0.0f, side);
+					pos += dir * halfLength;
+					stone.Box(pos, glm::vec3(thickness, thickness, halfLength), rotation);
+					pos += dir * halfLength * 0.9f;
+				}
+			}
+			AddLashing(rope, headY, 0.075f, 0.32f);
+		} break;
+		case AxeSID:
+		{
+			wood.Cylinder(glm::vec3(0.0f, -1.1f, 0.0f), glm::vec3(0.0f, 0.98f, 0.0f), 0.075f, 0.062f);
+			const real headY = 0.76f;
+			// Poll (the back of the head)
+			stone.Box(glm::vec3(0.0f, headY, -0.04f), glm::vec3(0.1f, 0.13f, 0.12f));
+			// Blade: a wedge flaring out to a thin, tall edge
+			const real nearZ = 0.07f;
+			const real edgeZ = 0.62f;
+			const glm::vec3 corners[8] =
+			{
+				glm::vec3(-0.09f, headY - 0.12f, nearZ), glm::vec3(0.09f, headY - 0.12f, nearZ),
+				glm::vec3(0.09f, headY + 0.12f, nearZ), glm::vec3(-0.09f, headY + 0.12f, nearZ),
+				glm::vec3(-0.012f, headY - 0.27f, edgeZ), glm::vec3(0.012f, headY - 0.27f, edgeZ),
+				glm::vec3(0.012f, headY + 0.2f, edgeZ), glm::vec3(-0.012f, headY + 0.2f, edgeZ),
+			};
+			stone.Hexahedron(corners);
+			AddLashing(rope, headY, 0.075f, 0.36f);
+		} break;
+		case ShovelSID:
+		{
+			wood.Cylinder(glm::vec3(0.0f, -0.5f, 0.0f), glm::vec3(0.0f, 0.98f, 0.0f), 0.065f, 0.06f);
+			// D grip
+			wood.Cylinder(glm::vec3(-0.15f, 1.16f, 0.0f), glm::vec3(0.15f, 1.16f, 0.0f), 0.05f, 0.05f, 8);
+			wood.Cylinder(glm::vec3(-0.02f, 0.95f, 0.0f), glm::vec3(-0.15f, 1.16f, 0.0f), 0.045f, 0.045f, 8);
+			wood.Cylinder(glm::vec3(0.02f, 0.95f, 0.0f), glm::vec3(0.15f, 1.16f, 0.0f), 0.045f, 0.045f, 8);
+			// Blade: broad (along x), thin & slightly dished towards +z, tapering to a rounded point
+			const real topY = -0.5f;
+			const glm::vec3 upper[8] =
+			{
+				glm::vec3(-0.27f, topY, -0.035f), glm::vec3(0.27f, topY, -0.035f),
+				glm::vec3(0.27f, topY, 0.035f), glm::vec3(-0.27f, topY, 0.035f),
+				glm::vec3(-0.25f, topY - 0.45f, -0.015f), glm::vec3(0.25f, topY - 0.45f, -0.015f),
+				glm::vec3(0.25f, topY - 0.45f, 0.035f), glm::vec3(-0.25f, topY - 0.45f, 0.035f),
+			};
+			stone.Hexahedron(upper);
+			const glm::vec3 tip[8] =
+			{
+				glm::vec3(-0.25f, topY - 0.45f, -0.015f), glm::vec3(0.25f, topY - 0.45f, -0.015f),
+				glm::vec3(0.25f, topY - 0.45f, 0.035f), glm::vec3(-0.25f, topY - 0.45f, 0.035f),
+				glm::vec3(-0.06f, topY - 0.68f, 0.005f), glm::vec3(0.06f, topY - 0.68f, 0.005f),
+				glm::vec3(0.06f, topY - 0.68f, 0.03f), glm::vec3(-0.06f, topY - 0.68f, 0.03f),
+			};
+			stone.Hexahedron(tip);
+			// Socket the handle sits in
+			stone.Cylinder(glm::vec3(0.0f, topY - 0.05f, 0.0f), glm::vec3(0.0f, topY + 0.16f, 0.0f), 0.09f, 0.075f, 10);
+			AddLashing(rope, topY + 0.25f, 0.072f, 0.16f);
+		} break;
+		}
+
+		wood.AddTo(object);
+		stone.AddTo(object);
+		rope.AddTo(object);
+		return true;
+	}
+
+	HandTool::HandTool(const std::string& name, StringID typeID, const GameObjectID& gameObjectID, const PrefabIDPair& sourcePrefabID, bool bIsPrefabTemplate) :
+		GameObject(name, typeID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bInteractable = true;
 		m_bItemizable = true;
+	}
+
+	void HandTool::Initialize()
+	{
+		if (!IsPrefabTemplate() && m_Mesh == nullptr)
+		{
+			BuildHandToolMesh(this, m_TypeID);
+		}
+
+		GameObject::Initialize();
+	}
+
+	GameObject* HandTool::CopySelf(
+		GameObject* parent /* = nullptr */,
+		CopyFlags copyFlags /* = CopyFlags::ALL */,
+		std::string* optionalName /* = nullptr */,
+		const GameObjectID& optionalGameObjectID /* = InvalidGameObjectID */)
+	{
+		std::string newObjectName;
+		GameObjectID newGameObjectID = optionalGameObjectID;
+		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
+		GameObject* newGameObject = CreateObjectOfType(m_TypeID, newObjectName, newGameObjectID);
+
+		CopyGenericFields(newGameObject, parent, copyFlags);
+
+		return newGameObject;
+	}
+
+	Axe::Axe(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		HandTool(name, AxeSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
+	{
+	}
+
+	PropertyCollection* Axe::BuildTypeUniquePropertyCollection()
+	{
+		return GameObject::BuildPropertyCollection();
+	}
+
+	Shovel::Shovel(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		HandTool(name, ShovelSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
+	{
+	}
+
+	PropertyCollection* Shovel::BuildTypeUniquePropertyCollection()
+	{
+		return GameObject::BuildPropertyCollection();
+	}
+
+	//
+	// PickAxe
+	//
+	PickAxe::PickAxe(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
+		HandTool(name, PickAxeSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
+	{
 	}
 
 	PropertyCollection* PickAxe::BuildTypeUniquePropertyCollection()

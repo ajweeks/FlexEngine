@@ -1,0 +1,24 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "29463C8A30F640D3ACF1BDA447001363",
+	"root" : 
+	{
+		"id" : "2F5912D36C5B4D60B9CA71B76F483665",
+		"name" : "axe",
+		"type" : "axe",
+		"collider" : 
+		{
+			"shape" : "box",
+			"half extents" : "0.150,1.100,0.400"
+		},
+		"rigid body" : 
+		{
+			"mass" : 1.000000,
+			"kinematic" : false,
+			"static" : false,
+			"mask" : 1,
+			"group" : 1
+		}
+	}
+}

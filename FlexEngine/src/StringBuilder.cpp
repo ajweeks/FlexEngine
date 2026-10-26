@@ -173,6 +173,13 @@ namespace flex
 
 	const char* StringBuilder::ToCString()
 	{
+		// The buffer isn't always null terminated (e.g. when an AppendLine fills it exactly, or after Clear)
+		if (buffer.size() <= length)
+		{
+			Resize(length + 1);
+		}
+		buffer[length] = '\0';
+
 		const char* result = buffer.data();
 		return result;
 	}

@@ -13,8 +13,10 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
+#include "Localization.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Platform/Platform.hpp"
+#include "SaveFile.hpp"
 #include "Player.hpp"
 #include "PlayerController.hpp"
 #include "Scene/BaseScene.hpp"
@@ -31,6 +33,8 @@ namespace flex
 	Game* g_Game = nullptr;
 
 	const char* Game::GAMEPLAY_SCENE_NAME = "scene_world.json";
+	const char* Game::GAME_NAME = "Fira";
+	const char* Game::GAME_VERSION = "0.1.0";
 	bool Game::s_bAutoPlay = false;
 	std::string Game::s_AutoPlayWorldName;
 
@@ -67,9 +71,9 @@ namespace flex
 			const i32 minutes = (i32)(seconds / 60.0f);
 			if (minutes < 60)
 			{
-				return IntToString(minutes) + " min";
+				return LOCF(Units_Minutes, minutes);
 			}
-			return IntToString(minutes / 60) + " h " + IntToString(minutes % 60) + " min";
+			return LOCF(Units_HoursMinutes, minutes / 60, minutes % 60);
 		}
 
 		// "2026-10-25_08-16-38" -> "2026-10-25 08:16"
@@ -86,7 +90,7 @@ namespace flex
 
 		i32 RandomSeed()
 		{
-			return (i32)(((u64)Time::CurrentMilliseconds() * 2654435761ull) & 0x7FFFFFFF);
+			return (i32)((Time::NowTicks() * 2654435761ull) >> 16 & 0x7FFFFFFF);
 		}
 
 		// Untextured quad drawn after the UI (so it's on top of sprites like the map), centered on a pixel position
@@ -106,6 +110,41 @@ namespace flex
 		}
 	} // anonymous namespace
 
+	WorldStats* GetCurrentWorldStats()
+	{
+		return (g_Game != nullptr && g_Game->m_bWorldLoaded) ? &g_Game->m_CurrentWorld.stats : nullptr;
+	}
+
+	void WorldStats::Serialize(JSONObject& parentObject) const
+	{
+		JSONObject statsObj = {};
+		statsObj.fields.emplace_back("torches placed", JSONValue(torchesPlaced));
+		statsObj.fields.emplace_back("pieces built", JSONValue(piecesBuilt));
+		statsObj.fields.emplace_back("tracks laid", JSONValue(tracksLaid));
+		statsObj.fields.emplace_back("rail laid", JSONValue(railLaid, 1));
+		statsObj.fields.emplace_back("distance travelled", JSONValue(distanceTravelled, 0));
+		statsObj.fields.emplace_back("chests opened", JSONValue(chestsOpened));
+		statsObj.fields.emplace_back("explored cells", JSONValue(exploredCells));
+		parentObject.fields.emplace_back("stats", JSONValue(statsObj));
+	}
+
+	void WorldStats::Parse(const JSONObject& parentObject)
+	{
+		*this = {};
+		JSONObject statsObj;
+		if (!parentObject.TryGetObject("stats", statsObj))
+		{
+			return;
+		}
+		statsObj.TryGetUInt("torches placed", torchesPlaced);
+		statsObj.TryGetUInt("pieces built", piecesBuilt);
+		statsObj.TryGetUInt("tracks laid", tracksLaid);
+		statsObj.TryGetFloat("rail laid", railLaid);
+		statsObj.TryGetFloat("distance travelled", distanceTravelled);
+		statsObj.TryGetUInt("chests opened", chestsOpened);
+		statsObj.TryGetUInt("explored cells", exploredCells);
+	}
+
 	Game::Game() :
 		m_ActionCallback(this, &Game::OnActionEvent),
 		m_SettingsFile("Game settings", SAVED_DIRECTORY "game_settings.json", 1)
@@ -116,6 +155,7 @@ namespace flex
 		m_SettingsFile.RegisterProperty("master volume", &m_Settings.masterVolume).SetRange(0.0f, 1.0f);
 		m_SettingsFile.RegisterProperty("terrain quality", &m_Settings.terrainQuality);
 		m_SettingsFile.RegisterProperty("show minimap", &m_Settings.bShowMinimap);
+		m_SettingsFile.RegisterProperty("language", &m_Settings.language);
 	}
 
 	Game::~Game()
@@ -351,13 +391,25 @@ namespace flex
 
 		switch (m_TourStep)
 		{
-		case 0: if (m_TourTime > 8.0f) { Screenshot("main_menu"); Next(); } break;
+		case 0:
+		{
+			// FLEX_TOUR_RESIZE=<w>x<h> resizes the window at runtime first, to check the UI follows size changes
+			static bool bResized = false;
+			const char* resize = getenv("FLEX_TOUR_RESIZE");
+			i32 w = 0, h = 0;
+			if (!bResized && resize != nullptr && m_TourTime > 2.0f && sscanf(resize, "%dx%d", &w, &h) == 2 && w > 0 && h > 0)
+			{
+				g_Window->SetSize(w, h);
+				bResized = true;
+			}
+			if (m_TourTime > 8.0f) { Screenshot("main_menu"); Next(); }
+		} break;
 		case 1: if (m_TourTime > 0.5f) { m_ScreenBeforeSettings = Screen::MAIN_MENU; SetScreen(Screen::SETTINGS); Next(); } break;
 		case 2: if (m_TourTime > 1.0f) { Screenshot("settings"); Next(); } break;
 		case 3: if (m_TourTime > 0.5f) { m_NewWorldName = "Tour world"; m_NewWorldSeed = "4242"; SetScreen(Screen::NEW_WORLD); Next(); } break;
 		case 4: if (m_TourTime > 1.0f) { Screenshot("new_world"); Next(); } break;
 		case 5: if (m_TourTime > 0.5f) { CreateWorld(m_NewWorldName, 4242); Next(); } break;
-		case 6: if (m_TourTime > 0.4f) { Screenshot("loading"); Next(); } break;
+		case 6: if (m_TourTime > 0.4f) { m_TourWorldDirectory = m_CurrentWorld.directory; Screenshot("loading"); Next(); } break;
 		case 7: if (m_Screen == Screen::PLAYING && m_TourTime > 6.0f) { Screenshot("playing"); Next(); } break;
 		case 8:
 		{
@@ -421,9 +473,15 @@ namespace flex
 			real extent;
 			TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
 			const bool bMapReady = (terrainGenerator != nullptr && terrainGenerator->GetLargeMap(textureID, center, extent) && m_TourTime > 1.0f) || m_TourTime > 20.0f;
-			if (m_bMapFollowPlayer && bMapReady)
+			if (m_bMapFollowPlayer && !m_bTourMapCaptured && bMapReady)
 			{
+				// The screenshot is of the frame rendered after this update, so the pan below waits until later
 				Screenshot("map");
+				m_bTourMapCaptured = true;
+				m_TourTime = 0.0f;
+			}
+			else if (m_bMapFollowPlayer && m_bTourMapCaptured && m_TourTime > 0.25f)
+			{
 				// Then pan (as if dragged with the middle mouse button) so the player is off the view's left edge
 				m_bMapFollowPlayer = false;
 				m_MapViewCenter.x += m_MapExtent * 1.3f;
@@ -509,7 +567,23 @@ namespace flex
 		case 18: if (m_TourTime > 3.0f) { Screenshot("cave"); Next(); } break;
 		case 19: if (m_TourTime > 0.5f) { LeaveWorld(); m_SelectedWorld = 0; SetScreen(Screen::WORLDS); Next(); } break;
 		case 20: if (m_TourTime > 1.5f) { Screenshot("worlds"); Next(); } break;
-		case 21: if (m_TourTime > 1.0f) { g_EngineInstance->Stop(); Next(); } break;
+		case 21:
+		{
+			if (m_TourTime > 1.0f)
+			{
+				// The tour's world isn't kept
+				for (const WorldInfo& world : m_Worlds)
+				{
+					if (!m_TourWorldDirectory.empty() && world.directory == m_TourWorldDirectory)
+					{
+						DeleteWorld(world);
+						break;
+					}
+				}
+				g_EngineInstance->Stop();
+				Next();
+			}
+		} break;
 		default: break;
 		}
 	}
@@ -517,6 +591,7 @@ namespace flex
 	void Game::Destroy()
 	{
 		SaveWorld();
+		save::WaitForPendingWrites();
 		g_InputManager->UnbindActionCallback(&m_ActionCallback);
 	}
 
@@ -676,7 +751,16 @@ namespace flex
 		case Screen::MAP: DrawMap(); break;
 		case Screen::PLAYING:
 		{
-			m_CurrentWorld.playTime += g_DeltaTime;
+			// Adding each frame's dt directly to the (float) total loses precision once it's large (after ~3 days of play
+			// it would stop increasing), so whole seconds are moved over instead (exact for ~190 days)
+			m_PlayTimeRemainder += g_DeltaTime;
+			if (m_PlayTimeRemainder >= 1.0f)
+			{
+				const real wholeSeconds = glm::floor(m_PlayTimeRemainder);
+				m_CurrentWorld.playTime += wholeSeconds;
+				m_PlayTimeRemainder -= wholeSeconds;
+			}
+			UpdateExplored();
 			m_AutosaveTimer += g_UnpausedDeltaTime;
 			if (m_AutosaveTimer > AUTOSAVE_INTERVAL)
 			{
@@ -710,6 +794,53 @@ namespace flex
 		}
 	}
 
+	void Game::UpdateExplored()
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player == nullptr || player->IsAwaitingTerrainCollision())
+		{
+			m_bHaveLastPlayerPos = false;
+			return;
+		}
+
+		const glm::vec3 pos = player->GetTransform()->GetWorldPosition();
+		if (m_bHaveLastPlayerPos)
+		{
+			// (Teleports aren't counted)
+			const real moved = glm::distance(pos, m_LastPlayerPos);
+			if (moved < 50.0f)
+			{
+				m_CurrentWorld.stats.distanceTravelled += moved;
+			}
+		}
+
+		// Cells within sight radius of the player count as explored (only checked on entering a new cell)
+		const i32 cellX = (i32)glm::floor(pos.x / EXPLORED_CELL_SIZE);
+		const i32 cellZ = (i32)glm::floor(pos.z / EXPLORED_CELL_SIZE);
+		const i32 lastCellX = (i32)glm::floor(m_LastPlayerPos.x / EXPLORED_CELL_SIZE);
+		const i32 lastCellZ = (i32)glm::floor(m_LastPlayerPos.z / EXPLORED_CELL_SIZE);
+		if (!m_bHaveLastPlayerPos || cellX != lastCellX || cellZ != lastCellZ)
+		{
+			const real radius = 256.0f;
+			const i32 cellRadius = (i32)glm::ceil(radius / EXPLORED_CELL_SIZE);
+			for (i32 z = -cellRadius; z <= cellRadius; ++z)
+			{
+				for (i32 x = -cellRadius; x <= cellRadius; ++x)
+				{
+					const glm::vec2 cellCenter(((real)(cellX + x) + 0.5f) * EXPLORED_CELL_SIZE, ((real)(cellZ + z) + 0.5f) * EXPLORED_CELL_SIZE);
+					if (glm::distance(cellCenter, glm::vec2(pos.x, pos.z)) <= radius)
+					{
+						// 16 bits for each coordinate (+-4000km)
+						m_ExploredCells.insert(((u32)(u16)(i16)(cellX + x) << 16) | (u32)(u16)(i16)(cellZ + z));
+					}
+				}
+			}
+			m_CurrentWorld.stats.exploredCells = (u32)m_ExploredCells.size();
+		}
+		m_LastPlayerPos = pos;
+		m_bHaveLastPlayerPos = true;
+	}
+
 	void Game::DrawBackground(real opacity)
 	{
 		const real s = m_UI.Scale();
@@ -734,7 +865,7 @@ namespace flex
 	{
 		const real s = m_UI.Scale();
 		DrawBackground(1.0f);
-		DrawTitle("FLEX", "An endless world to explore, climb & build in");
+		DrawTitle(GAME_NAME, LOC(MainMenu_Tagline));
 
 		UIRect column(UITheme::SCREEN_MARGIN * s, 420.0f * s, 440.0f * s, 600.0f * s);
 		const real buttonHeight = UITheme::BUTTON_HEIGHT * s;
@@ -742,17 +873,17 @@ namespace flex
 
 		if (!m_Worlds.empty())
 		{
-			if (m_UI.Button("continue", column.CutTop(buttonHeight, gap), "Continue: " + m_Worlds[0].name, true))
+			if (m_UI.Button("continue", column.CutTop(buttonHeight, gap), LOCF(MainMenu_Continue, m_Worlds[0].name.c_str()), true))
 			{
 				PlayWorld(m_Worlds[0]);
 				return;
 			}
 		}
-		if (m_UI.Button("worlds", column.CutTop(buttonHeight, gap), m_Worlds.empty() ? "New world" : "Worlds", m_Worlds.empty()))
+		if (m_UI.Button("worlds", column.CutTop(buttonHeight, gap), m_Worlds.empty() ? LOC(MainMenu_NewWorld) : LOC(MainMenu_Worlds), m_Worlds.empty()))
 		{
 			if (m_Worlds.empty())
 			{
-				m_NewWorldName = "My world";
+				m_NewWorldName = LOC(Worlds_FirstWorldName);
 				m_NewWorldSeed = IntToString(RandomSeed());
 				SetScreen(Screen::NEW_WORLD);
 			}
@@ -762,44 +893,62 @@ namespace flex
 				SetScreen(Screen::WORLDS);
 			}
 		}
-		if (m_UI.Button("settings", column.CutTop(buttonHeight, gap), "Settings"))
+		if (m_UI.Button("settings", column.CutTop(buttonHeight, gap), LOC(MainMenu_Settings)))
 		{
 			m_ScreenBeforeSettings = Screen::MAIN_MENU;
 			SetScreen(Screen::SETTINGS);
 		}
-		if (m_UI.Button("editor", column.CutTop(buttonHeight, gap), "Engine test scenes"))
+		if (m_UI.Button("editor", column.CutTop(buttonHeight, gap), LOC(MainMenu_Editor)))
 		{
 			EnterEditor();
 			return;
 		}
-		if (m_UI.Button("quit", column.CutTop(buttonHeight, gap), "Quit"))
+		if (m_UI.Button("quit", column.CutTop(buttonHeight, gap), LOC(MainMenu_Quit)))
 		{
 			g_EngineInstance->Stop();
 		}
 
-		m_UI.Text("[Esc] Back   [WASD] Move   [Space] Jump/glide   [Shift] Sprint/climb   [B] Build   [M] Map", UITheme::SCREEN_MARGIN * s, m_UI.Height() - 50.0f * s, UITheme::TEXT_CAPTION * s, UITheme::TEXT_SECONDARY);
+		// The version, subtly in the bottom right corner
+		m_UI.Text(LOCF(MainMenu_Version, GAME_NAME, GAME_VERSION), m_UI.Width() - UITheme::SPACE_XL * s, m_UI.Height() - UITheme::SPACE_XL * s,
+			UITheme::TEXT_CAPTION * s, UITheme::WithAlpha(UITheme::TEXT_SECONDARY, 0.7f), TextAlign::RIGHT);
 	}
 
 	void Game::DrawWorlds()
 	{
 		const real s = m_UI.Scale();
 		DrawBackground(1.0f);
-		DrawTitle("Worlds", "Every world is endless, & made from its seed");
+		DrawTitle(LOC(Worlds_Title), LOC(Worlds_Subtitle));
 
 		const UIRect panel(120.0f * s, 400.0f * s, 820.0f * s, 600.0f * s);
 		m_UI.Panel(panel);
 		UIRect content = panel.Inset(24.0f * s);
 
-		// World list
+		// World list (scrolled a whole row at a time, with the wheel or the scrollbar on the right)
 		UIRect list = content.CutTop(content.h - 80.0f * s, 16.0f * s);
 		const real rowHeight = 78.0f * s;
-		const u32 visibleRows = (u32)(list.h / (rowHeight + 10.0f * s));
-		for (u32 i = 0; i < (u32)m_Worlds.size() && i < visibleRows; ++i)
+		const real rowGap = 10.0f * s;
+		const u32 visibleRows = glm::max((u32)((list.h + rowGap) / (rowHeight + rowGap)), 1u);
+		const u32 worldCount = (u32)m_Worlds.size();
+		const real maxScroll = (real)(worldCount > visibleRows ? worldCount - visibleRows : 0);
+		if (maxScroll > 0.0f)
+		{
+			const real scrollbarWidth = 10.0f * s;
+			const UIRect scrollbar(list.x + list.w - scrollbarWidth, list.y, scrollbarWidth, list.h - rowGap);
+			list.w -= scrollbarWidth + UITheme::SPACE_M * s;
+			if (m_UI.ScrollDelta() != 0.0f && (m_UI.IsMouseOver(list) || m_UI.IsMouseOver(scrollbar)))
+			{
+				m_WorldListScroll -= m_UI.ScrollDelta() > 0.0f ? 1.0f : -1.0f;
+			}
+			m_UI.Scrollbar("world_scroll", scrollbar, (real)worldCount, (real)visibleRows, &m_WorldListScroll);
+		}
+		m_WorldListScroll = glm::clamp(m_WorldListScroll, 0.0f, maxScroll);
+		const u32 firstRow = (u32)glm::round(m_WorldListScroll);
+		for (u32 i = firstRow; i < worldCount && i < firstRow + visibleRows; ++i)
 		{
 			const WorldInfo& world = m_Worlds[i];
 			const std::string id = "world" + IntToString(i);
-			const std::string subtitle = "Seed " + IntToString(world.seed) + "   |   Played " + FormatPlayTime(world.playTime) + "   |   Last played " + FormatDate(world.lastPlayed);
-			if (m_UI.ListItem(id.c_str(), list.CutTop(rowHeight, 10.0f * s), world.name, subtitle, (i32)i == m_SelectedWorld))
+			const std::string subtitle = LOCF(Worlds_ListSubtitle, world.seed, FormatPlayTime(world.playTime).c_str(), FormatDate(world.lastPlayed).c_str());
+			if (m_UI.ListItem(id.c_str(), list.CutTop(rowHeight, rowGap), world.name, subtitle, (i32)i == m_SelectedWorld))
 			{
 				if (m_SelectedWorld == (i32)i && m_ScreenTime > 0.3f)
 				{
@@ -816,18 +965,22 @@ namespace flex
 		const real buttonWidth = (content.w - 3.0f * 12.0f * s) / 4.0f;
 		UIRect buttons = content;
 		const bool bSelected = m_SelectedWorld >= 0 && m_SelectedWorld < (i32)m_Worlds.size();
-		if (m_UI.Button("play", UIRect(buttons.x, buttons.y, buttonWidth, buttons.h), "Play", true, bSelected))
+		if (bSelected)
+		{
+			DrawWorldStats(UIRect(panel.x + panel.w + UITheme::SPACE_XL * s, panel.y, 440.0f * s, panel.h), m_Worlds[m_SelectedWorld]);
+		}
+		if (m_UI.Button("play", UIRect(buttons.x, buttons.y, buttonWidth, buttons.h), LOC(Worlds_Play), true, bSelected))
 		{
 			PlayWorld(m_Worlds[m_SelectedWorld]);
 			return;
 		}
-		if (m_UI.Button("new", UIRect(buttons.x + (buttonWidth + 12.0f * s), buttons.y, buttonWidth, buttons.h), "New world"))
+		if (m_UI.Button("new", UIRect(buttons.x + (buttonWidth + 12.0f * s), buttons.y, buttonWidth, buttons.h), LOC(Worlds_New)))
 		{
-			m_NewWorldName = "World " + IntToString((i32)m_Worlds.size() + 1);
+			m_NewWorldName = LOCF(Worlds_DefaultName, (i32)m_Worlds.size() + 1);
 			m_NewWorldSeed = IntToString(RandomSeed());
 			SetScreen(Screen::NEW_WORLD);
 		}
-		if (m_UI.Button("delete", UIRect(buttons.x + (buttonWidth + 12.0f * s) * 2.0f, buttons.y, buttonWidth, buttons.h), m_bConfirmDelete ? "Really delete?" : "Delete", false, bSelected))
+		if (m_UI.Button("delete", UIRect(buttons.x + (buttonWidth + 12.0f * s) * 2.0f, buttons.y, buttonWidth, buttons.h), m_bConfirmDelete ? LOC(Worlds_ConfirmDelete) : LOC(Worlds_Delete), false, bSelected))
 		{
 			if (m_bConfirmDelete)
 			{
@@ -840,38 +993,72 @@ namespace flex
 				m_bConfirmDelete = true;
 			}
 		}
-		if (m_UI.Button("back", UIRect(buttons.x + (buttonWidth + 12.0f * s) * 3.0f, buttons.y, buttonWidth, buttons.h), "Back"))
+		if (m_UI.Button("back", UIRect(buttons.x + (buttonWidth + 12.0f * s) * 3.0f, buttons.y, buttonWidth, buttons.h), LOC(Common_Back)))
 		{
 			SetScreen(Screen::MAIN_MENU);
 		}
+	}
+
+	void Game::DrawWorldStats(const UIRect& panel, const WorldInfo& world)
+	{
+		const real s = m_UI.Scale();
+		m_UI.Panel(panel);
+		UIRect content = panel.Inset(UITheme::SPACE_XL * s);
+		m_UI.Text(world.name, content.x, content.y + 20.0f * s, UITheme::TEXT_H2 * s, UITheme::TEXT_PRIMARY, TextAlign::LEFT, true);
+		content.CutTop(56.0f * s);
+		m_UI.FillRect(UIRect(content.x, content.y, content.w, 1.0f * s), UITheme::OUTLINE);
+		content.CutTop(UITheme::SPACE_M * s);
+
+		const WorldStats& stats = world.stats;
+		auto Row = [&](const std::string& label, const std::string& value)
+		{
+			const UIRect row = content.CutTop(42.0f * s);
+			m_UI.Text(label, row.x, row.y + row.h * 0.5f, UITheme::TEXT_BODY * s, UITheme::TEXT_SECONDARY);
+			m_UI.Text(value, row.x + row.w, row.y + row.h * 0.5f, UITheme::TEXT_BODY * s, UITheme::TEXT_PRIMARY, TextAlign::RIGHT);
+		};
+		auto Km = [&](real meters)
+		{
+			return LOCF(Units_Km, meters / 1000.0f);
+		};
+
+		Row(LOC(Stats_Created), world.created.empty() ? std::string(LOC(Stats_Unknown)) : FormatDate(world.created));
+		Row(LOC(Stats_LastPlayed), FormatDate(world.lastPlayed));
+		Row(LOC(Stats_TimeInWorld), FormatPlayTime(world.playTime));
+		Row(LOC(Stats_AreaExplored), LOCF(Units_SquareKm, stats.ExploredAreaKm2()));
+		Row(LOC(Stats_DistanceTravelled), Km(stats.distanceTravelled));
+		Row(LOC(Stats_RailLaid), Km(stats.railLaid));
+		Row(LOC(Stats_TorchesPlaced), IntToString((i32)stats.torchesPlaced));
+		Row(LOC(Stats_PiecesBuilt), IntToString((i32)stats.piecesBuilt));
+		Row(LOC(Stats_ChestsOpened), IntToString((i32)stats.chestsOpened));
+		Row(LOC(Stats_Seed), IntToString(world.seed));
 	}
 
 	void Game::DrawNewWorld()
 	{
 		const real s = m_UI.Scale();
 		DrawBackground(1.0f);
-		DrawTitle("New world", "Name it & pick a seed (or keep the random one)");
+		DrawTitle(LOC(NewWorld_Title), LOC(NewWorld_Subtitle));
 
 		const UIRect panel(UITheme::SCREEN_MARGIN * s, 400.0f * s, 640.0f * s, 344.0f * s);
 		m_UI.Panel(panel);
 		UIRect content = panel.Inset(28.0f * s);
 		const real fieldHeight = 60.0f * s;
 
-		m_UI.Text("World name", content.x, content.y + 12.0f * s, UITheme::TEXT_SMALL * s, UITheme::TEXT_SECONDARY);
+		m_UI.Text(LOC(NewWorld_Name), content.x, content.y + 12.0f * s, UITheme::TEXT_SMALL * s, UITheme::TEXT_SECONDARY);
 		content.CutTop(30.0f * s);
-		m_UI.TextField("name", content.CutTop(fieldHeight, 20.0f * s), &m_NewWorldName, 32, "My world");
+		m_UI.TextField("name", content.CutTop(fieldHeight, 20.0f * s), &m_NewWorldName, 32, LOC(Worlds_FirstWorldName));
 
-		m_UI.Text("Seed", content.x, content.y + 12.0f * s, UITheme::TEXT_SMALL * s, UITheme::TEXT_SECONDARY);
+		m_UI.Text(LOC(NewWorld_Seed), content.x, content.y + 12.0f * s, UITheme::TEXT_SMALL * s, UITheme::TEXT_SECONDARY);
 		content.CutTop(30.0f * s);
 		UIRect seedRow = content.CutTop(fieldHeight, 28.0f * s);
-		m_UI.TextField("seed", UIRect(seedRow.x, seedRow.y, seedRow.w - 160.0f * s, seedRow.h), &m_NewWorldSeed, 10, "Random");
-		if (m_UI.Button("random", UIRect(seedRow.x + seedRow.w - 148.0f * s, seedRow.y, 148.0f * s, seedRow.h), "Random"))
+		m_UI.TextField("seed", UIRect(seedRow.x, seedRow.y, seedRow.w - 160.0f * s, seedRow.h), &m_NewWorldSeed, 10, LOC(NewWorld_SeedPlaceholder));
+		if (m_UI.Button("random", UIRect(seedRow.x + seedRow.w - 148.0f * s, seedRow.y, 148.0f * s, seedRow.h), LOC(NewWorld_Random)))
 		{
 			m_NewWorldSeed = IntToString(RandomSeed());
 		}
 
 		const real buttonWidth = (content.w - 12.0f * s) * 0.5f;
-		if (m_UI.Button("create", UIRect(content.x, content.y, buttonWidth, UITheme::BUTTON_HEIGHT * s), "Create & play", true, !m_NewWorldName.empty()))
+		if (m_UI.Button("create", UIRect(content.x, content.y, buttonWidth, UITheme::BUTTON_HEIGHT * s), LOC(NewWorld_Create), true, !m_NewWorldName.empty()))
 		{
 			// Seeds can be any text, which is hashed if it isn't a number
 			i32 seed = 0;
@@ -895,7 +1082,7 @@ namespace flex
 			CreateWorld(m_NewWorldName, seed);
 			return;
 		}
-		if (m_UI.Button("back", UIRect(content.x + buttonWidth + 12.0f * s, content.y, buttonWidth, UITheme::BUTTON_HEIGHT * s), "Back"))
+		if (m_UI.Button("back", UIRect(content.x + buttonWidth + 12.0f * s, content.y, buttonWidth, UITheme::BUTTON_HEIGHT * s), LOC(Common_Back)))
 		{
 			SetScreen(m_Worlds.empty() ? Screen::MAIN_MENU : Screen::WORLDS);
 		}
@@ -912,20 +1099,20 @@ namespace flex
 		{
 			DrawBackground(1.0f);
 		}
-		DrawTitle("Settings", "Saved automatically");
+		DrawTitle(LOC(Settings_Title), LOC(Settings_Subtitle));
 
-		const UIRect panel(120.0f * s, 400.0f * s, 700.0f * s, 560.0f * s);
+		const UIRect panel(120.0f * s, 400.0f * s, 700.0f * s, 630.0f * s);
 		m_UI.Panel(panel);
 		UIRect content = panel.Inset(24.0f * s);
 		const real rowHeight = UITheme::ROW_HEIGHT * s;
 		const real gap = UITheme::SPACE_S * s;
 
 		bool bChanged = false;
-		bChanged |= m_UI.Slider("fov", content.CutTop(rowHeight, gap), "Field of view", &m_Settings.fov, 50.0f, 110.0f, "%.0f deg");
-		bChanged |= m_UI.Slider("sensitivity", content.CutTop(rowHeight, gap), "Mouse sensitivity", &m_Settings.mouseSensitivity, 0.1f, 4.0f, "%.2f");
-		bChanged |= m_UI.Checkbox("invert", content.CutTop(rowHeight, gap), "Invert mouse", &m_Settings.bInvertMouse);
+		bChanged |= m_UI.Slider("fov", content.CutTop(rowHeight, gap), LOC(Settings_Fov), &m_Settings.fov, 50.0f, 110.0f, LOC(Settings_FovValue));
+		bChanged |= m_UI.Slider("sensitivity", content.CutTop(rowHeight, gap), LOC(Settings_MouseSensitivity), &m_Settings.mouseSensitivity, 0.1f, 4.0f, "%.2f");
+		bChanged |= m_UI.Checkbox("invert", content.CutTop(rowHeight, gap), LOC(Settings_InvertMouse), &m_Settings.bInvertMouse);
 		real volume = m_Settings.masterVolume * 100.0f;
-		if (m_UI.Slider("volume", content.CutTop(rowHeight, gap), "Volume", &volume, 0.0f, 100.0f, "%.0f%%"))
+		if (m_UI.Slider("volume", content.CutTop(rowHeight, gap), LOC(Settings_Volume), &volume, 0.0f, 100.0f, "%.0f%%"))
 		{
 			m_Settings.masterVolume = volume / 100.0f;
 			bChanged = true;
@@ -936,13 +1123,26 @@ namespace flex
 			m_UI.PlayConfirm();
 		}
 		real quality = (real)m_Settings.terrainQuality;
-		static const char* qualityNames[] = { "Low", "Medium", "High", "Ultra" };
-		if (m_UI.Slider("quality", content.CutTop(rowHeight, gap), std::string("Terrain detail: ") + qualityNames[glm::clamp(m_Settings.terrainQuality, 0, 3)], &quality, 0.0f, 3.0f, ""))
+		const char* qualityNames[] = { LOC(Settings_QualityLow), LOC(Settings_QualityMedium), LOC(Settings_QualityHigh), LOC(Settings_QualityUltra) };
+		if (m_UI.Slider("quality", content.CutTop(rowHeight, gap), LOCF(Settings_TerrainDetail, qualityNames[glm::clamp(m_Settings.terrainQuality, 0, 3)]), &quality, 0.0f, 3.0f, ""))
 		{
 			m_Settings.terrainQuality = glm::clamp((i32)glm::round(quality), 0, 3);
 			bChanged = true;
 		}
-		bChanged |= m_UI.Checkbox("minimap", content.CutTop(rowHeight, gap), "Show minimap", &m_Settings.bShowMinimap);
+		bChanged |= m_UI.Checkbox("minimap", content.CutTop(rowHeight, gap), LOC(Settings_ShowMinimap), &m_Settings.bShowMinimap);
+		{
+			// Clicking cycles through the languages
+			u32 languageIndex = 0;
+			for (u32 i = 0; i < Loc::GetLanguageCount(); ++i)
+			{
+				languageIndex = m_Settings.language == Loc::GetLanguageCode(i) ? i : languageIndex;
+			}
+			if (m_UI.Button("language", content.CutTop(rowHeight, gap), LOCF(Settings_Language, Loc::GetLanguageName(languageIndex))))
+			{
+				m_Settings.language = Loc::GetLanguageCode((languageIndex + 1) % Loc::GetLanguageCount());
+				bChanged = true;
+			}
+		}
 
 		if (bChanged)
 		{
@@ -950,7 +1150,7 @@ namespace flex
 		}
 
 		content.CutTop(8.0f * s);
-		if (m_UI.Button("back", content.CutTop(UITheme::BUTTON_HEIGHT * s), "Back", true))
+		if (m_UI.Button("back", content.CutTop(UITheme::BUTTON_HEIGHT * s), LOC(Common_Back), true))
 		{
 			m_SettingsFile.Serialize();
 			SetScreen(m_ScreenBeforeSettings);
@@ -1026,7 +1226,7 @@ namespace flex
 		m_UI.FillRectGradient(UIRect(0.0f, 0.0f, m_UI.Width(), m_UI.Height()), UITheme::WithAlpha(UITheme::SURFACE, 1.0f / UITheme::SURFACE.a), UITheme::INK);
 		const glm::vec2 center(m_UI.Width() * 0.5f, m_UI.Height() * 0.5f);
 		m_UI.Text(m_CurrentWorld.name, center.x, center.y - 60.0f * s, UITheme::TEXT_H1 * s, UITheme::TEXT_PRIMARY, TextAlign::CENTER, true);
-		m_UI.Text("Generating terrain...", center.x, center.y + 10.0f * s, UITheme::TEXT_BODY * s, UITheme::TEXT_SECONDARY, TextAlign::CENTER);
+		m_UI.Text(LOC(Loading_Terrain), center.x, center.y + 10.0f * s, UITheme::TEXT_BODY * s, UITheme::TEXT_SECONDARY, TextAlign::CENTER);
 
 		// Spinner: dots around a circle, the leading ones brightest
 		const u32 dotCount = 10;
@@ -1054,33 +1254,33 @@ namespace flex
 		const UIRect panel(m_UI.Width() * 0.5f - panelWidth * 0.5f, m_UI.Height() * 0.5f - panelHeight * 0.5f, panelWidth, panelHeight);
 		m_UI.Panel(panel);
 		UIRect content = panel.Inset(28.0f * s);
-		m_UI.Text("Paused", content.x + content.w * 0.5f, content.y + 34.0f * s, UITheme::TEXT_H1 * s, UITheme::TEXT_PRIMARY, TextAlign::CENTER, true);
-		m_UI.Text(m_CurrentWorld.name + "   |   " + FormatPlayTime(m_CurrentWorld.playTime) + " played", content.x + content.w * 0.5f, content.y + 84.0f * s, UITheme::TEXT_SMALL * s, UITheme::TEXT_SECONDARY, TextAlign::CENTER);
+		m_UI.Text(LOC(Pause_Title), content.x + content.w * 0.5f, content.y + 34.0f * s, UITheme::TEXT_H1 * s, UITheme::TEXT_PRIMARY, TextAlign::CENTER, true);
+		m_UI.Text(LOCF(Pause_Played, m_CurrentWorld.name.c_str(), FormatPlayTime(m_CurrentWorld.playTime).c_str()), content.x + content.w * 0.5f, content.y + 84.0f * s, UITheme::TEXT_SMALL * s, UITheme::TEXT_SECONDARY, TextAlign::CENTER);
 		content.CutTop(116.0f * s);
 
-		if (m_UI.Button("resume", content.CutTop(buttonHeight, gap), "Resume", true))
+		if (m_UI.Button("resume", content.CutTop(buttonHeight, gap), LOC(Pause_Resume), true))
 		{
 			SetScreen(Screen::PLAYING);
 			return;
 		}
-		if (m_UI.Button("map", content.CutTop(buttonHeight, gap), "Map & teleport"))
+		if (m_UI.Button("map", content.CutTop(buttonHeight, gap), LOC(Pause_Map)))
 		{
 			SetScreen(Screen::MAP);
 			return;
 		}
-		if (m_UI.Button("settings", content.CutTop(buttonHeight, gap), "Settings"))
+		if (m_UI.Button("settings", content.CutTop(buttonHeight, gap), LOC(Pause_Settings)))
 		{
 			m_ScreenBeforeSettings = Screen::PAUSED;
 			SetScreen(Screen::SETTINGS);
 			g_EngineInstance->SetSimulationPaused(true);
 			return;
 		}
-		if (m_UI.Button("menu", content.CutTop(buttonHeight, gap), "Save & quit to menu"))
+		if (m_UI.Button("menu", content.CutTop(buttonHeight, gap), LOC(Pause_QuitToMenu)))
 		{
 			LeaveWorld();
 			return;
 		}
-		if (m_UI.Button("quit", content.CutTop(buttonHeight, gap), "Save & quit game"))
+		if (m_UI.Button("quit", content.CutTop(buttonHeight, gap), LOC(Pause_QuitGame)))
 		{
 			SaveWorld();
 			g_EngineInstance->Stop();
@@ -1219,20 +1419,18 @@ namespace flex
 		m_UI.FillRect(UIRect(frame.x, frame.y, border + 1.0f, frame.h), frameColour, UITheme::RADIUS_S * s);
 		m_UI.FillRect(UIRect(mapRect.x + mapRect.w - 1.0f, frame.y, border + 1.0f, frame.h), frameColour, UITheme::RADIUS_S * s);
 
-		m_UI.Text("Map", frame.x, frame.y - 34.0f * s, UITheme::TEXT_H2 * s, UITheme::TEXT_PRIMARY, TextAlign::LEFT, true);
-		m_UI.Text("[Scroll] Zoom   [Middle drag] Pan   [C] Re-center   [Click] Teleport   [Esc / M] Close", frame.x + frame.w, frame.y - 34.0f * s,
+		m_UI.Text(LOC(Map_Title), frame.x, frame.y - 34.0f * s, UITheme::TEXT_H2 * s, UITheme::TEXT_PRIMARY, TextAlign::LEFT, true);
+		m_UI.Text(LOC(Map_Controls), frame.x + frame.w, frame.y - 34.0f * s,
 			UITheme::TEXT_CAPTION * s, UITheme::TEXT_SECONDARY, TextAlign::RIGHT);
 
 		// Scale: the distance across the view
 		{
-			char scaleText[64];
-			snprintf(scaleText, ARRAY_LENGTH(scaleText), "%.1f km across", 2.0f * viewExtent / 1000.0f);
-			m_UI.Text(scaleText, frame.x, frame.y + frame.h + 30.0f * s, UITheme::TEXT_CAPTION * s, UITheme::TEXT_SECONDARY);
+			m_UI.Text(LOCF(Map_Scale, 2.0f * viewExtent / 1000.0f), frame.x, frame.y + frame.h + 30.0f * s, UITheme::TEXT_CAPTION * s, UITheme::TEXT_SECONDARY);
 		}
 
 		if (!bHaveMap)
 		{
-			m_UI.Text("Mapping the area...", mapRect.x + mapRect.w * 0.5f, mapRect.y + mapRect.h * 0.5f, UITheme::TEXT_BODY_LARGE * s, UITheme::TEXT_SECONDARY, TextAlign::CENTER);
+			m_UI.Text(LOC(Map_Mapping), mapRect.x + mapRect.w * 0.5f, mapRect.y + mapRect.h * 0.5f, UITheme::TEXT_BODY_LARGE * s, UITheme::TEXT_SECONDARY, TextAlign::CENTER);
 		}
 
 		// Treasure chests found so far
@@ -1277,15 +1475,13 @@ namespace flex
 			const terrain::ColumnSample column = terrainGenerator->SampleColumn(target.x, target.y);
 			const std::string description = terrainGenerator->DescribeLocation(glm::vec3(target.x, column.height, target.y));
 			const real distance = glm::distance(glm::vec2(playerPos.x, playerPos.z), target);
-			char info[256];
-			snprintf(info, ARRAY_LENGTH(info), "%s   |   %.0fm high   |   %.1fkm away   |   Click to teleport", description.c_str(), column.height, distance / 1000.0f);
-			m_UI.Text(info, frame.x + frame.w, frame.y + frame.h + 30.0f * s, UITheme::TEXT_SMALL * s, UITheme::TEXT_PRIMARY, TextAlign::RIGHT);
+			m_UI.Text(LOCF(Map_Hover, description.c_str(), column.height, distance / 1000.0f), frame.x + frame.w, frame.y + frame.h + 30.0f * s, UITheme::TEXT_SMALL * s, UITheme::TEXT_PRIMARY, TextAlign::RIGHT);
 
 			if (m_UI.IsMousePressed())
 			{
 				// Above the surface; the player is placed on the ground below (or the nearest dry land)
 				player->TeleportOnTerrain(glm::vec3(target.x, glm::max(column.height, column.waterLevel) + 250.0f, target.y));
-				player->ShowNotification("Teleported " + FloatToString(distance / 1000.0f, 1) + "km");
+				player->ShowNotification(LOCF(Map_Teleported, distance / 1000.0f));
 				SetScreen(Screen::PLAYING);
 				return;
 			}
@@ -1305,6 +1501,10 @@ namespace flex
 			firstPersonCamera->FOV = glm::radians(m_Settings.fov);
 		}
 		AudioManager::SetMasterGain(m_Settings.masterVolume);
+		if (!Loc::SetLanguage(m_Settings.language))
+		{
+			m_Settings.language = Loc::GetLanguage();
+		}
 		g_Renderer->SetTerrainQuality(m_Settings.terrainQuality);
 
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
@@ -1360,7 +1560,7 @@ namespace flex
 		else if (m_Worlds.empty())
 		{
 			Print("No worlds to play, creating one\n");
-			CreateWorld("World 1", RandomSeed());
+			CreateWorld(LOCF(Worlds_DefaultName, 1), RandomSeed());
 		}
 	}
 
@@ -1371,32 +1571,43 @@ namespace flex
 		const std::string worldsDirectory = WorldsDirectory();
 		Platform::CreateDirectoryRecursive(worldsDirectory);
 		std::vector<std::string> filePaths;
-		if (!Platform::FindFilesInDirectory(worldsDirectory, filePaths, "json", true))
+		if (!Platform::FindFilesInDirectory(worldsDirectory, filePaths, "*", true))
 		{
 			return;
 		}
 
+		// Each world's folder has a world.bin (or its backup), or only a world.json if it hasn't been saved since
+		// the binary format was added
+		const u64 listStart = save::Ticks();
+		std::set<std::string> worldDirectories;
 		for (const std::string& filePath : filePaths)
 		{
-			if (!EndsWith(filePath, "world.json"))
+			if (EndsWith(filePath, "/world.bin") || EndsWith(filePath, "/world.bin.bak") || EndsWith(filePath, "/world.json"))
 			{
-				continue;
+				worldDirectories.insert(ExtractDirectoryString(filePath));
 			}
+		}
+
+		for (const std::string& worldDirectory : worldDirectories)
+		{
 			JSONObject worldObj;
-			if (!JSONParser::ParseFromFile(filePath, worldObj))
+			if (save::ReadWorldFile(worldDirectory, worldObj, true) == save::WorldFileSource::NONE)
 			{
 				continue;
 			}
 			WorldInfo info = {};
-			info.directory = ExtractDirectoryString(filePath);
+			info.directory = worldDirectory;
 			worldObj.TryGetString("name", info.name);
 			worldObj.TryGetInt("seed", info.seed);
 			worldObj.TryGetString("last played", info.lastPlayed);
 			worldObj.TryGetFloat("play time", info.playTime);
+			worldObj.TryGetString("created", info.created);
+			info.stats.Parse(worldObj);
 			m_Worlds.push_back(info);
 		}
 
 		std::sort(m_Worlds.begin(), m_Worlds.end(), [](const WorldInfo& a, const WorldInfo& b) { return a.lastPlayed > b.lastPlayed; });
+		Print("Listed %u worlds in %.2f ms\n", (u32)m_Worlds.size(), save::MsSince(listStart));
 	}
 
 	void Game::CreateWorld(const std::string& name, i32 seed)
@@ -1404,7 +1615,7 @@ namespace flex
 		// A unique folder for it
 		const std::string base = WorldsDirectory() + SanitizeName(name);
 		std::string directory = base + "/";
-		for (i32 i = 2; FileExists(directory + "world.json"); ++i)
+		for (i32 i = 2; save::WorldFileExists(directory); ++i)
 		{
 			directory = base + "_" + IntToString(i) + "/";
 		}
@@ -1416,7 +1627,7 @@ namespace flex
 		worldObj.fields.emplace_back("seed", JSONValue(seed));
 		worldObj.fields.emplace_back("created", JSONValue(Platform::GetDateString_YMDHMS()));
 		worldObj.fields.emplace_back("last played", JSONValue(Platform::GetDateString_YMDHMS()));
-		if (!WriteFile(directory + "world.json", worldObj.ToString(), false))
+		if (!save::WriteWorldFile(directory, worldObj))
 		{
 			PrintError("Failed to create world at %s\n", directory.c_str());
 			return;
@@ -1461,11 +1672,14 @@ namespace flex
 		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
 
 		JSONObject worldObj;
-		if (!JSONParser::ParseFromFile(world.directory + "world.json", worldObj))
+		save::WorldFileStats fileStats;
+		const save::WorldFileSource source = save::ReadWorldFile(world.directory, worldObj, false, &fileStats);
+		if (source == save::WorldFileSource::NONE)
 		{
 			PrintError("Failed to load world from %s\n", world.directory.c_str());
 			return;
 		}
+		Print("Read world file (%s, %u bytes) in %.2f ms\n", save::WorldFileSourceToString(source), (u32)fileStats.sizeBytes, fileStats.ioMs);
 
 		m_WorldLoadStartMs = StartupTimer::Elapsed();
 		m_CurrentWorld = world;
@@ -1493,6 +1707,19 @@ namespace flex
 			for (const JSONField& field : chestFields)
 			{
 				openedChests.insert((u64)std::stoull(field.value.AsString()));
+			}
+		}
+
+		// Stats (parsed again, the list's copy may be older)
+		m_CurrentWorld.stats.Parse(worldObj);
+		m_ExploredCells.clear();
+		m_bHaveLastPlayerPos = false;
+		std::string explored;
+		if (worldObj.TryGetString("explored", explored))
+		{
+			for (size_t i = 0; i + 8 <= explored.size(); i += 8)
+			{
+				m_ExploredCells.insert((u32)strtoul(explored.substr(i, 8).c_str(), nullptr, 16));
 			}
 		}
 
@@ -1571,12 +1798,15 @@ namespace flex
 		}
 		else
 		{
-			// A fresh start: just a pickaxe
+			// A fresh start: just the basic tools (in the first quick access slots)
 			player->ResetInventory();
-			const PrefabID pickaxeID = g_ResourceManager->GetPrefabID("pickaxe");
-			if (pickaxeID.IsValid())
+			for (const char* toolName : { "pickaxe", "axe", "shovel" })
 			{
-				player->AddToInventory(pickaxeID, 1);
+				const PrefabID toolID = g_ResourceManager->GetPrefabID(toolName);
+				if (toolID.IsValid())
+				{
+					player->AddToInventory(toolID, 1);
+				}
 			}
 		}
 
@@ -1599,6 +1829,7 @@ namespace flex
 			return;
 		}
 
+		const u64 saveStart = save::Ticks();
 		m_CurrentWorld.lastPlayed = Platform::GetDateString_YMDHMS();
 
 		JSONObject worldObj = {};
@@ -1607,6 +1838,10 @@ namespace flex
 		worldObj.fields.emplace_back("seed", JSONValue(m_CurrentWorld.seed));
 		worldObj.fields.emplace_back("last played", JSONValue(m_CurrentWorld.lastPlayed));
 		worldObj.fields.emplace_back("play time", JSONValue(m_CurrentWorld.playTime, 1));
+		if (!m_CurrentWorld.created.empty())
+		{
+			worldObj.fields.emplace_back("created", JSONValue(m_CurrentWorld.created));
+		}
 		worldObj.fields.emplace_back("time of day", JSONValue(scene->GetTimeOfDay(), 4));
 
 		Player* player = scene->GetPlayer(0);
@@ -1644,16 +1879,39 @@ namespace flex
 		}
 		worldObj.fields.emplace_back("opened chests", JSONValue(chestFields));
 
-		if (!WriteFile(m_CurrentWorld.directory + "world.json", worldObj.ToString(), false))
+		m_CurrentWorld.stats.chestsOpened = (u32)TreasureChest::GetOpenedChests().size();
+		m_CurrentWorld.stats.exploredCells = (u32)m_ExploredCells.size();
+		m_CurrentWorld.stats.Serialize(worldObj);
+		{
+			// Explored cells, as 8 hex digits each (see UpdateExplored)
+			std::string explored;
+			explored.reserve(m_ExploredCells.size() * 8);
+			char cellStr[16];
+			for (u32 cell : m_ExploredCells)
+			{
+				snprintf(cellStr, ARRAY_LENGTH(cellStr), "%08X", cell);
+				explored += cellStr;
+			}
+			worldObj.fields.emplace_back("explored", JSONValue(explored));
+		}
+
+		save::WorldFileStats fileStats;
+		// (Written on another thread: flushing it to disk can take 10+ ms)
+		if (!save::WriteWorldFile(m_CurrentWorld.directory, worldObj, &fileStats, true))
 		{
 			PrintError("Failed to save world to %s\n", m_CurrentWorld.directory.c_str());
 		}
 
+		const u64 editsStart = save::Ticks();
 		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
 		if (terrainGenerator != nullptr)
 		{
 			terrainGenerator->FlushEdits();
 		}
+		const ms editsMs = save::MsSince(editsStart);
+		const ms worldMs = (ms)((double)(editsStart - saveStart) / 1e6);
+		Print("Saved world (%u bytes, %u objects) in %.2f ms (gather %.2f, encode %.2f, start write %.2f, terrain edits %.2f)\n",
+			(u32)fileStats.sizeBytes, (u32)objects.size(), worldMs + editsMs, worldMs - fileStats.encodeMs - fileStats.ioMs, fileStats.encodeMs, fileStats.ioMs, editsMs);
 	}
 
 	void Game::LeaveWorld()
@@ -1689,8 +1947,9 @@ namespace flex
 
 	void Game::DeleteWorld(const WorldInfo& world)
 	{
+		save::WaitForPendingWrites();
 		std::vector<std::string> filePaths;
-		if (Platform::FindFilesInDirectory(world.directory, filePaths, "*", false))
+		if (Platform::FindFilesInDirectory(world.directory, filePaths, "*", true))
 		{
 			for (const std::string& filePath : filePaths)
 			{
@@ -1698,6 +1957,7 @@ namespace flex
 			}
 		}
 		Platform::DeleteFile(world.directory + "world.json", false);
+		Platform::DeleteEmptyDirectory(world.directory);
 		RefreshWorlds();
 	}
 } // namespace flex

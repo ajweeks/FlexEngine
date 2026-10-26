@@ -22,8 +22,10 @@ IGNORE_WARNINGS_POP
 #include "Cameras/TerminalCamera.hpp"
 #include "Cameras/VehicleCamera.hpp"
 #include "FlexEngine.hpp"
+#include "GameUI.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
+#include "Localization.hpp"
 #include "Inventory.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
@@ -214,7 +216,8 @@ namespace flex
 		}
 		m_BuildMode.Update();
 
-		// Chopping & campfires (before the pickaxe, which it takes the mouse buttons from while aiming at a plant)
+		// Chopping & campfires (before digging, which it takes the mouse buttons from while aiming at a plant)
+		m_ToolSwingTimer = glm::max(m_ToolSwingTimer - g_DeltaTime, 0.0f);
 		m_Woodcraft->Update();
 		UpdateTerrainTool();
 
@@ -308,6 +311,27 @@ namespace flex
 		if (stack.count > 1 || (stack.count == 1 && !m_bPreviewPlaceItemFromInventory))
 		{
 			desiredActiveItemPrefabID = stack.prefabID;
+		}
+
+		// Forget cached proxies which were destroyed by something else (e.g. Game::ClearWorldObjects removes every root
+		// object when a world is loaded), which previously left dangling pointers here (a use after free found by ASan)
+		{
+			BaseScene* currentScene = g_SceneManager->CurrentScene();
+			for (i32 i = (i32)m_ActiveItemCache.size() - 1; i >= 0; --i)
+			{
+				if (currentScene->GetGameObject(m_ActiveItemCache[i].m_ItemProxyID) == nullptr)
+				{
+					m_ActiveItemCache.erase(m_ActiveItemCache.begin() + i);
+					if (m_ActiveItemIndex == i)
+					{
+						m_ActiveItemIndex = -1;
+					}
+					else if (m_ActiveItemIndex > i)
+					{
+						--m_ActiveItemIndex;
+					}
+				}
+			}
 		}
 
 		ActiveItem* activeItem = m_ActiveItemIndex != -1 ? &m_ActiveItemCache[m_ActiveItemIndex] : nullptr;
@@ -631,6 +655,10 @@ namespace flex
 			m_GroundNormal = ToVec3(callback.m_hitNormalWorld);
 			const real normalLength = glm::length(m_GroundNormal);
 			m_GroundNormal = normalLength > 1e-4f ? m_GroundNormal / normalLength : VEC3_UP;
+			// The swept sphere is narrower than the capsule, so it touches the ground further down than the capsule
+			// would (more so on slopes). Without this, a resting player always looked a few centimeters above the
+			// ground, so was snapped down into it every step & pushed back out along the slope, creeping downhill.
+			m_GroundGap -= (m_Radius - sweepRadius) / glm::max(m_GroundNormal.y, 0.3f);
 			m_bGroundHit = true;
 		}
 
@@ -896,7 +924,7 @@ namespace flex
 		for (const Notification& notification : m_Notifications)
 		{
 			const real alpha = glm::clamp(notification.timeRemaining, 0.0f, 1.0f);
-			g_Renderer->DrawStringSS(notification.text, glm::vec4(1.0f, 0.88f, 0.45f, alpha), AnchorPoint::TOP, glm::vec2(0.0f, -yOffset), 1.5f, 0.7f);
+			g_Renderer->DrawStringSS(notification.text, UITheme::WithAlpha(UITheme::EMBER_GLOW, alpha), AnchorPoint::TOP, glm::vec2(0.0f, -yOffset), 1.5f, 0.7f);
 			yOffset += lineHeight;
 		}
 
@@ -907,15 +935,15 @@ namespace flex
 			std::string prompt;
 			switch (nearby->GetTypeID())
 			{
-			case TreasureChestSID: prompt = "[E] Open chest"; break;
-			case VehicleSID: prompt = "[E] Drive"; break;
-			case RowBoatSID: prompt = "[E] Row"; break;
-			case TerminalSID: prompt = "[E] Use terminal"; break;
+			case TreasureChestSID: prompt = LOC(Prompt_OpenChest); break;
+			case VehicleSID: prompt = LOC(Prompt_Drive); break;
+			case RowBoatSID: prompt = LOC(Prompt_Row); break;
+			case TerminalSID: prompt = LOC(Prompt_UseTerminal); break;
 			default: break;
 			}
 			if (!prompt.empty())
 			{
-				g_Renderer->DrawStringSS(prompt, glm::vec4(1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, -0.08f), 1.5f, 0.6f);
+				g_Renderer->DrawStringSS(prompt, UITheme::TEXT_PRIMARY, AnchorPoint::CENTER, glm::vec2(0.0f, -0.08f), 1.5f, 0.6f);
 			}
 		}
 	}

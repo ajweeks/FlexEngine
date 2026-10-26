@@ -28,6 +28,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/Objects/Industry.hpp" // For BuildHandToolMesh
 #include "Scene/SceneManager.hpp"
 
 namespace flex
@@ -686,9 +687,13 @@ namespace flex
 		{
 			prefabTemplate->GetMesh()->CloneSelf(child, true);
 		}
+		else if (BuildHandToolMesh(child, prefabTemplate->GetTypeID()))
+		{
+			// Procedural tool mesh
+		}
 		else
 		{
-			Mesh* mesh = SetMesh(new Mesh(child));
+			Mesh* mesh = child->SetMesh(new Mesh(child));
 			mesh->LoadPrefabShape(PrefabShape::CUBE, g_Renderer->GetPlaceholderMaterialID());
 		}
 

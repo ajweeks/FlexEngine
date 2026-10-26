@@ -82,5 +82,6 @@ namespace flex
 		terrain::PlantInfo m_TestPlant;
 		GameObjectID m_TestCampfireID = InvalidGameObjectID;
 		glm::vec3 m_TestCampfirePos = VEC3_ZERO;
+		i32 m_TestEditCount = 0; // (+1, 0: not counting)
 	};
 } // namespace flex

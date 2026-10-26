@@ -221,7 +221,7 @@ namespace flex
 		VkResult VulkanBuffer::Resize(VkDeviceSize newSize)
 		{
 			PROFILE_AUTO("VulkanBuffer Resize");
-			const ns start = Time::CurrentNanoseconds();
+			const u64 start = Time::NowTicks();
 			const VkDeviceSize oldSize = m_Size;
 
 			// Other allocations' data must survive the resize since their owners may not upload it again (e.g. static
@@ -252,7 +252,7 @@ namespace flex
 				deviceFreeMemory(m_Device->m_LogicalDevice, oldMemory, nullptr);
 
 				// Allocating & waiting for the GPU take some time for large buffers, but much less than reading them back
-				const ms resizeTime = Time::ConvertFormats(Time::CurrentNanoseconds() - start, Time::Format::NANOSECOND, Time::Format::MILLISECOND);
+				const ms resizeTime = Time::MillisecondsSince(start);
 				if (resizeTime > 100.0f)
 				{
 					PrintWarn("Slow buffer resize: \"%s\" from %.1fMB to %.1fMB took %.1fms\n", m_DEBUG_Name.c_str(), oldSize / (1024.0 * 1024.0), newSize / (1024.0 * 1024.0), resizeTime);
@@ -286,7 +286,7 @@ namespace flex
 			}
 
 			// Reading back host visible memory is slow, so large buffers should be sized to avoid resizing
-			const ms resizeTime = Time::ConvertFormats(Time::CurrentNanoseconds() - start, Time::Format::NANOSECOND, Time::Format::MILLISECOND);
+			const ms resizeTime = Time::MillisecondsSince(start);
 			if (resizeTime > 20.0f)
 			{
 				PrintWarn("Slow buffer resize: \"%s\" from %.1fMB to %.1fMB took %.1fms\n", m_DEBUG_Name.c_str(), oldSize / (1024.0 * 1024.0), newSize / (1024.0 * 1024.0), resizeTime);

@@ -32,24 +32,27 @@ void main()
 	float soften, shadowOpacity;
 	UnpackU32To2Float(softenOpacity, soften, shadowOpacity);
 
-	// out_Colour = vec4(inputs.colour); return;
-	// out_Colour = vec4(inputs.texCoord, 0, 1); return;
-
-	float shadowTexValue = texture(in_Texture, inputs.texCoord + shadow)[inputs.channel];
 	float texValue = texture(in_Texture, inputs.texCoord)[inputs.channel];
-	if (texValue < threshold - soften && shadowTexValue < threshold - soften)
+	float shadowTexValue = texture(in_Texture, inputs.texCoord + shadow)[inputs.channel];
+
+	// Change in the distance field per screen pixel, so edges are anti-aliased over one pixel at any scale
+	// (a fixed smoothing width is blurry when magnified & aliased when minified)
+	float pixelDist = max(length(vec2(dFdx(texValue), dFdy(texValue))), 1e-4);
+	float a = clamp((texValue - threshold) / pixelDist + 0.5, 0.0, 1.0);
+	// Drop shadows are softened further by the font's soften value
+	float shadowA = smoothstep(threshold - soften - pixelDist * 0.5, threshold + soften + pixelDist * 0.5, shadowTexValue);
+
+	// A dark shadow under dark text only thickens it (& fills the gaps between letters)
+	float luminance = dot(inputs.colour.rgb, vec3(0.2126, 0.7152, 0.0722));
+	shadowOpacity *= smoothstep(0.2, 0.5, luminance);
+
+	float textAlpha = a * inputs.colour.a;
+	float shadowAlpha = shadowA * shadowOpacity * inputs.colour.a;
+	// Text over its (black) shadow
+	float alpha = textAlpha + shadowAlpha * (1.0 - textAlpha);
+	if (alpha <= 0.0)
 	{
 		discard;
 	}
-
-	float max = threshold + soften;
-	float min = threshold - soften;
-	float a = clamp((texValue - min) / (max - min), 0, 1);
-	float shadowA = clamp((shadowTexValue - min) / (max - min), 0, 1);
-
-	vec4 colour = inputs.colour;
-	colour.a = mix(0.0, inputs.colour.a, a);
-	vec4 shadowColour = vec4(0.0);
-	shadowColour.a = mix(0.0, shadowOpacity, shadowA * inputs.colour.a);
-	out_Colour = mix(shadowColour, colour, colour.a);
+	out_Colour = vec4(inputs.colour.rgb * (textAlpha / alpha), alpha);
 }

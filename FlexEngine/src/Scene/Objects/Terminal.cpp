@@ -994,7 +994,7 @@ namespace flex
 
 	bool Terminal::SkipOverChar(char c)
 	{
-		if (isalpha(c) || isdigit(c))
+		if (isalpha((unsigned char)c) || isdigit((unsigned char)c))
 		{
 			return true;
 		}

@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "cactus",
+		"shader" : "pbr",
+		"const albedo" : "0.150,0.260,0.110",
+		"const roughness" : 0.750000
+	}
+}

@@ -23,6 +23,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
 #include "JSONTypes.hpp"
+#include "Localization.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
@@ -35,6 +36,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/SceneManager.hpp"
 #include "Traversal.hpp"
 #include "Window/Window.hpp"
+#include "WorldStats.hpp"
 
 namespace flex
 {
@@ -236,6 +238,20 @@ namespace flex
 	const char* BuildMaterialName(BuildMaterial material)
 	{
 		return (u32)material < (u32)BuildMaterial::_COUNT ? s_MaterialNames[(u32)material] : "Invalid";
+	}
+
+	const char* BuildPieceDisplayName(BuildPieceType type)
+	{
+		static const LocID ids[] = { LocID::Build_Floor, LocID::Build_Wall, LocID::Build_Roof, LocID::Build_Stairs, LocID::Build_Torch, LocID::Build_Ladder, LocID::Build_Rope };
+		static_assert(ARRAY_LENGTH(ids) == (u32)BuildPieceType::_COUNT, "ids must match BuildPieceType");
+		return (u32)type < (u32)BuildPieceType::_COUNT ? Loc::Get(ids[(u32)type]) : "";
+	}
+
+	const char* BuildMaterialDisplayName(BuildMaterial material)
+	{
+		static const LocID ids[] = { LocID::Build_Wood, LocID::Build_Stone };
+		static_assert(ARRAY_LENGTH(ids) == (u32)BuildMaterial::_COUNT, "ids must match BuildMaterial");
+		return (u32)material < (u32)BuildMaterial::_COUNT ? Loc::Get(ids[(u32)material]) : "";
 	}
 
 	BuildPiece::BuildPiece(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /* = false */) :
@@ -470,9 +486,11 @@ namespace flex
 				PointLightData data = {};
 				data.pos = flamePos;
 				data.enabled = 1;
-				data.colour = glm::vec3(1.0f, 0.62f, 0.32f);
+				// Light colours are linear: a warm white (~3500K) reads as firelight once lit surfaces' own colour is
+				// added, while a saturated orange turns wooden interiors entirely orange
+				data.colour = glm::vec3(1.0f, 0.8f, 0.6f);
 				// Fade out with distance so lights being reassigned isn't noticeable
-				data.brightness = 45.0f * flicker * (1.0f - glm::smoothstep(TORCH_LIGHT_RANGE * 0.7f, TORCH_LIGHT_RANGE, glm::sqrt(torches[i].first)));
+				data.brightness = 16.0f * flicker * (1.0f - glm::smoothstep(TORCH_LIGHT_RANGE * 0.7f, TORCH_LIGHT_RANGE, glm::sqrt(torches[i].first)));
 				if (light.lightID == InvalidPointLightID)
 				{
 					light.lightID = g_Renderer->RegisterPointLight(&data);
@@ -998,6 +1016,11 @@ namespace flex
 		piece->GetTransform()->SetWorldRotation(m_PlacementRot);
 		scene->AddRootObject(piece);
 		AudioManager::PlaySource(m_PlaceSoundID);
+		if (WorldStats* stats = GetCurrentWorldStats())
+		{
+			stats->piecesBuilt++;
+			stats->torchesPlaced += m_SelectedType == BuildPieceType::TORCH ? 1 : 0;
+		}
 		if (m_SelectedType == BuildPieceType::TORCH)
 		{
 			GameSounds::PlayTorchIgnite(m_PlacementPos);
@@ -1029,7 +1052,7 @@ namespace flex
 		{
 			const bool bSelected = i == (i32)m_SelectedType;
 			pieces += bSelected ? "[" : " ";
-			pieces += IntToString(i + 1) + " " + BuildPieceTypeName((BuildPieceType)i);
+			pieces += IntToString(i + 1) + " " + BuildPieceDisplayName((BuildPieceType)i);
 			pieces += bSelected ? "]" : " ";
 			pieces += " ";
 		}
@@ -1037,9 +1060,9 @@ namespace flex
 		const bool bUsesMaterial = m_SelectedType == BuildPieceType::FLOOR || m_SelectedType == BuildPieceType::WALL ||
 			m_SelectedType == BuildPieceType::ROOF || m_SelectedType == BuildPieceType::STAIRS;
 		std::vector<std::string> lines;
-		lines.push_back(std::string("BUILDING: ") + BuildPieceTypeName(m_SelectedType) + (bUsesMaterial ? std::string(" (") + BuildMaterialName(m_SelectedMaterial) + ")" : ""));
+		lines.push_back(bUsesMaterial ? LOCF(Build_TitleMaterial, BuildPieceDisplayName(m_SelectedType), BuildMaterialDisplayName(m_SelectedMaterial)) : LOCF(Build_Title, BuildPieceDisplayName(m_SelectedType)));
 		lines.push_back(pieces);
-		lines.push_back("[LMB] Place   [RMB] Remove   [Scroll/1-7] Piece   [R] Rotate   [N] Material   [B] Exit");
+		lines.push_back(LOC(Build_Controls));
 
 		const glm::vec4 titleColour(1.0f, 0.85f, 0.4f, 1.0f);
 		const glm::vec4 textColour(0.95f, 0.95f, 0.95f, 1.0f);

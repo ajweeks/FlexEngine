@@ -604,6 +604,8 @@ namespace flex
 			VkBool32 depthWriteEnable = VK_TRUE;
 			VkCompareOp depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
 			VkBool32 stencilTestEnable = VK_FALSE;
+			// Enables depth bias, set with vkCmdSetDepthBias (requires bSetDynamicStates)
+			bool bDynamicDepthBias = false;
 
 			VkSpecializationInfo* fragSpecializationInfo = nullptr;
 

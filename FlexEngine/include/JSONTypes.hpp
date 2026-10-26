@@ -172,7 +172,7 @@ namespace flex
 		std::vector<JSONField> fieldArrayValue;
 		std::vector<JSONObject> objectArrayValue;
 
-		u32 floatPrecision;
+		u32 floatPrecision = DEFAULT_FLOAT_PRECISION; // (Only used by float & vector types, but copied with every value)
 	};
 
 	struct JSONField
@@ -186,7 +186,9 @@ namespace flex
 		std::string label;
 		JSONValue value;
 
-		std::string ToString(i32 tabCount) const;
+		// Labels are omitted when empty (for field array entries) unless bAlwaysWriteLabel is set (for object fields, where an
+		// empty label must still be written for the result to be parseable)
+		std::string ToString(i32 tabCount, bool bAlwaysWriteLabel = false) const;
 	};
 
 	// Stores a small value's bytes in a pointer-sized slot (memcpy avoids strict-aliasing UB and over-reading)

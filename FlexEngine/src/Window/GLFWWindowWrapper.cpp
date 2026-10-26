@@ -179,6 +179,10 @@ namespace flex
 
 		glfwSetWindowPos(m_Window, m_StartingPosition.x, m_StartingPosition.y);
 
+		// The OS can give the window a different size than requested (e.g. GLFW_MAXIMIZED on a smaller monitor than
+		// the saved size), and that resize happens inside glfwCreateWindow, before our callbacks are registered
+		SyncFrameBufferSize();
+
 		if (!g_bHeadless)
 		{
 			glfwFocusWindow(m_Window);
@@ -257,8 +261,29 @@ namespace flex
 		}
 	}
 
+	void GLFWWindowWrapper::SyncFrameBufferSize()
+	{
+		if (m_Window == nullptr)
+		{
+			return;
+		}
+
+		glm::vec2i frameBufferSize;
+		glfwGetFramebufferSize(m_Window, &frameBufferSize.x, &frameBufferSize.y);
+		// Zero while iconified; keep the last real size so layout code never divides by zero
+		if (frameBufferSize.x > 0 && frameBufferSize.y > 0 && frameBufferSize != m_FrameBufferSize)
+		{
+			SetFrameBufferSize(frameBufferSize.x, frameBufferSize.y);
+		}
+	}
+
 	void GLFWWindowWrapper::SetSize(i32 width, i32 height)
 	{
+		// A maximized window ignores size changes
+		if (glfwGetWindowAttrib(m_Window, GLFW_MAXIMIZED) == GLFW_TRUE)
+		{
+			glfwRestoreWindow(m_Window);
+		}
 		glfwSetWindowSize(m_Window, width, height);
 
 		OnSizeChanged(width, height);
@@ -425,6 +450,9 @@ namespace flex
 	void GLFWWindowWrapper::Update()
 	{
 		Window::Update();
+
+		// Catch any size change whose callback was missed, so text, UI & the swap chain always agree on the size
+		SyncFrameBufferSize();
 
 		if (glfwWindowShouldClose(m_Window))
 		{

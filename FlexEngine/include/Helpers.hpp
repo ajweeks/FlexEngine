@@ -36,6 +36,8 @@ namespace flex
 	* Returns true if reading and parsing succeeded
 	*/
 	bool ParseWAVFile(const std::string& filePath, i32* format, u8** data, u32* size, u32* freq, StringBuilder& outErrorStr);
+	// Parses WAV file contents already in memory (filePath is only used in error messages)
+	bool ParseWAVData(const std::vector<char>& dataArray, const std::string& filePath, i32* format, u8** data, u32* size, u32* freq, StringBuilder& outErrorStr);
 
 	// Returns string containing precision decimal places and a suffix if the number is larger than 999
 	// (e.g. (15690, 1) => "15.7k", (965840305, 2 => "965.84M"

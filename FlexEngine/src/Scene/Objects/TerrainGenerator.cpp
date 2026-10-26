@@ -37,6 +37,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/Objects/Props.hpp" // For DroppedItem
 #include "Scene/Objects/Road.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Systems/JobSystem.hpp"
@@ -231,7 +232,7 @@ namespace flex
 		m_Streamer->Start(params, threadCount, snapshotPath);
 		m_QueryDensity.reset();
 		m_bParamsDirty = false;
-		m_LoadStartTime = Time::CurrentNanoseconds();
+		m_LoadStartTime = Time::NowTicks();
 		m_bLoadComplete = false;
 		m_MaxApplyTime = 0.0f;
 
@@ -305,7 +306,7 @@ namespace flex
 			m_Streamer->LoadSnapshotAsync();
 		}
 		m_QueryDensity.reset();
-		m_LoadStartTime = Time::CurrentNanoseconds();
+		m_LoadStartTime = Time::NowTicks();
 		m_bLoadComplete = false;
 		m_MaxApplyTime = 0.0f;
 		m_WorldMap.bValid = false;
@@ -343,6 +344,10 @@ namespace flex
 				UpdateRigidBodies();
 			}
 			UpdateEditorBrush();
+			if (s_Active == this)
+			{
+				UpdateVegetationTour();
+			}
 			{
 				PROFILE_AUTO("TerrainGenerator UpdateMinimap");
 				UpdateMinimap();
@@ -364,7 +369,7 @@ namespace flex
 					{
 						triangleCount += pair.second.meshComponent != nullptr ? pair.second.meshComponent->GetIndexCount() / 3 : 0;
 					}
-					const ms loadTime = Time::ConvertFormats(Time::CurrentNanoseconds() - m_LoadStartTime, Time::Format::NANOSECOND, Time::Format::MILLISECOND);
+					const ms loadTime = Time::MillisecondsSince(m_LoadStartTime);
 					Print("Terrain loaded in %.0fms (%u chunks, %u non-empty, %u from disk cache, %u triangles, avg %.2fms/chunk on %u threads, avg upload %.2fms/chunk, max upload %.1fms/frame)\n",
 						loadTime, stats.displayedChunkCount, stats.displayedNonEmptyChunkCount, stats.snapshotChunkCount, triangleCount,
 						stats.averageGenerationTime, stats.threadCount, m_UploadCount > 0 ? m_TotalUploadTime / (real)m_UploadCount : 0.0f, m_MaxApplyTime);
@@ -373,6 +378,264 @@ namespace flex
 		}
 
 		GameObject::Update();
+	}
+
+	void TerrainGenerator::UpdateVegetationTour()
+	{
+		struct TourStop
+		{
+			std::string name;
+			glm::vec3 pos;
+		};
+		static i32 s_Step = getenv("FLEX_VEGETATION_TOUR") != nullptr ? 0 : -1;
+		static real s_Time = 0.0f;
+		static std::vector<TourStop> s_Stops;
+		static u32 s_StopIndex = 0;
+		static terrain::PlantInfo s_Cactus;
+		if (s_Step < 0)
+		{
+			return;
+		}
+
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player == nullptr || !m_bLoadComplete || player->IsAwaitingTerrainCollision())
+		{
+			return;
+		}
+		s_Time += g_UnpausedDeltaTime;
+		BaseScene* scene = g_SceneManager->CurrentScene();
+
+		auto Settled = [this]()
+		{
+			const terrain::TerrainStreamer::Stats stats = m_Streamer->GetStats();
+			return stats.bSettled && m_ChunkCommands.empty() && m_StagedChunks.empty();
+		};
+		auto Screenshot = [](const std::string& name)
+		{
+			const std::string directory = RelativePathToAbsolute(SCREENSHOT_DIRECTORY);
+			Platform::CreateDirectoryRecursive(directory);
+			g_Renderer->RequestScreenshot(directory + "vegetation_" + name + ".png");
+		};
+		auto Aim = [player](const glm::vec3& target)
+		{
+			const glm::vec3 delta = target - player->GetEyePosition();
+			player->GetTransform()->SetWorldRotation(glm::angleAxis(std::atan2(delta.x, delta.z), VEC3_UP));
+			player->SetPitch(-std::atan2(delta.y, glm::length(glm::vec2(delta.x, delta.z))));
+		};
+		auto CountPlants = [this](const glm::vec3& center, real extent, std::string* outSummary)
+		{
+			std::vector<terrain::PlantInfo> plants;
+			FindPlants(center - glm::vec3(extent, 400.0f, extent), center + glm::vec3(extent, 400.0f, extent), plants);
+			if (outSummary != nullptr)
+			{
+				static const char* speciesNames[] = { "none", "spruce", "pine", "birch", "oak", "willow", "acacia", "saguaro" };
+				u32 counts[ARRAY_LENGTH(speciesNames)] = {};
+				for (const terrain::PlantInfo& plant : plants)
+				{
+					++counts[glm::min((u32)plant.species, (u32)ARRAY_LENGTH(speciesNames) - 1)];
+				}
+				for (u32 i = 1; i < ARRAY_LENGTH(speciesNames); ++i)
+				{
+					if (counts[i] > 0)
+					{
+						*outSummary += std::string(speciesNames[i]) + ": " + std::to_string(counts[i]) + " ";
+					}
+				}
+			}
+			return (u32)plants.size();
+		};
+
+		switch (s_Step)
+		{
+		case 0:
+		{
+			// The nearest well vegetated spot well inside each biome
+			const std::vector<terrain::BiomeParams>& biomes = m_Params.biomes;
+			const glm::vec3 origin = player->GetTransform()->GetWorldPosition();
+			std::vector<std::vector<glm::vec3>> candidates(biomes.size());
+			const i32 halfCount = 90;
+			const real spacing = 500.0f;
+			for (i32 ring = 0; ring <= halfCount; ++ring)
+			{
+				for (i32 iz = -ring; iz <= ring; ++iz)
+				{
+					for (i32 ix = -ring; ix <= ring; ++ix)
+					{
+						if (glm::max(glm::abs(ix), glm::abs(iz)) != ring)
+						{
+							continue;
+						}
+						const real x = origin.x + (real)ix * spacing;
+						const real z = origin.z + (real)iz * spacing;
+						const terrain::ColumnSample column = SampleColumn(x, z);
+						if (column.primaryBiome < 0 || column.primaryBiome >= (i32)biomes.size() || column.primaryBiomeShare < 0.95f ||
+							column.oceanWeight > 0.05f || column.massifWeight > 0.1f || (column.lakeID != 0 && column.lakeT < 1.5f) ||
+							candidates[column.primaryBiome].size() >= 6)
+						{
+							continue;
+						}
+						candidates[column.primaryBiome].push_back(glm::vec3(x, column.height, z));
+					}
+				}
+			}
+			for (u32 b = 0; b < (u32)biomes.size(); ++b)
+			{
+				u32 bestCount = 0;
+				glm::vec3 best(0.0f);
+				for (const glm::vec3& candidate : candidates[b])
+				{
+					const u32 count = CountPlants(candidate, 60.0f, nullptr);
+					if (count >= bestCount)
+					{
+						bestCount = count;
+						best = candidate;
+					}
+				}
+				if (candidates[b].empty())
+				{
+					Print("Vegetation tour: no %s found\n", biomes[b].name.c_str());
+					continue;
+				}
+				s_Stops.push_back({ biomes[b].name, best });
+			}
+			scene->SetTimeOfDay(0.1f);
+			scene->SetTimeOfDayPaused(true);
+			s_StopIndex = 0;
+			s_Step = s_Stops.empty() ? 10 : 1;
+			s_Time = 0.0f;
+		} break;
+		case 1:
+		{
+			const TourStop& stop = s_Stops[s_StopIndex];
+			player->TeleportOnTerrain(stop.pos + glm::vec3(0.0f, 2.0f, 0.0f));
+			s_Step = 2;
+			s_Time = 0.0f;
+		} break;
+		case 2:
+		{
+			const TourStop& stop = s_Stops[s_StopIndex];
+			// Look towards the plants nearby
+			std::vector<terrain::PlantInfo> plants;
+			const glm::vec3 eye = player->GetEyePosition();
+			FindPlants(eye - glm::vec3(60.0f, 200.0f, 60.0f), eye + glm::vec3(60.0f, 200.0f, 60.0f), plants);
+			glm::vec3 target = eye + glm::vec3(0.0f, -2.0f, 30.0f);
+			if (!plants.empty())
+			{
+				glm::vec3 sum(0.0f);
+				for (const terrain::PlantInfo& plant : plants)
+				{
+					sum += plant.base;
+				}
+				target = sum / (real)plants.size();
+				if (glm::distance(glm::vec2(target.x, target.z), glm::vec2(eye.x, eye.z)) < 8.0f)
+				{
+					target = plants[0].base;
+				}
+				target.y += 2.0f;
+			}
+			Aim(target);
+			if (s_Time > 4.0f && Settled())
+			{
+				std::string summary;
+				const u32 count = CountPlants(eye, 100.0f, &summary);
+				const terrain::ColumnSample column = SampleColumn(eye.x, eye.z);
+				Print("Vegetation tour: %s at (%.0f, %.0f, %.0f), %s: %u plants within 100m (%s)\n", stop.name.c_str(), eye.x, eye.y, eye.z,
+					terrain::VegetationName(m_Params.biomes[glm::clamp(column.primaryBiome, 0, (i32)m_Params.biomes.size() - 1)].vegetation), count, summary.c_str());
+				std::string fileName = std::to_string(s_StopIndex) + "_" + stop.name;
+				for (char& c : fileName)
+				{
+					c = c == ' ' ? '_' : (char)tolower(c);
+				}
+				Screenshot(fileName);
+				s_Step = 3;
+				s_Time = 0.0f;
+			}
+		} break;
+		case 3:
+			if (s_Time > 0.5f)
+			{
+				++s_StopIndex;
+				s_Step = s_StopIndex < (u32)s_Stops.size() ? 1 : 10;
+				s_Time = 0.0f;
+			}
+			break;
+		case 10:
+		{
+			// Fell the nearest cactus, & check what it drops
+			bool bFound = false;
+			const glm::vec3 origin = player->GetTransform()->GetWorldPosition();
+			for (const TourStop& stop : s_Stops)
+			{
+				std::vector<terrain::PlantInfo> plants;
+				FindPlants(stop.pos - glm::vec3(150.0f, 400.0f, 150.0f), stop.pos + glm::vec3(150.0f, 400.0f, 150.0f), plants);
+				for (const terrain::PlantInfo& plant : plants)
+				{
+					if (plant.kind == terrain::PlantKind::CACTUS)
+					{
+						s_Cactus = plant;
+						bFound = true;
+						break;
+					}
+				}
+				if (bFound)
+				{
+					break;
+				}
+			}
+			FLEX_UNUSED(origin);
+			if (!bFound)
+			{
+				Print("Vegetation tour: no cactus found\n");
+				s_Step = 100;
+				break;
+			}
+			player->TeleportOnTerrain(s_Cactus.base + glm::vec3(4.0f, 1.5f, 2.0f));
+			s_Step = 11;
+			s_Time = 0.0f;
+		} break;
+		case 11:
+			Aim(s_Cactus.base + VEC3_UP * 1.0f);
+			if (s_Time > 3.0f && Settled())
+			{
+				Screenshot("cactus_1_before");
+				FellPlant(s_Cactus, VEC3_ZERO);
+				s_Step = 12;
+				s_Time = 0.0f;
+			}
+			break;
+		case 12:
+			Aim(s_Cactus.base + VEC3_UP * 0.5f);
+			if (s_Time > 1.0f && s_Time - g_UnpausedDeltaTime <= 1.0f)
+			{
+				Screenshot("cactus_2_falling");
+			}
+			if (s_Time > 10.0f)
+			{
+				std::vector<DroppedItem*> items;
+				scene->GetDroppedItemsInRadius(s_Cactus.base, 20.0f, items);
+				Print("Vegetation tour: felled a cactus (height %.1f), %u dropped items nearby:\n", s_Cactus.height, (u32)items.size());
+				for (DroppedItem* item : items)
+				{
+					GameObject* prefab = g_ResourceManager->GetPrefabTemplate(item->prefabID);
+					const glm::vec3 pos = item->GetTransform()->GetWorldPosition();
+					Print("  %s x%d at (%.1f, %.1f, %.1f)\n", prefab != nullptr ? prefab->GetName().c_str() : "?", item->stackSize, pos.x, pos.y, pos.z);
+				}
+				Screenshot("cactus_3_dropped");
+				s_Step = 100;
+				s_Time = 0.0f;
+			}
+			break;
+		case 100:
+			if (s_Time > 1.0f)
+			{
+				Print("Vegetation tour: done\n");
+				g_EngineInstance->Stop();
+				s_Step = 101;
+			}
+			break;
+		default:
+			break;
+		}
 	}
 
 	TerrainGenerator::Chunk TerrainGenerator::CreateChunk(terrain::ChunkCommand& command, bool bHidden)
@@ -463,9 +726,9 @@ namespace flex
 
 	TerrainGenerator::Chunk TerrainGenerator::CreateChunkTimed(terrain::ChunkCommand& command, bool bHidden)
 	{
-		const ns start = Time::CurrentNanoseconds();
+		const u64 start = Time::NowTicks();
 		Chunk chunk = CreateChunk(command, bHidden);
-		m_TotalUploadTime += Time::ConvertFormats(Time::CurrentNanoseconds() - start, Time::Format::NANOSECOND, Time::Format::MILLISECOND);
+		m_TotalUploadTime += Time::MillisecondsSince(start);
 		++m_UploadCount;
 		return chunk;
 	}
@@ -491,13 +754,14 @@ namespace flex
 
 		PROFILE_AUTO("TerrainGenerator ApplyChunkCommands");
 
-		const ns start = Time::CurrentNanoseconds();
+		// (Float timestamps lose precision over long sessions, which would make the budget check unreliable)
+		const u64 start = Time::NowTicks();
 		// Uploads are spread over multiple frames to avoid hitches (with a larger budget while the initial load fills the
 		// screen, or when falling behind while moving quickly)
 		const ms frameBudget = m_bLoadComplete ? glm::mix(4.0f, 8.0f, glm::clamp((real)m_ChunkCommands.size() / 200.0f, 0.0f, 1.0f)) : 12.0f;
 		auto IsOverBudget = [start, frameBudget]()
 		{
-			return Time::ConvertFormats(Time::CurrentNanoseconds() - start, Time::Format::NANOSECOND, Time::Format::MILLISECOND) > frameBudget;
+			return Time::MillisecondsSince(start) > frameBudget;
 		};
 
 		// Commands are consumed from the front, then erased all at once (erasing one at a time is quadratic)
@@ -588,7 +852,7 @@ namespace flex
 		}
 		m_ChunkCommands.erase(m_ChunkCommands.begin(), m_ChunkCommands.begin() + head);
 
-		m_LastApplyTime = Time::ConvertFormats(Time::CurrentNanoseconds() - start, Time::Format::NANOSECOND, Time::Format::MILLISECOND);
+		m_LastApplyTime = Time::MillisecondsSince(start);
 		m_MaxApplyTime = glm::max(m_MaxApplyTime, m_LastApplyTime);
 	}
 
@@ -883,6 +1147,38 @@ namespace flex
 		return m_Streamer != nullptr ? m_Streamer->SampleSurface(pos, normal) : terrain::SurfaceAttributes{};
 	}
 
+	u32 TerrainGenerator::GetEditCount() const
+	{
+		return m_Streamer != nullptr ? (u32)m_Streamer->Edits().Edits().size() : 0;
+	}
+
+	bool TerrainGenerator::FindPlacedMaterial(const glm::vec3& pos, terrain::Material& outMaterial) const
+	{
+		if (m_Streamer == nullptr)
+		{
+			return false;
+		}
+
+		const real tolerance = m_Params.voxelSize * 0.5f;
+		std::vector<terrain::Edit> edits;
+		m_Streamer->Edits().Gather(pos - glm::vec3(tolerance), pos + glm::vec3(tolerance), edits);
+		// The latest edit containing the point wins (like TerrainDensity::ComputeSurface)
+		for (auto iter = edits.rbegin(); iter != edits.rend(); ++iter)
+		{
+			if (iter->type == terrain::EditType::REMOVE_PLANT || glm::distance(pos, iter->center) > iter->radius + tolerance)
+			{
+				continue;
+			}
+			if (iter->type == terrain::EditType::FILL)
+			{
+				outMaterial = iter->material;
+				return true;
+			}
+			return false;
+		}
+		return false;
+	}
+
 	terrain::ColumnSample TerrainGenerator::SampleColumn(real x, real z) const
 	{
 		if (m_Streamer == nullptr)
@@ -1134,6 +1430,22 @@ namespace flex
 		bChanged = ImGui::ColorEdit3("Cliff", &biome.cliffColour.x) || bChanged;
 		bChanged = ImGui::ColorEdit3("Peak", &biome.peakColour.x) || bChanged;
 		bChanged = ImGui::DragFloat("Peak height", &biome.peakHeight, 5.0f, -1000.0f, 100000.0f) || bChanged;
+
+		ImGui::Text("Vegetation");
+		if (ImGui::BeginCombo("Type", terrain::VegetationName(biome.vegetation)))
+		{
+			for (u32 i = 0; i < (u32)terrain::Vegetation::_COUNT; ++i)
+			{
+				if (ImGui::Selectable(terrain::VegetationName((terrain::Vegetation)i), (u32)biome.vegetation == i))
+				{
+					biome.vegetation = (terrain::Vegetation)i;
+					bChanged = true;
+				}
+			}
+			ImGui::EndCombo();
+		}
+		bChanged = ImGui::SliderFloat("Tree density", &biome.treeDensity, 0.0f, 3.0f) || bChanged;
+		bChanged = ImGui::SliderFloat("Bush density", &biome.bushDensity, 0.0f, 3.0f) || bChanged;
 
 		return bChanged;
 	}
@@ -2020,6 +2332,27 @@ namespace flex
 		biomeObj.TryGetVec3("cliff colour", biome.cliffColour);
 		biomeObj.TryGetVec3("peak colour", biome.peakColour);
 		biomeObj.TryGetFloat("peak height", biome.peakHeight);
+
+		// Biomes saved before vegetation types take the matching default biome's (or one suiting their climate)
+		terrain::Vegetation defaultVegetation = biome.temperature < -0.7f ? terrain::Vegetation::TUNDRA :
+			biome.temperature < -0.2f ? terrain::Vegetation::TAIGA :
+			biome.temperature < 0.05f ? terrain::Vegetation::NORDIC :
+			biome.temperature < 0.5f ? terrain::Vegetation::BROADLEAF :
+			biome.grassiness > 0.12f ? terrain::Vegetation::SAVANNA : terrain::Vegetation::DESERT;
+		for (const terrain::BiomeParams& defaultBiome : terrain::WorldParams::Default().biomes)
+		{
+			if (defaultBiome.name == biome.name)
+			{
+				defaultVegetation = defaultBiome.vegetation;
+				biome.treeDensity = defaultBiome.treeDensity;
+				biome.bushDensity = defaultBiome.bushDensity;
+				break;
+			}
+		}
+		std::string vegetationName;
+		biome.vegetation = biomeObj.TryGetString("vegetation", vegetationName) ? terrain::ParseVegetation(vegetationName, defaultVegetation) : defaultVegetation;
+		biomeObj.TryGetFloat("tree density", biome.treeDensity);
+		biomeObj.TryGetFloat("bush density", biome.bushDensity);
 		return biome;
 	}
 
@@ -2044,6 +2377,9 @@ namespace flex
 		biomeObj.fields.emplace_back("cliff colour", JSONValue(biome.cliffColour, 2));
 		biomeObj.fields.emplace_back("peak colour", JSONValue(biome.peakColour, 2));
 		biomeObj.fields.emplace_back("peak height", JSONValue(biome.peakHeight, 1));
+		biomeObj.fields.emplace_back("vegetation", JSONValue(std::string(terrain::VegetationName(biome.vegetation))));
+		biomeObj.fields.emplace_back("tree density", JSONValue(biome.treeDensity, 2));
+		biomeObj.fields.emplace_back("bush density", JSONValue(biome.bushDensity, 2));
 		return biomeObj;
 	}
 

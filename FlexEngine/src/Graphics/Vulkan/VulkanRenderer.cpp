@@ -1275,10 +1275,17 @@ namespace flex
 
 		void VulkanRenderer::OnTextureDestroyed(TextureID textureID, Texture* texture)
 		{
-			auto spriteDescSetIter = m_SpriteDescSets.find(textureID);
-			if (spriteDescSetIter != m_SpriteDescSets.end())
+			for (auto spriteDescSetIter = m_SpriteDescSets.begin(); spriteDescSetIter != m_SpriteDescSets.end();)
 			{
-				m_SpriteDescSets.erase(spriteDescSetIter);
+				if (spriteDescSetIter->first.textureID == textureID)
+				{
+					m_DescriptorPoolPersistent->FreeSet(spriteDescSetIter->second.descSet);
+					spriteDescSetIter = m_SpriteDescSets.erase(spriteDescSetIter);
+				}
+				else
+				{
+					++spriteDescSetIter;
+				}
 			}
 
 			// Don't leave materials pointing at the soon-to-be-deleted texture
@@ -1364,12 +1371,22 @@ namespace flex
 				PROFILE_AUTO("CreateDynamicUniformBuffer");
 
 				GPUBuffer* dynamicBuffer = material->gpuBufferList.Get(GPUBufferType::DYNAMIC);
+				const u32 oldUnitSize = dynamicBuffer->data.unitSize;
+				const u32 oldBufferSize = dynamicBuffer->fullDynamicBufferSize;
 				dynamicBuffer->data.unitSize = shader->dynamicBufferUniforms.GetSizeInBytes();
 				if (dynamicBuffer->data.unitSize > 0)
 				{
-					dynamicBuffer->FreeHostMemory();
-
 					dynamicBuffer->data.unitSize = GetAlignedUBOSize(dynamicBuffer->data.unitSize);
+
+					// When growing, keep the existing contents so slots which aren't rewritten before the next draw
+					// (e.g. other objects in the same batch) don't read garbage
+					std::vector<u8> oldData;
+					if (dynamicBuffer->data.data != nullptr && oldUnitSize == dynamicBuffer->data.unitSize && oldBufferSize > 0)
+					{
+						oldData.assign(dynamicBuffer->data.data, dynamicBuffer->data.data + oldBufferSize);
+					}
+
+					dynamicBuffer->FreeHostMemory();
 
 					u32 uboAlignment = (u32)m_VulkanDevice->m_PhysicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
 					u32 dynamicAllignment =
@@ -1389,6 +1406,14 @@ namespace flex
 						CreateGPUBuffer(dynamicBuffer, dynamicBufferSize,
 							VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
 							true);
+
+						if (!oldData.empty())
+						{
+							const u32 copySize = glm::min((u32)oldData.size(), dynamicBufferSize);
+							memcpy(dynamicBuffer->data.data, oldData.data(), copySize);
+							// Written straight from the copy (reading back mapped write-combined memory is very slow)
+							memcpy(((VulkanGPUBuffer*)dynamicBuffer)->buffer.m_Mapped, oldData.data(), copySize);
+						}
 					}
 				}
 			}
@@ -1975,6 +2000,23 @@ namespace flex
 			EnqueueScreenSpaceSprites();
 
 			EnsureSpriteCapacity();
+
+			if (m_bEnableWireframeOverlay || m_bEnableSelectionWireframe || g_Editor->HasSelectedObject())
+			{
+				// Wireframes take one slot per object drawn, assigned while recording, so make room up front
+				u32 objectCount = 0;
+				for (ShaderBatch* batch : { &m_ForwardObjectBatches, &m_DeferredObjectBatches, &m_DepthAwareEditorObjBatches, &m_DepthUnawareEditorObjBatches })
+				{
+					for (const ShaderBatchPair& shaderBatch : batch->batches)
+					{
+						for (const MaterialBatchPair& matBatch : shaderBatch.batch.batches)
+						{
+							objectCount += (u32)matBatch.batch.objects.size();
+						}
+					}
+				}
+				EnsureDynamicUBOCapacity(m_Materials.at(m_WireframeMatID)->shaderID, objectCount);
+			}
 
 			FillOutOffscreenCommandBuffer();
 
@@ -4117,11 +4159,6 @@ namespace flex
 
 			BitmapFont* newFont = fontMetaData.bitmapFont;
 
-			// TODO: Save in common place
-			u32 sampleDensity = 32;
-			u32 padding = 1;
-			u32 spread = 5;
-
 			bool bUsingPreRenderedTexture = false;
 			std::string textureName = std::string("Font atlas ") + fileName;
 			VkFormat fontTexFormat = VK_FORMAT_R8G8B8A8_UNORM;
@@ -4178,198 +4215,28 @@ namespace flex
 				glm::vec2i textureSize(
 					std::max(std::max(maxPos[0].x, maxPos[1].x), std::max(maxPos[2].x, maxPos[3].x)),
 					std::max(std::max(maxPos[0].y, maxPos[1].y), std::max(maxPos[2].y, maxPos[3].y)));
+				textureSize = glm::max(textureSize, glm::vec2i(1));
 
-				VulkanTexture* fontTexColAttachment = (VulkanTexture*)newFont->SetTexture(CreateTexture(textureName));
-				fontTexColAttachment->CreateEmpty(textureSize.x, textureSize.y, 4, fontTexFormat, m_SamplerLinearClampToEdge, 1, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_SAMPLED_BIT);
-				fontTexColAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+				std::vector<u8> atlasPixels;
+				BitmapFont::GenerateSDFAtlas(face, newFont, characters, textureSize, atlasPixels);
 
-				VulkanMaterial* computeSDFMaterial = (VulkanMaterial*)m_Materials.at(m_ComputeSDFMatID);
-				ShaderID computeSDFShaderID = computeSDFMaterial->shaderID;
-				VulkanShader* computeSDFShader = (VulkanShader*)m_Shaders[computeSDFShaderID];
+				VulkanTexture* fontTex = (VulkanTexture*)newFont->SetTexture(CreateTexture(textureName));
+				fontTex->CreateFromMemory(atlasPixels.data(), (u32)atlasPixels.size(), (u32)textureSize.x, (u32)textureSize.y, 4,
+					(TextureFormat)fontTexFormat, 1, m_SamplerLinearClampToEdge);
 
-				VulkanRenderPass renderPass(m_VulkanDevice);
-				renderPass.RegisterForColourOnly("Font SDF render pass", InvalidFrameBufferAttachmentID, {});
-				renderPass.bCreateFrameBuffer = false;
-				renderPass.m_ColourAttachmentFormat = fontTexFormat;
-				renderPass.Create();
-
-				VkFramebufferCreateInfo framebufCreateInfo = vks::framebufferCreateInfo(renderPass);
-				framebufCreateInfo.attachmentCount = 1;
-				framebufCreateInfo.pAttachments = &fontTexColAttachment->imageView;
-				framebufCreateInfo.width = textureSize.x;
-				framebufCreateInfo.height = textureSize.y;
-				VkFramebuffer framebuffer = VK_NULL_HANDLE;
-				VK_CHECK_RESULT(vkCreateFramebuffer(m_VulkanDevice->m_LogicalDevice, &framebufCreateInfo, nullptr, &framebuffer));
-
-				VkCommandBuffer commandBuffer = m_CommandBufferManager.CreateCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY, true);
-
-				BeginDebugMarkerRegion(commandBuffer, "Generate font SDF");
-
-				VkRenderPassBeginInfo renderPassBeginInfo = vks::renderPassBeginInfo(renderPass);
-				renderPassBeginInfo.framebuffer = framebuffer;
-				renderPassBeginInfo.renderArea.offset = { 0, 0 };
-				renderPassBeginInfo.renderArea.extent = { (u32)textureSize.x, (u32)textureSize.y };
-				renderPassBeginInfo.clearValueCount = 1;
-				VkClearValue clearCol = {};
-				clearCol.color = VkClearColorValue{ 0.0f, 0.0f, 0.0f, 0.0f };
-				renderPassBeginInfo.pClearValues = &clearCol;
-				vkCmdBeginRenderPass(commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-				GraphicsPipelineID pipelineID = InvalidGraphicsPipelineID;
-				GraphicsPipelineCreateInfo pipelineCreateInfo = {};
-				pipelineCreateInfo.DBG_Name = "Load font pipeline";
-				pipelineCreateInfo.shaderID = computeSDFShaderID;
-				pipelineCreateInfo.vertexAttributes = computeSDFShader->vertexAttributes;
-				pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-				pipelineCreateInfo.cullMode = VK_CULL_MODE_NONE;
-				pipelineCreateInfo.bSetDynamicStates = true;
-				pipelineCreateInfo.bEnableAdditiveColourBlending = true;
-				pipelineCreateInfo.subpass = 0;
-				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
-				pipelineCreateInfo.depthWriteEnable = VK_FALSE;
-				pipelineCreateInfo.renderPass = renderPass;
-				pipelineCreateInfo.bPersistent = true;
-				CreateGraphicsPipeline(&pipelineCreateInfo, pipelineID);
-				GraphicsPipeline* pipeline = GetGraphicsPipeline(pipelineID)->pipeline;
-
-				glm::vec2 fontTexSize((real)fontTexColAttachment->width, (real)fontTexColAttachment->height);
-
-				u32 dynamicOffsetIndex = 0;
-				std::vector<VulkanTexture*> charTextures;
-				std::vector<VkDescriptorSet> descSets;
+				glm::vec2 fontTexSize((real)textureSize.x, (real)textureSize.y);
 				for (auto& charPair : characters)
 				{
-					FontMetric* metric = charPair.second;
-
-					u32 glyphIndex = FT_Get_Char_Index(face, metric->character);
-					if (glyphIndex == 0)
-					{
-						continue;
-					}
-
-					if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
-					{
-						PrintError("Failed to load glyph with index %u\n", glyphIndex);
-						continue;
-					}
-
-					if (face->glyph->format != FT_GLYPH_FORMAT_BITMAP)
-					{
-						if (FT_Render_Glyph(face->glyph, FT_RENDER_MODE_NORMAL))
-						{
-							PrintError("Failed to render glyph with index %u\n", glyphIndex);
-							continue;
-						}
-					}
-
-					if (face->glyph->bitmap.width == 0 ||
-						face->glyph->bitmap.rows == 0)
-					{
-						continue;
-					}
-
-					FT_Bitmap alignedBitmap = {};
-					if (FT_Bitmap_Convert(m_FTLibrary, &face->glyph->bitmap, &alignedBitmap, 1))
-					{
-						PrintError("Couldn't align free type bitmap size\n");
-						continue;
-					}
-
-					u32 width = alignedBitmap.width;
-					u32 height = alignedBitmap.rows;
-
-					CHECK(width != 0 && height != 0);
-
-					VulkanTexture* highResTex = (VulkanTexture*)CreateTexture("High res tex");
-					charTextures.push_back(highResTex);
-
-					++dynamicOffsetIndex;
-
-					// TODO: Pass in command buffer to avoid temporary?
-					highResTex->CreateFromMemory(alignedBitmap.buffer, width * height * sizeof(u8), width, height, 1, TextureFormat::R8_UNORM, 1, m_SamplerLinearClampToBorder);
-
-					glm::vec2i res = glm::vec2i(metric->width - padding * 2, metric->height - padding * 2);
-					glm::vec2i viewportTL = glm::vec2i(metric->texCoord) + glm::vec2i(padding);
-
-					VkViewport viewport = {
-						(real)viewportTL.x, (real)(viewportTL.y + res.y),
-						(real)res.x, -(real)res.y,
-						0.1f, 1.0f
-					};
-					vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
-
-					VkRect2D scissor = vks::scissor((u32)viewportTL.x, (u32)viewportTL.y, (u32)res.x, (u32)res.y);
-					vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
-
-					VkDeviceSize offsets[1] = { 0 };
-					vkCmdBindVertexBuffers(commandBuffer, 0, 1, &m_StaticVertexBuffers[computeSDFShader->staticVertexBufferIndex].second->m_Buffer, offsets);
-
-					vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
-
-					VkDescriptorSetLayout descSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(computeSDFShaderID);
-
-					DescriptorSetCreateInfo descSetCreateInfo = {};
-					descSetCreateInfo.DBG_Name = "Font SDF descriptor set";
-					descSetCreateInfo.descriptorSetLayout = descSetLayout;
-					descSetCreateInfo.shaderID = computeSDFShaderID;
-					descSetCreateInfo.gpuBufferList = &computeSDFMaterial->gpuBufferList;
-					descSetCreateInfo.imageDescriptors.SetUniform(&U_ALBEDO_SAMPLER, ImageDescriptorInfo{ highResTex->imageView, highResTex->sampler });
-					FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
-					// TODO: Allocate from temporary pool
-					VkDescriptorSet descriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
-					descSets.push_back(descriptorSet);
-
-					BindDescriptorSet(computeSDFMaterial, dynamicOffsetIndex * m_DynamicAlignment, commandBuffer, pipeline->layout, descriptorSet);
-
-					UniformOverrides overrides = {};
-					overrides.AddUniform(&U_TEX_CHANNEL, (i32)metric->channel);
-					overrides.AddUniform(&U_SDF_DATA, glm::vec4((real)res.x, (real)res.y, (real)spread, (real)sampleDensity));
-					UpdateDynamicUniformBuffer(m_ComputeSDFMatID, dynamicOffsetIndex * m_DynamicAlignment, MAT4_IDENTITY, &overrides);
-
-					VulkanRenderObject* quad3DRenderObject = GetRenderObject(m_Quad3DRenderID);
-					vkCmdDraw(commandBuffer, quad3DRenderObject->vertexBufferData->VertexCount, 1, quad3DRenderObject->vertexOffset, 0);
-
-					metric->texCoord = metric->texCoord / fontTexSize;
-
-					FT_Bitmap_Done(m_FTLibrary, &alignedBitmap);
+					charPair.second->texCoord = charPair.second->texCoord / fontTexSize;
 				}
-
-				vkCmdEndRenderPass(commandBuffer);
-
-				EndDebugMarkerRegion(commandBuffer, "End generate font SDF");
-
-				VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
-				SetCommandBufferName(m_VulkanDevice, commandBuffer, "Load font command buffer");
-
-				VkSubmitInfo submitInfo = vks::submitInfo(1, &commandBuffer);
-				VkPipelineStageFlags waitStages = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-				submitInfo.pWaitDstStageMask = &waitStages;
-
-				// TODO: Allow game to progress while this completes
-				VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
-				VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
-
-				for (VulkanTexture* highResTex : charTextures)
-				{
-					delete highResTex;
-				}
-				charTextures.clear();
-
-				vkFreeDescriptorSets(m_VulkanDevice->m_LogicalDevice, m_DescriptorPoolPersistent->GetPool(), (u32)descSets.size(), descSets.data());
-				descSets.clear();
-
-				DestroyGraphicsPipeline(pipelineID);
-				vkDestroyFramebuffer(m_VulkanDevice->m_LogicalDevice, framebuffer, nullptr);
 
 				std::string savedSDFTextureAbsFilePath = RelativePathToAbsolute(fontMetaData.renderedTextureFilePath);
 				std::string savedSDFDirectory = ExtractDirectoryString(savedSDFTextureAbsFilePath);
 				Platform::CreateDirectoryRecursive(savedSDFDirectory);
-				if (!fontTexColAttachment->SaveToFile(m_VulkanDevice, savedSDFTextureAbsFilePath, ImageFormat::PNG))
+				if (!SaveImage(savedSDFTextureAbsFilePath, ImageFormat::PNG, textureSize.x, textureSize.y, 4, atlasPixels.data()))
 				{
 					PrintError("Failed to write generated font SDF to %s\n", savedSDFTextureAbsFilePath.c_str());
 				}
-
-				fontTexColAttachment->TransitionToLayout(VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
 
 			FT_Done_Face(face);
@@ -4384,7 +4251,7 @@ namespace flex
 			for (auto& iter : m_SpriteDescSets)
 			{
 				m_DescriptorPoolPersistent->FreeSet(iter.second.descSet);
-				iter.second.descSet = CreateSpriteDescSet(iter.second.materialID, iter.first, iter.second.textureLayer);
+				iter.second.descSet = CreateSpriteDescSet(iter.second.materialID, iter.first.textureID, iter.second.textureLayer);
 			}
 
 			CreateDescriptorSets();
@@ -5027,8 +4894,8 @@ namespace flex
 				VkDescriptorSet descSet = GetSpriteDescriptorSet(drawInfo.textureID, matID, drawInfo.textureLayer, true);
 				if (descSet == VK_NULL_HANDLE)
 				{
-					// Texture may still be loading, use placeholder for now
-					descSet = GetSpriteDescriptorSet(pinkTextureID, matID, drawInfo.textureLayer, false);
+					// Texture may still be loading, use placeholder for now (cached, since uncached sets would leak every frame)
+					descSet = GetSpriteDescriptorSet(pinkTextureID, matID, drawInfo.textureLayer, true);
 					if (descSet == VK_NULL_HANDLE)
 					{
 						PrintError("Failed to create fallback descriptor set\n");
@@ -5076,23 +4943,9 @@ namespace flex
 				requiredShaderCount = glm::max(requiredShaderCount, pair.second);
 			}
 
-			bool bWaitedForIdle = false;
 			for (const auto& pair : requiredShaderCounts)
 			{
-				Shader* shader = m_Shaders[pair.first];
-				if ((i32)pair.second > shader->maxObjectCount)
-				{
-					if (!bWaitedForIdle)
-					{
-						// Growing recreates buffers & descriptor sets which in-flight frames may still reference
-						VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
-						bWaitedForIdle = true;
-					}
-
-					// Leave some headroom to avoid regrowing every time a sprite is added
-					const i32 newMax = (i32)glm::ceil(pair.second * 1.5f);
-					UpdateShaderMaxObjectCount(pair.first, newMax);
-				}
+				EnsureDynamicUBOCapacity(pair.first, pair.second);
 			}
 		}
 
@@ -5269,18 +5122,18 @@ namespace flex
 
 		VkDescriptorSet VulkanRenderer::GetSpriteDescriptorSet(TextureID textureID, MaterialID spriteMaterialID, u32 textureLayer, bool bCacheResult)
 		{
-			VkDescriptorSet descSet = VK_NULL_HANDLE;
-			if (m_SpriteDescSets.find(textureID) != m_SpriteDescSets.end())
+			// The set must reference the dynamic UBO of the material the sprite's slot is allocated from (& the right layer)
+			const SpriteDescSetKey key = { textureID, spriteMaterialID, textureLayer };
+			auto iter = m_SpriteDescSets.find(key);
+			if (iter != m_SpriteDescSets.end())
 			{
-				descSet = m_SpriteDescSets[textureID].descSet;
+				return iter->second.descSet;
 			}
-			else
+
+			VkDescriptorSet descSet = CreateSpriteDescSet(spriteMaterialID, textureID, textureLayer);
+			if (descSet != VK_NULL_HANDLE && bCacheResult)
 			{
-				descSet = CreateSpriteDescSet(spriteMaterialID, textureID, textureLayer);
-				if (descSet != VK_NULL_HANDLE && bCacheResult)
-				{
-					m_SpriteDescSets.insert({ textureID, { spriteMaterialID, descSet, textureLayer } });
-				}
+				m_SpriteDescSets.insert({ key, { spriteMaterialID, descSet, textureLayer } });
 			}
 			return descSet;
 		}
@@ -5350,6 +5203,8 @@ namespace flex
 			GraphicsPipelineCreateInfo pipelineCreateInfo = {};
 			pipelineCreateInfo.DBG_Name = debugName;
 			pipelineCreateInfo.bSetDynamicStates = true;
+			// Slope-scaled bias (set per cascade) keeps sloped surfaces from shadowing themselves
+			pipelineCreateInfo.bDynamicDepthBias = true;
 			pipelineCreateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 			pipelineCreateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
 			pipelineCreateInfo.bEnableColourBlending = false;
@@ -5604,38 +5459,32 @@ namespace flex
 		{
 			VulkanShader* shader = (VulkanShader*)GetShader(shaderID);
 
-			i32 oldMax = (i32)shader->maxObjectCount;
+			const i32 oldMax = (i32)shader->maxObjectCount;
 			shader->maxObjectCount = newMax;
 			Print("Growing dynamic UBO max object count of all materials who use shader \"%s\" from %i to %i\n", shader->name.c_str(), oldMax, shader->maxObjectCount);
-#if 1
-			// Efficient:
-			// Any materials that use this shader need their buffers grown too
-			// otherwise we'll think they have new max object count worth of space
+
+			// Buffers & descriptor sets in use by in-flight frames are about to be destroyed
+			VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
+
+			// Every material using this shader needs its buffer grown (they all share the shader's slot count), and every
+			// descriptor set referencing one of those buffers must be rewritten, whether or not any render object uses it
 			for (auto& materialPair : m_Materials)
 			{
-				if (materialPair.second->shaderID == shaderID)
+				if (materialPair.second->shaderID != shaderID)
 				{
-					CreateDynamicUniformBuffer((VulkanMaterial*)materialPair.second);
+					continue;
 				}
-			}
 
-			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
-			{
-				if (m_RenderObjects[i] != nullptr)
+				const MaterialID matID = materialPair.first;
+				CreateDynamicUniformBuffer((VulkanMaterial*)materialPair.second);
+
+				if (m_DescriptorPoolPersistent->GetSet(matID) != VK_NULL_HANDLE)
 				{
-					Material* objMat = GetMaterial(m_RenderObjects[i]->materialID);
-					if (objMat->shaderID == shaderID)
-					{
-						CreateGraphicsPipeline(i);
-						if (objMat->persistent)
-						{
-							m_DescriptorPoolPersistent->CreateDescriptorSet(m_RenderObjects[i]->materialID);
-						}
-						else
-						{
-							m_DescriptorPool->CreateDescriptorSet(m_RenderObjects[i]->materialID);
-						}
-					}
+					m_DescriptorPoolPersistent->CreateDescriptorSet(matID);
+				}
+				if (m_DescriptorPool->GetSet(matID) != VK_NULL_HANDLE)
+				{
+					m_DescriptorPool->CreateDescriptorSet(matID);
 				}
 			}
 
@@ -5647,26 +5496,80 @@ namespace flex
 					m_DescriptorPoolPersistent->FreeSet(spriteDescSetPair.second.descSet);
 					spriteDescSetPair.second.descSet = CreateSpriteDescSet(
 						spriteDescSetPair.second.materialID,
-						spriteDescSetPair.first,
+						spriteDescSetPair.first.textureID,
 						spriteDescSetPair.second.textureLayer);
 				}
 			}
-#else
-			// Naive:
-			for (auto& materialPair : m_Materials)
+
+			// Descriptor sets created outside of the descriptor pools' per-material lists
+			if (m_WireframeMatID != InvalidMaterialID && m_Materials.at(m_WireframeMatID)->shaderID == shaderID)
 			{
-				CreateDynamicUniformBuffer((VulkanMaterial*)materialPair.second);
+				CreateWireframeDescriptorSets();
+			}
+			if (m_ShadowMaterialID != InvalidMaterialID && m_Materials.at(m_ShadowMaterialID)->shaderID == shaderID)
+			{
+				if (m_ShadowDescriptorSet != VK_NULL_HANDLE)
+				{
+					m_DescriptorPoolPersistent->FreeSet(m_ShadowDescriptorSet);
+					m_ShadowDescriptorSet = VK_NULL_HANDLE;
+				}
+				CreateShadowResources();
+			}
+			auto ResetFontDescSets = [this, shaderID](const std::vector<BitmapFont*>& fonts, MaterialID fontMatID)
+			{
+				if (fontMatID == InvalidMaterialID || m_Materials.at(fontMatID)->shaderID != shaderID)
+				{
+					return;
+				}
+				for (BitmapFont* font : fonts)
+				{
+					if ((VkDescriptorSet)font->userData != VK_NULL_HANDLE)
+					{
+						m_DescriptorPoolPersistent->FreeSet((VkDescriptorSet)font->userData);
+						font->userData = 0; // Recreated on next use
+					}
+				}
+			};
+			ResetFontDescSets(g_ResourceManager->fontsScreenSpace, m_FontMatSSID);
+			ResetFontDescSets(g_ResourceManager->fontsWorldSpace, m_FontMatWSID);
+		}
+
+		bool VulkanRenderer::EnsureDynamicUBOCapacity(ShaderID shaderID, u32 requiredSlotCount)
+		{
+			VulkanShader* shader = (VulkanShader*)GetShader(shaderID);
+			if (shader == nullptr)
+			{
+				return false;
 			}
 
-			for (u32 i = 0; i < (u32)m_RenderObjects.size(); ++i)
+			const u32 currentMax = shader->maxObjectCount == -1 ? MAX_NUM_RENDER_OBJECTS : (u32)shader->maxObjectCount;
+			bool bTooSmall = currentMax < requiredSlotCount;
+			if (!bTooSmall)
 			{
-				if (m_RenderObjects[i] != nullptr)
+				// Every material's buffer should match the shader's count, but check the buffers themselves to be safe
+				const u64 requiredSize = (u64)requiredSlotCount * m_DynamicAlignment;
+				for (auto& materialPair : m_Materials)
 				{
-					CreateGraphicsPipeline(i);
+					if (materialPair.second->shaderID == shaderID)
+					{
+						const GPUBuffer* dynamicBuffer = materialPair.second->gpuBufferList.Get(GPUBufferType::DYNAMIC);
+						if (dynamicBuffer != nullptr && dynamicBuffer->fullDynamicBufferSize < requiredSize)
+						{
+							bTooSmall = true;
+							break;
+						}
+					}
 				}
 			}
-#endif
+			if (!bTooSmall)
+			{
+				return false;
+			}
 
+			// Grow geometrically, since every growth stalls the GPU & reallocates every material's buffer
+			const u32 newMax = currentMax >= requiredSlotCount ? currentMax : glm::max(requiredSlotCount + requiredSlotCount / 2, currentMax * 2);
+			UpdateShaderMaxObjectCount(shaderID, (i32)newMax);
+			return true;
 		}
 
 		void VulkanRenderer::CreateBRDFTexture()
@@ -6926,6 +6829,11 @@ namespace flex
 			}
 
 			VkPipelineRasterizationStateCreateInfo rasterizer = vks::pipelineRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, createInfo->cullMode, VK_FRONT_FACE_CLOCKWISE);
+			if (createInfo->bDynamicDepthBias)
+			{
+				CHECK(createInfo->bSetDynamicStates);
+				rasterizer.depthBiasEnable = VK_TRUE;
+			}
 
 			VkPipelineMultisampleStateCreateInfo multisampling = vks::pipelineMultisampleStateCreateInfo(VK_SAMPLE_COUNT_1_BIT);
 
@@ -6993,8 +6901,8 @@ namespace flex
 
 			VkPipelineDepthStencilStateCreateInfo depthStencil = vks::pipelineDepthStencilStateCreateInfo(createInfo->depthTestEnable, createInfo->depthWriteEnable, createInfo->depthCompareOp, createInfo->stencilTestEnable);
 
-			VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
-			VkPipelineDynamicStateCreateInfo dynamicState = vks::pipelineDynamicStateCreateInfo(ARRAY_LENGTH(dynamicStates), dynamicStates);
+			VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR, VK_DYNAMIC_STATE_DEPTH_BIAS };
+			VkPipelineDynamicStateCreateInfo dynamicState = vks::pipelineDynamicStateCreateInfo(createInfo->bDynamicDepthBias ? 3u : 2u, dynamicStates);
 			VkPipelineDynamicStateCreateInfo* pDynamicState = nullptr;
 			if (createInfo->bSetDynamicStates)
 			{
@@ -8204,20 +8112,16 @@ namespace flex
 				}
 			}
 
-			// Check if dynamic buffer needs to grow
-			if (dynamicBuffer != nullptr)
+			// Check if dynamic buffer needs to grow (only when assigning offsets: this may be called while recording, when
+			// buffers must not be recreated)
+			if (bWriteUBOOffsets && dynamicBuffer != nullptr)
 			{
-				u32 newUsedSize = *inOutDynamicUBOOffset + (dynamicObjectCount * dynamicBuffer->data.unitSize);
+				// Offsets advance by the aligned stride, not the unit size
+				const u32 stride = (u32)RoundUp((i32)dynamicBuffer->data.unitSize - 1, (i32)m_DynamicAlignment);
+				const u32 newUsedSize = *inOutDynamicUBOOffset + dynamicObjectCount * stride;
 				if (newUsedSize > dynamicBuffer->fullDynamicBufferSize)
 				{
-					// TODO: We may need to do this to be fully safe, once buffered resources are in it
-					// definitely won't be necessary though
-					//VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
-					//VK_CHECK_RESULT(vkQueueWaitIdle(m_PresentQueue));
-
-					real growthRate = 1.5f;
-					i32 newMax = (i32)glm::ceil((real)newUsedSize / m_DynamicAlignment * growthRate);
-					UpdateShaderMaxObjectCount(material->shaderID, newMax);
+					EnsureDynamicUBOCapacity(material->shaderID, (newUsedSize + m_DynamicAlignment - 1) / m_DynamicAlignment);
 				}
 			}
 
@@ -8294,13 +8198,7 @@ namespace flex
 			const u32 requiredSize = (slot + 1) * stride;
 			if (requiredSize > dynamicBuffer->fullDynamicBufferSize)
 			{
-				// Buffers are about to be recreated, ensure the GPU is no longer using them
-				VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
-
-				const real growthRate = 1.5f;
-				i32 newMax = (i32)glm::ceil((real)requiredSize / m_DynamicAlignment * growthRate);
-				UpdateShaderMaxObjectCount(material->shaderID, newMax);
-				return true;
+				return EnsureDynamicUBOCapacity(material->shaderID, (requiredSize + m_DynamicAlignment - 1) / m_DynamicAlignment);
 			}
 
 			return false;
@@ -8807,7 +8705,11 @@ namespace flex
 						pushedConstantsLayout = VK_NULL_HANDLE;
 					}
 
-					BindDescriptorSet(material, dynamicUBOOffset, commandBuffer, pipelineLayout, descriptorSet);
+					if (!BindDescriptorSet(material, dynamicUBOOffset, commandBuffer, pipelineLayout, descriptorSet))
+					{
+						// Its uniforms aren't in the buffer
+						continue;
+					}
 
 					Material::PushConstantBlock* pushConstantBlock = material->pushConstantBlock;
 					if (shader->bNeedPushConstantBlock)
@@ -9059,6 +8961,17 @@ namespace flex
 						}
 
 						m_ShadowRenderPass->Begin_WithFrameBuffer(m_OffScreenCmdBuffer, &depthStencilClearValue, 1, &m_ShadowCascades[c]->frameBuffer);
+
+						{
+							// Push casters away from the light by a few texels' worth of depth where they slope (reversed-Z, so
+							// negative). The slope term is in texels so it adapts to each cascade's resolution; the clamp
+							// (converted from texels to this cascade's normalized depth) stops near-vertical faces being
+							// pushed so far that their shadows detach from them
+							const real depthRange = glm::max(m_ShadowCascadeDepthRanges[c], 1e-3f);
+							const real texelSize = m_ShadowSamplingData.cascadeTexelSizes[c];
+							const real clamp = m_VulkanDevice->m_EnabledFeatures.depthBiasClamp ? -(m_ShadowSlopeBiasMaxTexels * texelSize) / depthRange : 0.0f;
+							vkCmdSetDepthBias(m_OffScreenCmdBuffer, 0.0f, clamp, -m_ShadowSlopeBias);
+						}
 
 						// TODO: Upload as one draw
 						m_CascadedShadowMapPushConstantBlock->SetData(m_ShadowSamplingData.cascadeViewProjMats[c]);
@@ -10077,13 +9990,27 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::BindDescriptorSet(const VulkanMaterial* material, u32 dynamicOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet, VkPipelineBindPoint bindPoint /* = VK_PIPELINE_BIND_POINT_GRAPHICS */) const
+		bool VulkanRenderer::BindDescriptorSet(const VulkanMaterial* material, u32 dynamicOffset, VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, VkDescriptorSet descriptorSet, VkPipelineBindPoint bindPoint /* = VK_PIPELINE_BIND_POINT_GRAPHICS */) const
 		{
+			bool bInRange = true;
 			u32* dynamicOffsetPtr = nullptr;
 			u32 dynamicOffsetCount = 0;
 			VulkanGPUBuffer const* dynamicBuffer = (VulkanGPUBuffer const*)material->gpuBufferList.Get(GPUBufferType::DYNAMIC);
 			if (dynamicBuffer != nullptr && dynamicBuffer->buffer.m_Size != 0)
 			{
+				// Never bind past the end of the buffer (the descriptor's range is one unit)
+				if ((u64)dynamicOffset + dynamicBuffer->data.unitSize > (u64)dynamicBuffer->buffer.m_Size)
+				{
+					static std::set<const VulkanMaterial*> s_WarnedMaterials;
+					if (s_WarnedMaterials.insert(material).second)
+					{
+						PrintError("Dynamic UBO offset %u out of range for material \"%s\" (buffer size %u), drawing skipped\n",
+							dynamicOffset, material->name.c_str(), (u32)dynamicBuffer->buffer.m_Size);
+					}
+					dynamicOffset = 0;
+					bInRange = false;
+				}
+
 				// This shader uses a dynamic buffer, so it needs a dynamic offset
 				dynamicOffsetPtr = &dynamicOffset;
 				dynamicOffsetCount = 1;
@@ -10092,6 +10019,8 @@ namespace flex
 			vkCmdBindDescriptorSets(commandBuffer, bindPoint, pipelineLayout,
 				0, 1, &descriptorSet,
 				dynamicOffsetCount, dynamicOffsetPtr);
+
+			return bInRange;
 		}
 
 
@@ -10137,7 +10066,7 @@ namespace flex
 			for (auto& iter : m_SpriteDescSets)
 			{
 				m_DescriptorPoolPersistent->FreeSet(iter.second.descSet);
-				iter.second.descSet = CreateSpriteDescSet(iter.second.materialID, iter.first, iter.second.textureLayer);
+				iter.second.descSet = CreateSpriteDescSet(iter.second.materialID, iter.first.textureID, iter.second.textureLayer);
 			}
 
 			CreateDescriptorSets();
@@ -10724,6 +10653,13 @@ namespace flex
 				return;
 			}
 
+			if (dynamicUBOOffsetOverride == InvalidID && renderObject->bPendingBatch)
+			{
+				// Its slot is (re)assigned & written when batches are next updated (its current offset may belong to
+				// another shader's buffer if its material changed)
+				return;
+			}
+
 			MaterialID matID = materialIDOverride == InvalidMaterialID ? renderObject->materialID : materialIDOverride;
 			u32 dynamicUBOOffset = dynamicUBOOffsetOverride == InvalidID ? renderObject->dynamicUBOOffset : dynamicUBOOffsetOverride;
 			glm::mat4 model = renderObject->gameObject->GetTransform()->GetWorldTransform();
@@ -10824,23 +10760,24 @@ namespace flex
 				index += uniform->size;
 			};
 
+			if ((u64)dynamicOffset + dynamicBuffer->data.unitSize > dynamicBuffer->fullDynamicBufferSize)
+			{
+				// Capacity must be ensured before slots are handed out (growing here could destroy buffers & descriptor
+				// sets already referenced by commands being recorded), so this is a bug in the caller. Skip the write
+				// rather than overflowing the buffer.
+				static std::set<MaterialID> s_WarnedMaterials;
+				if (s_WarnedMaterials.insert(materialID).second)
+				{
+					PrintError("Dynamic UBO offset %u out of range for material \"%s\" (buffer size %u)\n",
+						dynamicOffset, material->name.c_str(), dynamicBuffer->fullDynamicBufferSize);
+				}
+				return;
+			}
+
 			u32 index = 0;
 			const UniformList& dynamicUniforms = shader->dynamicBufferUniforms;
 			for (Uniform const* uniform : dynamicUniforms.uniforms)
 			{
-				// Resize buffer is not large enough (TODO: Only check on initialization)
-				if (dynamicOffset + index + uniform->size > dynamicBuffer->fullDynamicBufferSize)
-				{
-					VK_CHECK_RESULT(vkQueueWaitIdle(m_GraphicsQueue));
-					VK_CHECK_RESULT(vkQueueWaitIdle(m_PresentQueue));
-
-					// TODO: Untested path! May need GPU flush/dynamic UBO update here
-					real growthRate = 1.5f;
-					u32 newUsedSize = (u32)(glm::max(dynamicBuffer->fullDynamicBufferSize, 2u) * growthRate);
-					i32 newMax = (i32)glm::ceil((real)newUsedSize / m_DynamicAlignment);
-					UpdateShaderMaxObjectCount(material->shaderID, newMax);
-				}
-
 				GetUniformValue(uniform, material, userUniformOverrides,
 					&dynamicBuffer->data.data[dynamicOffset + index], index, dynamicOffset,
 					dynamicBuffer->fullDynamicBufferSize);
@@ -10993,7 +10930,7 @@ namespace flex
 			for (auto& iter : m_SpriteDescSets)
 			{
 				m_DescriptorPoolPersistent->FreeSet(iter.second.descSet);
-				iter.second.descSet = CreateSpriteDescSet(iter.second.materialID, iter.first, iter.second.textureLayer);
+				iter.second.descSet = CreateSpriteDescSet(iter.second.materialID, iter.first.textureID, iter.second.textureLayer);
 			}
 
 			CreateDescriptorSets();

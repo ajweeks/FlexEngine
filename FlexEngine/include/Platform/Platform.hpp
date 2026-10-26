@@ -103,6 +103,8 @@ namespace flex
 		}
 
 		static bool DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure = true);
+		// Removes a directory, which must be empty
+		static bool DeleteEmptyDirectory(const std::string& directoryPath);
 
 		static bool GetFileModifcationTime(const char* filePath, Date& outModificationDate);
 

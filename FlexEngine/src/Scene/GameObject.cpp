@@ -88,17 +88,28 @@ namespace flex
 		m_SourcePrefabID = sourcePrefabID;
 
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(sourcePrefabID);
-		m_TypeID = prefabTemplate->GetTypeID();
+		if (prefabTemplate == nullptr)
+		{
+			// e.g. an inventory loaded from a save which refers to a prefab that no longer exists (shown as a cube)
+			std::string prefabIDStr = sourcePrefabID.ToString();
+			PrintError("Active item refers to an unknown prefab (%s)\n", prefabIDStr.c_str());
+		}
+		m_TypeID = prefabTemplate != nullptr ? prefabTemplate->GetTypeID() : InvalidID;
 
 		m_ItemProxyObject = GameObject::CreateObjectOfType(BaseObjectSID, "Active item");
 		m_ItemProxyObject->SetSerializable(false);
 		m_ItemProxyObject->SetVisibleInSceneExplorer(false);
 		// Mineral deposit meshes are world-sized (~20m across), shrink them down to be hand-held
 		m_ItemProxyObject->GetTransform()->Scale(m_TypeID == MineralDepositSID ? 0.04f : 0.5f);
+		const bool bScaleToHand = m_TypeID != MineralDepositSID && !IsHandToolType(m_TypeID);
 
-		if (prefabTemplate->GetMesh() != nullptr)
+		if (prefabTemplate != nullptr && prefabTemplate->GetMesh() != nullptr)
 		{
 			prefabTemplate->GetMesh()->CloneSelf(m_ItemProxyObject, true);
+		}
+		else if (BuildHandToolMesh(m_ItemProxyObject, m_TypeID))
+		{
+			// Procedural tool mesh
 		}
 		else
 		{
@@ -123,15 +134,30 @@ namespace flex
 			}
 		}
 
+		Mesh* proxyMesh = m_ItemProxyObject->GetMesh();
+		if (bScaleToHand && proxyMesh != nullptr)
+		{
+			// Other items are shown at a size which fits in the hand (whatever their size in the world)
+			const glm::vec3 size = proxyMesh->m_MaxPoint - proxyMesh->m_MinPoint;
+			const real largest = glm::max(glm::max(size.x, size.y), size.z);
+			if (largest > 1e-3f && largest < 1e6f)
+			{
+				const real heldSize = 0.38f;
+				m_ItemProxyObject->GetTransform()->SetLocalScale(glm::vec3(heldSize / largest));
+			}
+		}
+
 		g_SceneManager->CurrentScene()->AddRootObject(m_ItemProxyObject);
+		m_ItemProxyID = m_ItemProxyObject->ID;
 	}
 
 	void ActiveItem::Clear()
 	{
 		if (m_ItemProxyObject != nullptr)
 		{
-			g_SceneManager->CurrentScene()->RemoveObject(m_ItemProxyObject, true);
+			g_SceneManager->CurrentScene()->RemoveObject(m_ItemProxyID, true);
 			m_ItemProxyObject = nullptr;
+			m_ItemProxyID = InvalidGameObjectID;
 		}
 		m_TypeID = InvalidID;
 		m_SourcePrefabID = InvalidPrefabID;
@@ -726,15 +752,28 @@ namespace flex
 		switch (activeItem.m_TypeID)
 		{
 		case PickAxeSID:
+		case AxeSID:
+		case ShovelSID:
 		{
+			// Turned so the head is seen side on (the axe's blade facing left, towards the center of view)
+			rotWS = rotWS * glm::angleAxis(glm::radians(activeItem.m_TypeID == ShovelSID ? -20.0f : -65.0f), VEC3_UP);
 			real timer = player->GetItemPickingTimer();
-			if (timer >= 0.0f)
+			const real swing01 = player->GetToolSwing01();
+			if (activeItem.m_TypeID == PickAxeSID && timer >= 0.0f)
 			{
 				// Bias so first frame
 				real timerAdjusted = timer + (PI - player->GetItemPickingDuration());
 				const real mineAnimSpeed = 20.0f;
 				const real mineAnimArc = glm::radians(30.0f);
 				rotWS = glm::angleAxis(-sin(timerAdjusted * mineAnimSpeed) * mineAnimArc, playerTransform->GetRight()) * rotWS;
+			}
+			else if (swing01 >= 0.0f)
+			{
+				// Chopping/digging: a quick swing forwards & down, then back up
+				const real swingArc = glm::radians(activeItem.m_TypeID == ShovelSID ? 25.0f : 45.0f);
+				const real swing = std::sin(swing01 * PI);
+				rotWS = glm::angleAxis(swing * swingArc, playerTransform->GetRight()) * rotWS;
+				posWS += player->GetLookDirection() * (swing * 0.3f);
 			}
 		} break;
 		case MineralDepositSID:
@@ -748,7 +787,16 @@ namespace flex
 		} break;
 		default:
 		{
-			// Nothing additional
+			// Held in front of the player, a little below & to the right of the center of view. (Previously this was 2m
+			// along the look direction from the body's center like tools are, which buried items like wood in the
+			// ground when looking down, & left them mostly below the screen otherwise, with only their shadow visible.)
+			const glm::vec3 viewUp = rotWS * VEC3_UP;
+			posWS = player->GetEyePosition() +
+				player->GetLookDirection() * 1.2f +
+				playerTransform->GetRight() * 0.45f -
+				viewUp * 0.38f;
+			// Turned a little, so more than one face shows
+			rotWS = rotWS * glm::angleAxis(glm::radians(-25.0f), VEC3_UP);
 		} break;
 		}
 

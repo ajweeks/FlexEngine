@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Spring.hpp"
+
 class btCollisionObject;
 class btRigidBody;
 
@@ -51,6 +53,11 @@ namespace flex
 		// Camera effects
 		real GetFOVOffset() const { return m_FOVOffset; }
 		real GetCameraRoll() const { return m_CameraRoll; }
+		// How far the player (& glider) is banked (radians, + leans right) & pitched (+ nose up) while flying
+		real GetBodyBank() const { return m_BankSpring.pos; }
+		real GetBodyPitch() const { return m_PitchSpring.pos; }
+		// How deployed the glider is [0, 1] (it inflates & folds away over a fraction of a second)
+		real GetCanopyOpenness() const { return m_CanopyOpenness; }
 
 		void DrawHUD() const;
 		void DrawImGui();
@@ -241,6 +248,11 @@ namespace flex
 		// The rope piece continuing on from the top/bottom of the given one (tossed ropes may have two)
 		BuildPiece* FindConnectedRope(BuildPiece* rope, bool bAbove) const;
 		void FixedUpdateSki(glm::vec3& velocity);
+		// Where the body (& glider) should lean, from how the player is flying
+		void UpdateBodyTiltTargets(const glm::vec3& velocity);
+		// Smooths the lean & applies it to the player's mesh (called with the render pose)
+		void UpdateBodyTilt();
+		void BuildGlider();
 
 		// Raycasts against physics colliders (ignoring the player) & the terrain's density
 		bool Raycast(const glm::vec3& from, const glm::vec3& to, glm::vec3& outHitPos, glm::vec3& outHitNormal, u32 flags = 0) const;
@@ -302,14 +314,31 @@ namespace flex
 		AudioSourceID m_HookAttachID = InvalidAudioSourceID;
 		AudioSourceID m_DeployID = InvalidAudioSourceID;
 
-		// Rope & glider canopy geometry (rebuilt each frame while visible, in child objects of the player)
+		// Rope & glider geometry (rebuilt each frame while visible, in child objects of the player). The glider's
+		// fabric is two colours (each a mesh), its lines, risers & harness bar another.
 		DynamicMesh* m_RopeMesh = nullptr;
 		DynamicMesh* m_CanopyMesh = nullptr;
+		DynamicMesh* m_CanopyTrimMesh = nullptr;
+		DynamicMesh* m_GliderFrameMesh = nullptr;
 		DynamicMesh* m_MotesMesh = nullptr;
 		MaterialID m_MotesMaterialID = InvalidMaterialID;
 		MaterialID m_RopeMaterialID = InvalidMaterialID;
 		MaterialID m_CanopyMaterialID = InvalidMaterialID;
+		MaterialID m_CanopyTrimMaterialID = InvalidMaterialID;
+		MaterialID m_GliderFrameMaterialID = InvalidMaterialID;
 		real m_CanopyOpenness = 0.0f;
+
+		// Leaning into turns & pitching with the flight path (the player's mesh & the glider, not the capsule)
+		GameObject* m_BodyMeshObject = nullptr;
+		glm::vec3 m_BodyMeshBasePos = VEC3_ZERO;
+		glm::quat m_BodyMeshBaseRot = QUAT_IDENTITY;
+		glm::vec3 m_TiltLastVelocity = VEC3_ZERO;
+		Spring<real> m_BankSpring;
+		Spring<real> m_PitchSpring;
+		// The pivot the body & glider lean around (the harness, above the player's center) & the lean as a world space
+		// rotation (both updated with the render pose)
+		glm::vec3 m_TiltPivot = VEC3_ZERO;
+		glm::quat m_TiltRotation = QUAT_IDENTITY;
 
 		real m_WindAngle = 0.0f;
 		std::vector<Thermal> m_NearbyThermals;

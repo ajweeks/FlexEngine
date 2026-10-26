@@ -572,6 +572,12 @@ namespace flex
 					velocity -= groundNormal * glm::max(glm::dot(velocity, groundNormal), 0.0f);
 				}
 
+				if (m_Player->m_bGrounded && !bMoving && !bJustJumped && glm::length(velocity) < 0.05f)
+				{
+					// Fully at rest on the ground, rather than a tiny residual velocity sliding the player along
+					velocity = VEC3_ZERO;
+				}
+
 				rb->setLinearVelocity(ToBtVec3(velocity));
 				if (bMoving)
 				{
@@ -1015,7 +1021,7 @@ namespace flex
 
 		// Tools are used rather than placed
 		GameObject* templateObject = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
-		return templateObject != nullptr && templateObject->IsItemizable() && templateObject->GetTypeID() != PickAxeSID;
+		return templateObject != nullptr && templateObject->IsItemizable() && !IsHandToolType(templateObject->GetTypeID());
 	}
 
 	void PlayerController::PreviewPlaceItemFromInventory()

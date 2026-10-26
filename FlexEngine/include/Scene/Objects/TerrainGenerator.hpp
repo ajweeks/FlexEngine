@@ -56,6 +56,11 @@ namespace flex
 		terrain::SurfaceAttributes SampleSurface(const glm::vec3& pos, const glm::vec3& normal) const;
 		// Column info (biome, water, etc.) at a world position
 		terrain::ColumnSample SampleColumn(real x, real z) const;
+		// The material most recently placed (filled) at a point (in or on the surface of placed material). Returns false
+		// for naturally generated terrain.
+		bool FindPlacedMaterial(const glm::vec3& pos, terrain::Material& outMaterial) const;
+		// Number of edits made to the terrain (digs, fills & felled plants)
+		u32 GetEditCount() const;
 
 		// Finds a point on the ground (out of water) near pos for something to stand on. When bKeepHeight is set & pos
 		// is in open air (e.g. in a cave or above the ground), the ground directly below pos is used if there is any.
@@ -125,6 +130,8 @@ namespace flex
 		};
 
 		void UpdateRoadSegments();
+		// FLEX_VEGETATION_TOUR=1: visits each biome, screenshotting its vegetation, then fells a cactus (to check what it drops)
+		void UpdateVegetationTour();
 
 		terrain::WorldParams GetEffectiveParams() const;
 		void ApplyChunkCommands();
@@ -192,7 +199,7 @@ namespace flex
 		bool m_bParamsDirty = false;
 		bool m_bEditPending = false;
 
-		ns m_LoadStartTime = 0.0f;
+		u64 m_LoadStartTime = 0; // From Time::NowTicks
 		bool m_bLoadComplete = false;
 		ms m_MaxApplyTime = 0.0f;
 

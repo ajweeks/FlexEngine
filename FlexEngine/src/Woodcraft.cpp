@@ -1,6 +1,7 @@
 #include "stdafx.hpp"
 
 #include "Woodcraft.hpp"
+#include "Localization.hpp"
 
 IGNORE_WARNINGS_PUSH
 #include <glm/gtx/norm.hpp> // For distance2
@@ -17,6 +18,7 @@ IGNORE_WARNINGS_POP
 #include "InputManager.hpp"
 #include "Platform/Platform.hpp"
 #include "Player.hpp"
+#include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/Objects/Campfire.hpp"
 #include "Scene/Objects/Props.hpp"
@@ -103,11 +105,6 @@ namespace flex
 		{
 			g_Renderer->SetFont(SID("editor-02"));
 			g_Renderer->DrawStringSS(text, glm::vec4(1.0f), AnchorPoint::CENTER, glm::vec2(0.0f, yOffset), 1.5f, 0.6f);
-		}
-
-		const char* PlantName(terrain::PlantKind kind)
-		{
-			return kind == terrain::PlantKind::CACTUS ? "cactus" : "tree";
 		}
 	} // anonymous namespace
 
@@ -234,8 +231,12 @@ namespace flex
 	i32 WoodcraftController::HitsToFell(const terrain::PlantInfo& plant) const
 	{
 		const i32 hits = plant.kind == terrain::PlantKind::CACTUS ? 2 : 3 + (i32)(plant.size01 * 2.99f);
-		// Much quicker with a tool
-		return m_Player->IsWieldingPickAxe() ? hits : hits * 2;
+		// Much quicker with a tool, & quickest with an axe
+		if (m_Player->IsWieldingAxe())
+		{
+			return glm::max((hits + 1) / 2, 1);
+		}
+		return m_Player->GetWieldedToolType() != InvalidStringID ? hits : hits * 2;
 	}
 
 	void WoodcraftController::UpdateChopping(bool bCanAct)
@@ -278,9 +279,10 @@ namespace flex
 			m_ChopHits = 0;
 		}
 
-		m_ChopCooldown = 0.45f;
+		m_ChopCooldown = m_Player->IsWieldingAxe() ? 0.4f : 0.45f;
 		m_TimeSinceChop = 0.0f;
 		++m_ChopHits;
+		m_Player->SwingTool(m_ChopCooldown * 0.9f);
 
 		const glm::vec3 chipColour = m_Target.kind == terrain::PlantKind::CACTUS ? glm::vec3(0.4f, 0.55f, 0.3f) : glm::vec3(0.7f, 0.55f, 0.35f);
 		if (WoodcraftEffects* effects = WoodcraftEffects::Get())
@@ -310,7 +312,7 @@ namespace flex
 		if (!m_bCampfireHintShown && wood >= Campfire::WOOD_COST)
 		{
 			m_bCampfireHintShown = true;
-			m_Player->ShowNotification("You have enough wood for a campfire: press [H] to build one");
+			m_Player->ShowNotification(LOC(Notify_CampfireReady));
 		}
 
 		if (g_InputManager->GetKeyPressed(KeyCode::KEY_H))
@@ -325,7 +327,7 @@ namespace flex
 			}
 			else
 			{
-				m_Player->ShowNotification("A campfire needs " + IntToString(Campfire::WOOD_COST) + " wood (you have " + IntToString(wood) + "). Chop down trees to get some.");
+				m_Player->ShowNotification(LOCF(Notify_CampfireNeedsWood, (i32)Campfire::WOOD_COST, (i32)wood));
 			}
 		}
 
@@ -372,7 +374,7 @@ namespace flex
 			{
 				const real yaw = std::atan2(camera->forward.x, camera->forward.z);
 				BuildCampfire(m_PlacementPos, yaw);
-				m_Player->ShowNotification("Campfire built. Hold [E] next to it to light it.");
+				m_Player->ShowNotification(LOC(Notify_CampfireBuilt));
 			}
 			m_bPlacingCampfire = false;
 		}
@@ -409,7 +411,7 @@ namespace flex
 			{
 				m_LightingProgress = 0.0f;
 				campfire->Light();
-				m_Player->ShowNotification("The campfire is lit. It'll burn for " + IntToString((i32)(Campfire::BURN_DURATION / 60.0f)) + " minutes.");
+				m_Player->ShowNotification(LOCF(Notify_CampfireLit, (i32)(Campfire::BURN_DURATION / 60.0f)));
 			}
 		}
 		else
@@ -427,9 +429,7 @@ namespace flex
 
 		if (m_bPlacingCampfire)
 		{
-			DrawPrompt(m_bPlacementValid ?
-				"[LMB] Build campfire (" + IntToString(Campfire::WOOD_COST) + " wood)   [RMB]/[H] Cancel" :
-				std::string("Find flat, dry ground for the campfire   [RMB]/[H] Cancel"));
+			DrawPrompt(m_bPlacementValid ? LOCF(Woodcraft_BuildCampfire, (i32)Campfire::WOOD_COST) : std::string(LOC(Woodcraft_FindGround)));
 			return;
 		}
 
@@ -437,10 +437,10 @@ namespace flex
 		{
 			const i32 hitsNeeded = HitsToFell(m_Target);
 			const i32 hits = m_Target.hash == m_ChopPlantHash ? m_ChopHits : 0;
-			std::string prompt = std::string("[LMB] Chop ") + PlantName(m_Target.kind);
-			if (!m_Player->IsWieldingPickAxe())
+			std::string prompt = m_Target.kind == terrain::PlantKind::CACTUS ? LOC(Woodcraft_ChopCactus) : LOC(Woodcraft_ChopTree);
+			if (!m_Player->IsWieldingAxe())
 			{
-				prompt += " (quicker with a pickaxe)";
+				prompt += LOC(Woodcraft_QuickerWithAxe);
 			}
 			DrawPrompt(prompt);
 			if (hits > 0)
@@ -456,7 +456,7 @@ namespace flex
 			switch (campfire->GetState())
 			{
 			case Campfire::State::UNLIT:
-				DrawPrompt("[Hold E] Light campfire");
+				DrawPrompt(LOC(Woodcraft_LightCampfire));
 				if (m_LightingProgress > 0.0f)
 				{
 					DrawProgressBar(m_LightingProgress / Campfire::LIGHT_HOLD_DURATION, glm::vec4(1.0f, 0.55f, 0.15f, 0.95f));
@@ -465,8 +465,7 @@ namespace flex
 			case Campfire::State::LIT:
 			{
 				const i32 seconds = (i32)campfire->GetBurnTimeRemaining();
-				const std::string secondsStr = (seconds % 60 < 10 ? "0" : "") + IntToString(seconds % 60);
-				DrawPrompt("Campfire burning (" + IntToString(seconds / 60) + ":" + secondsStr + " left)");
+				DrawPrompt(LOCF(Woodcraft_CampfireBurning, seconds / 60, seconds % 60));
 			} break;
 			default:
 				break;
@@ -848,6 +847,123 @@ namespace flex
 			if (m_TestTime > 4.0f)
 			{
 				Screenshot("10_dug_after");
+				// Held items & tools (the tools are given to new worlds)
+				for (const char* toolName : { "pickaxe", "axe", "shovel" })
+				{
+					const PrefabID toolID = g_ResourceManager->GetPrefabID(toolName);
+					if (toolID.IsValid() && CountItems(toolID) == 0)
+					{
+						m_Player->AddToInventory(toolID, 1);
+					}
+				}
+				if (CountItems(woodID) == 0)
+				{
+					m_Player->AddToInventory(woodID, 3);
+				}
+				Next();
+			}
+			break;
+		case 18:
+		case 19:
+		case 20:
+		case 21:
+		{
+			// Hold each item in turn, looking ahead
+			const char* itemNames[] = { "wood", "pickaxe", "axe", "shovel" };
+			const char* itemName = itemNames[m_TestStep - 18];
+			const PrefabID itemID = g_ResourceManager->GetPrefabID(itemName);
+			for (i32 i = 0; i < (i32)Player::QUICK_ACCESS_ITEM_COUNT; ++i)
+			{
+				if (m_Player->m_QuickAccessInventory[i].prefabID == itemID && m_Player->m_QuickAccessInventory[i].count > 0)
+				{
+					m_Player->SetSelectedQuickAccessItemSlot(i);
+					break;
+				}
+			}
+			m_Player->SetPitch(glm::radians(10.0f));
+			if (m_TestStep == 18)
+			{
+				// Wood, looking down (e.g. at the ground) & up
+				if (m_TestTime > 1.5f && m_TestTime - g_UnpausedDeltaTime <= 1.5f)
+				{
+					Screenshot("11_holding_wood_level");
+				}
+				if (m_TestTime > 1.5f)
+				{
+					m_Player->SetPitch(glm::radians(50.0f));
+				}
+				if (m_TestTime > 3.0f && m_TestTime - g_UnpausedDeltaTime <= 3.0f)
+				{
+					Screenshot("11_holding_wood_down");
+				}
+				if (m_TestTime > 3.0f)
+				{
+					m_Player->SetPitch(glm::radians(-30.0f));
+				}
+				if (m_TestTime < 4.5f)
+				{
+					break;
+				}
+			}
+			if (m_TestTime > 1.5f)
+			{
+				Screenshot((std::string("11_holding_") + itemName).c_str());
+				Print("Woodcraft test: holding %s (wielded tool: %s)\n", itemName,
+					m_Player->GetWieldedToolType() == InvalidStringID ? "none" : itemName);
+				Next();
+			}
+		} break;
+		case 22:
+		case 23:
+		case 24:
+		{
+			// Continuous digging (with the shovel, then the pickaxe) & filling (shovel)
+			const bool bFillTest = m_TestStep == 24;
+			const char* toolName = m_TestStep == 23 ? "pickaxe" : "shovel";
+			const PrefabID toolID = g_ResourceManager->GetPrefabID(toolName);
+			for (i32 i = 0; i < (i32)Player::QUICK_ACCESS_ITEM_COUNT; ++i)
+			{
+				if (m_Player->m_QuickAccessInventory[i].prefabID == toolID)
+				{
+					m_Player->SetSelectedQuickAccessItemSlot(i);
+					break;
+				}
+			}
+			m_Player->SetPitch(glm::radians(bFillTest ? 30.0f : 45.0f));
+			if (m_TestEditCount == 0)
+			{
+				// Each tool digs fresh ground (holding dig at one spot tunnels along the view, to the edge of the reach)
+				const glm::quat turn = glm::angleAxis(glm::radians(120.0f), VEC3_UP);
+				m_Player->GetTransform()->SetWorldRotation(turn * m_Player->GetTransform()->GetWorldRotation());
+			}
+			if (m_TestEditCount == 0)
+			{
+				m_TestEditCount = (i32)terrainGenerator->GetEditCount() + 1;
+				m_Player->m_TestTerrainStrokeCount = 0;
+				m_Player->m_TestTerrainEditCount = 0;
+				m_Player->m_TestTerrainWaitTime = 0.0f;
+			}
+			m_Player->m_TestTerrainAction = bFillTest ? 2 : 1;
+			if (m_TestTime > 1.5f && m_TestTime - g_UnpausedDeltaTime <= 1.5f)
+			{
+				Screenshot((std::string(bFillTest ? "12_filling_" : "12_digging_") + toolName).c_str());
+			}
+			if (m_TestTime > 4.0f)
+			{
+				m_Player->m_TestTerrainAction = 0;
+				Print("Woodcraft test: %s with the %s for %.1fs (ground %.0f%% rock): %u holes/mounds, %u terrain edits applied, "
+					"%d saved edits added, %.2fs waiting for re-meshing\n",
+					bFillTest ? "filled" : "dug", toolName, m_TestTime, m_Player->m_TerrainStroke.hardness * 100.0f,
+					m_Player->m_TestTerrainStrokeCount, m_Player->m_TestTerrainEditCount,
+					(i32)terrainGenerator->GetEditCount() - (m_TestEditCount - 1), m_Player->m_TestTerrainWaitTime);
+				m_TestEditCount = 0;
+				Next();
+			}
+		} break;
+		case 25:
+			if (m_TestTime > 2.0f)
+			{
+				Screenshot("13_dug_after");
 				g_Game->SaveWorld();
 				m_TestStep = 100;
 			}

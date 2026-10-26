@@ -100,11 +100,13 @@
 #endif
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
 #include <deque>
 #include <functional>
 #include <future>
 #include <map>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <utility>
@@ -115,6 +117,7 @@
 #include <set>
 #include <limits>
 #include <unordered_map>
+#include <unordered_set>
 
 #ifdef _WINDOWS
 #include <crtdbg.h>

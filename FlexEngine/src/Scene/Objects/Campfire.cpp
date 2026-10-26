@@ -39,7 +39,8 @@ namespace flex
 		const real CAMPFIRE_LIGHT_RANGE = 220.0f;
 		// Fire effects (flames, embers & smoke) are only animated within this distance of the camera
 		const real CAMPFIRE_EFFECTS_RANGE = 250.0f;
-		const glm::vec3 CAMPFIRE_LIGHT_COLOUR(1.0f, 0.52f, 0.22f);
+		// Linear (a warm white: saturated orange looks far too orange once lit through the colour pipeline)
+		const glm::vec3 CAMPFIRE_LIGHT_COLOUR(1.0f, 0.74f, 0.5f);
 
 		PointLightID s_CampfireLights[MAX_CAMPFIRE_LIGHTS] = { InvalidPointLightID, InvalidPointLightID, InvalidPointLightID };
 		i32 s_CampfireLightsUpdatedFrame = -1;
@@ -204,7 +205,7 @@ namespace flex
 			{
 			case terrain::PlantKind::CONIFER: return 3 + (i32)(plant.size01 * 2.99f);
 			case terrain::PlantKind::DECIDUOUS: return 3 + (i32)(plant.size01 * 2.99f);
-			case terrain::PlantKind::CACTUS: return 1;
+			case terrain::PlantKind::CACTUS: return 1 + (i32)(plant.size01 * 1.99f);
 			default: return 0;
 			}
 		}
@@ -658,7 +659,8 @@ namespace flex
 	{
 		m_bWoodDropped = true;
 
-		const PrefabID woodID = woodcraft::GetWoodPrefabID();
+		// Cacti drop pieces of cactus rather than wood
+		const PrefabID woodID = m_Plant.kind == terrain::PlantKind::CACTUS ? g_ResourceManager->GetPrefabID("cactus") : woodcraft::GetWoodPrefabID();
 		const i32 count = woodcraft::WoodYield(m_Plant);
 		if (!woodID.IsValid() || count <= 0)
 		{
@@ -1074,7 +1076,7 @@ namespace flex
 				data.colour = CAMPFIRE_LIGHT_COLOUR;
 				// Fade out with distance so lights being reassigned isn't noticeable
 				const real fade = 1.0f - glm::smoothstep(CAMPFIRE_LIGHT_RANGE * 0.7f, CAMPFIRE_LIGHT_RANGE, glm::sqrt(lit[i].first));
-				data.brightness = 60.0f * intensity * FireFlicker(time, campfire->m_Seed) * fade;
+				data.brightness = 30.0f * intensity * FireFlicker(time, campfire->m_Seed) * fade;
 				if (lightID == InvalidPointLightID)
 				{
 					lightID = g_Renderer->RegisterPointLight(&data);

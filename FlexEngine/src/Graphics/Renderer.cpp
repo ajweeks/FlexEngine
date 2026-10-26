@@ -61,6 +61,7 @@ namespace flex
 		m_Settings.RegisterProperty("terrain quality", &m_TerrainQuality);
 		m_Settings.RegisterProperty("shadow cascade split lambda", &m_ShadowCascadeSplitLambda);
 		m_Settings.RegisterProperty("shadow bias", &m_ShadowBias);
+		m_Settings.RegisterProperty("shadow slope bias", &m_ShadowSlopeBias);
 		m_Settings.RegisterProperty("shadow normal offset", &m_ShadowSamplingData.normalOffset);
 		m_Settings.RegisterProperty("shader quality level", &m_ShaderQualityLevel);
 
@@ -1216,6 +1217,7 @@ namespace flex
 			m_ShadowSamplingData.cascadeDepthSplits[c] = splitDist;
 			m_ShadowSamplingData.cascadeTexelSizes[c] = texelSize;
 			m_ShadowSamplingData.cascadeDepthBiases[c] = m_ShadowBias / (2.0f * radius + casterMargin);
+			m_ShadowCascadeDepthRanges[c] = 2.0f * radius + casterMargin;
 
 			lastSplitDist = splitDist;
 		}
@@ -3500,6 +3502,8 @@ namespace flex
 			SaveOnRelease();
 			ImGui::SliderFloat("Shadow bias", &m_ShadowBias, 0.0f, 0.25f);
 			SaveOnRelease();
+			ImGui::SliderFloat("Shadow slope bias", &m_ShadowSlopeBias, 0.0f, 4.0f);
+			SaveOnRelease();
 			ImGui::SliderFloat("Shadow normal offset", &m_ShadowSamplingData.normalOffset, 0.0f, 4.0f);
 			SaveOnRelease();
 
@@ -3693,18 +3697,8 @@ namespace flex
 			{
 				FontMetric* metric = font->GetMetric(c);
 
-				if (font->bUseKerning)
-				{
-					std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
-
-					auto iter = metric->kerning.find(charKey);
-					if (iter != metric->kerning.end())
-					{
-						strWidth += iter->second.x;
-					}
-				}
-
-				strWidth += metric->advanceX + letterSpacing;
+				strWidth += font->GetKerning(prevChar, c) + metric->advanceX + letterSpacing;
+				prevChar = c;
 			}
 		}
 
@@ -3737,7 +3731,7 @@ namespace flex
 		return strHeight;
 	}
 
-	real Renderer::GetStringWidth(const TextCache& textCache, BitmapFont* font) const
+	real Renderer::GetStringWidth(const TextCache& textCache, BitmapFont* font, real tracking /* = 0.0f */) const
 	{
 		real strWidth = 0;
 
@@ -3748,18 +3742,8 @@ namespace flex
 			{
 				FontMetric* metric = font->GetMetric(c);
 
-				if (font->bUseKerning)
-				{
-					std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
-
-					auto iter = metric->kerning.find(charKey);
-					if (iter != metric->kerning.end())
-					{
-						strWidth += iter->second.x;
-					}
-				}
-
-				strWidth += metric->advanceX + textCache.xSpacing;
+				strWidth += font->GetKerning(prevChar, c) + metric->advanceX + textCache.xSpacing + tracking;
+				prevChar = c;
 			}
 		}
 
@@ -3816,11 +3800,14 @@ namespace flex
 				real textScale = baseTextScale * textCache.scale;
 				std::string currentStr = textCache.str;
 
+				// Looser letter spacing for small text (in screen pixels per layout unit)
+				const real tracking = font->GetTracking(textScale * frameBufferSize.y * 0.5f);
+
 				real totalAdvanceX = 0;
 
 				glm::vec2 basePos(0.0f);
 
-				real strWidth = GetStringWidth(textCache, font) * textScale;
+				real strWidth = GetStringWidth(textCache, font, tracking) * textScale;
 				real strHeight = GetStringHeight(textCache, font) * textScale;
 
 				switch (textCache.anchor)
@@ -3867,28 +3854,19 @@ namespace flex
 						{
 							if (c == ' ')
 							{
-								totalAdvanceX += metric->advanceX + textCache.xSpacing;
+								totalAdvanceX += metric->advanceX + textCache.xSpacing + tracking;
 								prevChar = c;
 								continue;
 							}
+
+							totalAdvanceX += font->GetKerning(prevChar, c);
 
 							glm::vec2 pos =
 								glm::vec2((textCache.pos.x) * aspectRatio, textCache.pos.y) +
 								glm::vec2(totalAdvanceX + metric->offsetX, -metric->offsetY) * textScale;
 
-							if (font->bUseKerning)
-							{
-								std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
-
-								auto iter = metric->kerning.find(charKey);
-								if (iter != metric->kerning.end())
-								{
-									pos += iter->second * textScale;
-								}
-							}
-
 							glm::vec4 charSizePixelsCharSizeNorm(
-								metric->width, metric->height,
+								metric->atlasWidth, metric->atlasHeight,
 								metric->width * textScale, metric->height * textScale);
 
 							i32 texChannel = (i32)metric->channel;
@@ -3902,7 +3880,7 @@ namespace flex
 
 							outTextVertices[charIndex++] = vert;
 
-							totalAdvanceX += metric->advanceX + textCache.xSpacing;
+							totalAdvanceX += metric->advanceX + textCache.xSpacing + tracking;
 						}
 						else
 						{
@@ -3974,23 +3952,14 @@ namespace flex
 								continue;
 							}
 
+							totalAdvanceX += font->GetKerning(prevChar, c);
+
 							glm::vec3 pos = textCache.pos +
 								tangent * (totalAdvanceX + metric->offsetX) * textScale * textCache.scale +
 								VEC3_UP * (real)(-metric->offsetY) * textScale * textCache.scale;
 
-							if (font->bUseKerning)
-							{
-								std::wstring charKey(std::wstring(1, prevChar) + std::wstring(1, c));
-
-								auto iter = metric->kerning.find(charKey);
-								if (iter != metric->kerning.end())
-								{
-									pos += glm::vec3(iter->second, 0.0f) * textScale * textCache.scale;
-								}
-							}
-
 							glm::vec4 charSizePixelsCharSizeNorm(
-								metric->width, metric->height,
+								metric->atlasWidth, metric->atlasHeight,
 								metric->width * textScale * textCache.scale, metric->height * textScale * textCache.scale);
 
 							i32 texChannel = (i32)metric->channel;

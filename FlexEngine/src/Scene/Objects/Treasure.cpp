@@ -1,6 +1,7 @@
 #include "stdafx.hpp"
 
 #include "Scene/Objects/Treasure.hpp"
+#include "Localization.hpp"
 
 IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionShapes/btBoxShape.h>
@@ -230,11 +231,11 @@ namespace flex
 			}
 			const i32 count = entry.minCount + (i32)(HashU32(h + 2) % (u32)(entry.maxCount - entry.minCount + 1));
 			player->AddToInventory(prefabID, count);
-			found += (itemCount == 0 ? "" : ", ") + IntToString(count) + "x " + entry.prefabName;
+			found += (itemCount == 0 ? "" : ", ") + LOCF(Notify_ItemCount, count, Loc::ItemName(entry.prefabName));
 			++itemCount;
 		}
 
-		player->ShowNotification("Treasure! Found " + (found.empty() ? std::string("nothing (it was empty)") : found));
+		player->ShowNotification(found.empty() ? std::string(LOC(Notify_TreasureEmpty)) : LOCF(Notify_Treasure, found.c_str()));
 		AudioManager::PlaySource(g_ResourceManager->GetOrLoadAudioSourceID(SID("jingle-single-01.wav"), true));
 	}
 

@@ -3,6 +3,7 @@
 #include "Callbacks/InputCallbacks.hpp"
 #include "ConfigFile.hpp"
 #include "GameUI.hpp"
+#include "WorldStats.hpp"
 
 // The game: main menu, worlds (each a seed with its own saved progress), settings, the pause menu & the map. Engine
 // test scenes are reached from the main menu (or by launching with --editor).
@@ -26,11 +27,17 @@ namespace flex
 		bool IsLoadingWorld() const { return m_Screen == Screen::LOADING; }
 		// Whether a menu is taking input instead of the player
 		bool IsMenuOpen() const { return m_Screen != Screen::PLAYING && m_Screen != Screen::NONE; }
+		// False in the editor (engine test scenes, reached from the main menu)
+		bool IsActive() const { return m_Screen != Screen::NONE; }
 
 		// Saves the current world (if one is being played)
 		void SaveWorld();
 
 		static const char* GAMEPLAY_SCENE_NAME;
+		// Shown in the window's title & the main menu
+		static const char* GAME_NAME;
+		// The game's version (separate from the engine's), shown on the main menu
+		static const char* GAME_VERSION;
 
 		// Call before Initialize: skips the main menu & loads straight into a world (--play[=<world name>]). An
 		// empty name means the most recently played world (or a new one if there are none).
@@ -57,6 +64,8 @@ namespace flex
 			i32 seed = 0;
 			std::string lastPlayed; // YYYY-MM-DD_HH-MM-SS, sorts chronologically
 			real playTime = 0.0f;
+			std::string created; // YYYY-MM-DD_HH-MM-SS (empty for worlds made before it was saved)
+			WorldStats stats;
 		};
 
 		struct Settings
@@ -67,6 +76,7 @@ namespace flex
 			real masterVolume = 0.5f;
 			i32 terrainQuality = 1;
 			bool bShowMinimap = true;
+			std::string language = "en"; // A Language code (see Localization.hpp)
 		};
 
 		EventReply OnActionEvent(Action action, ActionEvent actionEvent);
@@ -82,6 +92,10 @@ namespace flex
 		void DrawMap();
 		void DrawBackground(real opacity);
 		void DrawTitle(const std::string& title, const std::string& subtitle);
+		void DrawWorldStats(const UIRect& panel, const WorldInfo& world);
+
+		// Counts the explored area & distance travelled around the player (while playing)
+		void UpdateExplored();
 
 		void RefreshWorlds();
 		void CreateWorld(const std::string& name, i32 seed);
@@ -105,6 +119,7 @@ namespace flex
 		std::vector<WorldInfo> m_Worlds;
 		i32 m_SelectedWorld = -1;
 		bool m_bConfirmDelete = false;
+		real m_WorldListScroll = 0.0f; // In rows
 		std::string m_NewWorldName;
 		std::string m_NewWorldSeed;
 
@@ -112,8 +127,14 @@ namespace flex
 		bool m_bWorldLoaded = false;
 		WorldInfo m_CurrentWorld;
 		sec m_AutosaveTimer = 0.0f;
+		sec m_PlayTimeRemainder = 0.0f; // Play time not yet added to m_CurrentWorld.playTime (see Update)
 		sec m_LoadingTime = 0.0f;
 		ms m_WorldLoadStartMs = 0.0f;
+		friend WorldStats* GetCurrentWorldStats();
+		// Packed cell coordinates (see UpdateExplored) of the current world's explored area
+		std::unordered_set<u32> m_ExploredCells;
+		glm::vec3 m_LastPlayerPos = glm::vec3(0.0f);
+		bool m_bHaveLastPlayerPos = false;
 		// The view direction restored when loading (kept while the loading screen is up)
 		glm::quat m_LoadRotation = QUAT_IDENTITY;
 		real m_LoadPitch = 0.0f;
@@ -139,6 +160,8 @@ namespace flex
 		i32 m_TourStep = 0;
 		sec m_TourTime = 0.0f;
 		glm::vec3 m_TourCavePos = glm::vec3(0.0f);
+		bool m_bTourMapCaptured = false; // The map screenshot was requested (the pan waits a frame, so it isn't in the shot)
+		std::string m_TourWorldDirectory; // Deleted at the end of the tour
 		// FLEX_BUILD_TEST: after the tour builds its hut, views it from several angles & shows placement previews
 		void UpdateBuildTest();
 		// A small hut with one of every build piece

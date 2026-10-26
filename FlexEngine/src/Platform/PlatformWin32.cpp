@@ -227,6 +227,11 @@ namespace flex
 		return (dwAttrib != INVALID_FILE_ATTRIBUTES && dwAttrib & FILE_ATTRIBUTE_DIRECTORY);
 	}
 
+	bool Platform::DeleteEmptyDirectory(const std::string& directoryPath)
+	{
+		return ::RemoveDirectoryA(directoryPath.c_str()) != 0;
+	}
+
 	bool Platform::DeleteFile(const std::string& filePath, bool bPrintErrorOnFailure /* = true */)
 	{
 		if (::DeleteFile(filePath.c_str()))

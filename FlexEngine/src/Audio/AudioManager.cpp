@@ -721,7 +721,7 @@ namespace flex
 
 		if (s_WaveData[sourceID] != nullptr)
 		{
-			delete s_WaveData[sourceID];
+			delete[] s_WaveData[sourceID];
 			s_WaveData[sourceID] = nullptr;
 		}
 
@@ -943,7 +943,7 @@ namespace flex
 		}
 
 		alDeleteSources(1, &s_Sources[sourceID].source);
-		delete s_WaveData[sourceID];
+		delete[] s_WaveData[sourceID];
 		s_WaveData[sourceID] = nullptr;
 		s_Sources[sourceID].source = InvalidAudioSourceID;
 		return true;
@@ -956,7 +956,7 @@ namespace flex
 			if (s_Sources[id].source != InvalidAudioSourceID)
 			{
 				alDeleteSources(1, &s_Sources[id].source);
-				delete s_WaveData[id];
+				delete[] s_WaveData[id];
 			}
 		}
 

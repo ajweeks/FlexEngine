@@ -2,6 +2,8 @@
 
 #include "Window/Window.hpp"
 
+#include "FlexEngine.hpp"
+#include "Game.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -68,7 +70,13 @@ namespace flex
 
 	std::string Window::GenerateWindowTitle()
 	{
-		std::string result = m_TitleString;
+		if (g_Game != nullptr && g_Game->IsActive())
+		{
+			// Just the game's name while it's being played (not the engine's, the scene's or frame timings)
+			return Game::GAME_NAME;
+		}
+
+		std::string result = "Flex Engine v" + FlexEngine::EngineVersionString();
 		result += " | " + g_SceneManager->CurrentScene()->GetName();
 		if (m_bShowMSInWindowTitle)
 		{

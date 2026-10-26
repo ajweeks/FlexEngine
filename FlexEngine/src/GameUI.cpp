@@ -302,12 +302,16 @@ namespace flex
 		const real unitScale = frameBufferScale * (font->metaData.size / 12.0f);
 		const real scale = size / glm::max(capMetric->height * unitScale * m_Height * 0.5f, 1e-4f);
 
+		const real pixelsPerUnit = unitScale * scale * m_Height * 0.5f;
+		const real tracking = font->GetTracking(pixelsPerUnit);
 		real advance = 0.0f;
+		char prevChar = ' ';
 		for (char c : text)
 		{
 			if (BitmapFont::IsCharValid(c))
 			{
-				advance += font->GetMetric(c)->advanceX;
+				advance += font->GetKerning(prevChar, c) + font->GetMetric(c)->advanceX + tracking;
+				prevChar = c;
 			}
 		}
 		return advance * unitScale * scale * m_Height * 0.5f;
@@ -518,6 +522,41 @@ namespace flex
 			}
 		}
 		return bSubmitted;
+	}
+
+	bool GameUI::Scrollbar(const char* id, const UIRect& rect, real contentSize, real viewSize, real* scroll)
+	{
+		const real maxScroll = glm::max(contentSize - viewSize, 0.0f);
+		if (maxScroll <= 0.0f || rect.h <= 0.0f)
+		{
+			return false;
+		}
+
+		const u64 hash = HashID(id);
+		const real thumbHeight = glm::max(rect.h * viewSize / contentSize, 32.0f * m_Scale);
+		const real travel = rect.h - thumbHeight;
+		const real t = glm::clamp(*scroll / maxScroll, 0.0f, 1.0f);
+		const UIRect thumb(rect.x, rect.y + travel * t, rect.w, thumbHeight);
+		const bool bHovered = IsMouseOver(UIRect(rect.x - 6.0f * m_Scale, rect.y, rect.w + 12.0f * m_Scale, rect.h));
+		const real hover = HoverAmount(hash, bHovered || m_ActiveID == hash);
+
+		if (m_bMousePressed && bHovered)
+		{
+			m_ActiveID = hash;
+			// Grabbing the thumb keeps it under the mouse where it was grabbed, clicking the track centers it there
+			m_DragOffset = (thumb.Contains(glm::vec2(rect.x, m_MousePos.y)) ? m_MousePos.y - thumb.y : thumbHeight * 0.5f);
+		}
+		const bool bDragging = m_ActiveID == hash && m_bMouseDown;
+		if (bDragging && travel > 0.0f)
+		{
+			*scroll = glm::clamp((m_MousePos.y - m_DragOffset - rect.y) / travel, 0.0f, 1.0f) * maxScroll;
+		}
+
+		FillRect(rect, UITheme::WithAlpha(UITheme::OUTLINE, 0.5f), rect.w * 0.5f);
+		const real drawnT = glm::clamp(*scroll / maxScroll, 0.0f, 1.0f);
+		const UIRect drawnThumb(rect.x, rect.y + travel * drawnT, rect.w, thumbHeight);
+		FillRect(drawnThumb, glm::mix(UITheme::TEXT_SECONDARY, bDragging ? UITheme::EMBER_GLOW : UITheme::EMBER, hover), rect.w * 0.5f);
+		return bDragging;
 	}
 
 	bool GameUI::ListItem(const char* id, const UIRect& rect, const std::string& title, const std::string& subtitle, bool bSelected)

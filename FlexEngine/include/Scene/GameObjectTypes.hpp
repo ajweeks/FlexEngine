@@ -29,6 +29,8 @@ namespace flex
 	static constexpr StringID MinerSID = SID("miner");
 	static constexpr StringID SpeakerSID = SID("speaker");
 	static constexpr StringID PickAxeSID = SID("pickaxe");
+	static constexpr StringID AxeSID = SID("axe");
+	static constexpr StringID ShovelSID = SID("shovel");
 	static constexpr StringID GerstnerWaveSID = SID("gerstner wave");
 	static constexpr StringID WireSID = SID("wire");
 	static constexpr StringID WirePlugSID = SID("wire plug");

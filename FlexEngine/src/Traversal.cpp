@@ -16,6 +16,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
+#include "Localization.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
@@ -251,11 +252,35 @@ namespace flex
 		m_Player = player;
 
 		m_RopeMaterialID = GetOrCreateMaterial("Traversal rope", glm::vec4(0.75f, 0.42f, 0.12f, 1.0f), 0.8f);
-		m_CanopyMaterialID = GetOrCreateMaterial("Traversal canopy", glm::vec4(0.85f, 0.12f, 0.08f, 1.0f), 0.6f);
+		// Ripstop nylon (linear colours): a deep orange-red with cream tips & centre, dark lines & webbing
+		m_CanopyMaterialID = GetOrCreateMaterial("Glider canopy", glm::vec4(0.75f, 0.11f, 0.025f, 1.0f), 0.55f);
+		m_CanopyTrimMaterialID = GetOrCreateMaterial("Glider canopy trim", glm::vec4(0.78f, 0.72f, 0.56f, 1.0f), 0.55f);
+		m_GliderFrameMaterialID = GetOrCreateMaterial("Glider lines", glm::vec4(0.035f, 0.035f, 0.04f, 1.0f), 0.45f);
 		m_RopeMesh = new DynamicMesh();
 		m_RopeMesh->Create(player, "Grapple rope", m_RopeMaterialID);
 		m_CanopyMesh = new DynamicMesh();
-		m_CanopyMesh->Create(player, "Glider canopy", m_CanopyMaterialID);
+		m_CanopyMesh->Create(player, "Glider canopy", m_CanopyMaterialID, 2048);
+		m_CanopyTrimMesh = new DynamicMesh();
+		m_CanopyTrimMesh->Create(player, "Glider canopy trim", m_CanopyTrimMaterialID, 2048);
+		m_GliderFrameMesh = new DynamicMesh();
+		m_GliderFrameMesh->Create(player, "Glider lines", m_GliderFrameMaterialID, 2048);
+
+		// The player's visible body, which leans while flying (the capsule collider stays upright)
+		for (GameObject* child : player->GetChildren())
+		{
+			if (child->GetName() == "Player mesh")
+			{
+				m_BodyMeshObject = child;
+				m_BodyMeshBasePos = child->GetTransform()->GetLocalPosition();
+				m_BodyMeshBaseRot = child->GetTransform()->GetLocalRotation();
+				break;
+			}
+		}
+		// A little sway as the glider settles into (& out of) turns
+		m_BankSpring.DR = 0.75f;
+		m_BankSpring.UAF = 5.0f;
+		m_PitchSpring.DR = 0.8f;
+		m_PitchSpring.UAF = 4.0f;
 		m_MotesMaterialID = GetOrCreateMaterial("Thermal motes", glm::vec4(0.95f, 0.92f, 0.85f, 1.0f), 1.0f);
 		m_MotesMesh = new DynamicMesh();
 		m_MotesMesh->Create(player, "Thermal motes", m_MotesMaterialID, 4096);
@@ -274,6 +299,11 @@ namespace flex
 		m_RopeMesh = nullptr;
 		delete m_CanopyMesh;
 		m_CanopyMesh = nullptr;
+		delete m_CanopyTrimMesh;
+		m_CanopyTrimMesh = nullptr;
+		delete m_GliderFrameMesh;
+		m_GliderFrameMesh = nullptr;
+		m_BodyMeshObject = nullptr;
 		delete m_MotesMesh;
 		m_MotesMesh = nullptr;
 
@@ -291,6 +321,11 @@ namespace flex
 		m_bLeapQueued = false;
 		m_RopeToss = {};
 		m_MantleCooldown = 0.0f;
+		// Respawning/teleporting: no folding animation or lean carried over
+		m_CanopyOpenness = 0.0f;
+		m_BankSpring.Reset();
+		m_PitchSpring.Reset();
+		m_TiltLastVelocity = VEC3_ZERO;
 	}
 
 	bool Traversal::CanControl() const
@@ -1157,6 +1192,8 @@ namespace flex
 		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
 		glm::vec3 velocity = ToVec3(rb->getLinearVelocity());
 
+		UpdateBodyTiltTargets(velocity);
+
 		m_bGrounded = m_Player->m_bGrounded;
 		if (m_bGrounded)
 		{
@@ -1502,7 +1539,7 @@ namespace flex
 		const glm::vec3 pos = m_Player->GetTransform()->GetWorldPosition();
 		const real feetY = pos.y - m_Player->GetHeight() * 0.5f;
 		const real reach = m_Player->GetRadius() + 0.45f;
-		glm::vec3 hitPos, hitNormal;
+		glm::vec3 hitPos(0.0f), hitNormal(0.0f);
 		bool bBlocked = false;
 		for (real height : { 0.4f, 1.1f })
 		{
@@ -1937,7 +1974,7 @@ namespace flex
 
 	void Traversal::UpdateVisuals()
 	{
-		if (m_RopeMesh == nullptr || m_CanopyMesh == nullptr || m_MotesMesh == nullptr)
+		if (m_RopeMesh == nullptr || m_CanopyMesh == nullptr || m_CanopyTrimMesh == nullptr || m_GliderFrameMesh == nullptr || m_MotesMesh == nullptr)
 		{
 			return;
 		}
@@ -1990,84 +2027,347 @@ namespace flex
 			m_RopeMesh->AddTube(points, bPastMid ? 3 : 2, 0.03f, 5);
 		}
 
-		// Glider canopy & its lines
-		const sec dt = g_DeltaTime;
-		const real targetOpenness = m_Mode == Mode::GLIDING ? 1.0f : 0.0f;
-		m_CanopyOpenness = glm::mix(m_CanopyOpenness, targetOpenness, ExpDecay(targetOpenness > m_CanopyOpenness ? 5.0f : 9.0f, dt));
-		m_CanopyMesh->Begin();
-		if (m_CanopyOpenness > 0.02f)
-		{
-			const glm::vec3 pos = m_Player->GetTransform()->GetWorldPosition();
-			const glm::vec3 heading = GetHeadingXZ();
-			const glm::vec3 right = glm::cross(heading, VEC3_UP);
-			// Bank into turns
-			const glm::vec3 up = glm::normalize(VEC3_UP - right * m_CameraRoll * 1.5f);
-			const glm::vec3 side = glm::normalize(glm::cross(up, heading));
-
-			const real span = 10.0f * m_CanopyOpenness;
-			const real arcAngle = glm::radians(110.0f);
-			const real radius = span / arcAngle;
-			const real chord = 2.8f;
-			const real height = 6.5f * m_CanopyOpenness;
-			const glm::vec3 arcCenter = pos + up * (height - radius) + heading * 0.6f;
-			const u32 segmentCount = 12;
-			const u32 chordCount = 4;
-
-			// Top & bottom surfaces (the canopy is visible from both sides)
-			for (u32 surface = 0; surface < 2; ++surface)
-			{
-				const real normalSign = surface == 0 ? 1.0f : -1.0f;
-				const u32 base = (u32)m_CanopyMesh->vertexBufferCreateInfo.positions_3D.size();
-				for (u32 i = 0; i <= segmentCount; ++i)
-				{
-					const real angle = arcAngle * ((real)i / (real)segmentCount - 0.5f);
-					const glm::vec3 radial = up * std::cos(angle) + side * std::sin(angle);
-					for (u32 j = 0; j <= chordCount; ++j)
-					{
-						const real c = (real)j / (real)chordCount;
-						// Thicker towards the leading edge
-						const real thickness = 0.18f * std::sin(PI * glm::pow(1.0f - c, 1.5f));
-						const glm::vec3 point = arcCenter + radial * (radius + thickness * normalSign) + heading * (chord * (0.5f - c));
-						m_CanopyMesh->AddVertex(point, radial * normalSign, glm::vec2((real)i / (real)segmentCount, c));
-					}
-				}
-				for (u32 i = 0; i < segmentCount; ++i)
-				{
-					for (u32 j = 0; j < chordCount; ++j)
-					{
-						const u32 a = base + i * (chordCount + 1) + j;
-						const u32 b = a + chordCount + 1;
-						if (surface == 0)
-						{
-							m_CanopyMesh->AddTriangle(a, a + 1, b);
-							m_CanopyMesh->AddTriangle(b, a + 1, b + 1);
-						}
-						else
-						{
-							m_CanopyMesh->AddTriangle(a, b, a + 1);
-							m_CanopyMesh->AddTriangle(b, b + 1, a + 1);
-						}
-					}
-				}
-			}
-
-			// Suspension lines from the harness to the wing
-			const glm::vec3 harness = pos + up * 0.8f;
-			for (u32 i = 0; i <= segmentCount; i += 3)
-			{
-				const real angle = arcAngle * ((real)i / (real)segmentCount - 0.5f);
-				const glm::vec3 radial = up * std::cos(angle) + side * std::sin(angle);
-				const glm::vec3 linePoints[] = { harness, arcCenter + radial * radius };
-				m_CanopyMesh->AddTube(linePoints, 2, 0.015f, 3);
-			}
-		}
+		UpdateBodyTilt();
+		BuildGlider();
 
 		m_RopeMesh->Upload();
 		m_CanopyMesh->Upload();
+		m_CanopyTrimMesh->Upload();
+		m_GliderFrameMesh->Upload();
 
 		m_MotesMesh->Begin();
 		DrawThermalMotes();
 		m_MotesMesh->Upload();
+	}
+
+	void Traversal::UpdateBodyTiltTargets(const glm::vec3& velocity)
+	{
+		const sec dt = g_FixedDeltaTime;
+		real targetBank = 0.0f;
+		real targetPitch = 0.0f;
+		if ((m_Mode == Mode::GLIDING || m_Mode == Mode::WINGSUIT) && dt > 0.0f)
+		{
+			const glm::vec2 h0(m_TiltLastVelocity.x, m_TiltLastVelocity.z);
+			const glm::vec2 h1(velocity.x, velocity.z);
+			const real horizontalSpeed = glm::length(h1);
+			if (glm::length(h0) > 1.0f && horizontalSpeed > 1.0f)
+			{
+				// Lean like a coordinated turn: so the lift balances gravity & the centripetal acceleration
+				const real turnRate = std::atan2(h0.x * h1.y - h0.y * h1.x, glm::dot(h0, h1)) / dt;
+				const glm::vec3 centripetalDir(-h1.y / horizontalSpeed, 0.0f, h1.x / horizontalSpeed);
+				const glm::vec3 right = glm::cross(GetHeadingXZ(), VEC3_UP);
+				const real lateralAcceleration = turnRate * horizontalSpeed * glm::dot(centripetalDir, right);
+				const real maxBank = glm::radians(m_Mode == Mode::GLIDING ? 40.0f : 60.0f);
+				targetBank = glm::clamp(std::atan2(lateralAcceleration, 9.81f), -maxBank, maxBank);
+			}
+
+			// Pitch with the flight path: gently under the glider, while the wingsuit's body lies along it
+			const real flightPath = std::atan2(velocity.y, glm::max(horizontalSpeed, 0.1f));
+			if (m_Mode == Mode::GLIDING)
+			{
+				targetPitch = glm::clamp(flightPath * 0.8f, glm::radians(-25.0f), glm::radians(25.0f));
+			}
+			else
+			{
+				targetPitch = glm::clamp(flightPath, glm::radians(-80.0f), glm::radians(40.0f)) - PI_DIV_TWO;
+			}
+		}
+		m_TiltLastVelocity = velocity;
+		m_BankSpring.SetTargetPos(targetBank);
+		m_PitchSpring.SetTargetPos(targetPitch);
+	}
+
+	void Traversal::UpdateBodyTilt()
+	{
+		const sec dt = g_DeltaTime;
+		if (dt > 0.0f)
+		{
+			m_BankSpring.Tick(dt);
+			m_PitchSpring.Tick(dt);
+		}
+
+		Transform* playerTransform = m_Player->GetTransform();
+		const glm::vec3 pos = playerTransform->GetWorldPosition();
+		const glm::vec3 heading = GetHeadingXZ();
+		const real bank = m_BankSpring.pos;
+		const real pitch = m_PitchSpring.pos;
+
+		// Bank around the heading, then pitch around the banked right axis
+		const glm::vec3 right0 = glm::cross(heading, VEC3_UP);
+		const glm::vec3 up1 = VEC3_UP * std::cos(bank) + right0 * std::sin(bank);
+		const glm::vec3 right1 = glm::cross(heading, up1);
+		const glm::vec3 forward2 = heading * std::cos(pitch) + up1 * std::sin(pitch);
+		const glm::vec3 up2 = up1 * std::cos(pitch) - heading * std::sin(pitch);
+		const glm::mat3 from(right0, VEC3_UP, heading);
+		const glm::mat3 to(right1, up2, forward2);
+		m_TiltRotation = glm::normalize(glm::quat_cast(to * glm::transpose(from)));
+
+		// Hanging from the glider's harness, the body swings around a point above its center. Without the glider (the
+		// wingsuit) it turns around its center.
+		m_TiltPivot = pos + VEC3_UP * (0.65f * glm::clamp(m_CanopyOpenness * 1.5f, 0.0f, 1.0f));
+
+		if (m_BodyMeshObject != nullptr)
+		{
+			// In first person the camera is inside the body, which stays upright so it doesn't swing into view
+			BaseCamera* camera = g_CameraManager->CurrentCamera();
+			const bool bFirstPerson = camera != nullptr && camera->bIsFirstPerson && camera->bPossessPlayer;
+			const bool bTilted = !bFirstPerson && (glm::abs(bank) > 1e-4f || glm::abs(pitch) > 1e-4f);
+			Transform* bodyTransform = m_BodyMeshObject->GetTransform();
+			if (bTilted)
+			{
+				const glm::quat playerRot = playerTransform->GetWorldRotation();
+				const glm::quat invPlayerRot = glm::inverse(playerRot);
+				const glm::vec3 restPos = pos + playerRot * m_BodyMeshBasePos;
+				const glm::vec3 tiltedPos = m_TiltPivot + m_TiltRotation * (restPos - m_TiltPivot);
+				bodyTransform->SetLocalPosition(invPlayerRot * (tiltedPos - pos));
+				bodyTransform->SetLocalRotation(invPlayerRot * m_TiltRotation * playerRot * m_BodyMeshBaseRot);
+			}
+			else if (bodyTransform->GetLocalPosition() != m_BodyMeshBasePos || bodyTransform->GetLocalRotation() != m_BodyMeshBaseRot)
+			{
+				bodyTransform->SetLocalPosition(m_BodyMeshBasePos);
+				bodyTransform->SetLocalRotation(m_BodyMeshBaseRot);
+			}
+		}
+	}
+
+	namespace
+	{
+		// Adds a triangle facing the given direction (front faces wind clockwise around their normal here)
+		void AddTriangleFacing(std::vector<u32>& indices, const std::vector<glm::vec3>& positions, u32 a, u32 b, u32 c, const glm::vec3& facing)
+		{
+			const glm::vec3 n = glm::cross(positions[b] - positions[a], positions[c] - positions[a]);
+			if (glm::dot(n, facing) > 0.0f)
+			{
+				std::swap(b, c);
+			}
+			indices.push_back(a);
+			indices.push_back(b);
+			indices.push_back(c);
+		}
+	} // anonymous namespace
+
+	void Traversal::BuildGlider()
+	{
+		// Inflates quickly when deployed, folds away faster when stowed
+		const sec dt = g_DeltaTime;
+		const real targetOpenness = m_Mode == Mode::GLIDING ? 1.0f : 0.0f;
+		m_CanopyOpenness = glm::mix(m_CanopyOpenness, targetOpenness, ExpDecay(targetOpenness > m_CanopyOpenness ? 6.0f : 10.0f, dt));
+		if (targetOpenness == 0.0f && m_CanopyOpenness < 0.02f)
+		{
+			m_CanopyOpenness = 0.0f;
+		}
+
+		m_CanopyMesh->Begin();
+		m_CanopyTrimMesh->Begin();
+		m_GliderFrameMesh->Begin();
+		if (m_CanopyOpenness <= 0.0f)
+		{
+			return;
+		}
+
+		const real open = m_CanopyOpenness;
+		// The glider's frame: centered on the harness (where the risers clip in), leaning with the body
+		const glm::vec3 heading = GetHeadingXZ();
+		const glm::vec3 F = m_TiltRotation * heading;
+		const glm::vec3 U = m_TiltRotation * VEC3_UP;
+		const glm::vec3 R = m_TiltRotation * glm::cross(heading, VEC3_UP);
+		const glm::vec3 P = m_TiltPivot;
+		auto ToWorld = [&](real x, real y, real z) { return P + R * x + U * y + F * z; };
+
+		// Span-wise shape: an arc that's flat in the middle & curves down towards the tips (anhedral)
+		const u32 cellCount = 16; // Even, so there's a rib at the center
+		const u32 ribCount = cellCount + 1;
+		const u32 chordCount = 8;
+		const real halfSpan = 5.4f * open; // Along the curve
+		const real wingHeight = 6.6f * glm::mix(0.35f, 1.0f, open); // Above the harness, at the center
+		const real maxArcAngle = glm::radians(78.0f);
+		const real rootChord = 2.7f * glm::mix(0.5f, 1.0f, open);
+
+		real ribX[ribCount], ribY[ribCount], ribAngle[ribCount], ribChord[ribCount], ribLE[ribCount], ribThickness[ribCount];
+		{
+			const u32 half = cellCount / 2;
+			const u32 subSteps = 8;
+			real x = 0.0f;
+			real y = wingHeight;
+			for (u32 i = 0; i <= half; ++i)
+			{
+				const real s = (real)i / (real)half;
+				const real angle = maxArcAngle * glm::pow(s, 1.7f);
+				const real chord = rootChord * std::sqrt(1.0f - 0.78f * s * s);
+				for (i32 sign : { 1, -1 })
+				{
+					const u32 rib = (u32)((i32)half + sign * (i32)i);
+					ribX[rib] = x * (real)sign;
+					ribY[rib] = y;
+					ribAngle[rib] = angle * (real)sign;
+					ribChord[rib] = chord;
+					// The pilot hangs below ~30% of the chord, & the tips sweep back a little
+					ribLE[rib] = 0.3f * rootChord - (rootChord - chord) * 0.35f;
+					ribThickness[rib] = 0.15f * (1.0f - 0.45f * s * s) * chord;
+				}
+				if (i < half)
+				{
+					for (u32 k = 0; k < subSteps; ++k)
+					{
+						const real sMid = ((real)i + ((real)k + 0.5f) / (real)subSteps) / (real)half;
+						const real a = maxArcAngle * glm::pow(sMid, 1.7f);
+						const real step = halfSpan / (real)(half * subSteps);
+						x += std::cos(a) * step;
+						y -= std::sin(a) * step;
+					}
+				}
+			}
+		}
+
+		// Airfoil (NACA style thickness, with camber & a flatter underside), dense around the leading edge
+		glm::vec3 grid[2][ribCount][chordCount + 1];
+		glm::vec3 ribOutward[ribCount];
+		for (u32 rib = 0; rib < ribCount; ++rib)
+		{
+			const glm::vec3 outward = SafeNormalize(R * std::sin(ribAngle[rib]) + U * std::cos(ribAngle[rib]), U);
+			ribOutward[rib] = outward;
+			const glm::vec3 base = ToWorld(ribX[rib], ribY[rib], 0.0f);
+			for (u32 j = 0; j <= chordCount; ++j)
+			{
+				const real c = 0.5f - 0.5f * std::cos(PI * (real)j / (real)chordCount);
+				const real thickness = 5.0f * ribThickness[rib] * (0.2969f * std::sqrt(c) - 0.126f * c - 0.3516f * c * c + 0.2843f * c * c * c - 0.1036f * c * c * c * c);
+				const real camber = 0.05f * ribChord[rib] * 4.0f * c * (1.0f - c);
+				const glm::vec3 chordPos = base + F * (ribLE[rib] - c * ribChord[rib]);
+				grid[0][rib][j] = chordPos + outward * (camber + thickness);
+				grid[1][rib][j] = chordPos + outward * (camber - thickness * 0.55f);
+			}
+		}
+
+		// Cells, alternating between the two fabrics (cream tips & center)
+		for (u32 cell = 0; cell < cellCount; ++cell)
+		{
+			const bool bTrim = cell <= 1 || cell >= cellCount - 2 || cell == cellCount / 2 - 1 || cell == cellCount / 2;
+			DynamicMesh* mesh = bTrim ? m_CanopyTrimMesh : m_CanopyMesh;
+			for (u32 surface = 0; surface < 2; ++surface)
+			{
+				const real outwardSign = surface == 0 ? 1.0f : -1.0f;
+				const u32 base = (u32)mesh->vertexBufferCreateInfo.positions_3D.size();
+				for (u32 side = 0; side < 2; ++side)
+				{
+					const u32 rib = cell + side;
+					for (u32 j = 0; j <= chordCount; ++j)
+					{
+						// Normal from the surface's tangents (span-wise from the neighbouring ribs, chord-wise along the rib)
+						const glm::vec3 spanTangent = grid[surface][glm::min(rib + 1, cellCount)][j] - grid[surface][rib > 0 ? rib - 1 : 0][j];
+						const glm::vec3 chordTangent = grid[surface][rib][glm::min(j + 1, chordCount)] - grid[surface][rib][j > 0 ? j - 1 : 0];
+						glm::vec3 normal = SafeNormalize(glm::cross(spanTangent, chordTangent), ribOutward[rib]);
+						if (glm::dot(normal, ribOutward[rib] * outwardSign) < 0.0f)
+						{
+							normal = -normal;
+						}
+						if (j == 0)
+						{
+							// The leading edge faces forwards
+							normal = SafeNormalize(F + ribOutward[rib] * 0.25f * outwardSign, F);
+						}
+						mesh->AddVertex(grid[surface][rib][j], normal, glm::vec2((real)rib / (real)cellCount, (real)j / (real)chordCount));
+					}
+				}
+				const std::vector<glm::vec3>& positions = mesh->vertexBufferCreateInfo.positions_3D;
+				for (u32 j = 0; j < chordCount; ++j)
+				{
+					const u32 a = base + j;
+					const u32 b = base + chordCount + 1 + j;
+					const glm::vec3 facing = (ribOutward[cell] + ribOutward[cell + 1]) * outwardSign;
+					AddTriangleFacing(mesh->indices, positions, a, a + 1, b, facing);
+					AddTriangleFacing(mesh->indices, positions, b, a + 1, b + 1, facing);
+				}
+			}
+		}
+
+		// Close off the wingtips
+		for (u32 tip = 0; tip < 2; ++tip)
+		{
+			const u32 rib = tip == 0 ? 0 : cellCount;
+			const glm::vec3 facing = tip == 0 ? -R : R;
+			const glm::vec3 normal = SafeNormalize(glm::cross(ribOutward[rib], F) * (tip == 0 ? 1.0f : -1.0f), facing);
+			const glm::vec3 outwardNormal = glm::dot(normal, facing) >= 0.0f ? normal : -normal;
+			const u32 base = (u32)m_CanopyTrimMesh->vertexBufferCreateInfo.positions_3D.size();
+			for (u32 j = 0; j <= chordCount; ++j)
+			{
+				m_CanopyTrimMesh->AddVertex(grid[0][rib][j], outwardNormal, glm::vec2(0.0f, (real)j / (real)chordCount));
+				m_CanopyTrimMesh->AddVertex(grid[1][rib][j], outwardNormal, glm::vec2(1.0f, (real)j / (real)chordCount));
+			}
+			for (u32 j = 0; j < chordCount; ++j)
+			{
+				const u32 a = base + j * 2;
+				AddTriangleFacing(m_CanopyTrimMesh->indices, m_CanopyTrimMesh->vertexBufferCreateInfo.positions_3D, a, a + 1, a + 2, outwardNormal);
+				AddTriangleFacing(m_CanopyTrimMesh->indices, m_CanopyTrimMesh->vertexBufferCreateInfo.positions_3D, a + 1, a + 3, a + 2, outwardNormal);
+			}
+		}
+
+		// Lines: each rib's A, B & C lines join (cascade) & run down to the riser on their side. Brake lines run from
+		// the outer trailing edge to the hands.
+		const real lineRadius = 0.014f;
+		const real riserSpread = 0.24f;
+		const real riserLength = 0.55f;
+		for (i32 sideSign : { -1, 1 })
+		{
+			const glm::vec3 riserTop = ToWorld((real)sideSign * riserSpread, riserLength, 0.05f);
+			const glm::vec3 brakeHandle = ToWorld((real)sideSign * (riserSpread + 0.08f), 0.15f, -0.12f);
+			for (u32 rib = 0; rib < ribCount; ++rib)
+			{
+				const i32 offset = (i32)rib - (i32)(cellCount / 2);
+				if (offset == 0 || (offset > 0) != (sideSign > 0) || (glm::abs(offset) % 2) != 1)
+				{
+					continue;
+				}
+				const glm::vec3 attachA = grid[1][rib][2];
+				const glm::vec3 attachB = grid[1][rib][4];
+				const glm::vec3 attachC = grid[1][rib][6];
+				const glm::vec3 cascade = glm::mix(attachB, riserTop, 0.3f);
+				for (const glm::vec3& attach : { attachA, attachB, attachC })
+				{
+					const glm::vec3 upper[] = { attach, cascade };
+					m_GliderFrameMesh->AddTube(upper, 2, lineRadius * 0.8f, 3);
+				}
+				const glm::vec3 main[] = { cascade, riserTop };
+				m_GliderFrameMesh->AddTube(main, 2, lineRadius, 3);
+			}
+
+			// Brakes
+			const u32 brakeCascadeRib = (u32)((i32)(cellCount / 2) + sideSign * 6);
+			const glm::vec3 brakeCascade = ToWorld(ribX[brakeCascadeRib] * 0.6f, wingHeight * 0.45f, ribLE[cellCount / 2] - rootChord * 0.9f);
+			for (u32 i = 5; i <= cellCount / 2; ++i)
+			{
+				const u32 rib = (u32)((i32)(cellCount / 2) + sideSign * (i32)i);
+				const glm::vec3 brake[] = { grid[1][rib][chordCount], brakeCascade };
+				m_GliderFrameMesh->AddTube(brake, 2, lineRadius * 0.8f, 3);
+			}
+			const glm::vec3 brakeMain[] = { brakeCascade, brakeHandle };
+			m_GliderFrameMesh->AddTube(brakeMain, 2, lineRadius, 3);
+
+			// Risers (webbing) down to the carabiners. In first person they'd be right beside the camera.
+			BaseCamera* camera = g_CameraManager->CurrentCamera();
+			const bool bFirstPerson = camera != nullptr && camera->bIsFirstPerson && camera->bPossessPlayer;
+			if (!bFirstPerson)
+			{
+				const glm::vec3 carabiner = ToWorld((real)sideSign * riserSpread, 0.0f, 0.0f);
+				const glm::vec3 riser[] = { riserTop, carabiner };
+				m_GliderFrameMesh->AddTube(riser, 2, 0.035f, 4);
+				const glm::vec3 handle[] = { brakeHandle - U * 0.09f, brakeHandle + U * 0.02f };
+				m_GliderFrameMesh->AddTube(handle, 2, 0.03f, 4);
+				// Harness straps from the carabiners down around the body to the seat
+				const glm::vec3 seatSide = ToWorld((real)sideSign * 0.36f, -1.05f, -0.12f);
+				const glm::vec3 strap[] = { carabiner, ToWorld((real)sideSign * 0.42f, -0.45f, -0.05f), seatSide };
+				m_GliderFrameMesh->AddTube(strap, 3, 0.03f, 4);
+			}
+		}
+
+		// Seat board & spreader bar between the carabiners (third person only, like the risers)
+		BaseCamera* camera = g_CameraManager->CurrentCamera();
+		if (!(camera != nullptr && camera->bIsFirstPerson && camera->bPossessPlayer))
+		{
+			const glm::vec3 spreader[] = { ToWorld(-riserSpread, 0.0f, 0.0f), ToWorld(riserSpread, 0.0f, 0.0f) };
+			m_GliderFrameMesh->AddTube(spreader, 2, 0.025f, 4);
+			const glm::vec3 seat[] = { ToWorld(-0.36f, -1.05f, -0.12f), ToWorld(0.36f, -1.05f, -0.12f) };
+			m_GliderFrameMesh->AddTube(seat, 2, 0.07f, 4);
+		}
 	}
 
 	void Traversal::DrawThermalMotes()
@@ -2157,42 +2457,38 @@ namespace flex
 
 		std::vector<std::string> lines;
 		const glm::vec3 velocity = ToVec3(m_Player->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
-		char buffer[128];
 		switch (m_Mode)
 		{
 		case Mode::GLIDING:
-			lines.push_back("PARAGLIDER");
-			snprintf(buffer, ARRAY_LENGTH(buffer), "Height %.0fm   Speed %.0fkm/h   Vario %+.1fm/s", m_HeightAboveGround, glm::length(velocity) * 3.6f, velocity.y);
-			lines.push_back(buffer);
-			lines.push_back(m_Lift > 0.8f ? "Rising air! Circle to stay in it" : "Find rising air: sunny slopes, ridges facing the wind");
-			lines.push_back("[W/S] Speed   [Ctrl] Wingsuit   [Space] Stow");
+			lines.push_back(LOC(Traversal_GliderTitle));
+			lines.push_back(LOCF(Traversal_GliderStats, m_HeightAboveGround, glm::length(velocity) * 3.6f, velocity.y));
+			lines.push_back(m_Lift > 0.8f ? LOC(Traversal_RisingAir) : LOC(Traversal_FindRisingAir));
+			lines.push_back(LOC(Traversal_GliderControls));
 			break;
 		case Mode::WINGSUIT:
-			lines.push_back("WINGSUIT");
-			snprintf(buffer, ARRAY_LENGTH(buffer), "Height %.0fm   Speed %.0fkm/h", m_HeightAboveGround, glm::length(velocity) * 3.6f);
-			lines.push_back(buffer);
-			lines.push_back("Look down to dive, pull up to trade speed for height");
-			lines.push_back("[Release Ctrl] Open glider");
+			lines.push_back(LOC(Traversal_WingsuitTitle));
+			lines.push_back(LOCF(Traversal_FlightStats, m_HeightAboveGround, glm::length(velocity) * 3.6f));
+			lines.push_back(LOC(Traversal_WingsuitHint));
+			lines.push_back(LOC(Traversal_WingsuitControls));
 			break;
 		case Mode::CLIMBING:
 			if (m_bMantling)
 			{
 				break;
 			}
-			lines.push_back("CLIMBING");
-			lines.push_back("[WASD] Climb   [Space] Leap   [Release Shift] Let go");
+			lines.push_back(LOC(Traversal_ClimbingTitle));
+			lines.push_back(LOC(Traversal_ClimbingControls));
 			break;
 		case Mode::SKIING:
-			lines.push_back(m_GroundSlipperiness > 0.6f ? "SKIING" : "SLIDING");
-			snprintf(buffer, ARRAY_LENGTH(buffer), "Speed %.0fkm/h", glm::length(velocity) * 3.6f);
-			lines.push_back(buffer);
-			lines.push_back("Look to carve   [S] Brake   [Space] Jump   [Release Ctrl] Stand");
+			lines.push_back(m_GroundSlipperiness > 0.6f ? LOC(Traversal_SkiingTitle) : LOC(Traversal_SlidingTitle));
+			lines.push_back(LOCF(Traversal_SpeedStats, glm::length(velocity) * 3.6f));
+			lines.push_back(LOC(Traversal_SkiingControls));
 			break;
 		default:
 			if (m_Hook.state == HookState::ATTACHED)
 			{
-				lines.push_back("GRAPPLING HOOK");
-				lines.push_back("[Space] Reel in   [Ctrl] Let out   [WASD] Swing   [F] Release");
+				lines.push_back(LOC(Traversal_HookTitle));
+				lines.push_back(LOC(Traversal_HookControls));
 			}
 			break;
 		}

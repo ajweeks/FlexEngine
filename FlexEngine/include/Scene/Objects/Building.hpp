@@ -37,6 +37,9 @@ namespace flex
 	void AppendBoxToVertexData(const glm::vec3& center, const glm::vec3& halfExtents, const glm::quat& rotation,
 		VertexBufferDataCreateInfo& vertexData, std::vector<u32>& indices);
 	const char* BuildMaterialName(BuildMaterial material);
+	// Localized names, as shown to the player (the names above are used in object names)
+	const char* BuildPieceDisplayName(BuildPieceType type);
+	const char* BuildMaterialDisplayName(BuildMaterial material);
 
 	class BuildPiece final : public GameObject
 	{

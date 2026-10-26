@@ -2,7 +2,9 @@
 
 #include "Scene/TerrainGeneration.hpp"
 
+#include "Helpers.hpp"
 #include "Platform/Platform.hpp"
+#include "SaveFile.hpp"
 #include "Systems/JobSystem.hpp"
 
 #include <chrono>
@@ -415,6 +417,29 @@ namespace flex
 			return (u32)material < (u32)Material::_COUNT ? s_Materials[(u32)material].name : "Invalid";
 		}
 
+		static const char* s_VegetationNames[] =
+		{
+			"none", "taiga", "nordic", "broadleaf", "swamp", "tundra", "alpine", "savanna", "desert",
+		};
+		static_assert(ARRAY_LENGTH(s_VegetationNames) == (u32)Vegetation::_COUNT, "s_VegetationNames must match Vegetation enum");
+
+		const char* VegetationName(Vegetation vegetation)
+		{
+			return (u32)vegetation < (u32)Vegetation::_COUNT ? s_VegetationNames[(u32)vegetation] : "none";
+		}
+
+		Vegetation ParseVegetation(const std::string& name, Vegetation fallback)
+		{
+			for (u32 i = 0; i < (u32)Vegetation::_COUNT; ++i)
+			{
+				if (name == s_VegetationNames[i])
+				{
+					return (Vegetation)i;
+				}
+			}
+			return fallback;
+		}
+
 		// -----------------------------------------------------------------------------------------
 		// World params
 		// -----------------------------------------------------------------------------------------
@@ -449,6 +474,7 @@ namespace flex
 			SEED_TREES,
 			SEED_FOREST,
 			SEED_TREASURE,
+			SEED_BUSHES,
 			SEED_BIOME_BASE = 1000,
 		};
 
@@ -470,6 +496,8 @@ namespace flex
 			plains.groundColour = glm::vec3(0.30f, 0.35f, 0.18f);
 			plains.cliffColour = glm::vec3(0.42f, 0.38f, 0.32f);
 			plains.grassiness = 1.0f;
+			plains.vegetation = Vegetation::BROADLEAF;
+			plains.treeDensity = 0.8f;
 			params.biomes.push_back(plains);
 
 			BiomeParams hills = {};
@@ -486,6 +514,7 @@ namespace flex
 			hills.groundColour = glm::vec3(0.27f, 0.32f, 0.17f);
 			hills.cliffColour = glm::vec3(0.40f, 0.38f, 0.35f);
 			hills.grassiness = 1.0f;
+			hills.vegetation = Vegetation::NORDIC;
 			params.biomes.push_back(hills);
 
 			BiomeParams mountains = {};
@@ -504,6 +533,9 @@ namespace flex
 			mountains.peakColour = glm::vec3(0.92f, 0.94f, 0.97f);
 			mountains.peakHeight = 650.0f;
 			mountains.grassiness = 0.8f;
+			mountains.vegetation = Vegetation::TAIGA;
+			mountains.treeDensity = 0.8f;
+			mountains.bushDensity = 0.8f;
 			params.biomes.push_back(mountains);
 
 			BiomeParams mesa = {};
@@ -523,6 +555,8 @@ namespace flex
 			mesa.groundColour = glm::vec3(0.66f, 0.46f, 0.29f);
 			mesa.cliffColour = glm::vec3(0.62f, 0.33f, 0.18f);
 			mesa.grassiness = 0.1f;
+			mesa.vegetation = Vegetation::DESERT;
+			mesa.treeDensity = 0.7f;
 			params.biomes.push_back(mesa);
 
 			BiomeParams badlands = {};
@@ -539,6 +573,7 @@ namespace flex
 			badlands.groundColour = glm::vec3(0.52f, 0.47f, 0.39f);
 			badlands.cliffColour = glm::vec3(0.46f, 0.41f, 0.37f);
 			badlands.grassiness = 0.15f;
+			badlands.vegetation = Vegetation::SAVANNA;
 			params.biomes.push_back(badlands);
 
 			BiomeParams lowlands = {};
@@ -553,6 +588,9 @@ namespace flex
 			lowlands.groundColour = glm::vec3(0.36f, 0.36f, 0.24f);
 			lowlands.cliffColour = glm::vec3(0.36f, 0.34f, 0.29f);
 			lowlands.grassiness = 0.85f;
+			lowlands.vegetation = Vegetation::BROADLEAF;
+			lowlands.treeDensity = 1.1f;
+			lowlands.bushDensity = 1.3f;
 			params.biomes.push_back(lowlands);
 
 			// Cold, gently rolling ground with patchy snow & lots of small lakes
@@ -571,6 +609,7 @@ namespace flex
 			tundra.peakColour = glm::vec3(0.90f, 0.92f, 0.95f);
 			tundra.peakHeight = 70.0f;
 			tundra.grassiness = 0.55f;
+			tundra.vegetation = Vegetation::TUNDRA;
 			params.biomes.push_back(tundra);
 
 			// Cold hills, darker & greener than tundra
@@ -590,6 +629,8 @@ namespace flex
 			boreal.peakColour = glm::vec3(0.91f, 0.93f, 0.96f);
 			boreal.peakHeight = 260.0f;
 			boreal.grassiness = 0.9f;
+			boreal.vegetation = Vegetation::TAIGA;
+			boreal.treeDensity = 1.2f;
 			params.biomes.push_back(boreal);
 
 			// Sand dunes (sharp ridged crests)
@@ -606,6 +647,7 @@ namespace flex
 			desert.groundColour = glm::vec3(0.78f, 0.66f, 0.48f);
 			desert.cliffColour = glm::vec3(0.70f, 0.52f, 0.36f);
 			desert.grassiness = 0.0f;
+			desert.vegetation = Vegetation::DESERT;
 			params.biomes.push_back(desert);
 
 			// Stepped sandstone plateaus, cut by canyons, with natural arches
@@ -626,6 +668,9 @@ namespace flex
 			canyons.groundColour = glm::vec3(0.72f, 0.52f, 0.35f);
 			canyons.cliffColour = glm::vec3(0.76f, 0.47f, 0.28f);
 			canyons.grassiness = 0.05f;
+			canyons.vegetation = Vegetation::DESERT;
+			canyons.treeDensity = 0.6f;
+			canyons.bushDensity = 0.8f;
 			params.biomes.push_back(canyons);
 
 			// Dark basalt ridges
@@ -643,6 +688,9 @@ namespace flex
 			volcanic.groundColour = glm::vec3(0.24f, 0.23f, 0.21f);
 			volcanic.cliffColour = glm::vec3(0.17f, 0.17f, 0.18f);
 			volcanic.grassiness = 0.2f;
+			volcanic.vegetation = Vegetation::ALPINE;
+			volcanic.treeDensity = 0.8f;
+			volcanic.bushDensity = 0.8f;
 			params.biomes.push_back(volcanic);
 
 			// Very flat, low & full of lakes
@@ -658,6 +706,7 @@ namespace flex
 			wetlands.groundColour = glm::vec3(0.26f, 0.30f, 0.17f);
 			wetlands.cliffColour = glm::vec3(0.33f, 0.30f, 0.25f);
 			wetlands.grassiness = 1.0f;
+			wetlands.vegetation = Vegetation::SWAMP;
 			params.biomes.push_back(wetlands);
 
 			return params;
@@ -716,6 +765,9 @@ namespace flex
 				hasher.Add(biome.peakColour);
 				hasher.Add(biome.peakHeight);
 				hasher.Add(biome.grassiness);
+				hasher.Add((u32)biome.vegetation);
+				hasher.Add(biome.treeDensity);
+				hasher.Add(biome.bushDensity);
 			}
 			return hasher.value;
 		}
@@ -814,6 +866,12 @@ namespace flex
 				biome.wavelength = glm::max(biome.wavelength, 1.0f);
 				biome.terraceHeight = glm::max(biome.terraceHeight, 0.1f);
 				biome.grassiness = glm::clamp(biome.grassiness, 0.0f, 1.0f);
+				biome.treeDensity = glm::max(biome.treeDensity, 0.0f);
+				biome.bushDensity = glm::max(biome.bushDensity, 0.0f);
+				if ((u32)biome.vegetation >= (u32)Vegetation::_COUNT)
+				{
+					biome.vegetation = Vegetation::NONE;
+				}
 				m_TotalBiomeFrequency += biome.frequency;
 				maxOverhang = glm::max(maxOverhang, biome.overhangAmplitude);
 				bAnyArches = bAnyArches || biome.archStrength > 0.0f;
@@ -1106,8 +1164,10 @@ namespace flex
 
 			ColumnSample result = {};
 			result.primaryBiome = 0;
+			result.secondaryBiome = -1;
 			real totalWeight = 0.0f;
 			real maxWeight = 0.0f;
+			real secondWeight = 0.0f;
 			for (i32 b = 0; b < biomeCount; ++b)
 			{
 				const real w = weights[b];
@@ -1138,8 +1198,18 @@ namespace flex
 
 				if (w > maxWeight)
 				{
+					if (maxWeight > 0.0f)
+					{
+						secondWeight = maxWeight;
+						result.secondaryBiome = result.primaryBiome;
+					}
 					maxWeight = w;
 					result.primaryBiome = b;
+				}
+				else if (w > secondWeight)
+				{
+					secondWeight = w;
+					result.secondaryBiome = b;
 				}
 			}
 
@@ -1156,6 +1226,7 @@ namespace flex
 			result.peakColour *= invTotalWeight;
 			result.peakHeight *= invTotalWeight;
 			result.primaryBiomeWeight = maxWeight * invTotalWeight;
+			result.primaryBiomeShare = maxWeight / (maxWeight + secondWeight);
 
 			const real invContinentWavelength = 1.0f / m_Params.continentWavelength;
 			result.height += m_Params.continentAmplitude * Fbm2(x * invContinentWavelength, z * invContinentWavelength, 3, DeriveSeed(m_Seed, SEED_CONTINENT));
@@ -1887,59 +1958,206 @@ namespace flex
 			return false;
 		}
 
-		// Trees & cacti, generated with the terrain (so they stream, LOD & collide along with it). Placed on a jittered
-		// grid, each candidate is decided by the biome's climate, a forest density pattern & the ground's slope.
+		// Trees, cacti & bushes, generated with the terrain (so they stream, LOD & collide along with it). Placed on
+		// jittered grids, each candidate is decided by its biome's vegetation type, a forest density pattern & the
+		// ground's slope. Each biome has one dominant tree species (& a little variety), so forests look uniform.
 		static constexpr real PLANT_CELL_SIZE = 7.0f;
+		static constexpr real BUSH_CELL_SIZE = 4.5f;
+		// Bushes are only shown on the most detailed chunks
+		static constexpr i32 MAX_BUSH_LEVEL = 1;
 
-		static PlantKind ChoosePlantKind(const ColumnSample& column, real x, real z, real chance, u32 forestSeed)
+		enum class BushKind : u8
 		{
-			// Forests grow in patches, with clearings between them
-			const real forestNoise = GradientNoise3(x / 700.0f, 0.0f, z / 700.0f, forestSeed) + 0.4f * GradientNoise3(x / 180.0f, 0.5f, z / 180.0f, forestSeed + 1);
-			const real forest = Smoothstep(-0.25f, 0.45f, forestNoise);
-			const real t = column.temperature;
-			const real grass = column.grassiness;
+			BERRY, // Dark, rounded, with berries
+			LEAFY, // Light green clumps
+			LOW_SHRUB, // Low, wide mats (heather, dwarf birch, juniper)
+			SCRUB, // Dry, grey-olive tufts
+		};
 
-			if (t > 0.55f && grass < 0.25f)
-			{
-				// Deserts: scattered cacti
-				return chance < 0.05f * (1.0f - grass * 3.0f) ? PlantKind::CACTUS : PlantKind::NONE;
-			}
-			if (t < -0.7f)
-			{
-				// Tundra: the odd stunted conifer
-				return chance < 0.03f * grass ? PlantKind::CONIFER : PlantKind::NONE;
-			}
+		struct VegetationInfo
+		{
+			real treeChance; // Chance of a tree per cell in clearings
+			real forestTreeChance; // Extra chance of a tree per cell in forests
+			// > 0: denser on grassy ground, < 0: sparser on grassy ground (deserts), 0: independent of grass
+			real grassResponse;
+			PlantSpecies majorSpecies;
+			PlantSpecies minorSpecies;
+			real minorFraction; // Of trees (they grow in groves)
+			real treeScale;
+			real bushChance; // Per bush cell
+			BushKind bushKind;
+			glm::vec3 bushColour;
+			glm::vec3 berryColour;
+			real berryFraction; // Of bushes with berries
+		};
 
-			const real density = grass * (0.04f + 0.42f * forest);
-			if (chance >= density)
+		static const VegetationInfo s_VegetationInfos[] =
+		{
+			// NONE
+			{ 0.0f, 0.0f, 0.0f, PlantSpecies::NONE, PlantSpecies::NONE, 0.0f, 1.0f, 0.0f, BushKind::LEAFY, glm::vec3(0.0f), glm::vec3(0.0f), 0.0f },
+			// TAIGA
+			{ 0.07f, 0.48f, 1.0f, PlantSpecies::SPRUCE, PlantSpecies::BIRCH, 0.05f, 1.0f, 0.12f, BushKind::BERRY, glm::vec3(0.09f, 0.17f, 0.08f), glm::vec3(0.16f, 0.18f, 0.42f), 0.7f },
+			// NORDIC
+			{ 0.05f, 0.40f, 1.0f, PlantSpecies::PINE, PlantSpecies::BIRCH, 0.4f, 1.0f, 0.12f, BushKind::BERRY, glm::vec3(0.13f, 0.24f, 0.09f), glm::vec3(0.62f, 0.08f, 0.07f), 0.6f },
+			// BROADLEAF
+			{ 0.03f, 0.34f, 1.0f, PlantSpecies::OAK, PlantSpecies::BIRCH, 0.08f, 1.0f, 0.10f, BushKind::LEAFY, glm::vec3(0.22f, 0.36f, 0.11f), glm::vec3(0.6f, 0.07f, 0.08f), 0.15f },
+			// SWAMP
+			{ 0.03f, 0.26f, 1.0f, PlantSpecies::WILLOW, PlantSpecies::BIRCH, 0.2f, 1.0f, 0.16f, BushKind::LEAFY, glm::vec3(0.14f, 0.24f, 0.10f), glm::vec3(0.0f), 0.0f },
+			// TUNDRA
+			{ 0.025f, 0.0f, 1.0f, PlantSpecies::SPRUCE, PlantSpecies::NONE, 0.0f, 0.45f, 0.22f, BushKind::LOW_SHRUB, glm::vec3(0.30f, 0.27f, 0.14f), glm::vec3(0.55f, 0.1f, 0.08f), 0.25f },
+			// ALPINE
+			{ 0.02f, 0.14f, 1.0f, PlantSpecies::PINE, PlantSpecies::SPRUCE, 0.2f, 0.85f, 0.10f, BushKind::LOW_SHRUB, glm::vec3(0.13f, 0.20f, 0.11f), glm::vec3(0.0f), 0.0f },
+			// SAVANNA
+			{ 0.012f, 0.025f, 0.0f, PlantSpecies::ACACIA, PlantSpecies::NONE, 0.0f, 1.0f, 0.08f, BushKind::SCRUB, glm::vec3(0.36f, 0.35f, 0.21f), glm::vec3(0.0f), 0.0f },
+			// DESERT
+			{ 0.04f, 0.0f, -2.0f, PlantSpecies::SAGUARO, PlantSpecies::NONE, 0.0f, 1.0f, 0.05f, BushKind::SCRUB, glm::vec3(0.38f, 0.36f, 0.24f), glm::vec3(0.0f), 0.0f },
+		};
+		static_assert(ARRAY_LENGTH(s_VegetationInfos) == (u32)Vegetation::_COUNT, "s_VegetationInfos must match Vegetation enum");
+
+		static PlantKind SpeciesKind(PlantSpecies species)
+		{
+			switch (species)
 			{
+			case PlantSpecies::SPRUCE:
+			case PlantSpecies::PINE:
+				return PlantKind::CONIFER;
+			case PlantSpecies::BIRCH:
+			case PlantSpecies::OAK:
+			case PlantSpecies::WILLOW:
+			case PlantSpecies::ACACIA:
+				return PlantKind::DECIDUOUS;
+			case PlantSpecies::SAGUARO:
+				return PlantKind::CACTUS;
+			default:
 				return PlantKind::NONE;
 			}
-			// Conifers in the cold & up mountains, broadleaf trees in milder climates, mixed in between
-			const real coniferness = Smoothstep(0.15f, -0.25f, t) + Smoothstep(column.peakHeight - 600.0f, column.peakHeight - 250.0f, column.height);
-			return HashToUnit(HashU32((u32)(chance * 16777216.0f) + 77u)) < coniferness ? PlantKind::CONIFER : PlantKind::DECIDUOUS;
 		}
 
-		// Sizes of a plant's parts (matching VegetationBuilder::AddPlant)
+		// The biome whose vegetation grows here: near borders plants are dithered between the two biomes
+		static const BiomeParams& VegetationBiome(const WorldParams& params, const ColumnSample& column, real random01)
+		{
+			const i32 biomeCount = (i32)params.biomes.size();
+			const i32 primary = glm::clamp(column.primaryBiome, 0, biomeCount - 1);
+			if (column.secondaryBiome >= 0 && column.secondaryBiome < biomeCount)
+			{
+				// Share is 0.5 right on the border, so plants are evenly mixed there, & only the primary's further in
+				const real primaryChance = 0.5f + 0.5f * Smoothstep(0.5f, 0.75f, column.primaryBiomeShare);
+				if (random01 >= primaryChance)
+				{
+					return params.biomes[column.secondaryBiome];
+				}
+			}
+			return params.biomes[primary];
+		}
+
+		// [0, 1]: forests grow in patches, with clearings between them
+		static real ForestAmount(real x, real z, u32 forestSeed)
+		{
+			const real forestNoise = GradientNoise3(x / 700.0f, 0.0f, z / 700.0f, forestSeed) + 0.4f * GradientNoise3(x / 180.0f, 0.5f, z / 180.0f, forestSeed + 1);
+			return Smoothstep(-0.25f, 0.45f, forestNoise);
+		}
+
+		static real GrassFactor(real grassResponse, real grassiness)
+		{
+			if (grassResponse > 0.0f)
+			{
+				return grassiness;
+			}
+			if (grassResponse < 0.0f)
+			{
+				return Max(1.0f + grassResponse * grassiness, 0.0f);
+			}
+			return 1.0f;
+		}
+
+		static PlantSpecies ChoosePlantSpecies(const WorldParams& params, const ColumnSample& column, real x, real z, u32 hash, u32 forestSeed, real& outScale)
+		{
+			const BiomeParams& biome = VegetationBiome(params, column, HashToUnit(HashU32(hash + 31)));
+			const VegetationInfo& info = s_VegetationInfos[(u32)biome.vegetation];
+			outScale = info.treeScale;
+			if (info.majorSpecies == PlantSpecies::NONE)
+			{
+				return PlantSpecies::NONE;
+			}
+
+			const real chance = HashToUnit(hash);
+			real density = info.treeChance;
+			if (info.forestTreeChance > 0.0f)
+			{
+				density += info.forestTreeChance * ForestAmount(x, z, forestSeed);
+			}
+			density *= biome.treeDensity * GrassFactor(info.grassResponse, column.grassiness);
+			if (chance >= density)
+			{
+				return PlantSpecies::NONE;
+			}
+
+			const real speciesRandom = HashToUnit(HashU32(hash + 77));
+			PlantSpecies species = info.majorSpecies;
+			if (info.minorFraction > 0.0f)
+			{
+				// The minor species grows in groves
+				const real grove = GradientNoise3(x / 110.0f, 2.5f, z / 110.0f, forestSeed + 2);
+				if (speciesRandom < info.minorFraction * Clamp(1.0f + 2.5f * grove, 0.0f, 3.0f))
+				{
+					species = info.minorSpecies;
+				}
+			}
+
+			// Towards the tree line only conifers grow
+			if (SpeciesKind(species) == PlantKind::DECIDUOUS)
+			{
+				const real alpine = Smoothstep(column.peakHeight - 600.0f, column.peakHeight - 250.0f, column.height);
+				if (HashToUnit(HashU32(hash + 78)) < alpine)
+				{
+					species = PlantSpecies::SPRUCE;
+				}
+			}
+			return species;
+		}
+
+		// Sizes of a plant's parts (VegetationBuilder::AddPlant builds from these)
 		static void ComputePlantDimensions(PlantInfo& plant)
 		{
 			const real s = plant.size01;
-			switch (plant.kind)
+			const real scale = plant.scale;
+			const real radiusScale = std::sqrt(scale);
+			switch (plant.species)
 			{
-			case PlantKind::CONIFER:
-				plant.height = 9.0f + 12.0f * s;
+			case PlantSpecies::SPRUCE:
+				plant.height = (9.0f + 12.0f * s) * scale;
 				plant.trunkHeight = plant.height * 0.35f - 0.3f;
-				plant.trunkRadius = 0.22f + 0.15f * s;
+				plant.trunkRadius = (0.22f + 0.15f * s) * radiusScale;
 				break;
-			case PlantKind::DECIDUOUS:
-				plant.height = 7.0f + 7.0f * s;
+			case PlantSpecies::PINE:
+				plant.height = (10.0f + 10.0f * s) * scale;
+				plant.trunkHeight = plant.height * 0.6f - 0.3f;
+				plant.trunkRadius = (0.2f + 0.12f * s) * radiusScale;
+				break;
+			case PlantSpecies::BIRCH:
+				plant.height = (8.0f + 6.0f * s) * scale;
+				plant.trunkHeight = plant.height * 0.6f - 0.3f;
+				plant.trunkRadius = (0.15f + 0.08f * s) * radiusScale;
+				break;
+			case PlantSpecies::OAK:
+				plant.height = (7.0f + 7.0f * s) * scale;
 				plant.trunkHeight = plant.height * 0.55f - 0.3f;
-				plant.trunkRadius = 0.3f + 0.15f * s;
+				plant.trunkRadius = (0.3f + 0.15f * s) * radiusScale;
 				break;
-			case PlantKind::CACTUS:
-				plant.height = 3.0f + 3.5f * s;
+			case PlantSpecies::WILLOW:
+				plant.height = (7.0f + 5.0f * s) * scale;
+				plant.trunkHeight = plant.height * 0.45f - 0.3f;
+				plant.trunkRadius = (0.35f + 0.15f * s) * radiusScale;
+				break;
+			case PlantSpecies::ACACIA:
+				plant.height = (5.0f + 4.0f * s) * scale;
+				plant.trunkHeight = plant.height * 0.72f - 0.3f;
+				plant.trunkRadius = (0.18f + 0.08f * s) * radiusScale;
+				break;
+			case PlantSpecies::SAGUARO:
+				plant.height = (3.0f + 3.5f * s) * scale;
 				plant.trunkHeight = plant.height;
-				plant.trunkRadius = 0.28f + 0.1f * s;
+				plant.trunkRadius = (0.28f + 0.1f * s) * radiusScale;
 				break;
 			default:
 				break;
@@ -1957,6 +2175,39 @@ namespace flex
 				}
 			}
 			return false;
+		}
+
+		// Whether a plant can grow at (x, z) within the box's height range, & if so where the ground is
+		static bool FindPlantGround(const TerrainDensity& density, const EditList& edits, const ColumnSample& column, real x, real z,
+			const glm::vec3& boxMin, const glm::vec3& boxMax, glm::vec3& outBase)
+		{
+			real groundY;
+			if (!density.FindTopSurface(x, z, boxMin.y, boxMax.y, column, edits, groundY))
+			{
+				return false;
+			}
+			const glm::vec3 base(x, groundY, z);
+			if (column.lakeID != 0 && column.lakeT < 1.05f && groundY < column.waterLevel + 0.5f)
+			{
+				return false;
+			}
+			if (groundY > column.peakHeight - 30.0f || SkyVisibility(base, column) < 0.95f)
+			{
+				return false;
+			}
+			// Not on steep slopes
+			const real e = 1.0f;
+			const glm::vec3 gradient(
+				density.Sample(base + glm::vec3(e, 0, 0), column, edits) - density.Sample(base - glm::vec3(e, 0, 0), column, edits),
+				density.Sample(base + glm::vec3(0, e, 0), column, edits) - density.Sample(base - glm::vec3(0, e, 0), column, edits),
+				density.Sample(base + glm::vec3(0, 0, e), column, edits) - density.Sample(base - glm::vec3(0, 0, e), column, edits));
+			const real gradientLength = glm::length(gradient);
+			if (gradientLength < 1e-5f || gradient.y / gradientLength < 0.8f)
+			{
+				return false;
+			}
+			outBase = base;
+			return true;
 		}
 
 		// Calls func(const PlantInfo&) for each plant whose base lies within the given box. Levels >= 2 skip small plants.
@@ -1989,45 +2240,89 @@ namespace flex
 					}
 
 					const ColumnSample column = density.SampleColumn(x, z);
-					const PlantKind kind = ChoosePlantKind(column, x, z, HashToUnit(h), forestSeed);
-					if (kind == PlantKind::NONE || IsPlantRemoved(edits, x, z))
+					real scale;
+					const PlantSpecies species = ChoosePlantSpecies(density.Params(), column, x, z, h, forestSeed, scale);
+					if (species == PlantSpecies::NONE || IsPlantRemoved(edits, x, z))
 					{
 						continue;
 					}
 
-					real groundY;
-					if (!density.FindTopSurface(x, z, boxMin.y, boxMax.y, column, edits, groundY))
-					{
-						continue;
-					}
-					const glm::vec3 base(x, groundY, z);
-					if (column.lakeID != 0 && column.lakeT < 1.05f && groundY < column.waterLevel + 0.5f)
-					{
-						continue;
-					}
-					if (groundY > column.peakHeight - 30.0f || SkyVisibility(base, column) < 0.95f)
-					{
-						continue;
-					}
-					// Not on steep slopes
-					const real e = 1.0f;
-					const glm::vec3 gradient(
-						density.Sample(base + glm::vec3(e, 0, 0), column, edits) - density.Sample(base - glm::vec3(e, 0, 0), column, edits),
-						density.Sample(base + glm::vec3(0, e, 0), column, edits) - density.Sample(base - glm::vec3(0, e, 0), column, edits),
-						density.Sample(base + glm::vec3(0, 0, e), column, edits) - density.Sample(base - glm::vec3(0, 0, e), column, edits));
-					const real gradientLength = glm::length(gradient);
-					if (gradientLength < 1e-5f || gradient.y / gradientLength < 0.8f)
+					glm::vec3 base;
+					if (!FindPlantGround(density, edits, column, x, z, boxMin, boxMax, base))
 					{
 						continue;
 					}
 
 					PlantInfo plant;
-					plant.kind = kind;
+					plant.kind = SpeciesKind(species);
+					plant.species = species;
 					plant.base = base;
 					plant.hash = h;
 					plant.size01 = size01;
+					plant.scale = scale;
 					ComputePlantDimensions(plant);
 					func(plant);
+				}
+			}
+		}
+
+		struct BushInfo
+		{
+			glm::vec3 base;
+			u32 hash;
+			const VegetationInfo* vegetation;
+		};
+
+		// Bushes aren't collided with or interacted with, so they're only found when building chunks
+		template<typename Func>
+		static void ForEachBush(const TerrainDensity& density, const EditList& edits, const glm::vec3& boxMin, const glm::vec3& boxMax, Func func)
+		{
+			// No vegetation type has a higher chance than this (so most cells can be skipped before sampling)
+			static const real MAX_BUSH_CHANCE = 0.45f;
+			const u32 seed = DeriveSeed(density.Seed(), SEED_BUSHES);
+			const u32 forestSeed = DeriveSeed(density.Seed(), SEED_FOREST);
+			const WorldParams& params = density.Params();
+			const i32 minCellX = (i32)glm::floor(boxMin.x / BUSH_CELL_SIZE);
+			const i32 maxCellX = (i32)glm::floor((boxMax.x - 1e-3f) / BUSH_CELL_SIZE);
+			const i32 minCellZ = (i32)glm::floor(boxMin.z / BUSH_CELL_SIZE);
+			const i32 maxCellZ = (i32)glm::floor((boxMax.z - 1e-3f) / BUSH_CELL_SIZE);
+			for (i32 cz = minCellZ; cz <= maxCellZ; ++cz)
+			{
+				for (i32 cx = minCellX; cx <= maxCellX; ++cx)
+				{
+					const u32 h = HashCoords(cx, cz, seed);
+					const real chance = HashToUnit(h);
+					if (chance >= MAX_BUSH_CHANCE)
+					{
+						continue;
+					}
+
+					const real x = ((real)cx + 0.1f + 0.8f * HashToUnit(HashU32(h + 1))) * BUSH_CELL_SIZE;
+					const real z = ((real)cz + 0.1f + 0.8f * HashToUnit(HashU32(h + 2))) * BUSH_CELL_SIZE;
+					if (x < boxMin.x || x >= boxMax.x || z < boxMin.z || z >= boxMax.z)
+					{
+						continue;
+					}
+
+					const ColumnSample column = density.SampleColumn(x, z);
+					const BiomeParams& biome = VegetationBiome(params, column, HashToUnit(HashU32(h + 31)));
+					const VegetationInfo& info = s_VegetationInfos[(u32)biome.vegetation];
+					// More undergrowth in & around forests
+					const real forest = info.forestTreeChance > 0.0f ? ForestAmount(x, z, forestSeed) : 0.5f;
+					const real bushChance = Min(info.bushChance * biome.bushDensity * (0.5f + forest) * GrassFactor(info.grassResponse, column.grassiness), MAX_BUSH_CHANCE);
+					if (chance >= bushChance)
+					{
+						continue;
+					}
+
+					BushInfo bush;
+					if (!FindPlantGround(density, edits, column, x, z, boxMin, boxMax, bush.base))
+					{
+						continue;
+					}
+					bush.hash = h;
+					bush.vegetation = &info;
+					func(bush);
 				}
 			}
 		}
@@ -2054,24 +2349,29 @@ namespace flex
 				}
 			}
 
-			// Adds the plants whose bases lie within the given box
+			// Adds the plants (& bushes) whose bases lie within the given box
 			void Build(const glm::vec3& boxMin, const glm::vec3& boxMax)
 			{
 				ForEachPlant(m_Density, m_Edits, boxMin, boxMax, m_Level, [this](const PlantInfo& plant)
 				{
-					AddPlant(plant.kind, plant.base - glm::vec3(0.0f, 0.3f, 0.0f), plant.hash, plant.size01);
+					AddPlant(plant);
 				});
+				if (m_Level <= MAX_BUSH_LEVEL)
+				{
+					ForEachBush(m_Density, m_Edits, boxMin, boxMax, [this](const BushInfo& bush)
+					{
+						AddBush(bush);
+					});
+				}
 			}
 
 			// A single plant (at full detail)
 			void BuildSingle(const PlantInfo& plant)
 			{
-				AddPlant(plant.kind, plant.base - glm::vec3(0.0f, 0.3f, 0.0f), plant.hash, plant.size01);
+				AddPlant(plant);
 			}
 
 		private:
-			using Kind = PlantKind;
-
 			void Append(const ChunkMeshData& part)
 			{
 				const u32 base = (u32)m_Out.positions.size();
@@ -2141,8 +2441,8 @@ namespace flex
 				}
 			}
 
-			// A lumpy, low poly ball of leaves (subdivided octahedron)
-			void AddBlob(const glm::vec3& center, const glm::vec3& radii, u32 hash, const glm::vec3& colour, const glm::vec4& weights)
+			// A lumpy, low poly ball of leaves (octahedron, subdivided once when detailed)
+			void AddBlob(const glm::vec3& center, const glm::vec3& radii, u32 hash, const glm::vec3& colour, const glm::vec4& weights, bool bSubdivide)
 			{
 				const glm::vec3 axes[6] = { glm::vec3(1, 0, 0), glm::vec3(0, 0, 1), glm::vec3(-1, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0), glm::vec3(0, -1, 0) };
 				const u32 faces[8][3] = { { 0, 4, 1 }, { 1, 4, 2 }, { 2, 4, 3 }, { 3, 4, 0 }, { 1, 5, 0 }, { 2, 5, 1 }, { 3, 5, 2 }, { 0, 5, 3 } };
@@ -2153,7 +2453,6 @@ namespace flex
 					const u32 bump = HashU32(hash + (u32)(i32)(n.x * 97.0f) * 31u + (u32)(i32)(n.y * 89.0f) * 17u + (u32)(i32)(n.z * 83.0f) * 7u);
 					return center + n * radii * (0.85f + 0.3f * HashToUnit(bump));
 				};
-				const bool bSubdivide = m_Level == 0;
 				for (const auto& face : faces)
 				{
 					const glm::vec3 a = axes[face[0]];
@@ -2176,8 +2475,13 @@ namespace flex
 				}
 			}
 
-			void AddPlant(Kind kind, const glm::vec3& base, u32 hash, real size01)
+			void AddPlant(const PlantInfo& plant)
 			{
+				const glm::vec3 base = plant.base - glm::vec3(0.0f, 0.3f, 0.0f);
+				const u32 hash = plant.hash;
+				const real height = plant.height;
+				const real trunkLength = plant.trunkHeight + 0.3f;
+				const real trunkRadius = plant.trunkRadius;
 				const real variation = HashToUnit(HashU32(hash + 9)) - 0.5f;
 				const real angle = HashToUnit(HashU32(hash + 11)) * TWO_PI;
 				// Weights: grass (leafy), layered rock, granular; w: sky visibility
@@ -2185,51 +2489,120 @@ namespace flex
 				const glm::vec4 barkWeights(0.0f, 0.2f, 0.8f, 1.0f);
 				const glm::vec3 bark = glm::vec3(0.33f, 0.24f, 0.16f) * (1.0f + variation * 0.3f);
 				const bool bDetailed = m_Level == 0;
+				const u32 trunkSides = bDetailed ? 6 : 4;
 
-				switch (kind)
+				switch (plant.species)
 				{
-				case Kind::CONIFER:
+				case PlantSpecies::SPRUCE:
 				{
-					const real height = 9.0f + 12.0f * size01;
-					const glm::vec3 needles = glm::vec3(0.11f, 0.2f, 0.11f) * (1.0f + variation * 0.35f);
+					// Dark, dense & narrow, branches down to near the ground
+					const glm::vec3 needles = glm::vec3(0.075f, 0.15f, 0.095f) * (1.0f + variation * 0.3f);
 					m_Target = &m_Trunks;
-					AddFrustum(base, height * 0.35f, 0.22f + 0.15f * size01, 0.15f, bDetailed ? 6 : 4, angle, bark, barkWeights, false);
+					AddFrustum(base, trunkLength, trunkRadius, 0.15f, trunkSides, angle, bark * 0.85f, barkWeights, false);
 					m_Target = &m_Foliage;
 					const u32 tiers = bDetailed ? 3 : 1;
 					for (u32 i = 0; i < tiers; ++i)
 					{
 						const real t = tiers == 1 ? 0.0f : (real)i / (real)(tiers - 1);
-						const real tierBase = height * (0.18f + 0.3f * t);
-						const real tierHeight = height * (tiers == 1 ? 0.82f : 0.52f - 0.12f * t);
-						const real radius = height * (0.28f - 0.09f * t);
+						const real tierBase = height * (0.16f + 0.3f * t);
+						const real tierHeight = height * (tiers == 1 ? 0.84f : 0.54f - 0.12f * t);
+						const real radius = height * (0.25f - 0.08f * t);
 						AddFrustum(base + glm::vec3(0.0f, tierBase, 0.0f), tierHeight, radius, 0.0f, bDetailed ? 7 : 5, angle + (real)i * 0.4f, needles * (1.0f + 0.08f * (real)i), leafWeights, true);
 					}
 				} break;
-				case Kind::DECIDUOUS:
+				case PlantSpecies::PINE:
 				{
-					const real height = 7.0f + 7.0f * size01;
-					const glm::vec3 leaves = glm::vec3(0.2f, 0.32f, 0.11f) * (1.0f + variation * 0.4f);
+					// Light green, tall bare trunk with a crown of short tiers
+					const glm::vec3 needles = glm::vec3(0.17f, 0.29f, 0.12f) * (1.0f + variation * 0.3f);
+					const glm::vec3 pineBark = glm::vec3(0.42f, 0.26f, 0.16f) * (1.0f + variation * 0.2f);
 					m_Target = &m_Trunks;
-					AddFrustum(base, height * 0.55f, 0.3f + 0.15f * size01, 0.2f, bDetailed ? 6 : 4, angle, bark, barkWeights, false);
+					AddFrustum(base, trunkLength, trunkRadius, trunkRadius * 0.55f, trunkSides, angle, pineBark, barkWeights, false);
+					m_Target = &m_Foliage;
+					if (bDetailed)
+					{
+						const real tierBases[3] = { 0.45f, 0.62f, 0.76f };
+						const real tierHeights[3] = { 0.3f, 0.26f, 0.24f };
+						const real tierRadii[3] = { 0.21f, 0.17f, 0.11f };
+						for (u32 i = 0; i < 3; ++i)
+						{
+							AddFrustum(base + glm::vec3(0.0f, height * tierBases[i], 0.0f), height * tierHeights[i], height * tierRadii[i], 0.0f, 7, angle + (real)i * 0.5f, needles * (1.0f + 0.07f * (real)i), leafWeights, true);
+						}
+					}
+					else
+					{
+						AddFrustum(base + glm::vec3(0.0f, height * 0.45f, 0.0f), height * 0.55f, height * 0.2f, 0.0f, 5, angle, needles, leafWeights, true);
+					}
+				} break;
+				case PlantSpecies::BIRCH:
+				{
+					// Slender white trunk, small airy light green canopy
+					const glm::vec3 leaves = glm::vec3(0.30f, 0.42f, 0.13f) * (1.0f + variation * 0.3f);
+					const glm::vec3 birchBark = glm::vec3(0.78f, 0.76f, 0.70f) * (1.0f + variation * 0.1f);
+					m_Target = &m_Trunks;
+					AddFrustum(base, trunkLength, trunkRadius, trunkRadius * 0.6f, trunkSides, angle, birchBark, barkWeights, false);
+					m_Target = &m_Foliage;
+					const real canopy = height * 0.2f;
+					AddBlob(base + glm::vec3(0.0f, height * 0.72f, 0.0f), glm::vec3(canopy, canopy * 1.5f, canopy), hash, leaves, leafWeights, bDetailed);
+					if (bDetailed)
+					{
+						const glm::vec3 offset(std::cos(angle) * canopy * 0.7f, 0.0f, std::sin(angle) * canopy * 0.7f);
+						AddBlob(base + glm::vec3(0.0f, height * 0.6f, 0.0f) + offset, glm::vec3(canopy * 0.7f, canopy, canopy * 0.7f), hash + 1, leaves * 1.08f, leafWeights, false);
+						AddBlob(base + glm::vec3(0.0f, height * 0.66f, 0.0f) - offset, glm::vec3(canopy * 0.65f, canopy * 0.9f, canopy * 0.65f), hash + 2, leaves * 0.93f, leafWeights, false);
+					}
+				} break;
+				case PlantSpecies::OAK:
+				{
+					// Wide, light green canopy
+					const glm::vec3 leaves = glm::vec3(0.22f, 0.36f, 0.11f) * (1.0f + variation * 0.35f);
+					m_Target = &m_Trunks;
+					AddFrustum(base, trunkLength, trunkRadius, 0.2f, trunkSides, angle, bark, barkWeights, false);
 					m_Target = &m_Foliage;
 					const real canopy = height * 0.33f;
-					AddBlob(base + glm::vec3(0.0f, height * 0.68f, 0.0f), glm::vec3(canopy, canopy * 0.8f, canopy), hash, leaves, leafWeights);
+					AddBlob(base + glm::vec3(0.0f, height * 0.68f, 0.0f), glm::vec3(canopy, canopy * 0.8f, canopy), hash, leaves, leafWeights, bDetailed);
 					if (bDetailed)
 					{
 						const glm::vec3 offset(std::cos(angle) * canopy * 0.6f, 0.0f, std::sin(angle) * canopy * 0.6f);
-						AddBlob(base + glm::vec3(0.0f, height * 0.58f, 0.0f) + offset, glm::vec3(canopy * 0.7f), hash + 1, leaves * 1.08f, leafWeights);
-						AddBlob(base + glm::vec3(0.0f, height * 0.62f, 0.0f) - offset, glm::vec3(canopy * 0.65f), hash + 2, leaves * 0.93f, leafWeights);
+						AddBlob(base + glm::vec3(0.0f, height * 0.58f, 0.0f) + offset, glm::vec3(canopy * 0.7f), hash + 1, leaves * 1.08f, leafWeights, true);
+						AddBlob(base + glm::vec3(0.0f, height * 0.62f, 0.0f) - offset, glm::vec3(canopy * 0.65f), hash + 2, leaves * 0.93f, leafWeights, true);
 					}
 				} break;
-				case Kind::CACTUS:
+				case PlantSpecies::WILLOW:
 				{
-					const real height = 3.0f + 3.5f * size01;
+					// Thick trunk under a drooping dark canopy
+					const glm::vec3 leaves = glm::vec3(0.19f, 0.28f, 0.12f) * (1.0f + variation * 0.3f);
+					const glm::vec3 willowBark = glm::vec3(0.30f, 0.26f, 0.20f) * (1.0f + variation * 0.2f);
+					m_Target = &m_Trunks;
+					AddFrustum(base, trunkLength, trunkRadius, trunkRadius * 0.7f, trunkSides, angle, willowBark, barkWeights, false);
+					m_Target = &m_Foliage;
+					const real canopy = height * 0.38f;
+					AddBlob(base + glm::vec3(0.0f, height * 0.72f, 0.0f), glm::vec3(canopy, canopy * 0.55f, canopy), hash, leaves, leafWeights, bDetailed);
+					// Hanging branches: a skirt from the canopy almost down to the ground
+					AddFrustum(base + glm::vec3(0.0f, height * 0.18f, 0.0f), height * 0.5f, canopy * 1.05f, canopy * 0.8f, bDetailed ? 9 : 6, angle, leaves * 0.85f, leafWeights, false);
+				} break;
+				case PlantSpecies::ACACIA:
+				{
+					// Flat topped olive canopy on a tall trunk
+					const glm::vec3 leaves = glm::vec3(0.27f, 0.32f, 0.12f) * (1.0f + variation * 0.3f);
+					const glm::vec3 acaciaBark = glm::vec3(0.36f, 0.28f, 0.20f) * (1.0f + variation * 0.2f);
+					m_Target = &m_Trunks;
+					AddFrustum(base, trunkLength, trunkRadius, trunkRadius * 0.6f, trunkSides, angle, acaciaBark, barkWeights, false);
+					m_Target = &m_Foliage;
+					const real canopy = height * 0.48f;
+					AddBlob(base + glm::vec3(0.0f, height * 0.84f, 0.0f), glm::vec3(canopy, canopy * 0.2f, canopy), hash, leaves, leafWeights, bDetailed);
+					if (bDetailed)
+					{
+						const glm::vec3 offset(std::cos(angle) * canopy * 0.55f, 0.0f, std::sin(angle) * canopy * 0.55f);
+						AddBlob(base + glm::vec3(0.0f, height * 0.78f, 0.0f) + offset, glm::vec3(canopy * 0.55f, canopy * 0.16f, canopy * 0.55f), hash + 1, leaves * 1.08f, leafWeights, false);
+					}
+				} break;
+				case PlantSpecies::SAGUARO:
+				{
 					const glm::vec3 green = glm::vec3(0.24f, 0.36f, 0.2f) * (1.0f + variation * 0.3f);
 					const glm::vec4 cactusWeights(0.3f, 0.0f, 0.7f, 1.0f);
 					// Prickly: cacti are solid
 					m_Target = &m_Trunks;
 					const u32 sides = bDetailed ? 8 : 5;
-					const real radius = 0.28f + 0.1f * size01;
+					const real radius = trunkRadius;
 					AddFrustum(base, height, radius, radius * 0.8f, sides, angle, green, cactusWeights, false);
 					AddFrustum(base + glm::vec3(0.0f, height, 0.0f), radius * 0.5f, radius * 0.8f, 0.0f, sides, angle, green, cactusWeights, false);
 					if (bDetailed)
@@ -2252,6 +2625,101 @@ namespace flex
 				} break;
 				default:
 					break;
+				}
+			}
+
+			void AddBush(const BushInfo& bush)
+			{
+				const VegetationInfo& info = *bush.vegetation;
+				const u32 hash = bush.hash;
+				const real size = HashToUnit(HashU32(hash + 5));
+				const real variation = HashToUnit(HashU32(hash + 9)) - 0.5f;
+				const real angle = HashToUnit(HashU32(hash + 11)) * TWO_PI;
+				const glm::vec4 leafWeights(1.0f, 0.0f, 0.0f, 1.0f);
+				const bool bDetailed = m_Level == 0;
+				const glm::vec3 base = bush.base - glm::vec3(0.0f, 0.15f, 0.0f);
+				glm::vec3 colour = info.bushColour * (1.0f + variation * 0.35f);
+				m_Target = &m_Foliage;
+
+				real berryRadius = 0.0f;
+				glm::vec3 berryCenter;
+				switch (info.bushKind)
+				{
+				case BushKind::BERRY:
+				{
+					const real r = 0.45f + 0.35f * size;
+					berryCenter = base + glm::vec3(0.0f, r * 0.7f, 0.0f);
+					berryRadius = r;
+					AddBlob(berryCenter, glm::vec3(r, r * 0.75f, r), hash, colour, leafWeights, bDetailed);
+				} break;
+				case BushKind::LEAFY:
+				{
+					const real r = 0.55f + 0.5f * size;
+					berryCenter = base + glm::vec3(0.0f, r * 0.8f, 0.0f);
+					berryRadius = r;
+					AddBlob(berryCenter, glm::vec3(r, r * 0.85f, r), hash, colour, leafWeights, bDetailed);
+					if (bDetailed)
+					{
+						const glm::vec3 offset(std::cos(angle) * r * 0.7f, 0.0f, std::sin(angle) * r * 0.7f);
+						AddBlob(base + glm::vec3(0.0f, r * 0.55f, 0.0f) + offset, glm::vec3(r * 0.65f), hash + 1, colour * 1.1f, leafWeights, false);
+					}
+				} break;
+				case BushKind::LOW_SHRUB:
+				{
+					// Low, wide mats, varying between greens, browns & the odd russet one
+					const real r = 0.5f + 0.6f * size;
+					const real tint = HashToUnit(HashU32(hash + 14));
+					if (tint < 0.2f)
+					{
+						colour = glm::vec3(0.36f, 0.19f, 0.10f) * (1.0f + variation * 0.3f);
+					}
+					else if (tint < 0.5f)
+					{
+						colour = glm::mix(colour, glm::vec3(0.18f, 0.24f, 0.11f), 0.6f);
+					}
+					berryCenter = base + glm::vec3(0.0f, r * 0.25f, 0.0f);
+					berryRadius = r;
+					AddBlob(berryCenter, glm::vec3(r, r * 0.38f, r * 0.85f), hash, colour, leafWeights, bDetailed);
+					if (bDetailed)
+					{
+						const glm::vec3 offset(std::cos(angle) * r * 0.8f, 0.0f, std::sin(angle) * r * 0.8f);
+						AddBlob(base + offset + glm::vec3(0.0f, r * 0.15f, 0.0f), glm::vec3(r * 0.6f, r * 0.3f, r * 0.6f), hash + 1, colour * 0.9f, leafWeights, false);
+					}
+				} break;
+				case BushKind::SCRUB:
+				{
+					// A dry tuft: a low clump with a few stiff spikes
+					const real r = 0.3f + 0.35f * size;
+					AddBlob(base + glm::vec3(0.0f, r * 0.35f, 0.0f), glm::vec3(r, r * 0.5f, r), hash, colour, leafWeights, false);
+					if (bDetailed)
+					{
+						const u32 spikes = 4 + (HashU32(hash + 15) % 3);
+						for (u32 i = 0; i < spikes; ++i)
+						{
+							const real a = angle + TWO_PI * (real)i / (real)spikes;
+							const real d = r * (0.2f + 0.5f * HashToUnit(HashU32(hash + 40 + i)));
+							const real spikeHeight = r * (1.4f + 1.4f * HashToUnit(HashU32(hash + 50 + i)));
+							const glm::vec3 spikeBase = base + glm::vec3(std::cos(a) * d, 0.0f, std::sin(a) * d);
+							AddFrustum(spikeBase, spikeHeight, 0.035f + 0.02f * size, 0.0f, 3, a, colour * 1.2f, leafWeights, false);
+						}
+					}
+				} break;
+				}
+
+				// Berries dotted over the top of the bush
+				if (bDetailed && berryRadius > 0.0f && HashToUnit(HashU32(hash + 16)) < info.berryFraction)
+				{
+					const u32 berries = 4 + (HashU32(hash + 17) % 4);
+					const real berrySize = 0.04f;
+					for (u32 i = 0; i < berries; ++i)
+					{
+						const real a = TWO_PI * HashToUnit(HashU32(hash + 60 + i));
+						const real up = 0.15f + 0.6f * HashToUnit(HashU32(hash + 70 + i));
+						const glm::vec3 dir = glm::normalize(glm::vec3(std::cos(a), up, std::sin(a)));
+						const real verticalScale = info.bushKind == BushKind::LOW_SHRUB ? 0.38f : 0.8f;
+						const glm::vec3 pos = berryCenter + glm::vec3(dir.x * berryRadius, dir.y * berryRadius * verticalScale, dir.z * berryRadius) * 0.98f;
+						AddBlob(pos, glm::vec3(berrySize), hash + 80 + i, info.berryColour, leafWeights, false);
+					}
 				}
 			}
 
@@ -3307,8 +3775,30 @@ namespace flex
 
 		void EditStore::Add(const Edit& edit)
 		{
-			const u32 index = (u32)m_Edits.size();
-			m_Edits.push_back(edit);
+			// A dig/fill which contains the previous edit of the same kind entirely (e.g. a hole growing while the player
+			// keeps digging) replaces it. The result is identical (the larger sphere dominates wherever the smaller one
+			// has any effect), but keeps the edit count down.
+			u32 index = (u32)m_Edits.size();
+			bool bReplacesLast = false;
+			if (!m_Edits.empty() && edit.type != EditType::REMOVE_PLANT)
+			{
+				const Edit& last = m_Edits.back();
+				bReplacesLast = last.type == edit.type &&
+					last.material == edit.material &&
+					glm::distance(last.center, edit.center) + last.radius <= edit.radius + 1e-4f;
+			}
+
+			if (bReplacesLast)
+			{
+				index = (u32)m_Edits.size() - 1;
+				m_Edits.back() = edit;
+				m_Hash = m_HashBeforeLast;
+			}
+			else
+			{
+				m_Edits.push_back(edit);
+				m_HashBeforeLast = m_Hash;
+			}
 			HashEdit(m_Hash, edit);
 
 			const glm::vec3 editMin = edit.center - glm::vec3(edit.radius);
@@ -3324,7 +3814,11 @@ namespace flex
 				{
 					for (i32 z = cellMin.z; z <= cellMax.z; ++z)
 					{
-						m_Cells[glm::ivec3(x, y, z)].push_back(index);
+						std::vector<u32>& cell = m_Cells[glm::ivec3(x, y, z)];
+						if (cell.empty() || cell.back() != index)
+						{
+							cell.push_back(index);
+						}
 					}
 				}
 			}
@@ -3337,6 +3831,7 @@ namespace flex
 			m_BoundsMin = glm::vec3(1e30f);
 			m_BoundsMax = glm::vec3(-1e30f);
 			m_Hash = 0;
+			m_HashBeforeLast = 0;
 		}
 
 		static bool BoxesOverlap(const glm::vec3& aMin, const glm::vec3& aMax, const glm::vec3& bMin, const glm::vec3& bMax)
@@ -3410,43 +3905,46 @@ namespace flex
 			return !edits.empty();
 		}
 
+		// Version 1: "FTED", version, seed, count, then the edits
 		static const u32 EDITS_FILE_MAGIC = 0x44455446; // "FTED"
 		static const u32 EDITS_FILE_VERSION = 1;
+		// Version 2: a binary save container (see SaveFile.hpp) holding a header & the edits (byte shuffled, so they compress
+		// well if that's ever worth it)
+		static const u32 EDITS_FILE_TYPE = save::FourCC('T', 'E', 'D', 'T');
+		static const u32 EDITS_CONTAINER_FILE_VERSION = 2;
+		static const u32 EDITS_SECTION_HEADER = save::FourCC('E', 'H', 'D', 'R');
+		static const u32 EDITS_SECTION_LIST = save::FourCC('E', 'D', 'I', 'T');
+		static const u32 EDIT_RECORD_SIZE = sizeof(glm::vec3) + sizeof(real) + 2;
 
 		bool WriteEdits(const std::string& filePath, i32 seed, const std::vector<Edit>& edits)
 		{
-			std::vector<u8> bytes;
-			ByteWriter writer(bytes);
-			writer.Write(EDITS_FILE_MAGIC);
-			writer.Write(EDITS_FILE_VERSION);
-			writer.Write(seed);
-			writer.Write((u32)edits.size());
+			std::vector<u8> records(edits.size() * EDIT_RECORD_SIZE);
+			u8* record = records.data();
 			for (const Edit& edit : edits)
 			{
-				writer.Write(edit.center.x);
-				writer.Write(edit.center.y);
-				writer.Write(edit.center.z);
-				writer.Write(edit.radius);
-				writer.Write((u8)edit.type);
-				writer.Write((u8)edit.material);
+				memcpy(record, &edit.center, sizeof(glm::vec3));
+				memcpy(record + 12, &edit.radius, sizeof(real));
+				record[16] = (u8)edit.type;
+				record[17] = (u8)edit.material;
+				record += EDIT_RECORD_SIZE;
 			}
+			// Grouping each byte of the floats together makes them much more compressible
+			std::vector<u8> shuffled(records.size());
+			save::ShuffleBytes(records.data(), edits.size(), EDIT_RECORD_SIZE, shuffled.data());
 
-			// Write to a temporary file first so a crash mid-write can't corrupt existing edits
-			const std::string tempPath = filePath + ".tmp";
-			{
-				std::ofstream file(tempPath, std::ios::binary | std::ios::trunc);
-				if (!file)
-				{
-					return false;
-				}
-				file.write((const char*)bytes.data(), (std::streamsize)bytes.size());
-				if (!file)
-				{
-					return false;
-				}
-			}
-			std::remove(filePath.c_str());
-			return std::rename(tempPath.c_str(), filePath.c_str()) == 0;
+			save::Writer header;
+			header.Write(seed);
+			header.Write((u32)edits.size());
+			header.Write(EDIT_RECORD_SIZE);
+
+			save::FileWriter writer(EDITS_FILE_TYPE, EDITS_CONTAINER_FILE_VERSION);
+			writer.AddSection(EDITS_SECTION_HEADER, header.bytes, 0, false);
+			// Not compressed: zlib halves the size (shuffled), but even 100k edits are only 1.7 MB, & compressing them
+			// took ~5x longer to save (100 vs 17 ms, on the main thread) & ~8x longer to load (22 vs 3 ms). The reader
+			// handles compressed sections, so this can change without a new version.
+			writer.AddSection(EDITS_SECTION_LIST, shuffled, 0, false);
+			// Written atomically, keeping the previous file as a backup
+			return writer.Save(filePath, true);
 		}
 
 		static bool ReadWholeFile(const std::string& filePath, std::vector<u8>& outBytes)
@@ -3466,21 +3964,14 @@ namespace flex
 			return (bool)file.read((char*)outBytes.data(), size);
 		}
 
-		bool ReadEdits(const std::string& filePath, i32 seed, std::vector<Edit>& outEdits)
+		static bool ReadEditsV1(const std::vector<u8>& bytes, i32 seed, std::vector<Edit>& outEdits)
 		{
-			outEdits.clear();
-
-			std::vector<u8> bytes;
-			if (!ReadWholeFile(filePath, bytes))
-			{
-				return false;
-			}
-
 			ByteReader reader(bytes.data(), bytes.size());
 			u32 magic, version, count;
 			i32 fileSeed;
 			if (!reader.Read(magic) || !reader.Read(version) || !reader.Read(fileSeed) || !reader.Read(count) ||
-				magic != EDITS_FILE_MAGIC || version != EDITS_FILE_VERSION || fileSeed != seed)
+				magic != EDITS_FILE_MAGIC || version != EDITS_FILE_VERSION || fileSeed != seed ||
+				(u64)count * EDIT_RECORD_SIZE > (u64)(bytes.size() - 16))
 			{
 				return false;
 			}
@@ -3501,6 +3992,89 @@ namespace flex
 				outEdits.push_back(edit);
 			}
 			return true;
+		}
+
+		static bool ReadEditsContainer(const save::FileReader& file, i32 seed, std::vector<Edit>& outEdits)
+		{
+			std::vector<u8> headerBytes, shuffled;
+			if (!file.GetSection(EDITS_SECTION_HEADER, headerBytes) || !file.GetSection(EDITS_SECTION_LIST, shuffled))
+			{
+				return false;
+			}
+			save::Reader header(headerBytes.data(), headerBytes.size());
+			i32 fileSeed;
+			u32 count, recordSize;
+			// (Newer versions may append fields to each record, which are ignored)
+			if (!header.Read(fileSeed) || !header.Read(count) || !header.Read(recordSize) || fileSeed != seed ||
+				recordSize < EDIT_RECORD_SIZE || recordSize > 1024 || (u64)count * recordSize != (u64)shuffled.size())
+			{
+				return false;
+			}
+
+			std::vector<u8> records(shuffled.size());
+			save::UnshuffleBytes(shuffled.data(), count, recordSize, records.data());
+			outEdits.resize(count);
+			const u8* record = records.data();
+			for (Edit& edit : outEdits)
+			{
+				memcpy(&edit.center, record, sizeof(glm::vec3));
+				memcpy(&edit.radius, record + 12, sizeof(real));
+				edit.type = record[16] <= (u8)EditType::REMOVE_PLANT ? (EditType)record[16] : EditType::DIG;
+				edit.material = record[17] < (u8)Material::_COUNT ? (Material)record[17] : Material::SOIL;
+				record += recordSize;
+			}
+			return true;
+		}
+
+		static bool ReadEditsFile(const std::string& filePath, i32 seed, std::vector<Edit>& outEdits, bool& bOutCorrupt)
+		{
+			outEdits.clear();
+			bOutCorrupt = false;
+
+			std::vector<u8> bytes;
+			if (!save::ReadFileBytes(filePath, bytes))
+			{
+				return false;
+			}
+
+			save::FileReader file;
+			const save::LoadResult result = file.Parse(bytes.data(), bytes.size(), EDITS_FILE_TYPE);
+			bool bRead;
+			if (result == save::LoadResult::NOT_CONTAINER)
+			{
+				bRead = ReadEditsV1(bytes, seed, outEdits);
+			}
+			else
+			{
+				bRead = result == save::LoadResult::OK && ReadEditsContainer(file, seed, outEdits);
+				bOutCorrupt = result != save::LoadResult::OK || (!bRead && file.HasSection(EDITS_SECTION_LIST));
+			}
+			if (!bRead)
+			{
+				outEdits.clear();
+			}
+			return bRead;
+		}
+
+		bool ReadEdits(const std::string& filePath, i32 seed, std::vector<Edit>& outEdits)
+		{
+			bool bCorrupt;
+			if (ReadEditsFile(filePath, seed, outEdits, bCorrupt))
+			{
+				return true;
+			}
+			// A missing or damaged file falls back to the backup kept by the last save
+			bool bBackupCorrupt;
+			if ((bCorrupt || !FileExists(filePath)) && ReadEditsFile(filePath + ".bak", seed, outEdits, bBackupCorrupt))
+			{
+				PrintWarn("Terrain edits %s were %s, loaded %u from its backup\n", filePath.c_str(), bCorrupt ? "damaged" : "missing", (u32)outEdits.size());
+				return true;
+			}
+			if (bCorrupt)
+			{
+				PrintError("Terrain edits %s are damaged & couldn't be loaded\n", filePath.c_str());
+			}
+			return false;
 		}
 
 		// -----------------------------------------------------------------------------------------

@@ -723,6 +723,8 @@ namespace flex
 		{
 			g_Game->Destroy();
 		}
+		// (The log is otherwise only saved periodically, which misses what was printed while shutting down)
+		SaveLogBufferToFile();
 
 		SaveCommonSettingsToDisk(false);
 		g_Window->SaveToConfig();
@@ -785,6 +787,11 @@ namespace flex
 
 	std::string FlexEngine::WindowTitle()
 	{
+		// The game has its own name (the editor & test scenes show the engine's)
+		if (g_EngineInstance != nullptr && g_EngineInstance->m_bGameMode)
+		{
+			return Game::GAME_NAME;
+		}
 		return "Flex Engine v" + EngineVersionString();
 	}
 
@@ -875,7 +882,9 @@ namespace flex
 	void FlexEngine::UpdateAndRender()
 	{
 		m_bRunning = true;
-		sec frameStartTime = Time::CurrentSeconds();
+		// Kept as doubles: the absolute time as a float loses precision over long sessions (~2ms resolution after
+		// 4.6 hours, ~8ms after a day), which would quantize the delta time
+		double frameStartTime = glfwGetTime();
 		while (m_bRunning)
 		{
 			Profiler::EndFrame();
@@ -885,7 +894,7 @@ namespace flex
 				break;
 			}
 
-			sec now = Time::CurrentSeconds();
+			double now = glfwGetTime();
 
 			if (m_bToggleRenderImGui)
 			{
@@ -895,7 +904,7 @@ namespace flex
 
 			g_Window->PollEvents();
 
-			sec frameEndTime = now;
+			double frameEndTime = now;
 
 			if (m_FramesToFakeDT > 0)
 			{
@@ -904,11 +913,11 @@ namespace flex
 				frameStartTime = frameEndTime - m_FakeDT;
 			}
 
-			sec secondsElapsed = frameEndTime - frameStartTime;
+			sec secondsElapsed = (sec)(frameEndTime - frameStartTime);
 			frameStartTime = frameEndTime;
 
 			g_UnpausedDeltaTime = glm::clamp(secondsElapsed, m_MinDT, m_MaxDT);
-			g_SecElapsedSinceProgramStart = frameEndTime;
+			g_SecElapsedSinceProgramStart = (sec)frameEndTime;
 
 			// TODO: Pause audio when editor is paused
 			if (m_bSimulationPaused && !m_bSimulateNextFrame)

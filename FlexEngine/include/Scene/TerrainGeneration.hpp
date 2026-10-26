@@ -33,7 +33,7 @@ namespace flex
 		static const u32 MAX_BIOME_COUNT = 16;
 
 		// Bump whenever generation output changes to invalidate cached chunks
-		static const u32 GENERATOR_VERSION = 14;
+		static const u32 GENERATOR_VERSION = 15;
 
 		enum class Material : u8
 		{
@@ -77,6 +77,26 @@ namespace flex
 			Material material;
 		};
 
+		// The plant life a biome grows: a dominant tree species (with a little variety), its density & the bushes
+		// beneath. Chosen per biome so forests look uniform.
+		enum class Vegetation : u8
+		{
+			NONE,
+			TAIGA, // Dense dark green spruces, the odd birch, berry bushes
+			NORDIC, // Light green pines & birches, berry bushes
+			BROADLEAF, // Light green deciduous trees in open woods, leafy bushes
+			SWAMP, // Drooping willows, leafy bushes
+			TUNDRA, // Low shrubs & the odd stunted spruce
+			ALPINE, // Sparse pines, low shrubs
+			SAVANNA, // Scattered flat topped acacias & dry scrub
+			DESERT, // Cacti & dry scrub
+
+			_COUNT
+		};
+
+		const char* VegetationName(Vegetation vegetation);
+		Vegetation ParseVegetation(const std::string& name, Vegetation fallback);
+
 		struct BiomeParams
 		{
 			std::string name;
@@ -102,6 +122,10 @@ namespace flex
 			glm::vec3 peakColour = glm::vec3(0.9f, 0.92f, 0.95f);
 			real peakHeight = 100000.0f; // World height above which peakColour is used
 			real grassiness = 1.0f; // [0, 1], 0: ground is bare soil/sand, 1: ground is grass
+
+			Vegetation vegetation = Vegetation::BROADLEAF;
+			real treeDensity = 1.0f; // Multiplier of the vegetation type's tree density
+			real bushDensity = 1.0f; // Multiplier of the vegetation type's bush density
 		};
 
 		struct WorldParams
@@ -186,6 +210,10 @@ namespace flex
 			real temperature;
 			real primaryBiomeWeight;
 			i32 primaryBiome;
+			// The next most prominent biome (-1: none) & primary / (primary + secondary) weights (vegetation blends
+			// between them near borders)
+			i32 secondaryBiome;
+			real primaryBiomeShare;
 
 			// Lake or ocean (lakeID == 0: none, OCEAN_ID: ocean)
 			u32 lakeID;
@@ -378,15 +406,30 @@ namespace flex
 			CACTUS,
 		};
 
+		// Visual variants of the plant kinds
+		enum class PlantSpecies : u8
+		{
+			NONE,
+			SPRUCE, // Conifer: dark, tall & narrow
+			PINE, // Conifer: lighter, bare lower trunk & rounded tiers
+			BIRCH, // Deciduous: slender pale trunk, small light canopy
+			OAK, // Deciduous: wide, light green canopy
+			WILLOW, // Deciduous: drooping dark canopy
+			ACACIA, // Deciduous: flat topped canopy on a leaning trunk
+			SAGUARO, // Cactus
+		};
+
 		struct PlantInfo
 		{
 			PlantKind kind = PlantKind::NONE;
+			PlantSpecies species = PlantSpecies::NONE;
 			glm::vec3 base = glm::vec3(0.0f); // Where the trunk meets the ground
 			real height = 0.0f; // Overall height
 			real trunkHeight = 0.0f; // Height of the collidable trunk (from the base)
 			real trunkRadius = 0.0f; // At the base
 			u32 hash = 0; // Unique per plant, the source of its variation
 			real size01 = 0.0f;
+			real scale = 1.0f; // Of the whole plant (stunted trees are smaller)
 		};
 
 		// Plants whose bases lie within the box (as shown at full detail), excluding removed ones. Edits must include
@@ -448,6 +491,7 @@ namespace flex
 		class EditStore
 		{
 		public:
+			// Replaces the last edit instead when the new one contains it (see the definition)
 			void Add(const Edit& edit);
 			void Clear();
 			const std::vector<Edit>& Edits() const { return m_Edits; }
@@ -469,6 +513,7 @@ namespace flex
 			glm::vec3 m_BoundsMin = glm::vec3(1e30f);
 			glm::vec3 m_BoundsMax = glm::vec3(-1e30f);
 			u64 m_Hash = 0;
+			u64 m_HashBeforeLast = 0; // (before the last edit was added, for replacing it)
 		};
 
 		bool WriteEdits(const std::string& filePath, i32 seed, const std::vector<Edit>& edits);

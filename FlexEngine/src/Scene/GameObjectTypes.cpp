@@ -67,7 +67,10 @@ namespace flex
 			TYPE(MineralDeposit, GameObjectTypeInfo::NO_SERIALIZED_MESH),
 			TYPE(Miner, 0),
 			TYPE(Speaker, 0),
-			TYPE(PickAxe, 0),
+			// Hand tools build their meshes (wooden handle & stone head) themselves
+			TYPE(PickAxe, PROCEDURAL),
+			TYPE(Axe, PROCEDURAL),
+			TYPE(Shovel, PROCEDURAL),
 			TYPE(BuildPiece, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
 			TYPE(TreasureChest, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
 			TYPE(Campfire, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),

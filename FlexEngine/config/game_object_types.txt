@@ -31,6 +31,8 @@ solar panel
 vehicle
 speaker
 pickaxe
+axe
+shovel
 build piece
 treasure chest
 row boat

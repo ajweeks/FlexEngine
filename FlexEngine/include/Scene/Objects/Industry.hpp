@@ -3,7 +3,7 @@
 #include "Scene/GameObject.hpp"
 #include "Timer.hpp"
 
-// Power & mining objects: batteries, solar panels, head lamps, power poles, mineral deposits, miners, speakers & pickaxes
+// Power & mining objects: batteries, solar panels, head lamps, power poles, mineral deposits, miners, speakers & hand tools (pickaxes, axes & shovels)
 namespace flex
 {
 	class Battery final : public GameObject
@@ -236,7 +236,29 @@ namespace flex
 
 	};
 
-	class PickAxe : public GameObject
+	// Hand held tools for working the land: pickaxes (mining, & digging rock), axes (chopping plants) & shovels (digging
+	// loose ground). Their meshes are built procedurally (a wooden handle & a stone head, see BuildHandToolMesh).
+	class HandTool : public GameObject
+	{
+	public:
+		HandTool(const std::string& name, StringID typeID, const GameObjectID& gameObjectID, const PrefabIDPair& sourcePrefabID, bool bIsPrefabTemplate);
+
+		virtual void Initialize() override;
+
+		virtual GameObject* CopySelf(
+			GameObject* parent = nullptr,
+			CopyFlags copyFlags = CopyFlags::ALL,
+			std::string* optionalName = nullptr,
+			const GameObjectID& optionalGameObjectID = InvalidGameObjectID) override;
+	};
+
+	// Whether objects of this type are hand tools (pickaxe, axe or shovel)
+	bool IsHandToolType(StringID typeID);
+	// Creates object's mesh: the tool's (static) submeshes, one per material, in the tool's space (handle along +Y, the
+	// head/blade facing +Z, ~2.2 units long). Returns false for other types.
+	bool BuildHandToolMesh(GameObject* object, StringID typeID);
+
+	class PickAxe : public HandTool
 	{
 	public:
 		PickAxe(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
@@ -265,5 +287,23 @@ namespace flex
 		// Non-serialized fields
 		AudioSourceID m_SourceID = InvalidAudioSourceID;
 
+	};
+
+	// Chops trees & cacti in fewer hits than other tools
+	class Axe final : public HandTool
+	{
+	public:
+		Axe(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+	};
+
+	// Digs loose ground (soil, sand, gravel, snow...) much quicker than a pickaxe, but is slow in rock
+	class Shovel final : public HandTool
+	{
+	public:
+		Shovel(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
 	};
 } // namespace flex

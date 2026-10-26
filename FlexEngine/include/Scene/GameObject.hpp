@@ -74,6 +74,9 @@ namespace flex
 		bool IsValid() const { return m_ItemProxyObject != nullptr; }
 
 		GameObject* m_ItemProxyObject = nullptr; // Just the mesh representation of the object
+		// The proxy is a root object in the scene, so it can be destroyed by others (e.g. when a world's objects are
+		// cleared). Its ID is kept to check that before using the pointer.
+		GameObjectID m_ItemProxyID = InvalidGameObjectID;
 		StringID m_TypeID = InvalidID;
 		PrefabID m_SourcePrefabID = InvalidPrefabID;
 	};

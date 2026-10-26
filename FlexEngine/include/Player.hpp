@@ -202,7 +202,14 @@ namespace flex
 		void ResetItemPickingTimer();
 
 		GameObject* GetObjectPointedAt() const;
+		// Type of the hand tool (pickaxe, axe or shovel) in the selected quick access slot, or InvalidStringID
+		StringID GetWieldedToolType() const;
 		bool IsWieldingPickAxe() const;
+		bool IsWieldingAxe() const;
+		// Swings the wielded tool once (duration in seconds), unless it's already swinging
+		void SwingTool(real duration);
+		// [0, 1] through the current tool swing, or -1 when not swinging
+		real GetToolSwing01() const { return m_ToolSwingTimer > 0.0f ? 1.0f - m_ToolSwingTimer / m_ToolSwingDuration : -1.0f; }
 
 		static const u32 WEARABLES_ITEM_COUNT = 3;
 		static const u32 QUICK_ACCESS_ITEM_COUNT = 11;
@@ -336,11 +343,39 @@ namespace flex
 
 		real m_ItemPickupMaxDist = 100.0f;
 
-		bool m_bTerrainToolActive = false; // Whether the player is pointing a pickaxe at terrain within reach
-		sec m_TerrainToolCooldown = 0.0f;
+		bool m_bTerrainToolActive = false; // Whether the player is pointing a digging tool at terrain within reach
 		i32 m_TerrainFillMaterialIndex = 0;
 		real m_TerrainToolReach = 8.0f;
-		real m_TerrainDigRadius = 1.6f;
+		real m_TerrainDigRadius = 1.6f; // Full size of a hole/mound
+
+		// Digging & filling are continuous: while the button is held, the hole (or mound) being worked on grows at a
+		// rate depending on the tool & the ground, & a new one is started once it's full size or the player looks away
+		struct TerrainStroke
+		{
+			bool bActive = false;
+			bool bFill = false;
+			glm::vec3 anchor = VEC3_ZERO; // Dig: the hole's center. Fill: the surface point the mound grows from.
+			glm::vec3 normal = VEC3_UP; // Fill: surface normal at the anchor
+			real hardness = 0.0f; // [0: loose ground, 1: rock]
+			real progress = 0.0f; // [0, 1] of a full sized hole/mound (by volume)
+			real appliedRadius = 0.0f; // Radius of the last edit made (0: none yet)
+		};
+		TerrainStroke m_TerrainStroke;
+		sec m_TimeSinceTerrainEdit = 0.0f; // Edits (& so chunk re-meshing) are rate limited
+		void EndTerrainStroke();
+		glm::vec3 GetTerrainStrokeCenter(real radius) const;
+		// [0: loose ground (soil, sand, gravel, snow...), 1: rock] at a surface point
+		real SampleTerrainHardness(const glm::vec3& pos, const glm::vec3& normal) const;
+
+		// Test hook (FLEX_TEST_WOODCRAFT): 1: dig, 2: fill, as if the mouse button were held
+		i32 m_TestTerrainAction = 0;
+		// Stats for the test: holes/mounds made, terrain edits applied & time spent waiting for re-meshing
+		u32 m_TestTerrainStrokeCount = 0;
+		u32 m_TestTerrainEditCount = 0;
+		sec m_TestTerrainWaitTime = 0.0f;
+
+		sec m_ToolSwingTimer = 0.0f;
+		sec m_ToolSwingDuration = 1.0f;
 
 		bool m_bTerrainPlacementPending = true;
 		bool m_bTerrainPlacementExact = false;

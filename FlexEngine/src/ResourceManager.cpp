@@ -9,6 +9,7 @@ IGNORE_WARNINGS_PUSH
 
 #include <ft2build.h>
 #include FT_FREETYPE_H
+#include FT_OUTLINE_H
 #include <freetype/fttypes.h>
 #include <freetype/fterrors.h>
 IGNORE_WARNINGS_POP
@@ -1275,7 +1276,8 @@ namespace flex
 		static const std::string DPIStr = FloatToString(g_Monitor->DPI.x, 0) + "DPI";
 
 		metaData.renderedTextureFilePath = StripFileType(StripLeadingDirectories(metaData.filePath));
-		metaData.renderedTextureFilePath += "-" + IntToString(metaData.size, 2) + "-" + DPIStr + m_FontImageExtension;
+		metaData.renderedTextureFilePath += "-" + IntToString(metaData.size, 2) + "-" + DPIStr +
+			"-sdf" + IntToString((i32)BitmapFont::SDF_ATLAS_VERSION) + m_FontImageExtension;
 		metaData.renderedTextureFilePath = FONT_SDF_DIRECTORY + metaData.renderedTextureFilePath;
 	}
 
@@ -1290,9 +1292,6 @@ namespace flex
 
 		CHECK_EQ(metaData.bitmapFont, nullptr);
 
-		// TODO: Save in common place
-		u32 sampleDensity = 32;
-
 		FT_Error error = FT_New_Memory_Face(ft, (FT_Byte*)fileMemory.data(), (FT_Long)fileMemory.size(), 0, outFace);
 		FT_Face& face = *outFace;
 		if (error == FT_Err_Unknown_File_Format)
@@ -1306,9 +1305,15 @@ namespace flex
 			return false;
 		}
 
-		i32 fontHeight = metaData.size * sampleDensity;
+		// Glyph metrics are in layout units: pixels at size / 2 points. Small fonts are stored in the atlas at a larger
+		// scale so their SDF keeps thin features & sharp corners, and the outlines are rendered at a further
+		// supersampled scale to compute the SDF from.
+		const i32 fontHeight = metaData.size * 32; // 26.6 points
+		const real emLayout = (fontHeight / 64.0f) * g_Monitor->DPI.y / 72.0f;
+		const u32 atlasScale = (u32)glm::clamp((i32)ceilf(64.0f / glm::max(emLayout, 1.0f)), 1, 4);
+		const i32 renderScale = (i32)(atlasScale * BitmapFont::SDF_SUPERSAMPLE);
 		error = FT_Set_Char_Size(face,
-			0, fontHeight,
+			0, fontHeight * renderScale,
 			(FT_UInt)g_Monitor->DPI.x,
 			(FT_UInt)g_Monitor->DPI.y);
 
@@ -1327,6 +1332,8 @@ namespace flex
 		std::string fontName = std::string(face->family_name) + " - " + face->style_name;
 		metaData.bitmapFont = new BitmapFont(metaData, fontName, face->num_glyphs);
 		BitmapFont* newFont = metaData.bitmapFont;
+		newFont->atlasScale = atlasScale;
+		newFont->emSize = emLayout;
 
 		if (metaData.bScreenSpace)
 		{
@@ -1347,9 +1354,11 @@ namespace flex
 		u32 curPos = 0;   // Internal move count
 		u32 channel = 0;  // Current channel writing to
 
-		u32 padding = 1;
-		u32 spread = 5;
-		u32 totPadding = padding + spread;
+		// Border around each glyph's cell, in atlas pixels
+		const i32 cellPadding = (i32)((BitmapFont::SDF_PADDING + BitmapFont::SDF_SPREAD) * atlasScale);
+		const i32 S = (i32)BitmapFont::SDF_SUPERSAMPLE;
+		auto FloorDiv = [](i32 a, i32 b) { return a >= 0 ? a / b : -((-a + b - 1) / b); };
+		auto CeilDiv = [&FloorDiv](i32 a, i32 b) { return -FloorDiv(-a, b); };
 
 		for (i32 c = 0; c < BitmapFont::CHAR_COUNT - 1; ++c)
 		{
@@ -1367,40 +1376,42 @@ namespace flex
 				continue;
 			}
 
-			if (newFont->bUseKerning && glyphIndex)
-			{
-				for (i32 previous = 0; previous < BitmapFont::CHAR_COUNT - 1; ++previous)
-				{
-					FT_Vector delta;
-
-					u32 prevIdx = FT_Get_Char_Index(face, previous);
-					FT_Get_Kerning(face, prevIdx, glyphIndex, FT_KERNING_DEFAULT, &delta);
-
-					if (delta.x != 0 || delta.y != 0)
-					{
-						std::wstring charKey(std::wstring(1, (wchar_t)previous) + std::wstring(1, (wchar_t)c));
-						metric->kerning[charKey] =
-							glm::vec2((real)delta.x / 64.0f, (real)delta.y / 64.0f);
-					}
-				}
-			}
-
-			if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_RENDER))
+			// Unhinted metrics: hinting would round advances & distort shapes for the one size the atlas is
+			// rendered at, but the SDF is drawn at arbitrary scales
+			if (FT_Load_Glyph(face, glyphIndex, FT_LOAD_NO_HINTING | FT_LOAD_NO_BITMAP))
 			{
 				PrintError("Failed to load glyph with index %u\n", glyphIndex);
 				continue;
 			}
 
+			metric->advanceX = (real)face->glyph->linearHoriAdvance / 65536.0f / renderScale;
+			metric->bIsValid = true;
+			(*outCharacters)[c] = metric;
 
-			u32 width = face->glyph->bitmap.width + totPadding * 2;
-			u32 height = face->glyph->bitmap.rows + totPadding * 2;
+			if (face->glyph->format != FT_GLYPH_FORMAT_OUTLINE || face->glyph->outline.n_points == 0)
+			{
+				// Nothing to draw (e.g. space)
+				continue;
+			}
 
+			// The rendered bitmap covers the outline's control box rounded out to whole render pixels. Align the
+			// glyph's cell to whole atlas pixels around it.
+			FT_BBox cbox;
+			FT_Outline_Get_CBox(&face->glyph->outline, &cbox);
+			const i32 left = FloorDiv(FloorDiv((i32)cbox.xMin, 64), S);
+			const i32 right = CeilDiv(CeilDiv((i32)cbox.xMax, 64), S);
+			const i32 bottom = FloorDiv(FloorDiv((i32)cbox.yMin, 64), S);
+			const i32 top = CeilDiv(CeilDiv((i32)cbox.yMax, 64), S);
 
-			metric->width = (u16)width;
-			metric->height = (u16)height;
-			metric->offsetX = (i16)(face->glyph->bitmap_left + totPadding);
-			metric->offsetY = -(i16)(face->glyph->bitmap_top + totPadding);
-			metric->advanceX = (real)face->glyph->advance.x / 64.0f;
+			u32 width = (u32)(right - left + cellPadding * 2);
+			u32 height = (u32)(top - bottom + cellPadding * 2);
+
+			metric->atlasWidth = (u16)width;
+			metric->atlasHeight = (u16)height;
+			metric->width = (real)width / atlasScale;
+			metric->height = (real)height / atlasScale;
+			metric->offsetX = (real)(left - cellPadding) / atlasScale;
+			metric->offsetY = -(real)(top + cellPadding) / atlasScale;
 
 			// Generate atlas coordinates
 			metric->channel = (u8)channel;
@@ -1443,11 +1454,11 @@ namespace flex
 					}
 				}
 			}
-
-			metric->bIsValid = true;
-
-			(*outCharacters)[c] = metric;
 		}
+
+		// Kerning (font units -> 26.6 render pixels -> layout units)
+		const real fontUnitsToLayout = (real)face->size->metrics.x_scale / 65536.0f / 64.0f / renderScale;
+		newFont->LoadKerning(fileMemory, fontUnitsToLayout, *outCharacters);
 
 		(*outMaxPositions)[0] = maxPos[0];
 		(*outMaxPositions)[1] = maxPos[1];

@@ -33,6 +33,7 @@ namespace flex
 
 		virtual void SetSize(i32 width, i32 height) override;
 		virtual void OnSizeChanged(i32 width, i32 height) override;
+		void SyncFrameBufferSize();
 		virtual void SetPosition(i32 newX, i32 newY) override;
 		virtual void OnPositionChanged(i32 newX, i32 newY) override;
 

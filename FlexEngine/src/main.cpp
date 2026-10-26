@@ -14,6 +14,26 @@
 
 bool g_bShowConsole = true;
 
+#if defined(DEBUG) && defined(_WINDOWS)
+#if defined(__SANITIZE_ADDRESS__)
+#include <sanitizer/common_interface_defs.h>
+#endif
+// Prints CRT assertions (e.g. out of range container accesses) with a stack trace, for automated runs
+static int PrintCrtReport(int reportType, char* message, int* returnValue)
+{
+	FLEX_UNUSED(reportType);
+	fprintf(stderr, "%s", message);
+#if defined(__SANITIZE_ADDRESS__)
+	__sanitizer_print_stack_trace();
+#else
+	flex::Platform::PrintStackTrace();
+#endif
+	fflush(stderr);
+	*returnValue = 0; // Don't break into the debugger
+	return 1; // Handled
+}
+#endif
+
 int main(int argc, char *argv[])
 {
 #ifdef _WINDOWS
@@ -30,6 +50,17 @@ int main(int argc, char *argv[])
 	//| _CRTDBG_CHECK_EVERY_16_DF // Check heap every 16 heap ops
 	);
 	//_CrtSetBreakAlloc(47947);
+
+	// Automated runs can't click through assertion dialogs (which otherwise abort with no message when there's no
+	// window to show them in), so print CRT assertions & errors to stderr instead
+	for (int i = 1; i < argc; ++i)
+	{
+		if (strcmp(argv[i], "--fuzz") == 0 || strcmp(argv[i], "--headless") == 0 || strcmp(argv[i], "--test-scenes") == 0)
+		{
+			_CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, PrintCrtReport);
+			break;
+		}
+	}
 #endif // DEBUG
 #endif // _WINDOWS
 
@@ -42,6 +73,8 @@ int main(int argc, char *argv[])
 	if (bRunUnitTests)
 	{
 		i32 result = flex::FlexTest::Run();
+		// (Release builds print to their own console window, so the results are also kept in saved/flex.log)
+		flex::SaveLogBufferToFile();
 
 		if (!bHeadless)
 		{
@@ -53,6 +86,17 @@ int main(int argc, char *argv[])
 		return result;
 	}
 
+	// Usage: Flex --fuzz [iterations] [seed] [JSON|Strings|Numbers|WAV|SaveFile]
+	// Runs the randomized robustness tests (see FuzzTests.hpp) for longer than `--test` does
+	if (argc >= 2 && strcmp(argv[1], "--fuzz") == 0)
+	{
+		flex::u32 iterations = argc >= 3 ? (flex::u32)strtoul(argv[2], nullptr, 10) : 100000;
+		flex::u64 seed = argc >= 4 ? (flex::u64)strtoull(argv[3], nullptr, 10) : 1;
+		// Unbuffered so that nothing is lost if a failure aborts the process
+		setvbuf(stdout, nullptr, _IONBF, 0);
+		const char* onlyTarget = argc >= 5 ? argv[4] : nullptr;
+		return flex::fuzz::Run(iterations, seed, onlyTarget);
+	}
 
 	// Usage: Flex --test-scenes [--frames=N] [--screenshots] [--profile] [scene_file_name ...]
 	// Loads each scene (or only those listed) in a hidden window and exits with the number of

@@ -24,6 +24,7 @@ IGNORE_WARNINGS_POP
 #include "Platform/Platform.hpp"
 #include "Player.hpp"
 #include "Scene/BaseScene.hpp"
+#include "Scene/Mesh.hpp"
 #include "ResourceManager.hpp"
 #include "Scene/Objects/Building.hpp"
 #include "Scene/Objects/TerrainGenerator.hpp"
@@ -61,16 +62,32 @@ namespace flex
 				FLAT_GROUND,
 				MANTLE,
 				ROPE,
+				SLOPE,
 				DONE
 			};
 
 			static const char* StepName(Step step)
 			{
-				static const char* names[] = { "wait for ground", "jump", "glide", "wingsuit", "land", "thermal", "relocate", "grapple", "climb", "ski", "dig", "tree grapple", "flat ground", "mantle", "rope", "done" };
+				static const char* names[] = { "wait for ground", "jump", "glide", "wingsuit", "land", "thermal", "relocate", "grapple", "climb", "ski", "dig", "tree grapple", "flat ground", "mantle", "rope", "slope", "done" };
 				return names[(u32)step];
 			}
 
 			Step GetStep() const { return m_Step; }
+
+			TraversalTestScript()
+			{
+				// e.g. FLEX_TRAVERSAL_ONLY=slope runs only that step (after landing), which is much quicker
+				if (const char* only = getenv("FLEX_TRAVERSAL_ONLY"))
+				{
+					for (u32 i = (u32)Step::JUMP; i < (u32)Step::DONE; ++i)
+					{
+						if (strcmp(only, StepName((Step)i)) == 0)
+						{
+							m_OnlyStep = (Step)i;
+						}
+					}
+				}
+			}
 
 			void Update()
 			{
@@ -301,16 +318,34 @@ namespace flex
 						camera->SetViewDirection(std::atan2(toPlayer.z, toPlayer.x), std::asin(toPlayer.y));
 						RequestScreenshot("traversal_glider");
 					}
+					else if (m_StepTime >= 5.5f && m_SubStep == 1)
+					{
+						// & from ahead, off to the side the glider is leaning towards (the inside of the turn)
+						m_SubStep = 2;
+						BaseCamera* camera = g_CameraManager->CurrentCamera();
+						const glm::vec3 heading = glm::normalize(glm::vec3(velocity.x, 0.0f, velocity.z) + glm::vec3(1e-4f, 0.0f, 0.0f));
+						const glm::vec3 right = glm::cross(heading, VEC3_UP);
+						const real side = traversal->GetBodyBank() >= 0.0f ? 1.0f : -1.0f;
+						camera->position = pos + heading * 9.0f + right * (side * 9.0f) + VEC3_UP * 1.0f;
+						const glm::vec3 toPlayer = glm::normalize(pos + VEC3_UP * 2.5f - camera->position);
+						camera->SetViewDirection(std::atan2(toPlayer.z, toPlayer.x), std::asin(toPlayer.y));
+						RequestScreenshot("traversal_glider_side");
+					}
 					else if (m_StepTime >= 5.5f)
 					{
-						if (m_SubStep == 1)
+						if (m_SubStep >= 1)
 						{
 							g_CameraManager->SetCameraByName("first-person", false);
 						}
 						Release(KeyCode::KEY_A);
 						Release(KeyCode::KEY_S);
 						const glm::vec3 average = Average();
-						Print("Traversal test: in a thermal (%.1fm/s lift at the start), the glider climbed at %.2fm/s\n", m_Max, average.y);
+						Print("Traversal test: in a thermal (%.1fm/s lift at the start), the glider climbed at %.2fm/s, banked %.0f degrees & pitched %.0f degrees\n", m_Max, average.y,
+							glm::degrees(traversal->GetBodyBank()), glm::degrees(traversal->GetBodyPitch()));
+						if (glm::abs(traversal->GetBodyBank()) < glm::radians(5.0f))
+						{
+							Fail("glider didn't lean into a turn");
+						}
 						if (m_Max > 1.5f && average.y < 0.0f)
 						{
 							Fail("glider didn't climb in a thermal");
@@ -850,8 +885,99 @@ namespace flex
 							{
 								Fail("didn't climb the tossed rope onto the cliff");
 							}
+							NextStep(Step::SLOPE);
+						}
+					}
+				} break;
+				case Step::SLOPE:
+				{
+					// Standing still on a walkable slope with no input mustn't creep downhill, while a slope too steep
+					// to stand on is still slid down
+					if (m_Frame == 0)
+					{
+						if (FindSlope(terrainGenerator, m_SpawnPos, 0.75f, 1.2f, m_TargetPos))
+						{
+							player->TeleportOnTerrain(m_TargetPos);
+						}
+						else
+						{
+							Print("Traversal test: no walkable slope nearby, skipping\n");
+							m_SubStep = 2;
+						}
+					}
+					else if (m_SubStep == 0 && m_StepTime > 2.0f && !player->IsAwaitingTerrainCollision() && player->IsGrounded())
+					{
+						m_StartPos = pos;
+						m_SubStepTime = m_StepTime;
+						m_SubStep = 1;
+						m_Count = 0;
+					}
+					else if (m_SubStep == 1 && m_StepTime <= m_SubStepTime + 5.0f)
+					{
+						// Only movement while resting on the ground counts: the terrain's collision can be rebuilt
+						// underneath the player as it streams in (more detail), dropping or lifting them a little
+						const glm::vec3 step = pos - m_StartPos;
+						if (player->IsGrounded() && glm::abs(step.y) < 0.05f && glm::length(step) < 0.2f)
+						{
+							Accumulate(glm::vec3(glm::length(glm::vec2(step.x, step.z)), step.y, 0.0f));
+						}
+						else
+						{
+							++m_Count;
+						}
+						m_StartPos = pos;
+					}
+					else if (m_SubStep == 0 && m_StepTime > 30.0f)
+					{
+						Fail("never landed on the slope");
+						m_SubStep = 2;
+					}
+					else if (m_SubStep == 1 && m_StepTime > m_SubStepTime + 5.0f)
+					{
+						const real horizontalDrift = m_Sum.x;
+						Print("Traversal test: standing still for 5s on a slope (ground normal y %.2f) drifted %.3fm horizontally, %.3fm vertically (%u frames resting, %u frames skipped)\n",
+							player->GetGroundNormal().y, horizontalDrift, m_Sum.y, m_SampleCount, m_Count);
+						if (horizontalDrift > 0.1f || glm::abs(m_Sum.y) > 0.1f || m_SampleCount < 60)
+						{
+							Fail("player slid down a walkable slope while standing still");
+						}
+						m_SubStep = 2;
+					}
+					else if (m_SubStep == 2)
+					{
+						if (FindSlope(terrainGenerator, m_SpawnPos, 1.45f, 4.0f, m_TargetPos))
+						{
+							player->TeleportOnTerrain(m_TargetPos);
+							m_SubStepTime = m_StepTime;
+							m_SubStep = 3;
+						}
+						else
+						{
+							Print("Traversal test: no slope too steep to stand on nearby, skipping\n");
 							NextStep(Step::DONE);
 						}
+					}
+					else if (m_SubStep == 3 && m_StepTime > m_SubStepTime + 1.0f && !player->IsAwaitingTerrainCollision())
+					{
+						m_StartPos = pos;
+						m_SubStepTime = m_StepTime;
+						m_SubStep = 4;
+					}
+					else if (m_SubStep == 3 && m_StepTime > m_SubStepTime + 30.0f)
+					{
+						Fail("never landed on the steep slope");
+						NextStep(Step::DONE);
+					}
+					else if (m_SubStep == 4 && m_StepTime > m_SubStepTime + 2.0f)
+					{
+						const real moved = glm::distance(pos, m_StartPos);
+						const glm::vec3 normal = player->GetGroundNormal();
+						Print("Traversal test: on a steep slope (ground normal y %.2f) the player slid %.2fm in 2s\n", normal.y, moved);
+						if (moved < 0.3f && normal.y < Player::WALKABLE_NORMAL_Y - 0.05f && traversal->GetMode() == Traversal::Mode::NONE)
+						{
+							Fail("player stuck to a slope too steep to stand on");
+						}
+						NextStep(Step::DONE);
 					}
 				} break;
 				default:
@@ -881,6 +1007,11 @@ namespace flex
 		private:
 			void NextStep(Step step)
 			{
+				if (m_OnlyStep != Step::DONE && step != m_OnlyStep)
+				{
+					// Only running one step: go straight to it after landing, & finish after it
+					step = m_Step == Step::WAIT_FOR_GROUND ? m_OnlyStep : Step::DONE;
+				}
 				m_bStepChanged = true;
 				m_SubStep = 0;
 				m_Step = step;
@@ -994,6 +1125,53 @@ namespace flex
 				}
 				Print("Traversal test: steepest slope nearby: %.2f\n", steepest);
 				return steepest > 0.0f;
+			}
+
+			// Dry land sloping evenly (gradient between minGradient & maxGradient) near center, nearest first. Returns a
+			// point above the surface to place the player at.
+			static bool FindSlope(TerrainGenerator* terrainGenerator, const glm::vec3& center, real minGradient, real maxGradient, glm::vec3& outPos)
+			{
+				for (i32 ring = 1; ring < 60; ++ring)
+				{
+					const u32 count = 8 + (u32)ring * 2;
+					for (u32 i = 0; i < count; ++i)
+					{
+						const real angle = TWO_PI * (real)i / (real)count;
+						const real x = center.x + std::cos(angle) * (real)ring * 12.0f;
+						const real z = center.z + std::sin(angle) * (real)ring * 12.0f;
+						const terrain::ColumnSample column = terrainGenerator->SampleColumn(x, z);
+						if ((column.lakeID != 0 && column.lakeT < 1.2f) || column.height < column.waterLevel + 2.0f)
+						{
+							continue;
+						}
+						if (terrainGenerator->SampleDensity(glm::vec3(x, column.height + 1.5f, z)) <= 0.0f ||
+							terrainGenerator->SampleDensity(glm::vec3(x, column.height - 1.5f, z)) >= 0.0f)
+						{
+							continue;
+						}
+						// The same gradient at two scales (a plane, rather than a bump or crease)
+						glm::vec2 gradients[2];
+						bool bValid = true;
+						for (u32 scale = 0; scale < 2 && bValid; ++scale)
+						{
+							const real e = scale == 0 ? 1.0f : 3.0f;
+							const real hx0 = terrainGenerator->SampleColumn(x - e, z).height;
+							const real hx1 = terrainGenerator->SampleColumn(x + e, z).height;
+							const real hz0 = terrainGenerator->SampleColumn(x, z - e).height;
+							const real hz1 = terrainGenerator->SampleColumn(x, z + e).height;
+							gradients[scale] = glm::vec2(hx1 - hx0, hz1 - hz0) / (2.0f * e);
+							const real gradient = glm::length(gradients[scale]);
+							bValid = gradient >= minGradient && gradient <= maxGradient;
+						}
+						if (!bValid || glm::distance(gradients[0], gradients[1]) > 0.15f)
+						{
+							continue;
+						}
+						outPos = glm::vec3(x, column.height + 1.5f, z);
+						return true;
+					}
+				}
+				return false;
 			}
 
 			static glm::vec3 HorizontalLook(Player* player)
@@ -1187,6 +1365,7 @@ namespace flex
 			Step m_Step = Step::WAIT_FOR_GROUND;
 			bool m_bStepChanged = false;
 			u32 m_SubStep = 0;
+			Step m_OnlyStep = Step::DONE;
 			sec m_SubStepTime = 0.0f; // Step time when the current sub step began
 			sec m_StepTime = 0.0f;
 			u32 m_Frame = 0;
@@ -1699,6 +1878,44 @@ namespace flex
 			if (s_VehicleTest != nullptr)
 			{
 				s_VehicleTest->Update();
+			}
+			if (const char* spawnCountStr = getenv("FLEX_TEST_SPAWN_OBJECTS"))
+			{
+				// Stress test for dynamic uniform buffer growth: spawn objects (some with materials created at runtime)
+				// a few at a time, like gameplay does (e.g. chopping plants)
+				static u32 s_Spawned = 0;
+				const u32 spawnCount = (u32)atoi(spawnCountStr);
+				BaseCamera* camera = g_CameraManager->CurrentCamera();
+				for (u32 i = 0; i < 16 && s_Spawned < spawnCount; ++i, ++s_Spawned)
+				{
+					MaterialID matID = g_Renderer->GetPlaceholderMaterialID();
+					if (s_Spawned % 3 != 0)
+					{
+						const std::string matName = "Spawn test " + IntToString((i32)(s_Spawned % 7));
+						matID = g_Renderer->GetMaterialID(matName);
+						if (matID == InvalidMaterialID)
+						{
+							MaterialCreateInfo createInfo = {};
+							createInfo.name = matName;
+							createInfo.shaderName = (s_Spawned % 7) < 4 ? "pbr" : "colour";
+							createInfo.constAlbedo = glm::vec4((s_Spawned % 7) / 7.0f, 0.5f, 0.3f, 1.0f);
+							createInfo.colourMultiplier = createInfo.constAlbedo;
+							createInfo.bDynamic = (s_Spawned % 2) == 0;
+							createInfo.bSerializable = false;
+							matID = g_Renderer->InitializeMaterial(&createInfo);
+						}
+					}
+					GameObject* obj = new GameObject("Spawn test " + IntToString((i32)s_Spawned), BaseObjectSID);
+					obj->SetSerializable(false);
+					Mesh* mesh = obj->SetMesh(new Mesh(obj));
+					mesh->LoadFromFile(MESH_DIRECTORY "cube.glb", matID);
+					const real angle = s_Spawned * 0.37f;
+					const glm::vec3 pos = camera->position + camera->forward * 8.0f +
+						glm::vec3(glm::cos(angle), 0.0f, glm::sin(angle)) * (1.0f + s_Spawned * 0.01f) + glm::vec3(0.0f, (s_Spawned % 10) * 0.3f - 1.5f, 0.0f);
+					obj->GetTransform()->SetWorldPosition(pos);
+					obj->GetTransform()->SetLocalScale(glm::vec3(0.15f));
+					g_SceneManager->CurrentScene()->AddRootObject(obj);
+				}
 			}
 			if (getenv("FLEX_TEST_SHOW_INVENTORY") != nullptr)
 			{

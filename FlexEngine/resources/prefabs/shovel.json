@@ -1,0 +1,24 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "DCBDA215398D4E0E9EA399D1EC2DBCD2",
+	"root" : 
+	{
+		"id" : "4999DE8135FA4BF3A49AFDFDD7B7DEE8",
+		"name" : "shovel",
+		"type" : "shovel",
+		"collider" : 
+		{
+			"shape" : "box",
+			"half extents" : "0.280,1.150,0.120"
+		},
+		"rigid body" : 
+		{
+			"mass" : 1.000000,
+			"kinematic" : false,
+			"static" : false,
+			"mask" : 1,
+			"group" : 1
+		}
+	}
+}

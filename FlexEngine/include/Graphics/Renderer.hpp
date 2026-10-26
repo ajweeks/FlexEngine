@@ -216,7 +216,8 @@ namespace flex
 		real GetStringWidth(const std::string& str, BitmapFont* font, real letterSpacing, bool bNormalized) const;
 		real GetStringHeight(const std::string& str, BitmapFont* font, bool bNormalized) const;
 
-		real GetStringWidth(const TextCache& textCache, BitmapFont* font) const;
+		// tracking: extra space after each character (in font layout units)
+		real GetStringWidth(const TextCache& textCache, BitmapFont* font, real tracking = 0.0f) const;
 		real GetStringHeight(const TextCache& textCache, BitmapFont* font) const;
 
 		void SaveSettingsToDisk(bool bAddEditorStr = true);
@@ -493,6 +494,12 @@ namespace flex
 		real m_ShadowCascadeSplitLambda = 0.75f;
 		// Constant depth bias in world units
 		real m_ShadowBias = 0.02f;
+		// Slope-scaled depth bias applied when rendering casters, in shadow map texels of depth per texel of slope
+		real m_ShadowSlopeBias = 1.5f;
+		// The largest slope-scaled bias, in shadow map texels (limits peter-panning on surfaces nearly parallel to the light)
+		real m_ShadowSlopeBiasMaxTexels = 6.0f;
+		// Light space depth covered by each cascade, in world units
+		real m_ShadowCascadeDepthRanges[MAX_SHADOW_CASCADE_COUNT] = {};
 
 		std::vector<glm::mat4> m_ShadowLightViewMats;
 		std::vector<glm::mat4> m_ShadowLightProjMats;

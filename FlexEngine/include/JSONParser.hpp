@@ -36,6 +36,10 @@ namespace flex
 
 		static const char* GetErrorString();
 
+		// The value a quoted string is read as (strings holding only numbers become vectors). Also used by the binary
+		// save format (SaveFile.cpp), so both read values the same way.
+		static JSONValue ValueFromString(const std::string& str);
+
 	private:
 		/*
 		* Parses an object starting at offset
@@ -52,12 +56,13 @@ namespace flex
 
 		/*
 		* Parses an array of fields
+		* Expects offset to point at the opening '['
 		* Returns true if parse was successful
 		* Fails when array type is
 		*/
-		static bool ParseArray(const std::string& fileContents, size_t quoteEnd, i32* offset, const std::string& fieldName, std::vector<JSONField>& fields);
+		static bool ParseArray(const std::string& fileContents, i32* offset, const std::string& fieldName, std::vector<JSONField>& fields);
 
-		static bool ParseValue(ValueType fieldType, const std::string& fieldName, const std::string& fileContents, size_t quoteEnd, i32* offset, JSONValue& outValue);
+		static bool ParseValue(ValueType fieldType, const std::string& fieldName, const std::string& fileContents, i32* offset, JSONValue& outValue);
 
 		/*
 		 * Expects offset to point at the opening bracket

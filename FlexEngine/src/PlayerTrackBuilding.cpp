@@ -21,6 +21,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
+#include "Localization.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "PlayerController.hpp"
@@ -30,6 +31,7 @@ IGNORE_WARNINGS_POP
 #include "StringBuilder.hpp"
 #include "Systems/TrackManager.hpp"
 #include "Window/Window.hpp"
+#include "WorldStats.hpp"
 
 // Building, editing & riding tracks
 namespace flex
@@ -390,6 +392,30 @@ namespace flex
 		}
 	}
 
+	namespace
+	{
+		// Adds a newly laid track to the world's stats
+		void CountTrackLaid(const BezierCurveList& track)
+		{
+			WorldStats* stats = GetCurrentWorldStats();
+			if (stats == nullptr)
+			{
+				return;
+			}
+			real length = 0.0f;
+			for (BezierCurve3D curve : track.curves)
+			{
+				if (curve.calculatedLength < 0.0f)
+				{
+					curve.CalculateLength();
+				}
+				length += curve.calculatedLength;
+			}
+			stats->railLaid += length;
+			stats->tracksLaid++;
+		}
+	} // anonymous namespace
+
 	void Player::OnTrackBuildingPrimaryAction()
 	{
 		TrackBuildingContext& ctx = m_TrackBuildingContext;
@@ -416,6 +442,7 @@ namespace flex
 				for (const BezierCurveList& loopTrack : loopTracks)
 				{
 					trackManager->AddTrack(loopTrack);
+					CountTrackLaid(loopTrack);
 				}
 				trackManager->FindJunctions();
 				trackManager->SetPreviewTrack(nullptr);
@@ -539,7 +566,9 @@ namespace flex
 		}
 
 		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
-		trackManager->AddTrack(TrackManager::CreateTrackThroughNodes(ctx.m_PlacedNodes, ctx.m_StartDir, endDir));
+		const BezierCurveList newTrack = TrackManager::CreateTrackThroughNodes(ctx.m_PlacedNodes, ctx.m_StartDir, endDir);
+		trackManager->AddTrack(newTrack);
+		CountTrackLaid(newTrack);
 		trackManager->FindJunctions();
 		trackManager->SetPreviewTrack(nullptr);
 
@@ -616,48 +645,48 @@ namespace flex
 			StringBuilder name;
 			if (!g_InputManager->GetActionBindingName(action, name))
 			{
-				return std::string("Unbound");
+				return std::string(LOC(Input_Unbound));
 			}
 			return name.ToString();
 		};
 
 		// LMB is checked for directly in PlayerController
-		const std::string primaryBinding = "LMB / " + BindingName(Action::INTERACT_RIGHT_HAND);
+		const std::string primaryBinding = LOCF(Track_PrimaryBinding, BindingName(Action::INTERACT_RIGHT_HAND).c_str());
 
 		std::vector<std::string> lines;
 		if (ctx.m_bPlacingTrack)
 		{
-			lines.push_back("TRACK BUILDING - " + std::to_string(ctx.m_PlacedNodes.size()) + " nodes placed");
-			lines.push_back("[" + primaryBinding + "] Place node");
-			lines.push_back("[" + BindingName(Action::UNDO_TRACK_NODE) + "] Undo last node");
-			lines.push_back("[" + BindingName(Action::COMPLETE_TRACK) + "] Finish track");
-			lines.push_back("[" + BindingName(Action::ENTER_TRACK_BUILD_MODE) + "] Finish & exit");
+			lines.push_back(LOCF(Track_BuildingTitle, (i32)ctx.m_PlacedNodes.size()));
+			lines.push_back(LOCF(Track_PlaceNode, primaryBinding.c_str()));
+			lines.push_back(LOCF(Track_UndoNode, BindingName(Action::UNDO_TRACK_NODE).c_str()));
+			lines.push_back(LOCF(Track_Finish, BindingName(Action::COMPLETE_TRACK).c_str()));
+			lines.push_back(LOCF(Track_FinishExit, BindingName(Action::ENTER_TRACK_BUILD_MODE).c_str()));
 			if (!ctx.m_bReticleValid)
 			{
-				lines.push_back("Aim at the ground to place nodes");
+				lines.push_back(LOC(Track_AimAtGround));
 			}
 			else if (ctx.m_HoveredPlacedNodeIndex != -1)
 			{
-				lines.push_back("Snapped - placing here closes the loop & finishes the track");
+				lines.push_back(LOC(Track_SnappedLoop));
 			}
 			else if (ctx.m_HoveredPoint.IsValid())
 			{
-				lines.push_back(ctx.m_PlacedNodes.empty() ? "Snapped - new track will branch from this node" : "Snapped - placing here joins & finishes the track");
+				lines.push_back(ctx.m_PlacedNodes.empty() ? LOC(Track_SnappedBranch) : LOC(Track_SnappedJoin));
 			}
 		}
 		else if (ctx.m_bEditingTrack)
 		{
-			lines.push_back("TRACK EDITING");
-			lines.push_back("[" + primaryBinding + "] " + (ctx.m_GrabbedPoints.empty() ? "Grab point" : "Release point"));
-			lines.push_back("[" + BindingName(Action::UNDO_TRACK_NODE) + "] Delete hovered node");
-			lines.push_back("[" + BindingName(Action::DELETE_TRACK) + "] Delete highlighted track");
-			lines.push_back("[" + BindingName(Action::ENTER_TRACK_EDIT_MODE) + "] Exit");
+			lines.push_back(LOC(Track_EditingTitle));
+			lines.push_back(ctx.m_GrabbedPoints.empty() ? LOCF(Track_GrabPoint, primaryBinding.c_str()) : LOCF(Track_ReleasePoint, primaryBinding.c_str()));
+			lines.push_back(LOCF(Track_DeleteNode, BindingName(Action::UNDO_TRACK_NODE).c_str()));
+			lines.push_back(LOCF(Track_DeleteTrack, BindingName(Action::DELETE_TRACK).c_str()));
+			lines.push_back(LOCF(Track_Exit, BindingName(Action::ENTER_TRACK_EDIT_MODE).c_str()));
 		}
 		else
 		{
 			const real forkSteer = m_Controller->GetForkSteer();
-			lines.push_back(std::string("FORK AHEAD - going ") + (forkSteer < 0.0f ? "left" : forkSteer > 0.0f ? "right" : "straight"));
-			lines.push_back("[" + BindingName(Action::MOVE_LEFT) + "] / [" + BindingName(Action::MOVE_RIGHT) + "] Choose left / right");
+			lines.push_back(forkSteer < 0.0f ? LOC(Track_ForkLeft) : forkSteer > 0.0f ? LOC(Track_ForkRight) : LOC(Track_ForkStraight));
+			lines.push_back(LOCF(Track_ChooseFork, BindingName(Action::MOVE_LEFT).c_str(), BindingName(Action::MOVE_RIGHT).c_str()));
 		}
 
 		BitmapFont* font = g_Renderer->SetFont(SID("editor-02"));

@@ -4,6 +4,7 @@
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "Game.hpp"
 #include "GameUI.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
@@ -1458,6 +1459,8 @@ namespace flex
 				real x = aspectRatio > targetAspectRatio ? (aspectRatio / targetAspectRatio) : 1.0f;
 				real y = aspectRatio > targetAspectRatio ? 1.0f : (aspectRatio / targetAspectRatio);
 
+				// (Hidden behind the game's menus, e.g. the full screen map, which it would otherwise draw over)
+				if (g_Game == nullptr || !g_Game->IsMenuOpen())
 				{
 					Rect rect{ -x, -y, x, y, VEC4_ONE };
 					playerQuickAccessUI->Update(rect);

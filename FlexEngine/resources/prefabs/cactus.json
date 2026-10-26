@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "4897EB2F49E44A1895B2A3AE7FE9388E",
+	"root" : 
+	{
+		"id" : "6F18064B69E6421CAFB11612F7C1C46A",
+		"name" : "cactus",
+		"type" : "object",
+		"mesh" : "cylinder.glb",
+		"materials" : 
+		[
+			"cactus"
+		]
+	}
+}
