@@ -107,6 +107,7 @@ namespace flex
 				const glm::vec3 pos = player->GetTransform()->GetWorldPosition();
 				const glm::vec3 velocity = ToVec3(player->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
 				m_StepTime += g_DeltaTime;
+				// FLEX_TRAVERSAL_DEBUG=<any>: prints the traversal step state each frame, and mantle details
 				if (getenv("FLEX_TRAVERSAL_DEBUG") != nullptr)
 				{
 					Print("[%s %u %.2f] pos (%.1f, %.1f, %.1f) vel (%.1f, %.1f, %.1f) grounded %d awaiting %d mode %s possessed %d\n", StepName(m_Step), m_Frame, m_StepTime,
@@ -1950,6 +1951,7 @@ namespace flex
 			{
 				UpdateTrackTest();
 			}
+			// FLEX_TEST_SPAWN_OBJECTS=<count>: spawns that many cubes in front of the camera, a few per frame, with runtime-made materials (dynamic UBO growth stress test)
 			if (const char* spawnCountStr = getenv("FLEX_TEST_SPAWN_OBJECTS"))
 			{
 				// Stress test for dynamic uniform buffer growth: spawn objects (some with materials created at runtime)
@@ -1988,6 +1990,7 @@ namespace flex
 					g_SceneManager->CurrentScene()->AddRootObject(obj);
 				}
 			}
+			// FLEX_TEST_SHOW_INVENTORY=<any>: opens the player inventory in a test scene
 			if (getenv("FLEX_TEST_SHOW_INVENTORY") != nullptr)
 			{
 				Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
@@ -1995,6 +1998,7 @@ namespace flex
 				{
 					player->SetInventoryShowing(true);
 					static bool bFilled = false;
+					// FLEX_TEST_FILL_INVENTORY=<any>: with FLEX_TEST_SHOW_INVENTORY, copies the quick access items into the main inventory so their icons can be checked
 					if (!bFilled && getenv("FLEX_TEST_FILL_INVENTORY") != nullptr)
 					{
 						// Copy the quick access items into the main inventory so its icons can be checked too
@@ -2143,9 +2147,11 @@ namespace flex
 			{
 				g_Renderer->SetDebugOverlayID(atoi(overlay));
 			}
+			// FLEX_TEST_FIRST_PERSON=<any>: switches to the first-person camera and ignores window focus (--profile does the same)
 			if (m_bProfile || getenv("FLEX_TEST_FIRST_PERSON") != nullptr)
 			{
 				g_CameraManager->SetCameraByName("first-person", false);
+				// FLEX_TEST_CAMERA=<name>: camera to use instead of first-person, when FLEX_TEST_FIRST_PERSON or --profile is set
 				if (const char* cameraName = getenv("FLEX_TEST_CAMERA"))
 				{
 					g_CameraManager->SetCameraByName(cameraName, false);

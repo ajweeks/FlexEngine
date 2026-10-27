@@ -2774,6 +2774,7 @@ namespace flex
 			TestWorldFiles(ctx, random);
 			TestTerrainEdits(ctx, random);
 			TestFixtures(ctx);
+			// FLEX_SAVE_BENCHMARK=<any value>: after the save file tests in --test, also times world saves & loads (best of 5, text vs binary) & prints a table
 			if (getenv("FLEX_SAVE_BENCHMARK") != nullptr)
 			{
 				Benchmark(random);

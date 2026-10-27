@@ -473,6 +473,7 @@ namespace flex
 				return;
 			}
 
+			// FLEX_DUMP_SOUNDS=<any value>: writes every generated sound to saved/sound_dump/ as a .wav & prints each one's length & level
 			s_bDump = getenv("FLEX_DUMP_SOUNDS") != nullptr;
 			s_bLog = getenv("FLEX_SOUND_LOG") != nullptr;
 			if (s_bDump)

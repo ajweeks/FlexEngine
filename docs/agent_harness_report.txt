@@ -1,0 +1,75 @@
+Agent harness report (2026-10-27)
+=================================
+
+WHAT'S NEW
+- scripts/flexsvc: one CLI (Python, run from WSL) for everything agents did by hand. State lives in
+  C:\Code\Flex\agents (board.md, builds\, sandboxes\, scratch\, refs\, bench\) and the locks in /tmp/flexsvc-locks.
+- docs/agents.md: the rules for agents, their commands, the 300-word report format & a dispatch playbook.
+- .claude/agents/flex-mechanic (Haiku), flex-dev (Sonnet), flex-engineer (Opus): the rules are built in, so briefs
+  only need a name, the tasks & how to verify them. These load at session start, so they show up next session.
+- A CLAUDE.md pointer & an updated memory note.
+
+HOW IT ADDRESSES THE LESSONS
+1. Builds: there's one shared incremental build queue, since the tree is shared and per-agent builds would compile
+   the same thing 6 times.
+   - Requests that queue behind a running build are served by the next one, so 3 simultaneous requests cost one
+     build. A no-change request takes about 2s.
+   - Every passing exe is copied to builds\<id>\. Runs use that copy, so no run can lock the build output.
+   - Each agent runs in its own sandbox: bin\<id>\FlexEngine\Flex.exe beside a FlexEngine\ folder whose
+     resources\ & config\ are junctions to the repo. saved\ is private except spv\ & fonts\. That fits the
+     engine's "../../../FlexEngine/" root without engine changes.
+   - Multiple instances do run at once: 4 terrain scene tests ran concurrently and all passed.
+2. Projects are regenerated automatically: if the .cpp/.hpp files on disk don't match Flex.vcxproj, it runs genie
+   (vs2026 + ninja) first. Tested by adding a file and then removing it.
+3. Builds fail loudly: on a nonzero exit, on error lines, or if Flex.exe is older than the newest source (a link
+   that didn't happen). It prints the deduped errors and who claimed those files.
+4. Runs never use a stale exe: `run` always builds first & runs that exact build. Every run has a timeout
+   (default 300s). On timeout it kills the process by sandbox path (tested), and the next run in that sandbox
+   kills leftovers. `status` lists every running Flex.exe.
+5. Fair resources: one build at a time, 3 GPU run slots (FLEXSVC_GPU_SLOTS), and `run --perf`/`bench` take the
+   machine exclusively. A gate lock means a waiting perf run isn't starved by a stream of new runs. Tested: the
+   perf run waited for 4 concurrent runs, then ran alone.
+6. Board: `post`, `post --to <agent|file>` (reaches whoever claimed matching files), `claim`, `read`. `build` &
+   `run` show unread messages automatically, so agents can't miss them. The service itself posts build
+   BROKEN/fixed & project regenerations. You can watch board.md directly.
+7. Test hooks: `flexsvc hooks` lists every FLEX_* env var & command line flag with its description, scanned from
+   the source so it stays current. Two Haiku agents added the missing descriptions, so 41 of 42 are now
+   documented (only --headless isn't).
+8. bench: the --play benchmark from a fixed seed in a fresh world. It prints p50/p95/p99/p99.9/max, hitches, the
+   top scopes & the first hitch lines, with deltas against --baseline <build id>, and saves full JSON.
+   --runs N takes medians. Noise warning: two runs of effectively the same code gave p99 28.7 vs 22.6ms, so
+   use --runs 3.
+9. Screenshots: `shots ref SET` / `shots diff SET` print a mean diff & % of pixels changed for each image, and
+   write amplified diff images only for those that differ. Tested: identical runs give "same", while a
+   debug-overlay run is flagged.
+10. Shaders: `flexsvc shaders` compiles shaders whose source or includes changed into saved\spv (includes
+    inlined, glslang vulkan1.2, then spirv-opt -O).
+
+END-TO-END TEST
+- Two concurrent Haiku agents, briefed with the flex-mechanic rules, each documented a set of hooks. They
+  claimed files, built, ran macbeth, and one posted --to SceneTestRunner.cpp, which reached the other through its
+  claim. Both reports followed the format and were about 250 words.
+  - Cost: 47k & 52k tokens, 67s & 100s.
+  - Diffs were comments only. One agent's Edit briefly dropped a code line, but it noticed and restored it.
+- Final builds via flexsvc: Release r-7 PASS, Linux lin-1 PASS. The test board is archived in
+  C:\Code\Flex\agents\archive\.
+
+NOT DONE (deliberately, to keep this minimal)
+- Direct agent-to-agent interrupts: messages only arrive when the agent next calls flexsvc. SendMessage in Claude
+  Code would be the push channel.
+- A single --script input-injection driver for the engine. That's engine work: FLEX_* hooks would become script
+  commands. It's the next most valuable item.
+- GPU slots are polled (1s), not strict FIFO.
+- Debug builds still output into the shared bin\Debug_x64, and `run` only runs Release.
+
+CAVEATS
+- My first test of `flexsvc shaders` recompiled all shaders into the shared saved\spv. The include check is now
+  per shader. All 25 scenes pass under validation with the new spv, and the macbeth & sponza screenshots match
+  ones taken before.
+- Sandboxes start with no saved window settings, so screenshots are 2176x1224. Only compare refs made in sandboxes.
+
+DISPATCH ADVICE
+- Run 5-6 agents grouped by area, with the perf agent last.
+- Use flex-mechanic for recipe-style edits & flex-dev for scoped features. Keep Opus for renderer, perf, terrain
+  & investigations.
+- Archive board.md, cursors\ & claims.json between dispatches.

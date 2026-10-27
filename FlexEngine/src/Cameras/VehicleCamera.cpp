@@ -74,6 +74,7 @@ namespace flex
 
 		// Per frame values for offline analysis
 		static FILE* csv = nullptr;
+		// FLEX_VEHICLE_CAM_CSV=<any value>: writes per frame camera & vehicle values (dt, alpha, positions, look-at, speed) to vehicle_cam.csv in the working directory
 		if (csv == nullptr && getenv("FLEX_VEHICLE_CAM_CSV") != nullptr)
 		{
 			csv = fopen("vehicle_cam.csv", "w");
