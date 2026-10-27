@@ -14,6 +14,13 @@ namespace flex
 {
 	std::array<bool, MAX_JOYSTICK_COUNT> g_JoysticksConnected;
 
+	// FLEX_NO_FOCUS=1 (set by flexsvc runs): show the window without taking focus or input. "0" or unset: normal
+	static bool NoFocusRequested()
+	{
+		const char* value = getenv("FLEX_NO_FOCUS");
+		return value != nullptr && strcmp(value, "0") != 0;
+	}
+
 	GLFWWindowWrapper::GLFWWindowWrapper(const std::string& title) :
 		Window(title)
 	{
@@ -104,7 +111,12 @@ namespace flex
 
 		// Don't hide window when losing focus in Windowed Fullscreen
 		glfwWindowHint(GLFW_AUTO_ICONIFY, GLFW_TRUE);
-		glfwWindowHint(GLFW_FOCUS_ON_SHOW, GLFW_TRUE);
+		const bool bNoFocus = NoFocusRequested();
+		glfwWindowHint(GLFW_FOCUS_ON_SHOW, bNoFocus ? GLFW_FALSE : GLFW_TRUE);
+		if (bNoFocus)
+		{
+			glfwWindowHint(GLFW_FOCUSED, GLFW_FALSE);
+		}
 
 		if (g_bVulkanEnabled)
 		{
@@ -185,7 +197,10 @@ namespace flex
 
 		if (!g_bHeadless)
 		{
-			glfwFocusWindow(m_Window);
+			if (!NoFocusRequested())
+			{
+				glfwFocusWindow(m_Window);
+			}
 			m_bHasFocus = true;
 		}
 	}

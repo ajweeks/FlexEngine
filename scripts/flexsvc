@@ -3,12 +3,15 @@
 
 Every agent passes its own name (-a NAME, or FLEX_AGENT=NAME). See docs/agents.md for the full guide.
 
-  flexsvc -a NAME build [--config Release|Debug] [--linux]   build the tree as it is now (queued, cached)
-  flexsvc -a NAME run [--perf] [--timeout S] [--env K=V] [--fresh] -- <Flex.exe args>
-  flexsvc -a NAME bench [--seconds S] [--baseline BUILD_ID|file.json]
+  flexsvc -a NAME build [--linux] [--mine] [--until-ok] [--max S]   build the tree as it is now (queued, cached)
+  flexsvc -a NAME run [--perf] [--timeout S] [--env K=V] [--fresh] [--build ID|--last-good] [--detach] [--grep RE] -- <args>
+  flexsvc -a NAME wait TICKET [--max S]                    output of a `run --detach`
+  flexsvc -a NAME bench [--seconds S] [--baseline BUILD_ID|file.json] [--env K=V] [--baseline-env K=V]
+  flexsvc -a NAME hold | release                           make builds wait while you save a multi-file edit
+  flexsvc -a NAME pin BUILD_ID                             keep a build past pruning
   flexsvc -a NAME post [--to AGENT|PATH] MESSAGE           post to the board (or to whoever claimed PATH)
-  flexsvc -a NAME read [--all]                             unread board messages (also shown by build/run)
-  flexsvc -a NAME claim PATH...                            say which files you're working on
+  flexsvc -a NAME read|board [--all|--undelivered]        unread board messages (also shown by build/run)
+  flexsvc -a NAME claim [--set|--clear] PATH...            add to the files you're working on (--set replaces)
   flexsvc -a NAME shaders [NAME...]                        compile changed (or named) shaders into saved/spv
   flexsvc -a NAME shots ref|diff SET                       save / compare the last run's screenshots
   flexsvc -a NAME kill                                     kill Flex.exe processes left in your sandbox
@@ -20,14 +23,14 @@ resources/ & config/ link to the repo & whose saved/ is private, except saved/sp
 so several instances can run at once without sharing logs, settings, worlds or caches.
 """
 
-import argparse, contextlib, fcntl, fnmatch, glob, hashlib, json, os, re, shutil, subprocess, sys, time
+import argparse, contextlib, fcntl, fnmatch, glob, hashlib, json, os, re, shlex, shutil, subprocess, sys, time
 
 REPO = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 ENGINE = os.path.join(REPO, "FlexEngine")
 HOME = os.environ.get("FLEXSVC_HOME", os.path.join(os.path.dirname(REPO), "agents"))
 LOCKS = os.environ.get("FLEXSVC_LOCKS", "/tmp/flexsvc-locks")  # flock needs a Linux filesystem
 GPU_SLOTS = int(os.environ.get("FLEXSVC_GPU_SLOTS", "3"))
-KEEP_BUILDS = 30
+KEEP_BUILDS = 40
 MSBUILD_GLOB = "/mnt/c/Program Files/Microsoft Visual Studio/*/*/MSBuild/Current/Bin/amd64/MSBuild.exe"
 SRC_EXTS = (".cpp", ".c", ".h", ".hpp")
 
@@ -146,6 +149,30 @@ def post(msg, to=None, sender=None):
 	with lock("board"):
 		with open(board_path(), "a") as f:
 			f.write(line)
+	if to and to != "all" and sender is None:
+		for agent in recipients(to):
+			cur = os.path.join(HOME, "cursors", agent)
+			if not os.path.exists(cur):
+				print("note: %s hasn't read the board yet; the manager can see undelivered posts with `read --undelivered`" % agent)
+			elif time.time() - os.path.getmtime(cur) > 900:
+				print("note: %s hasn't read the board for %.0f min and may have finished; the manager can see it with `read --undelivered`" % (agent, (time.time() - os.path.getmtime(cur)) / 60))
+
+
+def recipients(to):
+	"""Agents a directed post reaches: whoever claimed a matching path, else the named agent."""
+	allc = claims()
+	if to in allc or os.path.exists(os.path.join(HOME, "cursors", to)):
+		return [to]
+	agents = [a for a, paths in allc.items() if any(fnmatch.fnmatch(c, "*" + to + "*") or fnmatch.fnmatch(to, "*" + c + "*") for c in paths)]
+	return agents or [to]
+
+
+def cursor_of(agent):
+	cur = os.path.join(HOME, "cursors", agent)
+	try:
+		return int(open(cur).read().strip() or 0)
+	except (OSError, ValueError):
+		return 0
 
 
 def addressed_to_me(sender, to):
@@ -179,6 +206,23 @@ def unread(show_all=False):
 	return out
 
 
+def undelivered():
+	"""Directed messages whose addressee hasn't read past them (for the manager to relay)."""
+	try:
+		lines = open(board_path()).readlines()
+	except OSError:
+		return []
+	out = []
+	for i, line in enumerate(lines):
+		m = re.match(r"- \[[^\]]*\] \*\*([^*]+)\*\*(?: → ([^:]+))?:", line)
+		if not m or not m.group(2) or m.group(2) == "all":
+			continue
+		missed = [a for a in recipients(m.group(2)) if a != m.group(1) and cursor_of(a) <= i]
+		if missed:
+			out.append("(not read by %s) %s" % (", ".join(missed), line.rstrip()))
+	return out
+
+
 def show_unread():
 	msgs = unread()
 	if msgs:
@@ -197,9 +241,17 @@ def source_files():
 	return out
 
 
+def spv_files():
+	return glob.glob(os.path.join(ENGINE, "saved", "spv", "*.spv"))
+
+
 def fingerprint(files):
 	h = hashlib.sha1()
 	newest = 0.0
+	for p in sorted(spv_files()):  # shaders compiled since the last build make a new build (each snapshots its spv)
+		with contextlib.suppress(OSError):
+			st = os.stat(p)
+			h.update(("%s|%d|%d\n" % (p, st.st_size, st.st_mtime_ns)).encode())
 	for p in sorted(files + [os.path.join(REPO, "scripts", "genie.lua")]):
 		with contextlib.suppress(OSError):
 			st = os.stat(p)
@@ -241,6 +293,29 @@ def error_lines(output, linux=False):
 	return out
 
 
+def hold_file():
+	return os.path.join(HOME, "hold.json")
+
+
+def wait_for_hold(max_wait=90):  # keeps a build/run under the 120 s tool timeout
+	"""While another agent holds (mid multi-file edit), wait rather than build half an edit. Holds expire."""
+	t0 = time.time()
+	announced = False
+	while time.time() - t0 < max_wait:
+		h = read_json(hold_file())
+		if not h or h.get("agent") == AGENT or time.time() - h.get("since", 0) > 600:
+			return
+		if not announced:
+			print("[%s] %s is holding builds (mid-edit), waiting up to %ds..." % (now_str(), h.get("agent"), max_wait), flush=True)
+			announced = True
+		time.sleep(3)
+	print("[%s] hold still active after %ds, building anyway" % (now_str(), max_wait), flush=True)
+
+
+def changed_since(files, t):
+	return [p for p in files if os.path.exists(p) and os.path.getmtime(p) > t]
+
+
 def build(config="Release", linux=False, quiet_cached=False):
 	"""Builds the tree as it stands now. Requests that queue up behind a running build are served by the next build
 	(which starts after they asked), so N agents asking at once cost one or two builds. Returns the state dict."""
@@ -249,13 +324,14 @@ def build(config="Release", linux=False, quiet_cached=False):
 	state_file = os.path.join(HOME, "builds", key + ".json")
 	os.makedirs(os.path.dirname(state_file), exist_ok=True)
 
+	wait_for_hold()
 	with machine(False, "build " + key), lock("build-" + key, what="build " + key):
 		files = source_files()
 		fp, newest_src = fingerprint(files)
 		last = read_json(state_file, {})
 		if last and (last.get("fingerprint") == fp or last.get("started", 0) >= requested):
 			if not quiet_cached:
-				print("[%s] cached %s build %s (%s)" % (now_str(), key, last.get("id"), "unchanged sources" if last.get("fingerprint") == fp else "started after you asked"))
+				print("[%s] cached %s build %s (%s; newest source change %s)" % (now_str(), key, last.get("id"), "unchanged sources" if last.get("fingerprint") == fp else "started after you asked", time.strftime("%H:%M:%S", time.localtime(newest_src))))
 			return last
 
 		if not linux:
@@ -270,7 +346,7 @@ def build(config="Release", linux=False, quiet_cached=False):
 		started = time.time()
 		print("[%s] building %s (%s)..." % (now_str(), key, build_id), flush=True)
 		if linux:
-			cmd = ["ninja", "-C", os.path.join(REPO, "build", "debug64")]
+			cmd = ["nice", "-n", "10", "ninja", "-C", os.path.join(REPO, "build", "debug64"), "-j", str(max(2, (os.cpu_count() or 4) // 2))]
 			cwd = REPO
 		else:
 			msbuild = sorted(glob.glob(MSBUILD_GLOB))
@@ -285,8 +361,17 @@ def build(config="Release", linux=False, quiet_cached=False):
 			f.write(output)
 
 		errors = error_lines(output, linux)
+		late = changed_since(files, started)
 		state = {"id": build_id, "n": n, "config": key, "fingerprint": fp, "started": started, "seconds": round(time.time() - started, 1),
-			"ok": r.returncode == 0 and not errors, "errors": errors[:40], "log": log, "by": AGENT}
+			"ok": r.returncode == 0 and not errors, "errors": errors[:40], "log": log, "by": AGENT, "newest_src": newest_src}
+		if late:
+			# Edited while compiling: objects may be stale. Touch them so the next build recompiles them, and don't trust this one.
+			state["dirty"] = [os.path.relpath(p, ENGINE) for p in late[:10]]
+			for p in late:
+				with contextlib.suppress(OSError):
+					os.utime(p)
+			state["fingerprint"] = "dirty"
+			print("[%s] WARNING: %d source file(s) changed during the build (%s): treat %s as unreliable, rebuild" % (now_str(), len(late), ", ".join(state["dirty"][:3]), build_id), flush=True)
 		if r.returncode != 0 and not errors:
 			state["errors"] = ["build exited with %d but printed no error lines, see %s" % (r.returncode, log)]
 
@@ -304,6 +389,10 @@ def build(config="Release", linux=False, quiet_cached=False):
 					if name.lower().endswith((".exe", ".dll", ".pdb")):
 						shutil.copy2(os.path.join(out_dir, name), snap)
 				state["dir"] = snap
+				spv_snap = os.path.join(snap, "spv")  # each build runs with the shaders it was built with
+				os.makedirs(spv_snap, exist_ok=True)
+				for p in spv_files():
+					shutil.copy2(p, spv_snap)
 		elif state["ok"]:
 			state["dir"] = os.path.join(REPO, "bin", "Debug_x64", "FlexEngine")
 
@@ -313,13 +402,38 @@ def build(config="Release", linux=False, quiet_cached=False):
 			else:
 				post("%s build BROKEN (%s, first error: %s)" % (key, build_id, state["errors"][0][:200]), sender="flexsvc")
 		write_json(state_file, state)
+		if state["ok"] and not linux and not late:
+			write_json(os.path.join(HOME, "builds", key + "-good.json"), state)
 		prune_builds()
 		return state
+
+
+def build_mine():
+	"""Compile only the .cpp files you claimed (Linux ninja, compile check) before saving into shared files."""
+	cpps = [os.path.basename(p) for p in claims().get(AGENT, []) if p.endswith(".cpp")]
+	if not cpps:
+		die("no claimed .cpp files (flexsvc claim PATH...)")
+	bd = os.path.join(REPO, "build", "debug64")
+	targets = subprocess.run(["ninja", "-C", bd, "-t", "targets", "all"], capture_output=True, text=True).stdout.splitlines()
+	names = set(os.path.splitext(c)[0] + ".o" for c in cpps) | set(c + ".o" for c in cpps)
+	objs = [t.split(":")[0] for t in targets if os.path.basename(t.split(":")[0]) in names]
+	if not objs:
+		die("no ninja object targets match %s" % cpps)
+	with machine(False, "build --mine"), lock("build-linux-debug", what="build --mine"):  # one ninja per build dir
+		r = subprocess.run(["nice", "-n", "10", "ninja", "-C", bd, "-k", "0"] + objs, capture_output=True, text=True, errors="replace")
+	errs = error_lines(r.stdout + r.stderr, True)
+	ok = r.returncode == 0 and not errs
+	print("BUILD --mine %s (%d object(s)): %s" % ("PASS" if ok else "FAIL", len(objs), cpps))
+	for e in errs[:30]:
+		print("  " + e)
+	sys.exit(0 if ok else 1)
 
 
 def prune_builds():
 	snaps = [d for d in glob.glob(os.path.join(HOME, "builds", "*-*")) if os.path.isdir(d)]
 	snaps.sort(key=os.path.getmtime)
+	pins = read_json(os.path.join(HOME, "pins.json"), [])
+	snaps = [d for d in snaps if os.path.basename(d) not in pins]
 	for d in snaps[:-KEEP_BUILDS]:
 		shutil.rmtree(d, ignore_errors=True)
 		with contextlib.suppress(OSError):
@@ -337,6 +451,13 @@ def print_build(state):
 		owners = sorted(set(a for a, paths in mine.items() for e in state["errors"] for p in paths if os.path.basename(p) in e))
 		if owners:
 			print("  (files claimed by: %s)" % ", ".join(owners))
+		mine_files = [os.path.basename(p) for p in claims().get(AGENT, [])]
+		mine_err = [e for e in state["errors"] if any(m in e for m in mine_files)]
+		print("  errors in files you claimed: %s" % (len(mine_err) if mine_files else "n/a (nothing claimed)"))
+		if mine_files and not mine_err:
+			print("  -> probably not yours (unless a header you changed caused them): `run --last-good` runs the newest passing build, `build --until-ok` waits for a fix")
+	if state.get("dirty"):
+		print("  (files changed while it compiled: %s)" % ", ".join(state["dirty"][:5]))
 
 
 # ---------------------------------------------------------------- sandboxes & runs
@@ -357,10 +478,23 @@ def sandbox(agent):
 	os.makedirs(os.path.join(fe, "saved"), exist_ok=True)
 	for name in ("resources", "config"):
 		ensure_link(os.path.join(fe, name), os.path.join(ENGINE, name))
-	for name in ("spv", "fonts"):
-		os.makedirs(os.path.join(ENGINE, "saved", name), exist_ok=True)
-		ensure_link(os.path.join(fe, "saved", name), os.path.join(ENGINE, "saved", name))
+	os.makedirs(os.path.join(ENGINE, "saved", "fonts"), exist_ok=True)
+	ensure_link(os.path.join(fe, "saved", "fonts"), os.path.join(ENGINE, "saved", "fonts"))
 	return sb
+
+
+def link_spv(sb, state):
+	"""Point the sandbox's saved/spv at the shaders the build was made with (else an older exe gets newer shaders)."""
+	link = os.path.join(sb, "FlexEngine", "saved", "spv")
+	snap = os.path.join(state.get("dir") or "", "spv")
+	target = snap if os.path.isdir(snap) else os.path.join(ENGINE, "saved", "spv")
+	if os.path.lexists(link):
+		# wslpath resolves links, so name the junction through its parent (else rmdir targets the shader folder itself)
+		r = subprocess.run(["cmd.exe", "/c", "rmdir", winpath(os.path.dirname(link)) + "\\spv"], capture_output=True, text=True, cwd=HOME)
+		if os.path.lexists(link):
+			die("couldn't remove the sandbox's spv junction %s: %s" % (link, (r.stdout + r.stderr).strip()))
+	os.makedirs(target, exist_ok=True)
+	ensure_link(link, target)
 
 
 def install_exe(sb, state):
@@ -378,28 +512,58 @@ def install_exe(sb, state):
 
 def kill_sandbox(sb):
 	pattern = winpath(sb) + "\\*"
-	ps = ("Get-CimInstance Win32_Process -Filter \"Name='Flex.exe'\" | Where-Object { $_.ExecutablePath -like '%s' } | "
-		"ForEach-Object { Stop-Process -Id $_.ProcessId -Force; $_.ProcessId }" % pattern)
-	r = subprocess.run(["powershell.exe", "-NoProfile", "-Command", ps], capture_output=True, text=True)
+	ps = ("Get-Process -Name Flex -ErrorAction SilentlyContinue | Where-Object { $_.Path -like '%s' } | "
+		"ForEach-Object { Stop-Process -Id $_.Id -Force; $_.Id }" % pattern)  # Get-CimInstance can hang
+	try:
+		r = subprocess.run(["powershell.exe", "-NoProfile", "-Command", ps], capture_output=True, text=True, timeout=30)
+	except subprocess.TimeoutExpired:
+		print("flexsvc: couldn't list Flex.exe processes (powershell timed out)", file=sys.stderr)
+		return []
 	return r.stdout.split()
+
+
+def flex_processes():
+	"""[(pid, exe path)] of running Flex.exe, or None if powershell timed out."""
+	ps = "Get-Process -Name Flex -ErrorAction SilentlyContinue | ForEach-Object { '{0} {1}' -f $_.Id, $_.Path }"
+	try:
+		out = subprocess.run(["powershell.exe", "-NoProfile", "-Command", ps], capture_output=True, text=True, timeout=15).stdout
+	except subprocess.TimeoutExpired:
+		return None
+	return [(l.strip().split(" ", 1) + [""])[:2] for l in out.splitlines() if l.strip()]
 
 
 def bat_quote(v):
 	return v.replace("%", "%%").replace("^", "^^").replace("&", "^&").replace("|", "^|").replace("<", "^<").replace(">", "^>")
 
 
+def bat_arg(v):
+	"""One command line argument in a .bat: quoted if it has spaces or cmd specials (only % needs escaping inside quotes)."""
+	if any(c in v for c in " \t&|<>^()"):
+		return '"%s"' % v.replace("%", "%%")
+	return v.replace("%", "%%")
+
+
 def run_exe(exe, args, env, timeout, perf, log, sb, label):
-	marker = os.path.join(sb, "running")
-	if os.path.exists(marker):
+	"""Call with the sandbox lock held (run_flex does), so any marker left here is from a run that died or timed out."""
+	marker = os.path.join(sb, "running-%d" % os.getpid())
+	old = glob.glob(os.path.join(sb, "running*"))
+	if old:
+		for p in old:
+			with contextlib.suppress(OSError):
+				os.remove(p)
 		killed = kill_sandbox(sb)
 		if killed:
 			print("killed leftover Flex.exe from an earlier run in this sandbox: %s" % killed)
-	bat = os.path.join(sb, "run.bat")
+	bat = os.path.join(sb, "run-%d.bat" % os.getpid())
 	lines = ["@echo off"]
 	if perf:
 		lines.append("set VK_INSTANCE_LAYERS=")
+	if not perf and not os.environ.get("FLEXSVC_FOCUS"):
+		# The window shows without taking focus or input (FLEXSVC_FOCUS=1 opts out). Not for perf runs: unfocused
+		# windows measured ~2x the hitches & +4ms p99 (Windows deprioritizes background windows' presents)
+		lines.append("set FLEX_NO_FOCUS=1")
 	lines += ["set %s=%s" % (k, bat_quote(v)) for k, v in env.items()]
-	lines += ["cd /d \"%s\"" % winpath(os.path.dirname(exe)), "Flex.exe %s < nul" % " ".join(args), "exit /b %errorlevel%"]
+	lines += ["cd /d \"%s\"" % winpath(os.path.dirname(exe)), "Flex.exe %s < nul" % " ".join(bat_arg(x) for x in args), "exit /b %errorlevel%"]
 	with open(bat, "w", newline="\r\n") as f:
 		f.write("\n".join(lines) + "\n")
 
@@ -415,8 +579,10 @@ def run_exe(exe, args, env, timeout, perf, log, sb, label):
 			p.kill()
 			kill_sandbox(sb)
 			code = 124
-	if not timed_out:
-		os.remove(marker)
+	with contextlib.suppress(OSError):
+		if not timed_out:
+			os.remove(marker)
+		os.remove(bat)
 	with open(log, errors="replace") as f:
 		output = f.read().replace("\r", "")
 	return code, output, time.time() - started, timed_out
@@ -424,44 +590,100 @@ def run_exe(exe, args, env, timeout, perf, log, sb, label):
 
 def summarize(output, tail):
 	keep = re.compile(r"(error|warning|fail|pass|assert|crash|exception|Frame times|Hitch:|===)", re.I)
-	lines = output.splitlines()
+	lines = [l for l in output.splitlines() if not l.lstrip().startswith("DBG:")]  # DBG: lines are scratch prints, never failures
 	hits = [l for l in lines if keep.search(l)]
 	shown = hits[:40] + (["... %d more matching lines" % (len(hits) - 40)] if len(hits) > 40 else [])
 	tail_lines = [l for l in lines[-tail:] if l not in shown] if tail else []
 	return "\n".join(shown + (["--- last lines ---"] + tail_lines if tail_lines else []))
 
 
-def run_flex(args, env=None, timeout=300, perf=False, fresh=False, config="Release", build_state=None, tail=15, quiet=False, sandbox_name=None):
+def existing_build(build_id):
+	snap = os.path.join(HOME, "builds", build_id)
+	if not os.path.isdir(snap):
+		die("no build %s in %s (builds are pruned after %d; `flexsvc pin ID` keeps one)" % (build_id, os.path.dirname(snap), KEEP_BUILDS))
+	return {"id": build_id, "ok": True, "dir": snap}
+
+
+def last_good_state():
+	good = read_json(os.path.join(HOME, "builds", "Release-good.json"))
+	if not good or not os.path.isdir(good.get("dir", "")):
+		die("no passing Release build yet")
+	newer = [p for p in claims().get(AGENT, []) if os.path.isfile(os.path.join(REPO, p)) and os.path.getmtime(os.path.join(REPO, p)) > good["started"]]
+	print("[%s] using last good build %s (%s ago)%s" % (now_str(), good["id"], "%.0fm" % ((time.time() - good["started"]) / 60),
+		("; your claimed files changed since: " + ", ".join(newer)) if newer else "; none of your claimed files changed since"))
+	return good
+
+
+def run_flex(args, env=None, timeout=300, perf=False, fresh=False, config="Release", build_state=None, tail=15, quiet=False, sandbox_name=None, grep=None, wipe=()):
 	state = build_state or build(config, quiet_cached=True)
 	if not state["ok"]:
 		print_build(state)
 		die("not running: the current tree doesn't build", 1)
-	sb = sandbox(sandbox_name or AGENT)
-	saved = os.path.join(sb, "FlexEngine", "saved")
-	if fresh:
-		for name in os.listdir(saved):
-			if name not in ("spv", "fonts"):
-				p = os.path.join(saved, name)
-				shutil.rmtree(p, ignore_errors=True) if os.path.isdir(p) and not os.path.islink(p) else os.remove(p)
-	if "--screenshots" in args or any(k.endswith("SCREENSHOT") or k == "FLEX_GAME_TOUR" for k in (env or {})):
-		shutil.rmtree(os.path.join(saved, "screenshots"), ignore_errors=True)  # so `shots diff` only sees this run's
-	if config == "Release":
-		exe = install_exe(sb, state)
-	else:
+	if config != "Release":
 		die("runs use Release builds (Debug writes into the shared tree's bin/, run it yourself if you need it)")
-
+	name = sandbox_name or AGENT
+	sb = sandbox(name)
+	saved = os.path.join(sb, "FlexEngine", "saved")
 	what = "%s run %s" % ("perf" if perf else "gpu", " ".join(args))[:120]
 	runs_dir = os.path.join(scratch_dir(), "runs")
 	os.makedirs(runs_dir, exist_ok=True)
-	with machine(perf, what), gpu_slot(what):
-		log = os.path.join(runs_dir, time.strftime("%H%M%S") + ".log")
-		print("[%s] running %s %s (timeout %ds)" % (now_str(), state["id"], " ".join(args), timeout), flush=True)
-		code, output, seconds, timed_out = run_exe(exe, args, env or {}, timeout, perf, log, sb, what)
+	# Runs in one sandbox share its saved/, exe folder & spv link, so they take turns (lock order: sandbox, machine, gpu)
+	with lock("sandbox-" + name, what=what):
+		if fresh:
+			for entry in os.listdir(saved):
+				if entry not in ("spv", "fonts"):
+					p = os.path.join(saved, entry)
+					shutil.rmtree(p, ignore_errors=True) if os.path.isdir(p) and not os.path.islink(p) else os.remove(p)
+		for entry in wipe:
+			shutil.rmtree(os.path.join(saved, entry), ignore_errors=True)
+		if "--screenshots" in args or any(k.endswith("SCREENSHOT") or k == "FLEX_GAME_TOUR" for k in (env or {})):
+			shutil.rmtree(os.path.join(saved, "screenshots"), ignore_errors=True)  # so `shots diff` only sees this run's
+		exe = install_exe(sb, state)
+		link_spv(sb, state)
+		with machine(perf, what), gpu_slot(what):
+			log = os.path.join(runs_dir, "%s-%d.log" % (time.strftime("%H%M%S"), os.getpid()))
+			print("[%s] running %s %s (timeout %ds)" % (now_str(), state["id"], " ".join(args), timeout), flush=True)
+			code, output, seconds, timed_out = run_exe(exe, args, env or {}, timeout, perf, log, sb, what)
 	if not quiet:
-		print(summarize(output, tail))
+		if grep:
+			print("\n".join(l for l in output.splitlines() if re.search(grep, l)))
+		else:
+			print(summarize(output, tail))
 		print("RUN %s exit %d in %.0fs (build %s) log: %s" % ("TIMEOUT" if timed_out else ("OK" if code == 0 else "FAILED"), code, seconds, state["id"], log))
 		print("sandbox saved/: %s" % saved)
 	return code, output, state
+
+
+def detach(argv):
+	"""Re-run this command in the background; prints a ticket for `wait`."""
+	tid = "%s-%s-%s" % (AGENT, time.strftime("%H%M%S"), os.urandom(3).hex())
+	d = os.path.join(HOME, "tickets")
+	os.makedirs(d, exist_ok=True)
+	out = os.path.join(d, tid + ".log")
+	cut = argv.index("--") if "--" in argv else len(argv)  # only drop our --detach, not one meant for Flex.exe
+	cmd = [sys.executable, os.path.abspath(__file__)] + [a for a in argv[:cut] if a != "--detach"] + argv[cut:]
+	base = shlex.quote(os.path.join(d, tid))
+	# The exit code goes to a temp file first & is renamed, so `wait` never reads a half-written .exit
+	sh = "%s > %s 2>&1; echo $? > %s.exit.tmp; mv %s.exit.tmp %s.exit" % (" ".join(shlex.quote(c) for c in cmd), shlex.quote(out), base, base, base)
+	subprocess.Popen(["sh", "-c", sh], start_new_session=True, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+	print("ticket %s  (flexsvc -a %s wait %s)" % (tid, AGENT, tid))
+
+
+def wait_ticket(tid, max_wait):
+	d = os.path.join(HOME, "tickets")
+	t0 = time.time()
+	while not os.path.exists(os.path.join(d, tid + ".exit")) and time.time() - t0 < max_wait:
+		time.sleep(2)
+	try:
+		print(open(os.path.join(d, tid + ".log"), errors="replace").read())
+	except OSError:
+		die("no ticket " + tid)
+	if os.path.exists(os.path.join(d, tid + ".exit")):
+		code = int(open(os.path.join(d, tid + ".exit")).read().strip() or 1)
+		print("TICKET DONE exit %d" % code)
+		sys.exit(code)
+	print("TICKET STILL RUNNING after %ds: wait again" % max_wait)
+	sys.exit(3)
 
 
 def scratch_dir():
@@ -488,9 +710,9 @@ def parse_bench(output):
 	return res
 
 
-def bench_median(state, seconds, seed, label, runs):
+def bench_median(state, seconds, seed, label, runs, extra_env=None):
 	"""Frame time percentiles are noisy run to run (p99 can move 20%), so take the median of several runs."""
-	results = [bench_once(state, seconds, seed, label) for _ in range(runs)]
+	results = [bench_once(state, seconds, seed, label, extra_env) for _ in range(runs)]
 	res = dict(results[len(results) // 2])
 	for k in ("p50", "p95", "p99", "p999", "max", "avg", "over2x", "over33", "hitches"):
 		vals = sorted(r[k] for r in results if k in r)
@@ -501,13 +723,10 @@ def bench_median(state, seconds, seed, label, runs):
 	return res
 
 
-def bench_once(state, seconds, seed, label):
-	env = {"FLEX_PLAY_BENCHMARK": str(seconds), "FLEX_PLAY_SEED": str(seed)}
-	sb_name = AGENT + "-bench"
-	saved = os.path.join(sandbox(sb_name), "FlexEngine", "saved")
-	for name in ("worlds", "terrain"):  # generate from scratch every time, so both exes do the same work
-		shutil.rmtree(os.path.join(saved, name), ignore_errors=True)
-	code, output, _ = run_flex(["--play=Bench"], env, timeout=seconds + 420, perf=True, build_state=state, quiet=True, sandbox_name=sb_name)
+def bench_once(state, seconds, seed, label, extra_env=None):
+	env = dict(extra_env or {}, FLEX_PLAY_BENCHMARK=str(seconds), FLEX_PLAY_SEED=str(seed))
+	# worlds & terrain are wiped so every run generates from scratch, and both exes do the same work
+	code, output, _ = run_flex(["--play=Bench"], env, timeout=seconds + 420, perf=True, build_state=state, quiet=True, sandbox_name=AGENT + "-bench", wipe=("worlds", "terrain"))
 	res = parse_bench(output)
 	res.update(build=state["id"], label=label, exit=code)
 	if "p50" not in res:
@@ -515,20 +734,19 @@ def bench_once(state, seconds, seed, label):
 	return res
 
 
-def bench(seconds, seed, baseline, runs):
+def bench(seconds, seed, baseline, runs, env=None, baseline_env=None):
+	if baseline and baseline != "same" and not baseline.endswith(".json"):
+		existing_build(baseline)  # fail before spending minutes on the current build's run
 	current = build("Release", quiet_cached=True)
 	if not current["ok"]:
 		print_build(current)
 		die("not benchmarking: the current tree doesn't build", 1)
-	result = {"current": bench_median(current, seconds, seed, "current", runs)}
+	result = {"current": bench_median(current, seconds, seed, "current", runs, env)}
 	if baseline:
 		if baseline.endswith(".json"):
 			result["baseline"] = read_json(baseline, {}).get("current") or die("can't read " + baseline)
 		else:
-			snap = os.path.join(HOME, "builds", baseline)
-			if not os.path.isdir(snap):
-				die("no build %s in %s (builds are kept for the last %d)" % (baseline, os.path.dirname(snap), KEEP_BUILDS))
-			result["baseline"] = bench_median({"id": baseline, "ok": True, "dir": snap}, seconds, seed, "baseline", runs)
+			result["baseline"] = bench_median(existing_build(baseline) if baseline != "same" else current, seconds, seed, "baseline", runs, baseline_env if baseline_env is not None else env)
 		b, c = result["baseline"], result["current"]
 		result["delta_ms"] = {k: round(c[k] - b[k], 2) for k in ("p50", "p95", "p99", "p999", "max", "avg") if k in b and k in c}
 		result["delta_hitches"] = c.get("hitches", 0) - b.get("hitches", 0)
@@ -570,8 +788,13 @@ def shots(action, set_name):
 			print("MISSING  %s" % name)
 			bad += 1
 			continue
-		a = Image.open(os.path.join(ref_dir, name)).convert("RGB")
-		b = Image.open(cur_path).convert("RGB")
+		try:
+			a = Image.open(os.path.join(ref_dir, name)).convert("RGB")
+			b = Image.open(cur_path).convert("RGB")
+		except Exception as e:  # truncated PNG from a run that was killed
+			print("CORRUPT  %s (%s)" % (name, str(e)[:80]))
+			bad += 1
+			continue
 		if a.size != b.size:
 			print("SIZE     %s %s vs %s" % (name, a.size, b.size))
 			bad += 1
@@ -617,6 +840,7 @@ def compile_shaders(names):
 		return "\n".join(out)
 
 	failed = 0
+	matched = set()
 	with lock("shaders"):
 		for path in sorted(glob.glob(os.path.join(src_dir, "*.*"))):
 			base, ext = os.path.splitext(os.path.basename(path))
@@ -626,8 +850,9 @@ def compile_shaders(names):
 			includes = set()
 			text = inline(path, includes)
 			if names:
-				if base not in names and os.path.basename(path) not in names:
+				if not any(base == n or os.path.basename(path) == n or base.startswith(n) for n in names):
 					continue
+				matched.add(base)
 			elif os.path.exists(spv) and os.path.getmtime(spv) >= max(os.path.getmtime(p) for p in includes | {path}):
 				continue
 			src = os.path.join(tmp, os.path.basename(path))
@@ -639,6 +864,8 @@ def compile_shaders(names):
 				r = subprocess.run([sdk[-1] + "/spirv-opt.exe", "-O", winpath(unopt), "-o", winpath(spv)], capture_output=True, text=True)
 			print("%s %s%s" % ("ok  " if r.returncode == 0 else "FAIL", os.path.basename(path), ("\n" + (r.stdout + r.stderr).replace("\r", "").strip()) if r.returncode else ""))
 			failed += r.returncode != 0
+	if names and not matched:
+		die("no shader in %s matches %s" % (src_dir, names), 1)
 	sys.exit(1 if failed else 0)
 
 
@@ -659,10 +886,14 @@ def status():
 			continue
 		if a["lock"] in ("gate", "build-Release", "build-Debug", "build-linux-debug") or a["lock"].startswith("slot") or a["state"] == "waiting":
 			print("  %-10s %-8s %-60s %4.0fs" % (a["agent"], a["state"], a["what"][:60], time.time() - a["since"]))
-	ps = "Get-CimInstance Win32_Process -Filter \"Name='Flex.exe'\" | ForEach-Object { '{0} {1}' -f $_.ProcessId, $_.ExecutablePath }"
-	procs = subprocess.run(["powershell.exe", "-NoProfile", "-Command", ps], capture_output=True, text=True).stdout.split("\n")
-	for line in filter(None, (l.strip() for l in procs)):
-		print("  Flex.exe pid " + line + ("" if "sandboxes" in line else "  (not started by flexsvc)"))
+	procs = flex_processes()
+	if procs is None:
+		print("  (couldn't list Flex.exe processes: powershell timed out)")
+	for pid, path in procs or []:
+		print("  Flex.exe pid %s %s%s" % (pid, path, "" if "sandboxes" in path else "  (not started by flexsvc)"))
+	h = read_json(hold_file())
+	if h:
+		print("  builds held by %s for %.0fs" % (h.get("agent"), time.time() - h.get("since", 0)))
 	for agent, paths in sorted(claims().items()):
 		print("claims %s: %s" % (agent, ", ".join(paths)))
 
@@ -695,37 +926,54 @@ def main():
 	b = sub.add_parser("build")
 	b.add_argument("--config", default="Release", choices=["Release", "Debug"])
 	b.add_argument("--linux", action="store_true", help="ninja Debug build (compile check only, renders on llvmpipe)")
+	b.add_argument("--mine", action="store_true", help="compile only your claimed .cpp files (Linux compile check)")
+	b.add_argument("--until-ok", action="store_true", help="rebuild whenever sources change until the tree builds")
+	b.add_argument("--max", type=int, default=100, help="seconds --until-ok may take (keep under the tool timeout)")
 	r = sub.add_parser("run")
 	r.add_argument("--perf", action="store_true", help="exclusive machine, validation layers off")
 	r.add_argument("--timeout", type=int, default=300)
 	r.add_argument("--env", action="append", default=[], metavar="K=V")
 	r.add_argument("--fresh", action="store_true", help="wipe the sandbox's saved/ (worlds, caches, settings) first")
 	r.add_argument("--tail", type=int, default=15)
+	r.add_argument("--build", help="run an existing build id (e.g. r-12) instead of building")
+	r.add_argument("--last-good", action="store_true", help="run the newest passing build, don't build")
+	r.add_argument("--detach", action="store_true", help="run in the background; returns a ticket for `wait`")
+	r.add_argument("--grep", help="print only output lines matching this regex")
 	r.add_argument("args", nargs=argparse.REMAINDER)
 	be = sub.add_parser("bench")
 	be.add_argument("--seconds", type=int, default=45)
 	be.add_argument("--seed", type=int, default=1)
 	be.add_argument("--baseline", help="build id (e.g. r-12) to run as well, or a saved bench .json")
 	be.add_argument("--runs", type=int, default=1, help="report the median of N runs of each exe")
+	be.add_argument("--env", action="append", default=[], metavar="K=V", help="env for the current run")
+	be.add_argument("--baseline-env", action="append", default=None, metavar="K=V", help="env for the baseline run (--baseline same re-runs the current build, for A/B of a toggle)")
 	p = sub.add_parser("post")
 	p.add_argument("--to")
 	p.add_argument("message", nargs="+")
-	rd = sub.add_parser("read")
+	rd = sub.add_parser("read", aliases=["board"])
 	rd.add_argument("--all", action="store_true")
+	rd.add_argument("--undelivered", action="store_true", help="directed messages their addressee hasn't read (manager)")
 	c = sub.add_parser("claim")
+	c.add_argument("--set", action="store_true", help="replace your claims instead of adding")
+	c.add_argument("--clear", action="store_true")
 	c.add_argument("paths", nargs="*")
+	w = sub.add_parser("wait")
+	w.add_argument("ticket")
+	w.add_argument("--max", type=int, default=100)
+	pn = sub.add_parser("pin")
+	pn.add_argument("build_id")
 	s = sub.add_parser("shots")
 	s.add_argument("action", choices=["ref", "diff"])
 	s.add_argument("set")
 	sh = sub.add_parser("shaders")
 	sh.add_argument("names", nargs="*")
-	for name in ("kill", "status", "hooks", "scratch"):
+	for name in ("kill", "status", "hooks", "scratch", "hold", "release", "changes"):
 		sub.add_parser(name)
 	a = ap.parse_args()
 
 	if a.cmd == "hooks":
 		return hooks()
-	AGENT = a.agent or ("user" if a.cmd in ("status", "read", "post") else None)
+	AGENT = a.agent or ("user" if a.cmd in ("status", "read", "board", "post") else None)
 	if not AGENT or not re.match(r"^[A-Za-z0-9_-]+$", AGENT):
 		die("pass your agent name: flexsvc -a NAME %s ... (or set FLEX_AGENT)" % a.cmd)
 	os.makedirs(HOME, exist_ok=True)
@@ -734,13 +982,40 @@ def main():
 		return status()
 	if a.cmd == "post":
 		return post(" ".join(a.message), a.to)
-	if a.cmd == "read":
-		print("\n".join(unread(a.all)) or "(nothing new)")
+	if a.cmd in ("read", "board"):
+		print("\n".join(undelivered() if a.undelivered else unread(a.all)) or "(nothing new)")
 		return
+	if a.cmd == "hold":
+		with lock("board"):
+			h = read_json(hold_file())
+			if h and h.get("agent") != AGENT and time.time() - h.get("since", 0) < 600:
+				die("%s already holds builds (%.0fs ago); wait for their `release` or for it to expire" % (h.get("agent"), time.time() - h["since"]), 1)
+			write_json(hold_file(), {"agent": AGENT, "since": time.time()})
+		return print("builds held for up to 10 min; `release` when your edit compiles")
+	if a.cmd == "release":
+		with lock("board"):
+			h = read_json(hold_file())
+			if h and h.get("agent") == AGENT:
+				os.remove(hold_file())
+				return print("released")
+		return print("you weren't holding builds")
+	if a.cmd == "pin":
+		existing_build(a.build_id)
+		pins = read_json(os.path.join(HOME, "pins.json"), [])
+		write_json(os.path.join(HOME, "pins.json"), sorted(set(pins + [a.build_id])))
+		return print("pinned " + a.build_id)
+	if a.cmd == "wait":
+		return wait_ticket(a.ticket, a.max)
+	if a.cmd == "changes":  # for the final commit message
+		os.chdir(REPO)
+		return print(subprocess.run("git status --short | grep -v dependencies/; git diff --stat HEAD -- . ':!FlexEngine/dependencies'", shell=True, capture_output=True, text=True).stdout)
 	if a.cmd == "claim":
 		with lock("board"):
 			allc = claims()
-			allc[AGENT] = a.paths
+			if a.clear:
+				allc.pop(AGENT, None)
+			else:
+				allc[AGENT] = a.paths if a.set else sorted(set(allc.get(AGENT, []) + a.paths))
 			write_json(os.path.join(HOME, "claims.json"), allc)
 		return
 	if a.cmd == "scratch":
@@ -754,16 +1029,26 @@ def main():
 
 	show_unread()
 	if a.cmd == "build":
+		if a.mine:
+			return build_mine()
+		t0 = time.time()
 		state = build(a.config, a.linux)
+		while a.until_ok and not state["ok"] and time.time() - t0 < a.max:
+			time.sleep(10)
+			state = build(a.config, a.linux, quiet_cached=True)
 		print_build(state)
 		sys.exit(0 if state["ok"] else 1)
 	if a.cmd == "run":
 		args = a.args[1:] if a.args[:1] == ["--"] else a.args
 		env = dict(kv.split("=", 1) for kv in a.env)
-		code, _, _ = run_flex(args, env, a.timeout, a.perf, a.fresh, tail=a.tail)
+		if a.detach:
+			return detach(sys.argv[1:])
+		pinned = existing_build(a.build) if a.build else (last_good_state() if a.last_good else None)
+		code, _, _ = run_flex(args, env, a.timeout, a.perf, a.fresh, tail=a.tail, build_state=pinned, grep=a.grep)
 		sys.exit(code)
 	if a.cmd == "bench":
-		return bench(a.seconds, a.seed, a.baseline, a.runs)
+		kv = lambda l: dict(x.split("=", 1) for x in l)
+		return bench(a.seconds, a.seed, a.baseline, a.runs, kv(a.env), kv(a.baseline_env) if a.baseline_env is not None else None)
 
 
 if __name__ == "__main__":

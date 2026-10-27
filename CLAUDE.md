@@ -41,6 +41,7 @@ General lessons for working in this repo (not task specifics).
 - Player movement abilities are in `Traversal` (owned by `Player`). When it controls the player's velocity, `PlayerController` skips walking.
 - Player-facing text lives in `resources/loc/en.txt` (`Key = Text`), not in source. To add a string, add a line there & use `LOC(Key)` (or `LOCF(Key, args...)` for printf-style text); keys aren't declared anywhere in code. Each call site resolves its key once, so it's cheap every frame. Missing keys show as the key & are logged once. The files hot-reload while the game runs.
 - Keys the game reads directly (not through an `Action` binding) are named in `GameControls.hpp` (`GameKeys::`). Use those so the Controls screen (`Game::DrawControls`) stays right, & add new controls to it.
+- Terrain is forward-shaded, so the G-buffer depth has no terrain; forward shaders can't use it for scene-depth effects.
 
 ## Design pitfalls
 - Async/batched systems: watch for livelock. Restarting in-flight work when inputs change can mean nothing ever completes, so prefer finishing a batch and predicting ahead instead.
