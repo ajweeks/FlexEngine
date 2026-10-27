@@ -106,6 +106,15 @@ namespace flex
 		void SetTerrainQuality(i32 quality) { m_TerrainQuality = glm::clamp(quality, 0, 3); }
 		real GetEffectiveShadowDistance() const { return m_ShadowDistanceOverride > 0.0f ? m_ShadowDistanceOverride : m_ShadowDistance; }
 
+		// Camera-relative rendering: everything the GPU sees (model matrices, view matrices, light positions, terrain
+		// vertices after the vertex shader...) is in "render space", world space translated by -origin, where origin is
+		// this point near the camera. Far from the world origin that keeps positions near the camera precise in floats. It
+		// snaps to a coarse grid on the xz plane (y is always 0, so heights are unchanged), so it rarely changes & is
+		// exactly zero near the world origin. Shaders that need absolute coordinates get it as the renderOrigin uniform.
+		static glm::vec3 RenderOriginFor(const glm::vec3& cameraPos);
+		// This frame's render origin (the current camera's, see BaseCamera::GetRenderOrigin)
+		glm::vec3 GetRenderOrigin() const { return m_RenderOrigin; }
+
 		virtual MaterialID GetRenderObjectMaterialID(RenderID renderID) = 0;
 
 		virtual std::vector<Pair<std::string, MaterialID>> GetValidMaterialNames(bool bEditorMaterials) const = 0;
@@ -490,6 +499,9 @@ namespace flex
 			CullFace cullFace = CullFace::_INVALID;
 		};
 
+		// See GetRenderOrigin
+		glm::vec3 m_RenderOrigin = VEC3_ZERO;
+
 		i32 m_ShadowCascadeCount = MAX_SHADOW_CASCADE_COUNT;
 		u32 m_ShadowMapBaseResolution = 4096;
 		// Distance from the camera that shadow cascades cover (shadows fade out towards this distance)
@@ -498,6 +510,11 @@ namespace flex
 		i32 m_TerrainQuality = 1;
 		// Blend between uniform (0) and logarithmic (1) cascade split distances
 		real m_ShadowCascadeSplitLambda = 0.75f;
+		// The furthest the first cascade reaches (in meters), so shadows near the camera stay sharp with long shadow distances
+		real m_ShadowNearCascadeDistance = 16.0f;
+		// How far (in degrees) the light can turn before shadow maps follow (see UpdateShadowLightDirection). 0: always.
+		real m_ShadowLightDirStep = 0.25f;
+		glm::vec3 m_ShadowLightDir = VEC3_ZERO;
 		// Constant depth bias in world units
 		real m_ShadowBias = 0.02f;
 		// Slope-scaled depth bias applied when rendering casters, in shadow map texels of depth per texel of slope
@@ -519,6 +536,7 @@ namespace flex
 			real radius = 0.0f;
 			glm::vec3 lightDir = VEC3_ZERO;
 			real shadowDistance = 0.0f;
+			glm::vec3 renderOrigin = VEC3_ZERO; // center is relative to this
 			u64 frameRendered = 0;
 			bool bValid = false;
 		};
@@ -529,6 +547,45 @@ namespace flex
 		u64 m_ShadowCascadeFrameIndex = 0;
 
 		void InvalidateShadowCascadeCache();
+
+		// Point light shadows: a pool of cached cube maps (6 faces in a 2D array each) for the lights nearest the camera,
+		// re-rendered only when their casters change, with a per-frame budget of faces (see docs/gi_plan.md)
+		struct PointShadowSettings
+		{
+			bool bEnabled = true;
+			// Lights that can have shadows at once (each takes 6 faces)
+			i32 slotCount = 8;
+			u32 resolution = 256;
+			// Most faces rendered per frame (the update cost is bounded by this)
+			i32 faceBudget = 12;
+			// Casters further than this from a light don't shadow it (the faces' far plane)
+			real range = 20.0f;
+			// Casters nearer than this to a light are ignored (e.g. the torch's own flame)
+			real nearPlane = 0.3f;
+			// Shadows fade out towards this distance from the camera
+			real distance = 60.0f;
+			real normalOffset = 1.5f; // texels
+			real slopeBias = 1.5f;
+			real compareBias = 0.0002f; // normalized depth
+		};
+		struct PointShadowStats
+		{
+			u32 shadowedLights = 0; // Lights with a shadow this frame
+			u32 slotsInUse = 0;
+			u32 facesRendered = 0; // This frame
+			u32 facesDirty = 0; // Waiting for the budget
+			u32 drawCalls = 0;
+			ms cpuMs = 0.0f; // Slot update & caster scan
+		};
+		PointShadowSettings m_PointShadowSettings;
+		PointShadowStats m_PointShadowStats;
+		void DrawPointShadowImGui(bool& bSaveSettings);
+
+		// Directional light shadow cascade helpers (see UpdateShadowCascades)
+		void ComputeShadowCascadeSplits(real zNear, real shadowDistance, i32 cascadeCount, real* outSplitDepths) const;
+		// Returns the light direction to render shadow maps with (lightDir, quantized)
+		glm::vec3 UpdateShadowLightDirection(const glm::vec3& lightDir);
+		static void FrustumSliceBoundingSphere(real nearDepth, real farDepth, real tanDiagonalSq, real& outCenterDepth, real& outRadius);
 
 		// Filled every frame
 		std::vector<SpriteQuadDrawInfo> m_QueuedWSSprites;
@@ -626,7 +683,9 @@ namespace flex
 
 		ShaderID m_UIShaderID = InvalidShaderID;
 
+		// Relative to m_LastFrameRenderOrigin (see GetRenderOrigin)
 		glm::mat4 m_LastFrameViewProj;
+		glm::vec3 m_LastFrameRenderOrigin = VEC3_ZERO;
 
 		ShadowSamplingData m_ShadowSamplingData;
 

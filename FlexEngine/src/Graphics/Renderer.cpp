@@ -60,10 +60,19 @@ namespace flex
 		m_Settings.RegisterProperty("shadow distance", &m_ShadowDistance);
 		m_Settings.RegisterProperty("terrain quality", &m_TerrainQuality);
 		m_Settings.RegisterProperty("shadow cascade split lambda", &m_ShadowCascadeSplitLambda);
+		m_Settings.RegisterProperty("shadow near cascade distance", &m_ShadowNearCascadeDistance);
+		m_Settings.RegisterProperty("shadow light direction step", &m_ShadowLightDirStep);
 		m_Settings.RegisterProperty("shadow bias", &m_ShadowBias);
 		m_Settings.RegisterProperty("shadow slope bias", &m_ShadowSlopeBias);
 		m_Settings.RegisterProperty("shadow normal offset", &m_ShadowSamplingData.normalOffset);
 		m_Settings.RegisterProperty("shader quality level", &m_ShaderQualityLevel);
+
+		m_Settings.RegisterProperty("point shadows enabled", &m_PointShadowSettings.bEnabled);
+		m_Settings.RegisterProperty("point shadow slots", &m_PointShadowSettings.slotCount);
+		m_Settings.RegisterProperty("point shadow resolution", &m_PointShadowSettings.resolution);
+		m_Settings.RegisterProperty("point shadow face budget", &m_PointShadowSettings.faceBudget);
+		m_Settings.RegisterProperty("point shadow range", &m_PointShadowSettings.range);
+		m_Settings.RegisterProperty("point shadow distance", &m_PointShadowSettings.distance);
 
 		m_Settings.RegisterProperty("ambient intensity", &m_SSAOSamplingData.ambientIntensity);
 		m_Settings.RegisterProperty("ambient shadow amount", &m_SSAOSamplingData.ambientShadowAmount);
@@ -1082,12 +1091,155 @@ namespace flex
 		}
 	}
 
+	glm::vec3 Renderer::RenderOriginFor(const glm::vec3& cameraPos)
+	{
+		// FLEX_RENDER_ORIGIN_GRID=<meters>: the grid the render origin snaps to (default 2048, a multiple of the terrain
+		// shader's noise grid). 0 renders in world space (the origin is always zero); 1 makes it follow the camera closely,
+		// which exercises camera-relative rendering near the world origin too.
+		static const real s_Grid = []()
+		{
+			const char* grid = getenv("FLEX_RENDER_ORIGIN_GRID");
+			return grid != nullptr ? glm::max((real)atof(grid), 0.0f) : 2048.0f;
+		}();
+		if (s_Grid <= 0.0f)
+		{
+			return VEC3_ZERO;
+		}
+		// Rounded, so the camera is at most half a cell away (positions near it keep ~0.1mm precision) & the origin stays
+		// zero within 1km of the world origin. Multiples of the grid are exact in floats.
+		return glm::vec3(glm::round(cameraPos.x / s_Grid) * s_Grid, 0.0f, glm::round(cameraPos.z / s_Grid) * s_Grid);
+	}
+
 	void Renderer::InvalidateShadowCascadeCache()
 	{
 		for (CachedShadowCascade& cache : m_CachedShadowCascades)
 		{
 			cache.bValid = false;
 		}
+	}
+
+	void Renderer::DrawPointShadowImGui(bool& bSaveSettings)
+	{
+		if (!ImGui::TreeNode("Point light shadows"))
+		{
+			return;
+		}
+
+		PointShadowSettings& settings = m_PointShadowSettings;
+		auto SaveOnRelease = [&bSaveSettings]()
+		{
+			if (ImGui::IsItemDeactivatedAfterEdit())
+			{
+				bSaveSettings = true;
+			}
+		};
+
+		const PointShadowStats& stats = m_PointShadowStats;
+		ImGui::Text("Shadowed lights: %u (slots in use: %u / %d)", stats.shadowedLights, stats.slotsInUse, settings.slotCount);
+		ImGui::Text("Faces rendered: %u (%u waiting), draws: %u, CPU %.3fms", stats.facesRendered, stats.facesDirty, stats.drawCalls, stats.cpuMs);
+
+		if (ImGui::Checkbox("Enabled##point shadows", &settings.bEnabled))
+		{
+			bSaveSettings = true;
+		}
+		// Slot count & resolution size the shadow map array
+		i32 slotCount = settings.slotCount;
+		if (ImGui::SliderInt("Shadowed lights", &slotCount, 1, MAX_POINT_LIGHT_COUNT))
+		{
+			settings.slotCount = glm::clamp(slotCount, 1, MAX_POINT_LIGHT_COUNT);
+			RecreateEverything();
+		}
+		SaveOnRelease();
+		u32 resolution = settings.resolution;
+		if (ImGuiExt::SliderUInt("Face resolution", &resolution, 64u, 1024u))
+		{
+			settings.resolution = NextPowerOfTwo(glm::clamp(resolution, 64u, 1024u));
+			RecreateEverything();
+		}
+		SaveOnRelease();
+		ImGui::SliderInt("Faces per frame", &settings.faceBudget, 1, 6 * MAX_POINT_LIGHT_COUNT);
+		SaveOnRelease();
+		ImGui::SliderFloat("Range", &settings.range, 2.0f, 60.0f);
+		SaveOnRelease();
+		ImGui::SliderFloat("Distance", &settings.distance, 5.0f, 200.0f);
+		SaveOnRelease();
+		ImGui::SliderFloat("Near plane", &settings.nearPlane, 0.05f, 1.0f);
+		ImGui::SliderFloat("Normal offset (texels)", &settings.normalOffset, 0.0f, 4.0f);
+		ImGui::SliderFloat("Slope bias##point", &settings.slopeBias, 0.0f, 4.0f);
+		ImGui::SliderFloat("Compare bias", &settings.compareBias, 0.0f, 0.002f, "%.5f");
+
+		ImGui::TreePop();
+	}
+
+	// FLEX_SHADOW_STABILIZATION=0: shadows as before the near cascade cap & light direction steps (for comparisons)
+	static bool IsShadowStabilizationEnabled()
+	{
+		static const bool s_bEnabled = getenv("FLEX_SHADOW_STABILIZATION") == nullptr || atoi(getenv("FLEX_SHADOW_STABILIZATION")) != 0;
+		return s_bEnabled;
+	}
+
+	void Renderer::ComputeShadowCascadeSplits(real zNear, real shadowDistance, i32 cascadeCount, real* outSplitDepths) const
+	{
+		// Practical split scheme: blend between uniform & logarithmic split depths. (Distributed from at least 0.5m: the
+		// first-person camera's much closer near plane would otherwise squeeze the first cascades down to a few centimeters)
+		const real splitNear = glm::min(glm::max(zNear, 0.5f), shadowDistance * 0.5f);
+		for (i32 c = 0; c < cascadeCount; ++c)
+		{
+			const real p = (real)(c + 1) / (real)cascadeCount;
+			const real logSplitDepth = splitNear * glm::pow(shadowDistance / splitNear, p);
+			const real uniformSplitDepth = splitNear + (shadowDistance - splitNear) * p;
+			outSplitDepths[c] = Lerp(uniformSplitDepth, logSplitDepth, m_ShadowCascadeSplitLambda);
+		}
+
+		// With long shadow distances (e.g. 1.5km over terrain) that leaves the first cascade covering tens of meters, so
+		// the shadows right around the player are blurry & shimmer. It's capped, & the cascades between it & the second to
+		// last one are spread out geometrically (each covering the same ratio of distances) so the resolution falls off evenly.
+		if (cascadeCount >= 2 && outSplitDepths[0] > m_ShadowNearCascadeDistance && IsShadowStabilizationEnabled())
+		{
+			const real first = glm::max(m_ShadowNearCascadeDistance, splitNear);
+			const i32 last = cascadeCount - 2;
+			for (i32 c = 1; c < last; ++c)
+			{
+				const real geometric = first * glm::pow(outSplitDepths[last] / first, (real)c / (real)last);
+				outSplitDepths[c] = glm::min(outSplitDepths[c], geometric);
+			}
+			outSplitDepths[0] = first;
+		}
+	}
+
+	glm::vec3 Renderer::UpdateShadowLightDirection(const glm::vec3& lightDir)
+	{
+		// Every change in the shadow maps' direction re-rasterizes every shadow edge at slightly different sub-texel offsets,
+		// which shimmers all over the screen as the sun moves (however slowly). So the direction is only updated once it's
+		// moved by a step: the shadows are then entirely still in between. Low sun shadows lengthen quickly (by
+		// 1/sin(elevation)^2), so the steps get smaller as the sun gets lower, keeping how far shadows jump about the same.
+		if (m_ShadowLightDir != VEC3_ZERO && m_ShadowLightDirStep > 0.0f && IsShadowStabilizationEnabled())
+		{
+			const real sinElevation = lightDir.y;
+			const real maxAngle = glm::radians(m_ShadowLightDirStep) * glm::clamp(2.0f * sinElevation * sinElevation, 0.05f, 1.0f);
+			// (Chord length ~= angle. Unlike the angle's cosine, it's precise for tiny angles.)
+			if (glm::length(lightDir - m_ShadowLightDir) < maxAngle)
+			{
+				return m_ShadowLightDir;
+			}
+		}
+		m_ShadowLightDir = lightDir;
+		return m_ShadowLightDir;
+	}
+
+	void Renderer::FrustumSliceBoundingSphere(real nearDepth, real farDepth, real tanDiagonalSq, real& outCenterDepth, real& outRadius)
+	{
+		// The smallest sphere containing the slice's corners is centered on the view axis, where the near & far corners are
+		// equally far away (or at the far plane's center when the far corners are further away than that from anywhere).
+		// Its size only depends on the depths & field of view, so cascades' texel sizes don't change as the camera turns.
+		const real farCornerRadiusSq = farDepth * farDepth * tanDiagonalSq;
+		real centerDepth = 0.5f * (farDepth + nearDepth) * (1.0f + tanDiagonalSq);
+		if (centerDepth >= farDepth)
+		{
+			centerDepth = farDepth;
+		}
+		outCenterDepth = centerDepth;
+		outRadius = glm::sqrt((farDepth - centerDepth) * (farDepth - centerDepth) + farCornerRadiusSq);
 	}
 
 	void Renderer::UpdateShadowCascades(BaseCamera* cam)
@@ -1100,11 +1252,14 @@ namespace flex
 		// Casters between the light & a cascade (but outside of it) must still be rendered into it
 		const real casterMargin = shadowDistance;
 
-		// Flip near & far planes
-		glm::mat4 modifiedProj = cam->GetProjection();
-		modifiedProj[2][2] = 1.0f - modifiedProj[2][2];
-		modifiedProj[3][2] = -modifiedProj[3][2];
-		glm::mat4 invCam = glm::inverse(modifiedProj * cam->GetView());
+		// Cascades are computed in render space (see RenderOriginFor), like everything else the GPU sees
+		const glm::vec3 renderOrigin = cam->GetRenderOrigin();
+		const glm::vec3 camPos = cam->position - renderOrigin;
+		const glm::vec3 camForward = glm::normalize(cam->forward);
+		const glm::mat4 projection = cam->GetProjection();
+		const real tanHalfFovX = 1.0f / glm::abs(projection[0][0]);
+		const real tanHalfFovY = 1.0f / glm::abs(projection[1][1]);
+		const real tanDiagonalSq = tanHalfFovX * tanHalfFovX + tanHalfFovY * tanHalfFovY;
 
 		if ((i32)m_ShadowLightViewMats.size() != cascadeCount)
 		{
@@ -1112,66 +1267,30 @@ namespace flex
 			m_ShadowLightProjMats.resize(cascadeCount);
 		}
 
-		const glm::vec3 lightDir = glm::normalize(m_DirectionalLight->data.dir); // Points towards the light
+		const glm::vec3 lightDir = UpdateShadowLightDirection(glm::normalize(m_DirectionalLight->data.dir)); // Points towards the light
 		const glm::vec3 up = glm::abs(glm::dot(lightDir, VEC3_UP)) > 0.99f ? VEC3_FORWARD : VEC3_UP;
 		const glm::mat4 lightRotation = glm::lookAt(VEC3_ZERO, -lightDir, up);
 		const glm::mat4 invLightRotation = glm::inverse(lightRotation);
 
 		++m_ShadowCascadeFrameIndex;
 
-		real lastSplitDist = 0.0f;
+		real splitDepths[MAX_SHADOW_CASCADE_COUNT];
+		ComputeShadowCascadeSplits(zNear, shadowDistance, cascadeCount, splitDepths);
+
+		real lastSplitDepth = zNear;
 		for (i32 c = 0; c < cascadeCount; ++c)
 		{
-			// Practical split scheme: blend between uniform & logarithmic split depths
-			const real p = (real)(c + 1) / (real)cascadeCount;
-			const real logSplitDepth = zNear * glm::pow(shadowDistance / zNear, p);
-			const real uniformSplitDepth = zNear + (shadowDistance - zNear) * p;
-			const real splitDepth = Lerp(uniformSplitDepth, logSplitDepth, m_ShadowCascadeSplitLambda);
+			const real splitDepth = splitDepths[c];
 			// Normalized linear depth (matches linDepth in shaders)
 			const real splitDist = (splitDepth - zNear) / (zFar - zNear);
 
-			glm::vec3 frustumCorners[8] = {
-				{ -1.0f,  1.0f, -1.0f },
-				{  1.0f,  1.0f, -1.0f },
-				{  1.0f, -1.0f, -1.0f },
-				{ -1.0f, -1.0f, -1.0f },
-				{ -1.0f,  1.0f,  1.0f },
-				{  1.0f,  1.0f,  1.0f },
-				{  1.0f, -1.0f,  1.0f },
-				{ -1.0f, -1.0f,  1.0f },
-			};
-
-			// Transform frustum corners from clip space to world space
-			for (glm::vec3& frustumCorner : frustumCorners)
-			{
-				glm::vec4 invCorner = invCam * glm::vec4(frustumCorner, 1.0f);
-				frustumCorner = invCorner / invCorner.w;
-			}
-
-			for (u32 i = 0; i < 4; ++i)
-			{
-				glm::vec3 dist = frustumCorners[i + 4] - frustumCorners[i];
-				frustumCorners[i + 4] = frustumCorners[i] + (dist * splitDist);
-				frustumCorners[i] = frustumCorners[i] + (dist * lastSplitDist);
-			}
-
-			glm::vec3 frustumCenter(0.0f);
-			for (const glm::vec3& frustumCorner : frustumCorners)
-			{
-				frustumCenter += frustumCorner;
-			}
-			frustumCenter /= 8.0f;
-
-			// Bounding sphere keeps the cascade's size constant as the camera rotates
-			real radius = 0.0f;
-			for (const glm::vec3& frustumCorner : frustumCorners)
-			{
-				real distance = glm::length(frustumCorner - frustumCenter);
-				radius = glm::max(radius, distance);
-			}
+			real centerDepth, radius;
+			FrustumSliceBoundingSphere(lastSplitDepth, splitDepth, tanDiagonalSq, centerDepth, radius);
+			glm::vec3 frustumCenter = camPos + camForward * centerDepth;
 			radius = std::ceil(radius * 16.0f) / 16.0f;
+			lastSplitDepth = splitDepth;
 
-			// Distant cascades are only re-rendered every few frames (see CachedShadowCascade)
+		// Distant cascades are only re-rendered every few frames (see CachedShadowCascade)
 			CachedShadowCascade& cache = m_CachedShadowCascades[c];
 			const bool bCacheable = m_bCacheDistantShadowCascades && c >= 2;
 			if (bCacheable && cache.bValid)
@@ -1179,12 +1298,13 @@ namespace flex
 				const u64 interval = c == 2 ? 2 : 4;
 				const bool bDue = m_ShadowCascadeFrameIndex - cache.frameRendered >= interval;
 				const bool bContained = glm::distance(frustumCenter, cache.center) + radius <= cache.radius;
-				const bool bLightUnchanged = glm::dot(lightDir, cache.lightDir) > 0.99999f && cache.shadowDistance == shadowDistance;
+				// (The light direction only changes in steps, see UpdateShadowLightDirection, & all cascades follow each at once)
+				const bool bLightUnchanged = lightDir == cache.lightDir && cache.shadowDistance == shadowDistance &&
+					cache.renderOrigin == renderOrigin;
 				if (!bDue && bContained && bLightUnchanged)
 				{
 					m_bRenderShadowCascade[c] = false;
 					m_ShadowSamplingData.cascadeDepthSplits[c] = splitDist;
-					lastSplitDist = splitDist;
 					continue;
 				}
 			}
@@ -1197,17 +1317,20 @@ namespace flex
 				cache.radius = radius;
 				cache.lightDir = lightDir;
 				cache.shadowDistance = shadowDistance;
+				cache.renderOrigin = renderOrigin;
 				cache.frameRendered = m_ShadowCascadeFrameIndex;
 				cache.bValid = true;
 			}
 
 			const real texelSize = (2.0f * radius) / (real)m_ShadowMapBaseResolution;
 
-			// Snap center to whole texels in light space to prevent shadow edges shimmering as the camera moves
-			glm::vec3 centerLS = glm::vec3(lightRotation * glm::vec4(frustumCenter, 1.0f));
+			// Snap center to whole texels in light space to prevent shadow edges shimmering as the camera moves. In world space
+			// (& double precision), so the texel grid stays put when the render origin changes.
+			const glm::dvec3 renderOriginD(renderOrigin);
+			glm::dvec3 centerLS = glm::dmat3(lightRotation) * (glm::dvec3(frustumCenter) + renderOriginD);
 			centerLS.x = glm::floor(centerLS.x / texelSize) * texelSize;
 			centerLS.y = glm::floor(centerLS.y / texelSize) * texelSize;
-			frustumCenter = glm::vec3(invLightRotation * glm::vec4(centerLS, 1.0f));
+			frustumCenter = glm::vec3(glm::dmat3(invLightRotation) * centerLS - renderOriginD);
 
 			// Reversed-Z: depth is 1 at casterMargin towards the light & 0 at the far side of the cascade
 			m_ShadowLightViewMats[c] = glm::lookAt(frustumCenter + lightDir * radius, frustumCenter, up);
@@ -1218,8 +1341,6 @@ namespace flex
 			m_ShadowSamplingData.cascadeTexelSizes[c] = texelSize;
 			m_ShadowSamplingData.cascadeDepthBiases[c] = m_ShadowBias / (2.0f * radius + casterMargin);
 			m_ShadowCascadeDepthRanges[c] = 2.0f * radius + casterMargin;
-
-			lastSplitDist = splitDist;
 		}
 
 		// Unused cascades are never selected (normalized depth never exceeds 1)
@@ -2070,6 +2191,7 @@ namespace flex
 			{ "terrain_generate_points", "", "", "", "vk_terrain_generate_points_comp.spv" },
 			{ "terrain_generate_mesh", "", "", "", "vk_terrain_generate_mesh_comp.spv" },
 			{ "hologram", "vk_hologram_vert.spv", "vk_hologram_frag.spv", "", "" },
+			{ "hologram_xray", "vk_hologram_xray_vert.spv", "vk_hologram_xray_frag.spv", "", "" },
 		};
 		SUPPRESS_WARN_END;
 
@@ -2142,6 +2264,7 @@ namespace flex
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_PROJECTION_INV);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_DIR_LIGHT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_POINT_LIGHTS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_POINT_SHADOW_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SPOT_LIGHTS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_AREA_LIGHTS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SKYBOX_DATA);
@@ -2155,6 +2278,7 @@ namespace flex
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_DEPTH_SAMPLER);
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SSAO_FINAL_SAMPLER);
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SHADOW_CASCADES_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_POINT_SHADOW_SAMPLER);
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_FB_0_SAMPLER);
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_FB_1_SAMPLER);
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_LTC_MATRICES_SAMPLER);
@@ -2238,6 +2362,7 @@ namespace flex
 			(u32)VertexAttribute::TANGENT;
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_RENDER_ORIGIN);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
 
@@ -2583,10 +2708,12 @@ namespace flex
 			(u32)VertexAttribute::EXTRA_VEC4;
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_RENDER_ORIGIN);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_DIR_LIGHT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_POINT_LIGHTS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_POINT_SHADOW_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SPOT_LIGHTS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_AREA_LIGHTS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SKYBOX_DATA);
@@ -2596,6 +2723,7 @@ namespace flex
 
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SHADOW_CASCADES_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_POINT_SHADOW_SAMPLER);
 		++shaderID;
 
 		// Terrain water (as above, with the enable_water_clip specialization constant set)
@@ -2612,10 +2740,12 @@ namespace flex
 			(u32)VertexAttribute::EXTRA_VEC4;
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_RENDER_ORIGIN);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_DIR_LIGHT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_POINT_LIGHTS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_POINT_SHADOW_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SPOT_LIGHTS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_AREA_LIGHTS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SKYBOX_DATA);
@@ -2625,6 +2755,7 @@ namespace flex
 
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_ALBEDO_SAMPLER);
 		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_SHADOW_CASCADES_SAMPLER);
+		m_Shaders[shaderID]->textureUniforms.AddUniform(&U_POINT_SHADOW_SAMPLER);
 		++shaderID;
 
 		// Water
@@ -2639,6 +2770,7 @@ namespace flex
 
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_CAM_POS);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_RENDER_ORIGIN);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_PROJECTION);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_DIR_LIGHT);
@@ -2786,12 +2918,36 @@ namespace flex
 		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_EMISSIVE);
 		++shaderID;
 
+		// Hologram (x-ray): drawn (with a reversed depth test) where the regular hologram is hidden
+		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
+		m_Shaders[shaderID]->bTranslucent = true;
+		m_Shaders[shaderID]->bDepthWriteEnable = false;
+		m_Shaders[shaderID]->vertexAttributes =
+			(u32)VertexAttribute::POSITION |
+			(u32)VertexAttribute::NORMAL;
+
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_CONSTANT);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TIME);
+
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_UNIFORM_BUFFER_DYNAMIC);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_MODEL);
+		m_Shaders[shaderID]->dynamicBufferUniforms.AddUniform(&U_CONST_EMISSIVE);
+		++shaderID;
+
 		CHECK_EQ(shaderID, m_Shaders.size());
 #endif // USE_SHADER_REFLECTION
 
 		for (shaderID = 0; shaderID < (ShaderID)m_Shaders.size(); ++shaderID)
 		{
 			Shader* shader = m_Shaders[shaderID];
+
+			// Model matrices of shaders drawn with the camera's (or a shadow cascade's) matrices are world transforms
+			const UniformList& constants = shader->constantBufferUniforms;
+			shader->bWorldSpaceModel = shader->dynamicBufferUniforms.HasUniform(&U_MODEL) &&
+				(constants.HasUniform(&U_VIEW_PROJECTION) || constants.HasUniform(&U_VIEW) || constants.HasUniform(&U_VIEW_INV) ||
+				constants.HasUniform(&U_CAM_POS) || shader->renderPassType == RenderPassType::SHADOW);
 
 			shader->dynamicVertexIndexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(shader->vertexAttributes), shader->bDeviceLocalDynamicBuffers);
 
@@ -3555,6 +3711,12 @@ namespace flex
 				ImGui::SetTooltip("Detail of streamed terrain (how far away detailed chunks are used)");
 			}
 			ImGui::SliderFloat("Shadow cascade split lambda", &m_ShadowCascadeSplitLambda, 0.0f, 1.0f);
+			ImGui::SliderFloat("Near cascade max distance", &m_ShadowNearCascadeDistance, 2.0f, 200.0f);
+			ImGui::SliderFloat("Light direction step (deg)", &m_ShadowLightDirStep, 0.0f, 2.0f);
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Shadow maps follow the light in steps (0: continuously), so they don't shimmer as the sun moves");
+			}
 			ImGui::Checkbox("Cache distant shadow cascades", &m_bCacheDistantShadowCascades);
 			if (ImGui::IsItemHovered())
 			{
@@ -3567,6 +3729,8 @@ namespace flex
 			SaveOnRelease();
 			ImGui::SliderFloat("Shadow normal offset", &m_ShadowSamplingData.normalOffset, 0.0f, 4.0f);
 			SaveOnRelease();
+
+			DrawPointShadowImGui(bSaveSettings);
 
 			ImGui::SliderFloat("Ambient intensity", &m_SSAOSamplingData.ambientIntensity, 0.0f, 2.0f);
 			SaveOnRelease();

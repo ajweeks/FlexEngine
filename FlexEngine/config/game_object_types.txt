@@ -37,3 +37,4 @@ build piece
 treasure chest
 row boat
 campfire
+bed

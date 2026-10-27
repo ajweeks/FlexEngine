@@ -46,6 +46,7 @@ namespace flex
 	static constexpr StringID BuildPieceSID = SID("build piece");
 	static constexpr StringID TreasureChestSID = SID("treasure chest");
 	static constexpr StringID CampfireSID = SID("campfire");
+	static constexpr StringID BedSID = SID("bed");
 	static constexpr StringID ParticleSystemSID = SID("particle system");
 
 	class GameObject;

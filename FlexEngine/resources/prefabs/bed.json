@@ -1,0 +1,11 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "B3D5A1E07C2F4E9A8D61F0A2C9477B15",
+	"root" : 
+	{
+		"id" : "7A41C0D93E5B4F2C9B8E6D1A0F3C2E84",
+		"name" : "bed",
+		"type" : "bed"
+	}
+}

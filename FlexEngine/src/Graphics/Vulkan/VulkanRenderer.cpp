@@ -271,6 +271,9 @@ namespace flex
 				m_ShadowImage = { m_VulkanDevice->m_LogicalDevice, vkDestroyImage };
 				m_ShadowImageView = { m_VulkanDevice->m_LogicalDevice, vkDestroyImageView };
 				m_ShadowImageMemory = { m_VulkanDevice->m_LogicalDevice, deviceFreeMemory };
+				m_PointShadowImage = { m_VulkanDevice->m_LogicalDevice, vkDestroyImage };
+				m_PointShadowImageView = { m_VulkanDevice->m_LogicalDevice, vkDestroyImageView };
+				m_PointShadowImageMemory = { m_VulkanDevice->m_LogicalDevice, deviceFreeMemory };
 
 				CreateSwapChain();
 				CreateSwapChainImageViews();
@@ -743,6 +746,7 @@ namespace flex
 
 			vkDestroySemaphore(m_VulkanDevice->m_LogicalDevice, m_OffscreenSemaphore, nullptr);
 
+			DestroyPointShadowResources();
 			m_ShadowImage.replace();
 			m_ShadowImageView.replace();
 			m_ShadowImageMemory.replace();
@@ -1900,7 +1904,8 @@ namespace flex
 
 			// NOTE: This doesn't respect TAA jitter!
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
-			m_SpritePerspPushConstBlock->SetData(cam->GetView(), cam->GetProjection());
+			m_RenderOrigin = cam->GetRenderOrigin();
+			m_SpritePerspPushConstBlock->SetData(cam->GetViewRelative(), cam->GetProjection());
 
 			if (m_bSSAOStateChanged)
 			{
@@ -1942,6 +1947,7 @@ namespace flex
 				wireframeMat->colourMultiplier = glm::vec4(f, f * 0.25f, f * 0.75f, 1.0f);
 			}
 
+			UpdatePointShadowUniformData();
 			UpdateConstantUniformBuffers();
 
 			// TODO: Only update when things have changed
@@ -1966,7 +1972,8 @@ namespace flex
 				m_TimestampQueryNames.clear();
 			}
 
-			m_LastFrameViewProj = cam->GetViewProjection();
+			m_LastFrameViewProj = cam->GetViewProjectionRelative();
+			m_LastFrameRenderOrigin = cam->GetRenderOrigin();
 		}
 
 		void VulkanRenderer::Draw()
@@ -1996,6 +2003,8 @@ namespace flex
 			}
 
 			UpdateRenderObjectBatches();
+
+			UpdatePointShadowSlots();
 
 			// Enqueue renderer-owned sprites now (rather than while recording) so they're included in the capacity check
 			EnqueueWorldSpaceSprites();
@@ -2039,6 +2048,9 @@ namespace flex
 			Profiler::AddSample("# Shadow draw calls", (ms)m_FrameShadowDrawCallCount);
 			Profiler::AddSample("# Triangles (thousands)", (ms)m_FrameTriangleCount / 1000.0f);
 			Profiler::AddSample("# Shadow triangles (thousands)", (ms)m_FrameShadowTriangleCount / 1000.0f);
+			Profiler::AddSample("# Point shadowed lights", (ms)m_PointShadowStats.shadowedLights);
+			Profiler::AddSample("# Point shadow faces rendered", (ms)m_PointShadowStats.facesRendered);
+			Profiler::AddSample("# Point shadow draw calls", (ms)m_PointShadowStats.drawCalls);
 
 
 			if (m_Terrain != nullptr)
@@ -2657,7 +2669,9 @@ namespace flex
 
 			if (m_bInitialized &&
 				((i32)m_ShadowCascades.size() != m_ShadowCascadeCount ||
-					m_ShadowCascades[0]->frameBuffer.width != m_ShadowMapBaseResolution))
+					m_ShadowCascades[0]->frameBuffer.width != m_ShadowMapBaseResolution ||
+					m_PointShadowSettings.resolution != m_PointShadowResolution ||
+					m_PointShadowSettings.slotCount != m_PointShadowSlotCount))
 			{
 				RecreateEverything();
 			}
@@ -4642,6 +4656,8 @@ namespace flex
 				m_ShadowCascades[i]->attachment->image = m_ShadowImage;
 				m_ShadowCascades[i]->attachment->view = m_ShadowCascades[i]->imageView;
 			}
+
+			CreatePointShadowResources();
 		}
 
 		u32 VulkanRenderer::GetStaticVertexIndexBufferIndex(u32 stride)
@@ -4918,6 +4934,8 @@ namespace flex
 				else
 				{
 					pushBlock = m_SpritePerspPushConstBlock;
+					// The perspective push constants are relative to the render origin
+					model[3] -= glm::vec4(m_RenderOrigin, 0.0f);
 				}
 
 				VkPipeline pipeline = graphicsPipeline->pipeline;
@@ -5288,6 +5306,664 @@ namespace flex
 				return InvalidID;
 			}
 			return offset;
+		}
+
+		//
+		// Point light shadows (see docs/gi_plan.md & PointLightShadow in vk_misc.glsl)
+		//
+
+		// FLEX_POINT_SHADOWS=0: disables point light shadows (for A/B comparisons in one build). =2: treats every face as
+		// changed every frame, so the full face budget is rendered (measures the worst case update cost)
+		static bool ArePointShadowsAllowed()
+		{
+			static const bool s_bAllowed = getenv("FLEX_POINT_SHADOWS") == nullptr || atoi(getenv("FLEX_POINT_SHADOWS")) != 0;
+			return s_bAllowed;
+		}
+
+		static bool IsPointShadowStressTest()
+		{
+			static const bool s_bStress = getenv("FLEX_POINT_SHADOWS") != nullptr && atoi(getenv("FLEX_POINT_SHADOWS")) == 2;
+			return s_bStress;
+		}
+
+		// Lights within this distance of a slot's position keep using it (a campfire's light moves with its flames)
+		static const real POINT_SHADOW_MATCH_DISTANCE = 0.5f;
+		// Lights that moved further than this from where their faces were rendered get them re-rendered
+		static const real POINT_SHADOW_MOVE_DISTANCE = 0.1f;
+		// Seconds to fade a light's shadow in or out
+		static const real POINT_SHADOW_FADE_TIME = 0.35f;
+		// Each face's frustum is wider than 90 degrees by this many texels on each side, so filter taps stay on one face
+		static const real POINT_SHADOW_GUARD_TEXELS = 2.0f;
+
+		void VulkanRenderer::GetPointShadowFaceBasis(u32 face, glm::vec3& outForward, glm::vec3& outUp)
+		{
+			// Must match PointLightShadow in vk_misc.glsl
+			static const glm::vec3 forwards[6] = { VEC3_RIGHT, -VEC3_RIGHT, VEC3_UP, -VEC3_UP, VEC3_FORWARD, -VEC3_FORWARD };
+			static const glm::vec3 ups[6] = { VEC3_UP, VEC3_UP, VEC3_FORWARD, VEC3_FORWARD, VEC3_UP, VEC3_UP };
+			outForward = forwards[face];
+			outUp = ups[face];
+		}
+
+		real VulkanRenderer::GetPointShadowTanHalfFOV() const
+		{
+			const real resolution = (real)glm::max(m_PointShadowResolution, 16u);
+			return resolution / (resolution - 2.0f * POINT_SHADOW_GUARD_TEXELS);
+		}
+
+		glm::mat4 VulkanRenderer::GetPointShadowFaceViewProj(const glm::vec3& lightPosRS, u32 face) const
+		{
+			glm::vec3 forward, up;
+			GetPointShadowFaceBasis(face, forward, up);
+			const glm::mat4 view = glm::lookAt(lightPosRS, lightPosRS + forward, up);
+			// Reversed-Z (far & near swapped), like the camera & sun shadows
+			const glm::mat4 proj = glm::perspective(2.0f * glm::atan(GetPointShadowTanHalfFOV()), 1.0f, m_PointShadowSettings.range, m_PointShadowSettings.nearPlane);
+			return proj * view;
+		}
+
+		void VulkanRenderer::DestroyPointShadowResources()
+		{
+			for (Cascade* face : m_PointShadowFaces)
+			{
+				delete face;
+			}
+			m_PointShadowFaces.clear();
+			m_PointShadowImageView.replace();
+			m_PointShadowImage.replace();
+			m_PointShadowImageMemory.replace();
+			m_PointShadowSlots.clear();
+			m_PointShadowFacesToRender.clear();
+		}
+
+		void VulkanRenderer::CreatePointShadowResources()
+		{
+			PROFILE_AUTO("CreatePointShadowResources");
+
+			DestroyPointShadowResources();
+
+			m_PointShadowSettings.resolution = NextPowerOfTwo(glm::clamp(m_PointShadowSettings.resolution, 64u, 1024u));
+			m_PointShadowSettings.slotCount = glm::clamp(m_PointShadowSettings.slotCount, 1, MAX_POINT_LIGHT_COUNT);
+			m_PointShadowResolution = m_PointShadowSettings.resolution;
+			m_PointShadowSlotCount = m_PointShadowSettings.slotCount;
+			const u32 layerCount = (u32)m_PointShadowSlotCount * 6;
+
+			VkImageCreateInfo imageCreateInfo = vks::imageCreateInfo();
+			imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+			imageCreateInfo.format = m_ShadowBufFormat;
+			imageCreateInfo.extent = { m_PointShadowResolution, m_PointShadowResolution, 1 };
+			imageCreateInfo.mipLevels = 1;
+			imageCreateInfo.arrayLayers = layerCount;
+			imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+			imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+			VK_CHECK_RESULT(vkCreateImage(m_VulkanDevice->m_LogicalDevice, &imageCreateInfo, nullptr, m_PointShadowImage.replace()));
+			SetImageName(m_VulkanDevice, m_PointShadowImage, "Point shadow image");
+
+			VkMemoryRequirements memRequirements;
+			vkGetImageMemoryRequirements(m_VulkanDevice->m_LogicalDevice, m_PointShadowImage, &memRequirements);
+			VkMemoryAllocateInfo memAlloc = vks::memoryAllocateInfo(memRequirements.size);
+			memAlloc.memoryTypeIndex = m_VulkanDevice->GetMemoryType(memRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			VK_CHECK_RESULT(m_VulkanDevice->AllocateMemory("Point shadow image memory", &memAlloc, nullptr, m_PointShadowImageMemory.replace()));
+			VK_CHECK_RESULT(vkBindImageMemory(m_VulkanDevice->m_LogicalDevice, m_PointShadowImage, m_PointShadowImageMemory, 0));
+
+			VkImageViewCreateInfo arrayView = vks::imageViewCreateInfo();
+			arrayView.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+			arrayView.format = m_ShadowBufFormat;
+			arrayView.subresourceRange = { VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, layerCount };
+			arrayView.image = m_PointShadowImage;
+			VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &arrayView, nullptr, m_PointShadowImageView.replace()));
+			SetImageViewName(m_VulkanDevice, m_PointShadowImageView, "Point shadow image view");
+
+			// Sampleable from the start (faces are only rendered once a light is assigned to them)
+			{
+				VkCommandBuffer transitionCmdBuffer = BeginSingleTimeCommands(m_VulkanDevice);
+				VkImageMemoryBarrier barrier = vks::imageMemoryBarrier();
+				barrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+				barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				barrier.srcAccessMask = 0;
+				barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+				barrier.image = m_PointShadowImage;
+				barrier.subresourceRange = arrayView.subresourceRange;
+				vkCmdPipelineBarrier(transitionCmdBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+					0, 0, nullptr, 0, nullptr, 1, &barrier);
+				EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, transitionCmdBuffer);
+			}
+
+			m_PointShadowFaces.resize(layerCount);
+			for (u32 layer = 0; layer < layerCount; ++layer)
+			{
+				Cascade* face = new Cascade(m_VulkanDevice);
+				m_PointShadowFaces[layer] = face;
+
+				VkImageViewCreateInfo layerView = arrayView;
+				layerView.viewType = VK_IMAGE_VIEW_TYPE_2D;
+				layerView.subresourceRange.baseArrayLayer = layer;
+				layerView.subresourceRange.layerCount = 1;
+				VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &layerView, nullptr, face->imageView.replace()));
+
+				VkFramebufferCreateInfo frameBufferCreateInfo = vks::framebufferCreateInfo(*m_ShadowRenderPass);
+				frameBufferCreateInfo.pAttachments = &face->imageView;
+				frameBufferCreateInfo.attachmentCount = 1;
+				frameBufferCreateInfo.width = m_PointShadowResolution;
+				frameBufferCreateInfo.height = m_PointShadowResolution;
+				frameBufferCreateInfo.layers = 1;
+				char frameBufferName[64];
+				snprintf(frameBufferName, ARRAY_LENGTH(frameBufferName), "Point shadow face %u frame buffer", layer);
+				face->frameBuffer.Create(&frameBufferCreateInfo, m_ShadowRenderPass, frameBufferName);
+			}
+
+			m_PointShadowSlots.resize((size_t)m_PointShadowSlotCount);
+		}
+
+		void VulkanRenderer::UpdatePointShadowUniformData()
+		{
+			const PointShadowSettings& settings = m_PointShadowSettings;
+			m_PointShadowData = {};
+			for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
+			{
+				m_PointShadowData.lights[i * 2] = glm::vec4(0.0f, 0.0f, 0.0f, -1.0f);
+			}
+			m_PointShadowData.params = glm::vec4(GetPointShadowTanHalfFOV(), settings.normalOffset, settings.compareBias, (real)m_PointShadowResolution);
+			m_PointShadowStats.shadowedLights = 0;
+
+			const bool bEnabled = settings.bEnabled && ArePointShadowsAllowed();
+			const real fadeStep = g_UnpausedDeltaTime / POINT_SHADOW_FADE_TIME;
+			for (PointShadowSlot& slot : m_PointShadowSlots)
+			{
+				bool bReady = slot.bInUse && slot.bWanted && bEnabled;
+				for (u32 f = 0; f < 6; ++f)
+				{
+					bReady = bReady && slot.bFaceValid[f];
+				}
+				slot.fade = glm::clamp(slot.fade + (bReady ? fadeStep : -fadeStep), 0.0f, 1.0f);
+				slot.bReferenced = false;
+			}
+			if (!bEnabled || m_PointShadowSlots.empty())
+			{
+				return;
+			}
+
+			const glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
+			const glm::vec3 renderOrigin = g_CameraManager->CurrentCamera()->GetRenderOrigin();
+			for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
+			{
+				const PointLightData& light = m_PointLightData[i];
+				if (light.enabled == 0 || light.colour.x == -1.0f)
+				{
+					continue;
+				}
+
+				i32 bestSlot = -1;
+				real bestDistSq = POINT_SHADOW_MATCH_DISTANCE * POINT_SHADOW_MATCH_DISTANCE;
+				for (i32 s = 0; s < (i32)m_PointShadowSlots.size(); ++s)
+				{
+					const PointShadowSlot& slot = m_PointShadowSlots[s];
+					const real distSq = glm::distance2(slot.pos, light.pos);
+					if (slot.bInUse && slot.fade > 0.0f && distSq < bestDistSq)
+					{
+						bestSlot = s;
+						bestDistSq = distSq;
+					}
+				}
+				if (bestSlot == -1)
+				{
+					continue;
+				}
+
+				PointShadowSlot& slot = m_PointShadowSlots[bestSlot];
+				// Lights beyond the shadow distance fade to unshadowed
+				const real distanceFade = 1.0f - glm::smoothstep(settings.distance * 0.75f, settings.distance, glm::distance(light.pos, camPos));
+				const real strength = slot.fade * distanceFade;
+				if (strength <= 0.001f)
+				{
+					continue;
+				}
+				m_PointShadowData.lights[i * 2] = glm::vec4(slot.pos - renderOrigin, (real)(bestSlot * 6));
+				m_PointShadowData.lights[i * 2 + 1] = glm::vec4(strength, settings.nearPlane, settings.range, 0.0f);
+				slot.bReferenced = true;
+				m_PointShadowStats.shadowedLights++;
+			}
+		}
+
+		void VulkanRenderer::UpdatePointShadowSlots()
+		{
+			PROFILE_AUTO("Update point shadow slots");
+			const ms startTime = Time::CurrentMilliseconds();
+
+			m_PointShadowFacesToRender.clear();
+			m_PointShadowStats.facesRendered = 0;
+			m_PointShadowStats.facesDirty = 0;
+			m_PointShadowStats.drawCalls = 0;
+			m_PointShadowStats.slotsInUse = 0;
+
+			for (PointShadowSlot& slot : m_PointShadowSlots)
+			{
+				slot.bWanted = false;
+				for (u32 f = 0; f < 6; ++f)
+				{
+					slot.faceCasters[f].clear();
+				}
+			}
+
+			const PointShadowSettings& settings = m_PointShadowSettings;
+			if (!settings.bEnabled || !ArePointShadowsAllowed() || m_PointShadowSlots.empty() || m_PointShadowImageView == VK_NULL_HANDLE)
+			{
+				return;
+			}
+			++m_PointShadowFrameIndex;
+
+			const glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
+			const real range = settings.range;
+			const real nearPlane = settings.nearPlane;
+
+			// 1. The lights that should have shadows: those nearest the camera whose range can be seen
+			struct Candidate
+			{
+				glm::vec3 pos;
+				real score;
+			};
+			std::vector<Candidate> candidates;
+			for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
+			{
+				const PointLightData& light = m_PointLightData[i];
+				if (light.enabled == 0 || light.colour.x == -1.0f || light.brightness <= 0.0f)
+				{
+					continue;
+				}
+				const real distance = glm::distance(light.pos, camPos);
+				if (distance >= settings.distance)
+				{
+					continue;
+				}
+				const glm::vec3 posRS = light.pos - m_RenderOrigin;
+				bool bVisible = true;
+				for (u32 p = 0; p < 4 && bVisible; ++p)
+				{
+					bVisible = glm::dot(glm::vec3(m_CameraCullPlanes[p]), posRS) + m_CameraCullPlanes[p].w >= -range;
+				}
+				if (!bVisible)
+				{
+					continue;
+				}
+				real score = distance;
+				for (const PointShadowSlot& slot : m_PointShadowSlots)
+				{
+					if (slot.bInUse && glm::distance2(slot.pos, light.pos) < POINT_SHADOW_MATCH_DISTANCE * POINT_SHADOW_MATCH_DISTANCE)
+					{
+						// Hysteresis: lights that already have a shadow keep it until another is clearly nearer
+						score *= 0.75f;
+						break;
+					}
+				}
+				candidates.push_back({ light.pos, score });
+			}
+			std::sort(candidates.begin(), candidates.end(), [](const Candidate& a, const Candidate& b) { return a.score < b.score; });
+			if ((i32)candidates.size() > m_PointShadowSlotCount)
+			{
+				candidates.resize((size_t)m_PointShadowSlotCount);
+			}
+
+			// 2. Give each a slot: its own (cached faces), or a free one
+			std::vector<const Candidate*> unassigned;
+			for (const Candidate& candidate : candidates)
+			{
+				i32 bestSlot = -1;
+				real bestDistSq = POINT_SHADOW_MATCH_DISTANCE * POINT_SHADOW_MATCH_DISTANCE;
+				for (i32 s = 0; s < (i32)m_PointShadowSlots.size(); ++s)
+				{
+					const PointShadowSlot& slot = m_PointShadowSlots[s];
+					const real distSq = glm::distance2(slot.pos, candidate.pos);
+					if (slot.bInUse && !slot.bWanted && distSq < bestDistSq)
+					{
+						bestSlot = s;
+						bestDistSq = distSq;
+					}
+				}
+				if (bestSlot == -1)
+				{
+					unassigned.push_back(&candidate);
+					continue;
+				}
+				PointShadowSlot& slot = m_PointShadowSlots[bestSlot];
+				slot.bWanted = true;
+				slot.score = candidate.score;
+				if (bestDistSq > POINT_SHADOW_MOVE_DISTANCE * POINT_SHADOW_MOVE_DISTANCE)
+				{
+					slot.pos = candidate.pos;
+					for (u32 f = 0; f < 6; ++f)
+					{
+						slot.bFaceValid[f] = false;
+					}
+				}
+			}
+			for (const Candidate* candidate : unassigned)
+			{
+				// Prefer unused slots, then the least important unwanted one (which the shaders aren't using)
+				i32 freeSlot = -1;
+				for (i32 s = 0; s < (i32)m_PointShadowSlots.size(); ++s)
+				{
+					const PointShadowSlot& slot = m_PointShadowSlots[s];
+					if (slot.bWanted || slot.bReferenced || slot.fade > 0.0f)
+					{
+						continue;
+					}
+					if (freeSlot == -1 || !slot.bInUse ||
+						(m_PointShadowSlots[freeSlot].bInUse && glm::distance2(slot.pos, camPos) > glm::distance2(m_PointShadowSlots[freeSlot].pos, camPos)))
+					{
+						freeSlot = s;
+						if (!slot.bInUse)
+						{
+							break;
+						}
+					}
+				}
+				if (freeSlot == -1)
+				{
+					// Waits for an unwanted slot to fade out
+					continue;
+				}
+				PointShadowSlot& slot = m_PointShadowSlots[freeSlot];
+				slot.pos = candidate->pos;
+				slot.score = candidate->score;
+				slot.fade = 0.0f;
+				slot.bInUse = true;
+				slot.bWanted = true;
+				for (u32 f = 0; f < 6; ++f)
+				{
+					slot.bFaceValid[f] = false;
+				}
+			}
+
+			std::vector<u32> activeSlots;
+			for (u32 s = 0; s < (u32)m_PointShadowSlots.size(); ++s)
+			{
+				m_PointShadowStats.slotsInUse += m_PointShadowSlots[s].bInUse ? 1 : 0;
+				if (m_PointShadowSlots[s].bWanted)
+				{
+					activeSlots.push_back(s);
+					for (u32 f = 0; f < 6; ++f)
+					{
+						m_PointShadowSlots[s].currentHash[f] = 14695981039346656037ull;
+					}
+				}
+			}
+			if (activeSlots.empty())
+			{
+				m_PointShadowStats.cpuMs = Time::CurrentMilliseconds() - startTime;
+				return;
+			}
+
+			// 3. Gather each face's casters, hashing what could change its contents (casters appearing, moving or changing mesh)
+			const real tanHalf = GetPointShadowTanHalfFOV();
+			const real planeScale = 1.0f / glm::sqrt(1.0f + tanHalf * tanHalf);
+			glm::vec3 faceForward[6], faceUp[6], faceRight[6];
+			for (u32 f = 0; f < 6; ++f)
+			{
+				GetPointShadowFaceBasis(f, faceForward[f], faceUp[f]);
+				faceRight[f] = glm::normalize(glm::cross(faceUp[f], faceForward[f]));
+				faceUp[f] = glm::cross(faceForward[f], faceRight[f]);
+			}
+			auto HashBytes = [](u64 hash, const void* data, size_t size)
+			{
+				const u8* bytes = (const u8*)data;
+				for (size_t i = 0; i < size; ++i)
+				{
+					hash = (hash ^ bytes[i]) * 1099511628211ull;
+				}
+				return hash;
+			};
+
+			ShaderBatch* casterBatches[] = { &m_DeferredObjectBatches, &m_ForwardObjectBatches };
+			for (ShaderBatch* shaderBatches : casterBatches)
+			{
+				for (const ShaderBatchPair& shaderBatch : shaderBatches->batches)
+				{
+					if ((m_Shaders[shaderBatch.shaderID]->vertexAttributes & (u32)VertexAttribute::POSITION) == 0)
+					{
+						continue;
+					}
+					for (const MaterialBatchPair& matBatch : shaderBatch.batch.batches)
+					{
+						for (RenderID renderID : matBatch.batch.objects)
+						{
+							VulkanRenderObject* renderObject = GetRenderObject(renderID);
+							if (renderObject == nullptr || !renderObject->gameObject->IsVisible() || renderObject->bHidden || !RenderObjectCastsShadow(renderObject))
+							{
+								continue;
+							}
+							glm::vec4 sphere = GetCullSphere(renderObject);
+							if (sphere.w <= 0.0f)
+							{
+								// Unbounded: overlaps every face
+								sphere = glm::vec4(camPos, 1e7f);
+							}
+							const glm::vec3 center(sphere);
+							const real radius = sphere.w;
+							u64 objectHash = 0;
+							bool bObjectHashed = false;
+							for (u32 s : activeSlots)
+							{
+								PointShadowSlot& slot = m_PointShadowSlots[s];
+								const glm::vec3 v = center - slot.pos;
+								const real distance = glm::length(v);
+								if (distance - radius > range || distance + radius < nearPlane)
+								{
+									continue;
+								}
+								for (u32 f = 0; f < 6; ++f)
+								{
+									const real a = glm::dot(v, faceForward[f]) * tanHalf;
+									const real b1 = glm::dot(v, faceRight[f]);
+									const real b2 = glm::dot(v, faceUp[f]);
+									if ((a - glm::abs(b1)) * planeScale < -radius || (a - glm::abs(b2)) * planeScale < -radius)
+									{
+										continue;
+									}
+									if (!bObjectHashed)
+									{
+										bObjectHashed = true;
+										struct
+										{
+											glm::mat4 transform;
+											RenderID renderID;
+											u32 vertexOffset;
+											u32 indexOffset;
+											u32 count;
+											glm::vec4 sphere;
+										} key;
+										key.transform = renderObject->gameObject->GetTransform()->GetWorldTransform();
+										key.renderID = renderID;
+										key.vertexOffset = renderObject->vertexOffset;
+										key.indexOffset = renderObject->indexOffset;
+										key.count = renderObject->bIndexed ? (u32)renderObject->indices->size() : renderObject->vertexBufferData->UsedVertexCount;
+										key.sphere = sphere;
+										objectHash = HashBytes(14695981039346656037ull, &key, sizeof(key));
+									}
+									slot.currentHash[f] = (slot.currentHash[f] ^ objectHash) * 1099511628211ull;
+									slot.faceCasters[f].emplace_back(&shaderBatch, renderID);
+								}
+							}
+						}
+					}
+				}
+			}
+
+			// 4. Pick the faces to render: new lights' first, then those that have waited longest
+			struct DirtyFace
+			{
+				u32 slot;
+				u32 face;
+				bool bSlotReady;
+				u64 renderedFrame;
+				real score;
+			};
+			std::vector<DirtyFace> dirtyFaces;
+			for (u32 s : activeSlots)
+			{
+				PointShadowSlot& slot = m_PointShadowSlots[s];
+				bool bReady = true;
+				for (u32 f = 0; f < 6; ++f)
+				{
+					bReady = bReady && slot.bFaceValid[f];
+				}
+				for (u32 f = 0; f < 6; ++f)
+				{
+					if (!slot.bFaceValid[f] || slot.faceHash[f] != slot.currentHash[f] || IsPointShadowStressTest())
+					{
+						dirtyFaces.push_back({ s, f, bReady, slot.faceRenderedFrame[f], slot.score });
+					}
+				}
+			}
+			std::sort(dirtyFaces.begin(), dirtyFaces.end(), [](const DirtyFace& a, const DirtyFace& b)
+			{
+				if (a.bSlotReady != b.bSlotReady)
+				{
+					return !a.bSlotReady;
+				}
+				if (a.renderedFrame != b.renderedFrame)
+				{
+					return a.renderedFrame < b.renderedFrame;
+				}
+				return a.score < b.score;
+			});
+			const u32 budget = (u32)glm::max(settings.faceBudget, 1);
+			for (const DirtyFace& dirty : dirtyFaces)
+			{
+				if ((u32)m_PointShadowFacesToRender.size() >= budget)
+				{
+					break;
+				}
+				PointShadowSlot& slot = m_PointShadowSlots[dirty.slot];
+				slot.faceHash[dirty.face] = slot.currentHash[dirty.face];
+				slot.bFaceValid[dirty.face] = true;
+				slot.faceRenderedFrame[dirty.face] = m_PointShadowFrameIndex;
+				m_PointShadowFacesToRender.emplace_back(dirty.slot, dirty.face);
+			}
+			m_PointShadowStats.facesRendered = (u32)m_PointShadowFacesToRender.size();
+			m_PointShadowStats.facesDirty = (u32)dirtyFaces.size() - m_PointShadowStats.facesRendered;
+			m_PointShadowStats.cpuMs = Time::CurrentMilliseconds() - startTime;
+		}
+
+		void VulkanRenderer::RenderPointShadows(VkCommandBuffer commandBuffer)
+		{
+			if (m_PointShadowFacesToRender.empty())
+			{
+				return;
+			}
+
+			PROFILE_AUTO("Point light shadows");
+			BeginDebugMarkerRegion(commandBuffer, "Point light shadows");
+			BeginGPUTimeStamp(commandBuffer, "Point shadows");
+
+			VulkanMaterial* shadowMaterial = (VulkanMaterial*)m_Materials.at(m_ShadowMaterialID);
+			VkClearValue depthClearValue = VkClearValue{ 0.0f, 0 };
+			const VkViewport viewport = vks::viewportFlipped((real)m_PointShadowResolution, (real)m_PointShadowResolution, 0.0f, 1.0f);
+			const VkRect2D scissor = vks::scissor(0u, 0u, m_PointShadowResolution, m_PointShadowResolution);
+
+			for (const std::pair<u32, u32>& slotFace : m_PointShadowFacesToRender)
+			{
+				const PointShadowSlot& slot = m_PointShadowSlots[slotFace.first];
+				const u32 face = slotFace.second;
+				const u32 layer = slotFace.first * 6 + face;
+
+				m_ShadowRenderPass->Begin_WithFrameBuffer(commandBuffer, &depthClearValue, 1, &m_PointShadowFaces[layer]->frameBuffer);
+				vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+				vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+				// Reversed-Z, so negative (in texels of depth slope, which adapts to the resolution)
+				vkCmdSetDepthBias(commandBuffer, 0.0f, 0.0f, -m_PointShadowSettings.slopeBias);
+
+				const glm::mat4 viewProj = GetPointShadowFaceViewProj(slot.pos - m_RenderOrigin, face);
+
+				const ShaderBatchPair* boundBatch = nullptr;
+				GraphicsPipeline* pipeline = nullptr;
+				VkPipeline boundPipeline = VK_NULL_HANDLE;
+				VkPipelineLayout pushedLayout = VK_NULL_HANDLE;
+				bool bBuffersBound = false;
+				for (const std::pair<const ShaderBatchPair*, RenderID>& caster : slot.faceCasters[face])
+				{
+					const ShaderBatchPair* shaderBatch = caster.first;
+					if (shaderBatch != boundBatch)
+					{
+						boundBatch = shaderBatch;
+						bBuffersBound = false;
+						Shader* shader = m_Shaders[shaderBatch->shaderID];
+						pipeline = GetShadowGraphicsPipeline(CalculateVertexStride(shader->vertexAttributes));
+
+						VulkanBuffer* vertBuffer = nullptr;
+						VulkanBuffer* indexBuffer = nullptr;
+						if (shaderBatch->bDynamic)
+						{
+							VertexIndexBufferPair* pair = m_DynamicVertexIndexBufferPairs[shader->dynamicVertexIndexBufferIndex].second;
+							vertBuffer = pair->vertexBuffer;
+							indexBuffer = pair->indexBuffer;
+						}
+						else
+						{
+							const u32 staticIndex = GetStaticVertexIndexBufferIndex(CalculateVertexStride(shader->vertexAttributes));
+							if (staticIndex != u32_max)
+							{
+								vertBuffer = m_StaticVertexBuffers[staticIndex].second;
+								indexBuffer = m_StaticIndexBuffer;
+							}
+						}
+						if (pipeline == nullptr || vertBuffer == nullptr || vertBuffer->m_Buffer == VK_NULL_HANDLE)
+						{
+							continue;
+						}
+						if (indexBuffer != nullptr && indexBuffer->m_Buffer != VK_NULL_HANDLE)
+						{
+							vkCmdBindIndexBuffer(commandBuffer, indexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
+						}
+						VkDeviceSize offsets[1] = { 0 };
+						vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertBuffer->m_Buffer, offsets);
+						bBuffersBound = true;
+					}
+					if (!bBuffersBound)
+					{
+						continue;
+					}
+
+					VulkanRenderObject* renderObject = GetRenderObject(caster.second);
+					const u32 dynamicUBOOffset = GetShadowDynamicUBOOffset(caster.second);
+					if (renderObject == nullptr || dynamicUBOOffset == InvalidID)
+					{
+						continue;
+					}
+					if (renderObject->bIndexed && shaderBatch->bDynamic && renderObject->dynamicIndexBufferOffset == InvalidBufferID)
+					{
+						continue;
+					}
+
+					if (pipeline->pipeline != boundPipeline)
+					{
+						vkCmdBindPipeline(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->pipeline);
+						boundPipeline = pipeline->pipeline;
+					}
+					if (pipeline->layout != pushedLayout)
+					{
+						vkCmdPushConstants(commandBuffer, pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::mat4), &viewProj);
+						pushedLayout = pipeline->layout;
+					}
+					if (!BindDescriptorSet(shadowMaterial, dynamicUBOOffset, commandBuffer, pipeline->layout, m_ShadowDescriptorSet))
+					{
+						continue;
+					}
+
+					if (renderObject->bIndexed)
+					{
+						vkCmdDrawIndexed(commandBuffer, (u32)renderObject->indices->size(), 1, renderObject->indexOffset, renderObject->vertexOffset, 0);
+					}
+					else
+					{
+						vkCmdDraw(commandBuffer, renderObject->vertexBufferData->UsedVertexCount, 1, renderObject->vertexOffset, 0);
+					}
+					m_PointShadowStats.drawCalls++;
+				}
+
+				m_ShadowRenderPass->End();
+			}
+
+			EndGPUTimeStamp(commandBuffer, "Point shadows");
+			EndDebugMarkerRegion(commandBuffer, "End Point light shadows");
 		}
 
 		bool VulkanRenderer::RenderObjectCastsShadow(VulkanRenderObject* renderObject) const
@@ -6626,6 +7302,12 @@ namespace flex
 				}
 				imageDescriptors->SetUniform(&U_RANDOM_TABLES, ImageDescriptorInfo{ texture->imageView, texture->sampler });
 			}
+
+			// Last, so it takes the shaders' last binding
+			if (shader->textureUniforms.HasUniform(&U_POINT_SHADOW_SAMPLER))
+			{
+				imageDescriptors->SetUniform(&U_POINT_SHADOW_SAMPLER, ImageDescriptorInfo{ m_PointShadowImageView, m_SamplerShadow });
+			}
 		}
 
 		void VulkanRenderer::FillOutBufferDescriptorInfos(ShaderUniformContainer<BufferDescriptorInfo>* descriptors, GPUBufferList const* gpuBufferList, ShaderID shaderID)
@@ -7615,6 +8297,40 @@ namespace flex
 
 			btDiscreteDynamicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
 			m_DebugRenderer->DrawPhysicsWorld(physicsWorld, g_CameraManager->CurrentCamera()->position, m_PhysicsDebuggingSettings.drawRadius);
+		}
+
+		void VulkanRenderer::DrawDebugLinesOnly(VkCommandBuffer& commandBuffer)
+		{
+			const RenderID debugRenderID = ((VulkanDebugRenderer*)m_DebugRenderer)->GetRenderID();
+			VulkanRenderObject* debugRenderObject = debugRenderID != InvalidRenderID ? GetRenderObject(debugRenderID) : nullptr;
+			if (debugRenderObject == nullptr || !debugRenderObject->gameObject->IsVisible())
+			{
+				return;
+			}
+
+			for (ShaderBatch* editorBatch : { &m_DepthAwareEditorObjBatches, &m_DepthUnawareEditorObjBatches })
+			{
+				for (const ShaderBatchPair& shaderBatch : editorBatch->batches)
+				{
+					for (const MaterialBatchPair& matBatch : shaderBatch.batch.batches)
+					{
+						if (!Contains(matBatch.batch.objects, debugRenderID))
+						{
+							continue;
+						}
+
+						ShaderBatchPair linesBatch = {};
+						linesBatch.shaderID = shaderBatch.shaderID;
+						linesBatch.bDynamic = shaderBatch.bDynamic;
+						MaterialBatchPair linesMatBatch = {};
+						linesMatBatch.materialID = matBatch.materialID;
+						linesMatBatch.batch.objects.push_back(debugRenderID);
+						linesBatch.batch.batches.push_back(linesMatBatch);
+						DrawShaderBatch(linesBatch, commandBuffer);
+						return;
+					}
+				}
+			}
 		}
 
 		void VulkanRenderer::RecordScreenshotCopy(VkCommandBuffer commandBuffer, u32 swapChainImageIndex)
@@ -8782,7 +9498,8 @@ namespace flex
 						continue;
 					}
 
-					const glm::vec4 cullSphere = drawCallInfo != nullptr ? GetCullSphere(renderObject) : glm::vec4(0.0f);
+					// In render space (like the cull planes & shadow cascade matrices)
+					const glm::vec4 cullSphere = drawCallInfo != nullptr ? GetCullSphere(renderObject) - glm::vec4(m_RenderOrigin, 0.0f) : glm::vec4(0.0f);
 					if (drawCallInfo != nullptr && drawCallInfo->cullPlanes != nullptr && cullSphere.w > 0.0f)
 					{
 						const glm::vec3 center(cullSphere);
@@ -8928,7 +9645,7 @@ namespace flex
 						else
 						{
 							BaseCamera* cam = g_CameraManager->CurrentCamera();
-							material->pushConstantBlock->SetData(cam->GetView(), cam->GetProjection());
+							material->pushConstantBlock->SetData(cam->GetViewRelative(), cam->GetProjection());
 						}
 
 						// The camera's matrices (or an override) are the same for every object in the batch, so only push them once
@@ -8994,7 +9711,8 @@ namespace flex
 		void VulkanRenderer::UpdateCameraCullPlanes()
 		{
 			// Gribb/Hartmann plane extraction (left, right, bottom, top). These don't depend on the depth convention.
-			const glm::mat4 viewProj = g_CameraManager->CurrentCamera()->GetViewProjection();
+			// In render space, like the cull spheres they're tested against (see DrawShaderBatch).
+			const glm::mat4 viewProj = g_CameraManager->CurrentCamera()->GetViewProjectionRelative();
 			const glm::vec4 row0(viewProj[0][0], viewProj[1][0], viewProj[2][0], viewProj[3][0]);
 			const glm::vec4 row1(viewProj[0][1], viewProj[1][1], viewProj[2][1], viewProj[3][1]);
 			const glm::vec4 row3(viewProj[0][3], viewProj[1][3], viewProj[2][3], viewProj[3][3]);
@@ -9102,17 +9820,12 @@ namespace flex
 				//
 
 				bool bEnableShadows = true;
-				if (bEnableShadows && m_DirectionalLight && m_DirectionalLight->data.castShadows)
+				const bool bSunShadows = bEnableShadows && m_DirectionalLight && m_DirectionalLight->data.castShadows;
+				// Shadow casters are drawn straight out of the regular (non-editor) batches
+				ShaderBatch* shadowCasterBatches[] = { &m_DeferredObjectBatches, &m_ForwardObjectBatches };
+				if (bSunShadows || !m_PointShadowFacesToRender.empty())
 				{
-					PROFILE_AUTO("Shadow cascades");
-					BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "Shadow cascades");
-					BeginGPUTimeStamp(m_OffScreenCmdBuffer, "Shadows");
-
-					VkClearValue depthStencilClearValue = VkClearValue{ 0.0f, 0 };
-
-					// Shadow casters are drawn straight out of the regular (non-editor) batches
-					ShaderBatch* shadowCasterBatches[] = { &m_DeferredObjectBatches, &m_ForwardObjectBatches };
-
+					// Model matrices for the shadow material (shared by the sun's cascades & point light shadows)
 					PROFILE_BEGIN("Update shadow dynamic uniform buffer");
 					for (ShaderBatch* shaderBatches : shadowCasterBatches)
 					{
@@ -9135,6 +9848,15 @@ namespace flex
 						}
 					}
 					PROFILE_END("");
+				}
+
+				if (bSunShadows)
+				{
+					PROFILE_AUTO("Shadow cascades");
+					BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "Shadow cascades");
+					BeginGPUTimeStamp(m_OffScreenCmdBuffer, "Shadows");
+
+					VkClearValue depthStencilClearValue = VkClearValue{ 0.0f, 0 };
 
 					PROFILE_BEGIN("Render shadow objects");
 					VkViewport viewport = vks::viewportFlipped((real)m_ShadowCascades[0]->frameBuffer.width, (real)m_ShadowCascades[0]->frameBuffer.height, 0.0f, 1.0f);
@@ -9198,6 +9920,8 @@ namespace flex
 					EndGPUTimeStamp(m_OffScreenCmdBuffer, "Shadows");
 					EndDebugMarkerRegion(m_OffScreenCmdBuffer, "End Shadow cascades");
 				}
+
+				RenderPointShadows(m_OffScreenCmdBuffer);
 
 				PROFILE_BEGIN("Deferred render pass");
 				BeginDebugMarkerRegion(m_OffScreenCmdBuffer, "Deferred");
@@ -9646,6 +10370,12 @@ namespace flex
 					}
 
 					EndDebugMarkerRegion(commandBuffer, "End Editor objects");
+				}
+				else
+				{
+					// Debug lines (e.g. the collision wireframe toggled with P) are still drawn while other editor objects
+					// are hidden (in the game)
+					DrawDebugLinesOnly(commandBuffer);
 				}
 
 				if (!m_QueuedWSSprites.empty())
@@ -10730,19 +11460,29 @@ namespace flex
 
 			BaseScene* scene = g_SceneManager->CurrentScene();
 			BaseCamera* cam = g_CameraManager->CurrentCamera();
+			// Everything is uploaded in render space (see Renderer::RenderOriginFor)
+			m_RenderOrigin = cam->GetRenderOrigin();
+			const glm::vec3 renderOrigin = m_RenderOrigin;
+			glm::vec4 renderOriginData(renderOrigin, 0.0f);
 			glm::mat4 projection = cam->GetProjection();
 			glm::mat4 projectionInv; // Calculated below
-			glm::mat4 view = cam->GetView();
+			glm::mat4 view = cam->GetViewRelative();
 			glm::mat4 viewInv; // Calculated below
-			glm::mat4 viewProjection = cam->GetViewProjection();
-			glm::vec4 camPos = glm::vec4(cam->position, 0.0f);
+			glm::mat4 viewProjection = cam->GetViewProjectionRelative();
+			glm::vec4 camPos = glm::vec4(cam->position - renderOrigin, 0.0f);
+			// Last frame's matrix, moved to this frame's render origin (identical when it hasn't changed)
+			glm::mat4 lastFrameViewProj = m_LastFrameViewProj;
+			if (m_LastFrameRenderOrigin != renderOrigin)
+			{
+				lastFrameViewProj = m_LastFrameViewProj * glm::translate(MAT4_IDENTITY, renderOrigin - m_LastFrameRenderOrigin);
+			}
 			real exposure = cam->exposure;
 			glm::vec2 nearFarPlanes(cam->zNear, cam->zFar);
 			// Clouds are positioned relative to the camera so shaders don't need large world space values
 			SkyboxData skyboxData = g_SceneManager->CurrentScene()->GetSkyboxData();
-			skyboxData.clouds.y -= camPos.y;
-			skyboxData.clouds.z += camPos.x;
-			skyboxData.clouds.w += camPos.z;
+			skyboxData.clouds.y -= cam->position.y;
+			skyboxData.clouds.z += cam->position.x;
+			skyboxData.clouds.w += cam->position.z;
 			// Wrapped: a float holding the absolute time would make shader animations stutter after hours of play
 			glm::vec4 time(AnimationTime(), scene->GetTimeOfDay(), 0.0f, 0.0f);
 			glm::vec2i windowSize = g_Window->GetSize();
@@ -10759,6 +11499,42 @@ namespace flex
 			if (m_DirectionalLight != nullptr)
 			{
 				dirLightData = &m_DirectionalLight->data;
+			}
+
+			// Lights & water clip volumes in render space
+			PointLightData pointLights[MAX_POINT_LIGHT_COUNT];
+			SpotLightData spotLights[MAX_SPOT_LIGHT_COUNT];
+			AreaLightData areaLights[MAX_AREA_LIGHT_COUNT];
+			memcpy(pointLights, m_PointLightData, sizeof(pointLights));
+			memcpy(spotLights, m_SpotLightData, sizeof(spotLights));
+			memcpy(areaLights, m_AreaLightData, sizeof(areaLights));
+			for (PointLightData& light : pointLights)
+			{
+				light.pos -= renderOrigin;
+			}
+			for (SpotLightData& light : spotLights)
+			{
+				light.pos -= renderOrigin;
+			}
+			for (AreaLightData& light : areaLights)
+			{
+				for (glm::vec4& point : light.points)
+				{
+					point -= glm::vec4(renderOrigin, 0.0f);
+				}
+			}
+			WaterClipData waterClipData = defaultWaterClipData;
+			{
+				auto iter = m_GlobalUserUniforms.find(U_WATER_CLIP_DATA_ID);
+				if (iter != m_GlobalUserUniforms.end())
+				{
+					memcpy(&waterClipData, iter->second.first, sizeof(WaterClipData));
+				}
+				for (WaterClipVolume& volume : waterClipData.volumes)
+				{
+					// worldToLocal * translate(renderOrigin)
+					volume.worldToLocal[3] += volume.worldToLocal * glm::vec4(renderOrigin, 0.0f);
+				}
 			}
 
 			struct UniformInfo
@@ -10783,33 +11559,35 @@ namespace flex
 				switch (uniform->id)
 				{
 				case U_CAM_POS_ID: dataStart = (void*)&camPos; break;
+				case U_RENDER_ORIGIN_ID: dataStart = (void*)&renderOriginData; break;
 				case U_VIEW_ID: dataStart = (void*)&view; break;
 				case U_VIEW_INV_ID: dataStart = (void*)&viewInv; break;
 				case U_VIEW_PROJECTION_ID: dataStart = (void*)&viewProjection; break;
 				case U_PROJECTION_ID: dataStart = (void*)&projection; break;
 				case U_PROJECTION_INV_ID: dataStart = (void*)&projectionInv; break;
 				case U_DIR_LIGHT_ID: dataStart = (void*)dirLightData; break;
-				case U_POINT_LIGHTS_ID: dataStart = (void*)m_PointLightData; break;
-				case U_SPOT_LIGHTS_ID: dataStart = (void*)m_SpotLightData; break;
-				case U_AREA_LIGHTS_ID: dataStart = (void*)m_AreaLightData; break;
+				case U_POINT_LIGHTS_ID: dataStart = (void*)pointLights; break;
+				case U_POINT_SHADOW_DATA_ID: dataStart = (void*)&m_PointShadowData; break;
+				case U_SPOT_LIGHTS_ID: dataStart = (void*)spotLights; break;
+				case U_AREA_LIGHTS_ID: dataStart = (void*)areaLights; break;
 				case U_EXPOSURE_ID: dataStart = (void*)&exposure; break;
 				case U_TIME_ID: dataStart = (void*)&time; break;
 				case U_OCEAN_DATA_ID: dataStart = (void*)&defaultOceanData; break;
-				case U_WATER_CLIP_DATA_ID: dataStart = (void*)&defaultWaterClipData; break;
+				case U_WATER_CLIP_DATA_ID: dataStart = (void*)&waterClipData; break; // (Includes the global override)
 				case U_SKYBOX_DATA_ID: dataStart = (void*)&skyboxData; break;
 				case U_SHADOW_SAMPLING_DATA_ID: dataStart = (void*)&m_ShadowSamplingData; break;
 				case U_NEAR_FAR_PLANES_ID: dataStart = (void*)&nearFarPlanes; break;
 				case U_SSAO_GEN_DATA_ID: dataStart = (void*)&m_SSAOGenData; break;
 				case U_SSAO_BLUR_DATA_CONSTANT_ID: dataStart = (void*)&m_SSAOBlurDataConstant; break;
 				case U_SSAO_SAMPLING_DATA_ID: dataStart = (void*)&m_SSAOSamplingData; break;
-				case U_LAST_FRAME_VIEWPROJ_ID: dataStart = (void*)&m_LastFrameViewProj; break;
+				case U_LAST_FRAME_VIEWPROJ_ID: dataStart = (void*)&lastFrameViewProj; break;
 				case U_SCREEN_SIZE_ID: dataStart = (void*)&screenSize; break;
 				case U_TERRAIN_GEN_CONSTANT_DATA_ID: dataStart = (void*)terrainGenConstantData; break;
 				}
 
 				if (dataStart != nullptr)
 				{
-					auto iter = m_GlobalUserUniforms.find(uniform->id);
+					auto iter = uniform->id != U_WATER_CLIP_DATA_ID ? m_GlobalUserUniforms.find(uniform->id) : m_GlobalUserUniforms.end();
 					if (iter != m_GlobalUserUniforms.end())
 					{
 						dataStart = iter->second.first;
@@ -10886,7 +11664,7 @@ namespace flex
 			MaterialID materialID,
 			u32 dynamicOffset,
 			// TODO: Rename to objectToWorld
-			const glm::mat4& model,
+			const glm::mat4& modelIn,
 			UniformOverrides const* userUniformOverrides /* = nullptr */)
 		{
 			PROFILE_AUTO("UpdateDynamicUniformBuffer");
@@ -10902,6 +11680,13 @@ namespace flex
 				return; // There are no dynamic uniforms to update
 			}
 
+			// World transforms are uploaded in render space (see Renderer::RenderOriginFor). The subtraction is exact when the
+			// object is near the origin (or the origin is zero).
+			glm::mat4 model = modelIn;
+			if (shader->bWorldSpaceModel)
+			{
+				model[3] -= glm::vec4(m_RenderOrigin, 0.0f);
+			}
 			glm::vec4 colourMultiplier = material->colourMultiplier;
 			u32 enableAlbedoSampler = material->enableAlbedoSampler;
 			u32 enableEmissiveSampler = material->enableEmissiveSampler;

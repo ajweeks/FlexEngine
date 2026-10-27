@@ -49,6 +49,7 @@ namespace flex
 			LOOP_AIR_RUSH,
 			LOOP_CRICKETS,
 			LOOP_CAMPFIRE,
+			LOOP_TREASURE_HUM,
 
 			_COUNT
 		};

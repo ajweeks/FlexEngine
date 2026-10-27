@@ -74,6 +74,7 @@ namespace flex
 			TYPE(BuildPiece, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
 			TYPE(TreasureChest, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
 			TYPE(Campfire, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
+			TYPE(Bed, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
 		};
 
 #undef TYPE

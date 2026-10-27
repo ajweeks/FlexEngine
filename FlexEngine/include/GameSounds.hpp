@@ -46,6 +46,8 @@ namespace flex
 
 		// Call every frame for each burning fire (intensity [0, 1]). A crackle loop plays at the nearest one.
 		void ReportFire(const glm::vec3& posWS, real intensity);
+		// Call every frame for each unopened treasure chest. A soft hum plays at the nearest one.
+		void ReportTreasure(const glm::vec3& posWS);
 		// Call every frame from the vehicle the player is driving. forwardSpeed in m/s, throttle in [-1, 1],
 		// wheelSlip in [0, 1] (0: full grip).
 		void UpdateVehicle(real forwardSpeed, real throttle, bool bBraking, real wheelSlip);

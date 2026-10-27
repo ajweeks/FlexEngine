@@ -41,6 +41,9 @@ namespace flex
 			virtual void DrawLineWithAlpha(const btVector3& from, const btVector3& to, const btVector4& colourFrom, const btVector4& colourTo) override;
 			virtual void DrawBasis(const btVector3& origin, const btVector3& right, const btVector3& up, const btVector3& forward) override;
 
+			// The render object holding this frame's lines (InvalidRenderID before it's created)
+			RenderID GetRenderID() const;
+
 		private:
 			virtual void Draw() override;
 

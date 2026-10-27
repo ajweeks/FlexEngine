@@ -51,6 +51,18 @@ namespace flex
 
 	void CameraManager::Update()
 	{
+		// FLEX_LOOK_TEST=<degrees per second>,<camera name> (see BaseCamera::UpdateSmoothnessStats) switches to that camera
+		// once the player is being controlled
+		static const char* lookTest = getenv("FLEX_LOOK_TEST");
+		if (lookTest != nullptr && !m_CameraStack.empty())
+		{
+			const char* comma = strchr(lookTest, ',');
+			BaseCamera* current = CurrentCamera();
+			if (comma != nullptr && current->bPossessPlayer && current->GetName() != comma + 1 && GetCameraByName(comma + 1) != nullptr)
+			{
+				SetCameraByName(comma + 1, false);
+			}
+		}
 	}
 
 	void CameraManager::OnPostSceneChange()

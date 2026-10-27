@@ -16,6 +16,7 @@ layout (location = 2) out mat3 ex_TBN;
 
 layout (binding = 0) uniform UBOConstant
 {
+	vec4 renderOrigin; // xyz: see Renderer::RenderOriginFor
 	mat4 view;
 	mat4 viewProjection;
 } uboConstant;
@@ -48,6 +49,7 @@ void main()
 		normalize(mat3(uboDynamic.model) * in_Normal));
 
     vec4 worldPos = uboDynamic.model * vec4(in_Position, 1.0);
-    ex_WorldPos = worldPos.xyz;
+    // World space (the model matrix is relative to the render origin), since it's used for texture coordinates
+    ex_WorldPos = worldPos.xyz + uboConstant.renderOrigin.xyz;
     gl_Position = uboConstant.viewProjection * worldPos;
 }

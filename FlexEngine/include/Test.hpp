@@ -6,6 +6,7 @@
 #include "Pair.hpp"
 #include "PoolAllocator.hpp"
 #include "SaveFile.hpp"
+#include "Scene/Objects/Building.hpp"
 #include "Systems/TrackManager.hpp"
 #include "Track/BezierCurve3D.hpp"
 
@@ -2595,6 +2596,9 @@ namespace flex
 
 				// Save files (binary format, compression, corruption handling)
 				save::RunSelfTests,
+
+				// Build mode placement (overlaps & extending pieces from the aimed edge)
+				RunBuildingSelfTests,
 
 				// Randomized robustness tests (JSON parser, string & number helpers, WAV parser, binary save files)
 				FuzzTestsShort,

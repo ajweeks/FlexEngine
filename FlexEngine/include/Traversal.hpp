@@ -80,6 +80,9 @@ namespace flex
 		real ComputeLift(const glm::vec3& pos) const;
 		// Thermals whose cells overlap the square of the given half size around pos (in xz)
 		void GetThermalsNear(const glm::vec2& pos, real halfSize, std::vector<Thermal>& outThermals) const;
+		// Removes the part of a horizontal velocity which would take a crawling player off a ledge (a drop of more than a
+		// step). Returns true if anything was removed.
+		bool BlockLedges(glm::vec3& velocity) const;
 		bool IsHookAttached() const { return m_Hook.state == HookState::ATTACHED; }
 		real GetRopeLength() const { return m_Hook.ropeLength; }
 		glm::vec3 GetHookPos() const { return m_Hook.pos; }

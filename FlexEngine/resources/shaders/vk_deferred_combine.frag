@@ -13,6 +13,7 @@ layout (binding = 0) uniform UBOConstant
 	mat4 invProj;
 	DirectionalLight dirLight;
 	PointLight pointLights[NUM_POINT_LIGHTS];
+	PointShadowData pointShadowData;
 	SpotLight spotLights[NUM_SPOT_LIGHTS];
 	AreaLight areaLights[NUM_AREA_LIGHTS];
 	SkyboxData skyboxData;
@@ -321,6 +322,7 @@ layout (binding = 7) uniform sampler2D normalRoughnessSampler;
 layout (binding = 8) uniform sampler2D albedoMetallicSampler;
 layout (binding = 9) uniform sampler2D ltcMatricesSampler;
 layout (binding = 10) uniform sampler2D ltcAmplitudesSampler;
+layout (binding = 11) uniform sampler2DArrayShadow pointShadowSampler;
 
 void main()
 {
@@ -382,6 +384,10 @@ void main()
 		vec3 L = normalize(uboConstant.pointLights[i].position - posWS);
 		vec3 radiance = uboConstant.pointLights[i].colour.rgb * attenuation * uboConstant.pointLights[i].brightness;
 		float NoL = max(dot(N, L), 0.0);
+		if (NoL > 0.0)
+		{
+			radiance *= PointLightShadow(uboConstant.pointShadowData, i, posWS, N, pointShadowSampler);
+		}
 
 		Lo += DoLighting(radiance, N, V, L, NoV, NoL, roughness, metallic, F0, albedo);
 	}

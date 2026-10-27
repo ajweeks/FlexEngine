@@ -147,6 +147,15 @@ namespace flex
 			drawLine(origin, origin + forward, btVector3(0.0f, 0.0f, 1.0f));
 		}
 
+		RenderID VulkanDebugRenderer::GetRenderID() const
+		{
+			if (m_Object == nullptr || m_Object->GetMesh() == nullptr || m_Object->GetMesh()->GetSubmeshCount() == 0)
+			{
+				return InvalidRenderID;
+			}
+			return m_Object->GetMesh()->GetSubMesh(0)->renderID;
+		}
+
 		void VulkanDebugRenderer::Draw()
 		{
 			const u32 lineCount = m_LineSegmentIndex;

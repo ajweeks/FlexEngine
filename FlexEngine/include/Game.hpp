@@ -66,7 +66,10 @@ namespace flex
 			std::string lastPlayed; // YYYY-MM-DD_HH-MM-SS, sorts chronologically
 			real playTime = 0.0f;
 			std::string created; // YYYY-MM-DD_HH-MM-SS (empty for worlds made before it was saved)
-			WorldStats stats;
+			// terrain::GENERATOR_VERSION the world was created with (0: before it was saved), so terrain generation
+			// changes can be made conditional on it later
+			i32 terrainVersion = 0;
+WorldStats stats;
 		};
 
 		struct Settings
@@ -78,6 +81,7 @@ namespace flex
 			i32 terrainQuality = 1;
 			bool bShowMinimap = true;
 			std::string language = "en"; // A Language code (see Localization.hpp)
+			std::string keyBindings; // Rebound controls (see Game::SaveBindings)
 		};
 
 		EventReply OnActionEvent(Action action, ActionEvent actionEvent);
@@ -89,9 +93,14 @@ namespace flex
 		void DrawNewWorld();
 		void DrawSettings();
 		void DrawControls();
+		void SaveBindings();
+		void LoadBindings();
+		void ResetBindings();
+		bool TourRebindTest();
 		void DrawLoading();
 		void DrawPauseMenu();
 		void DrawMap();
+		void ToggleWaypoint(const glm::vec2& pos, real removeRadius);
 		void DrawBackground(real opacity);
 		void DrawTitle(const std::string& title, const std::string& subtitle);
 		void DrawWorldStats(const UIRect& panel, const WorldInfo& world);
@@ -119,6 +128,14 @@ namespace flex
 		Screen m_Screen = Screen::NONE;
 		Screen m_ScreenBeforeSettings = Screen::MAIN_MENU; // Where the settings & controls screens go back to
 		real m_ScreenTime = 0.0f;
+
+		// Controls screen: the row being rebound (-1 for none), & the message about the last change
+		i32 m_RebindIndex = -1;
+		std::string m_MapMessage; // Result of the last waypoint change, shown on the map
+		real m_MapMessageTime = 0.0f;
+		std::string m_RebindMessage;
+		real m_RebindMessageTime = 0.0f;
+		std::map<i32, std::pair<KeyCode, MouseButton>> m_DefaultActionBindings;
 
 		std::vector<WorldInfo> m_Worlds;
 		i32 m_SelectedWorld = -1;
@@ -164,6 +181,7 @@ namespace flex
 		i32 m_TourStep = 0;
 		sec m_TourTime = 0.0f;
 		glm::vec3 m_TourCavePos = glm::vec3(0.0f);
+		bool m_bTourWaypointsPlaced = false; // FLEX_UI_TEST
 		bool m_bTourMapCaptured = false; // The map screenshot was requested (the pan waits a frame, so it isn't in the shot)
 		std::string m_TourWorldDirectory; // Deleted at the end of the tour
 		// FLEX_BUILD_TEST: after the tour builds its hut, views it from several angles & shows placement previews

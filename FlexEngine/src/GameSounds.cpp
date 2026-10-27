@@ -80,7 +80,8 @@ namespace flex
 			Loop s_AirRush{ Sound::LOOP_AIR_RUSH, 3.0f }; // Follows speed closely
 			Loop s_Crickets{ Sound::LOOP_CRICKETS, 0.3f };
 			Loop s_Fire{ Sound::LOOP_CAMPFIRE, 1.5f };
-			Loop* const s_Loops[] = { &s_Engine, &s_Skid, &s_Wind, &s_AirRush, &s_Crickets, &s_Fire };
+			Loop s_TreasureHum{ Sound::LOOP_TREASURE_HUM, 1.0f };
+			Loop* const s_Loops[] = { &s_Engine, &s_Skid, &s_Wind, &s_AirRush, &s_Crickets, &s_Fire, &s_TreasureHum };
 
 			// Reported by other systems during the frame
 			bool s_bVehicleReported = false;
@@ -95,6 +96,10 @@ namespace flex
 			glm::vec3 s_FirePos;
 			real s_FireIntensity = 0.0f;
 			real s_FireDistSq = 0.0f;
+
+			bool s_bTreasureReported = false;
+			glm::vec3 s_TreasurePos;
+			real s_TreasureDistSq = 0.0f;
 
 			glm::vec3 s_ListenerPos(0.0f);
 
@@ -170,7 +175,15 @@ namespace flex
 						}
 						if (desc.b3D)
 						{
-							AudioManager::SetSourceRolloff(id, 3.0f, 60.0f);
+							if ((Sound)s == Sound::LOOP_TREASURE_HUM)
+							{
+								// Audible from far off, so it can lead the player to the chest
+								AudioManager::SetSourceRolloff(id, 5.0f, 300.0f, 0.8f);
+							}
+							else
+							{
+								AudioManager::SetSourceRolloff(id, 3.0f, 60.0f);
+							}
 						}
 						s_Banks[s].ids.push_back(id);
 						++soundCount;
@@ -463,6 +476,16 @@ namespace flex
 				{
 					s_Fire.target = 0.0f;
 				}
+
+				if (s_bTreasureReported && !bPaused)
+				{
+					AudioManager::SetSourcePositionWS(s_Banks[(u32)Sound::LOOP_TREASURE_HUM].ids[0], s_TreasurePos);
+					s_TreasureHum.target = s_SfxVolume * 0.35f;
+				}
+				else
+				{
+					s_TreasureHum.target = 0.0f;
+				}
 			}
 		} // namespace
 
@@ -562,6 +585,7 @@ namespace flex
 
 			s_bVehicleReported = false;
 			s_bFireReported = false;
+			s_bTreasureReported = false;
 		}
 
 		bool IsReady()
@@ -650,6 +674,18 @@ namespace flex
 				s_FirePos = posWS;
 				s_FireIntensity = intensity;
 				s_FireDistSq = distSq;
+			}
+		}
+
+		void ReportTreasure(const glm::vec3& posWS)
+		{
+			const glm::vec3 diff = posWS - s_ListenerPos;
+			const real distSq = glm::dot(diff, diff);
+			if (!s_bTreasureReported || distSq < s_TreasureDistSq)
+			{
+				s_bTreasureReported = true;
+				s_TreasurePos = posWS;
+				s_TreasureDistSq = distSq;
 			}
 		}
 

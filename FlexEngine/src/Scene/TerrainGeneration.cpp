@@ -419,7 +419,7 @@ namespace flex
 
 		static const char* s_VegetationNames[] =
 		{
-			"none", "taiga", "nordic", "broadleaf", "swamp", "tundra", "alpine", "savanna", "desert", "volcanic",
+			"none", "taiga", "nordic", "broadleaf", "swamp", "tundra", "alpine", "savanna", "desert", "volcanic", "jungle", "mushroom", "crystal",
 		};
 		static_assert(ARRAY_LENGTH(s_VegetationNames) == (u32)Vegetation::_COUNT, "s_VegetationNames must match Vegetation enum");
 
@@ -476,6 +476,9 @@ namespace flex
 			SEED_TREASURE,
 			SEED_BUSHES,
 			SEED_SPAWN,
+			SEED_SPIRES,
+			SEED_FJORDS,
+			SEED_PALMS,
 			SEED_BIOME_BASE = 1000,
 		};
 
@@ -485,13 +488,15 @@ namespace flex
 
 			// Colours are sRGB albedos, kept fairly muted (real grass & rock are darker & less saturated than they appear)
 
+			// Open grassland with scattered woods
 			BiomeParams plains = {};
 			plains.name = "Plains";
-			plains.frequency = 1.0f;
+			plains.frequency = 0.9f;
 			plains.temperature = 0.1f;
 			plains.baseHeight = 10.0f;
 			plains.heightAmplitude = 70.0f;
 			plains.wavelength = 1400.0f;
+			plains.roughness = 0.42f;
 			plains.caveStrength = 0.6f;
 			plains.lakeStrength = 1.0f;
 			plains.groundColour = glm::vec3(0.30f, 0.35f, 0.18f);
@@ -501,39 +506,44 @@ namespace flex
 			plains.treeDensity = 0.8f;
 			params.biomes.push_back(plains);
 
+			// Smooth, rolling green hills: pasture with the odd grove
 			BiomeParams hills = {};
-			hills.name = "Hills";
+			hills.name = "Rolling hills";
 			hills.frequency = 1.0f;
 			hills.temperature = -0.05f;
-			hills.baseHeight = 60.0f;
-			hills.heightAmplitude = 260.0f;
-			hills.wavelength = 1100.0f;
-			hills.ridgedness = 0.25f;
-			hills.overhangAmplitude = 10.0f;
-			hills.caveStrength = 1.0f;
-			hills.lakeStrength = 0.8f;
-			hills.groundColour = glm::vec3(0.27f, 0.32f, 0.17f);
+			hills.baseHeight = 50.0f;
+			hills.heightAmplitude = 150.0f;
+			hills.wavelength = 1300.0f;
+			hills.roughness = 0.3f;
+			hills.caveStrength = 0.7f;
+			hills.lakeStrength = 1.0f;
+			hills.groundColour = glm::vec3(0.29f, 0.37f, 0.17f);
 			hills.cliffColour = glm::vec3(0.40f, 0.38f, 0.35f);
 			hills.grassiness = 1.0f;
 			hills.vegetation = Vegetation::NORDIC;
+			hills.treeDensity = 0.45f;
+			hills.bushDensity = 0.7f;
 			params.biomes.push_back(hills);
 
+			// Sharp, domain warped ridges, high enough for permanent snow
 			BiomeParams mountains = {};
 			mountains.name = "Mountains";
-			mountains.frequency = 0.9f;
+			mountains.frequency = 1.0f;
 			mountains.temperature = -0.25f;
-			mountains.baseHeight = 250.0f;
-			mountains.heightAmplitude = 1100.0f;
-			mountains.wavelength = 2600.0f;
-			mountains.ridgedness = 0.85f;
-			mountains.overhangAmplitude = 22.0f;
+			mountains.baseHeight = 300.0f;
+			mountains.heightAmplitude = 1650.0f;
+			mountains.wavelength = 3200.0f;
+			mountains.ridgedness = 0.9f;
+			mountains.roughness = 0.5f;
+			mountains.overhangAmplitude = 26.0f;
 			mountains.caveStrength = 0.8f;
 			mountains.lakeStrength = 0.6f;
 			mountains.groundColour = glm::vec3(0.29f, 0.31f, 0.21f);
 			mountains.cliffColour = glm::vec3(0.38f, 0.37f, 0.37f);
 			mountains.peakColour = glm::vec3(0.92f, 0.94f, 0.97f);
-			mountains.peakHeight = 650.0f;
+			mountains.peakHeight = 850.0f;
 			mountains.grassiness = 0.8f;
+			mountains.sandyShores = 0.2f;
 			mountains.vegetation = Vegetation::TAIGA;
 			mountains.treeDensity = 0.8f;
 			mountains.bushDensity = 0.8f;
@@ -541,7 +551,7 @@ namespace flex
 
 			BiomeParams mesa = {};
 			mesa.name = "Mesa";
-			mesa.frequency = 0.8f;
+			mesa.frequency = 0.7f;
 			mesa.temperature = 0.65f;
 			mesa.baseHeight = 70.0f;
 			mesa.heightAmplitude = 340.0f;
@@ -562,7 +572,7 @@ namespace flex
 
 			BiomeParams badlands = {};
 			badlands.name = "Badlands";
-			badlands.frequency = 0.6f;
+			badlands.frequency = 0.5f;
 			badlands.temperature = 0.55f;
 			badlands.baseHeight = 40.0f;
 			badlands.heightAmplitude = 180.0f;
@@ -579,7 +589,7 @@ namespace flex
 
 			BiomeParams lowlands = {};
 			lowlands.name = "Lowlands";
-			lowlands.frequency = 0.7f;
+			lowlands.frequency = 0.5f;
 			lowlands.temperature = 0.3f;
 			lowlands.baseHeight = -60.0f;
 			lowlands.heightAmplitude = 40.0f;
@@ -610,6 +620,7 @@ namespace flex
 			tundra.peakColour = glm::vec3(0.90f, 0.92f, 0.95f);
 			tundra.peakHeight = 70.0f;
 			tundra.grassiness = 0.55f;
+			tundra.sandyShores = 0.3f;
 			tundra.vegetation = Vegetation::TUNDRA;
 			params.biomes.push_back(tundra);
 
@@ -630,44 +641,49 @@ namespace flex
 			boreal.peakColour = glm::vec3(0.91f, 0.93f, 0.96f);
 			boreal.peakHeight = 260.0f;
 			boreal.grassiness = 0.9f;
+			boreal.sandyShores = 0.4f;
 			boreal.vegetation = Vegetation::TAIGA;
 			boreal.treeDensity = 1.2f;
 			params.biomes.push_back(boreal);
 
-			// Sand dunes (sharp ridged crests)
+			// A sea of sand dunes: long crests with gentle windward slopes & steep slip faces
 			BiomeParams desert = {};
-			desert.name = "Desert";
+			desert.name = "Dunes";
 			desert.frequency = 0.8f;
 			desert.temperature = 0.9f;
-			desert.baseHeight = 20.0f;
-			desert.heightAmplitude = 55.0f;
-			desert.wavelength = 650.0f;
-			desert.ridgedness = 0.7f;
-			desert.caveStrength = 0.2f;
-			desert.lakeStrength = 0.05f;
-			desert.groundColour = glm::vec3(0.78f, 0.66f, 0.48f);
-			desert.cliffColour = glm::vec3(0.70f, 0.52f, 0.36f);
+			desert.baseHeight = 25.0f;
+			desert.heightAmplitude = 50.0f;
+			desert.wavelength = 420.0f;
+			desert.duneStrength = 1.0f;
+			desert.caveStrength = 0.1f;
+			desert.lakeStrength = 0.03f;
+			desert.groundColour = glm::vec3(0.80f, 0.64f, 0.44f);
+			desert.cliffColour = glm::vec3(0.76f, 0.58f, 0.40f);
 			desert.grassiness = 0.0f;
 			desert.vegetation = Vegetation::DESERT;
+			desert.treeDensity = 0.35f;
+			desert.bushDensity = 0.6f;
 			params.biomes.push_back(desert);
 
-			// Stepped sandstone plateaus, cut by canyons, with natural arches
+			// A high sandstone plateau cut by deep, winding, stepped canyons, with natural arches
 			BiomeParams canyons = {};
-			canyons.name = "Sandstone canyons";
-			canyons.frequency = 0.6f;
+			canyons.name = "Canyons";
+			canyons.frequency = 0.7f;
 			canyons.temperature = 0.75f;
-			canyons.baseHeight = 120.0f;
-			canyons.heightAmplitude = 260.0f;
-			canyons.wavelength = 1000.0f;
-			canyons.ridgedness = 0.35f;
-			canyons.terraceStrength = 0.7f;
-			canyons.terraceHeight = 28.0f;
-			canyons.overhangAmplitude = 18.0f;
+			canyons.baseHeight = 330.0f;
+			canyons.heightAmplitude = 90.0f;
+			canyons.wavelength = 1100.0f;
+			canyons.ridgedness = 0.15f;
+			canyons.terraceStrength = 0.75f;
+			canyons.terraceHeight = 32.0f;
+			canyons.canyonStrength = 1.0f;
+			canyons.canyonDepth = 300.0f;
+			canyons.overhangAmplitude = 16.0f;
 			canyons.archStrength = 1.0f;
 			canyons.caveStrength = 0.7f;
-			canyons.lakeStrength = 0.1f;
+			canyons.lakeStrength = 0.05f;
 			canyons.groundColour = glm::vec3(0.72f, 0.52f, 0.35f);
-			canyons.cliffColour = glm::vec3(0.76f, 0.47f, 0.28f);
+			canyons.cliffColour = glm::vec3(0.74f, 0.42f, 0.24f);
 			canyons.grassiness = 0.05f;
 			canyons.vegetation = Vegetation::DESERT;
 			canyons.treeDensity = 0.6f;
@@ -689,13 +705,14 @@ namespace flex
 			volcanic.groundColour = glm::vec3(0.24f, 0.23f, 0.21f);
 			volcanic.cliffColour = glm::vec3(0.17f, 0.17f, 0.18f);
 			volcanic.grassiness = 0.2f;
+			volcanic.sandyShores = 0.0f;
 			volcanic.vegetation = Vegetation::VOLCANIC;
 			params.biomes.push_back(volcanic);
 
-			// Very flat, low & full of lakes
+			// Very flat, low & full of lakes with muddy, reedy shores
 			BiomeParams wetlands = {};
 			wetlands.name = "Wetlands";
-			wetlands.frequency = 0.5f;
+			wetlands.frequency = 0.45f;
 			wetlands.temperature = 0.2f;
 			wetlands.baseHeight = 5.0f;
 			wetlands.heightAmplitude = 16.0f;
@@ -705,8 +722,92 @@ namespace flex
 			wetlands.groundColour = glm::vec3(0.26f, 0.30f, 0.17f);
 			wetlands.cliffColour = glm::vec3(0.33f, 0.30f, 0.25f);
 			wetlands.grassiness = 1.0f;
+			wetlands.sandyShores = 0.0f;
 			wetlands.vegetation = Vegetation::SWAMP;
 			params.biomes.push_back(wetlands);
+
+			// High, snowy mountains along the coast, split by long, narrow, sheer sided inlets of the sea
+			BiomeParams fjords = {};
+			fjords.name = "Fjords";
+			fjords.frequency = 0.9f;
+			fjords.temperature = -0.4f;
+			fjords.coastal = 1.0f;
+			fjords.baseHeight = 420.0f;
+			fjords.heightAmplitude = 750.0f;
+			fjords.wavelength = 2400.0f;
+			fjords.ridgedness = 0.7f;
+			fjords.fjordStrength = 1.0f;
+			fjords.overhangAmplitude = 20.0f;
+			fjords.caveStrength = 0.4f;
+			fjords.lakeStrength = 0.0f;
+			fjords.groundColour = glm::vec3(0.24f, 0.31f, 0.17f);
+			fjords.cliffColour = glm::vec3(0.34f, 0.34f, 0.35f);
+			fjords.peakColour = glm::vec3(0.92f, 0.94f, 0.97f);
+			fjords.peakHeight = 700.0f;
+			fjords.grassiness = 0.9f;
+			fjords.sandyShores = 0.15f;
+			fjords.vegetation = Vegetation::NORDIC;
+			fjords.treeDensity = 0.9f;
+			params.biomes.push_back(fjords);
+
+			// Hot, steep & dense rainforest, with sheer limestone towers rising out of it
+			BiomeParams jungle = {};
+			jungle.name = "Jungle";
+			jungle.frequency = 1.0f;
+			jungle.temperature = 0.5f;
+			jungle.baseHeight = 30.0f;
+			jungle.heightAmplitude = 150.0f;
+			jungle.wavelength = 1000.0f;
+			jungle.ridgedness = 0.35f;
+			jungle.spireStrength = 0.45f;
+			jungle.spireHeight = 170.0f;
+			jungle.overhangAmplitude = 12.0f;
+			jungle.caveStrength = 0.9f;
+			jungle.lakeStrength = 0.8f;
+			jungle.groundColour = glm::vec3(0.13f, 0.23f, 0.07f);
+			jungle.cliffColour = glm::vec3(0.50f, 0.49f, 0.44f);
+			jungle.grassiness = 1.0f;
+			jungle.vegetation = Vegetation::JUNGLE;
+			params.biomes.push_back(jungle);
+
+			// Otherworldly: soft violet moss under giant, brightly capped mushrooms
+			BiomeParams mushroom = {};
+			mushroom.name = "Mushroom meadows";
+			mushroom.frequency = 0.35f;
+			mushroom.temperature = 0.15f;
+			mushroom.baseHeight = 30.0f;
+			mushroom.heightAmplitude = 90.0f;
+			mushroom.wavelength = 1100.0f;
+			mushroom.roughness = 0.32f;
+			mushroom.caveStrength = 0.8f;
+			mushroom.lakeStrength = 0.8f;
+			mushroom.groundColour = glm::vec3(0.31f, 0.25f, 0.33f);
+			mushroom.cliffColour = glm::vec3(0.36f, 0.31f, 0.36f);
+			mushroom.grassiness = 1.0f;
+			mushroom.sandyShores = 0.0f;
+			mushroom.vegetation = Vegetation::MUSHROOM;
+			params.biomes.push_back(mushroom);
+
+			// Otherworldly: a forest of sheer, pale violet stone pillars over crystal strewn ground
+			BiomeParams spires = {};
+			spires.name = "Amethyst spires";
+			spires.frequency = 0.2f;
+			spires.temperature = -0.15f;
+			spires.baseHeight = 25.0f;
+			spires.heightAmplitude = 60.0f;
+			spires.wavelength = 1200.0f;
+			spires.spireStrength = 1.0f;
+			spires.spireHeight = 230.0f;
+			spires.overhangAmplitude = 8.0f;
+			spires.archStrength = 0.6f;
+			spires.caveStrength = 0.6f;
+			spires.lakeStrength = 0.3f;
+			spires.groundColour = glm::vec3(0.53f, 0.51f, 0.58f);
+			spires.cliffColour = glm::vec3(0.52f, 0.42f, 0.62f);
+			spires.grassiness = 0.25f;
+			spires.sandyShores = 0.5f;
+			spires.vegetation = Vegetation::CRYSTAL;
+			params.biomes.push_back(spires);
 
 			return params;
 		}
@@ -755,6 +856,15 @@ namespace flex
 				hasher.Add(biome.ridgedness);
 				hasher.Add(biome.terraceStrength);
 				hasher.Add(biome.terraceHeight);
+				hasher.Add(biome.roughness);
+				hasher.Add(biome.duneStrength);
+				hasher.Add(biome.canyonStrength);
+				hasher.Add(biome.canyonDepth);
+				hasher.Add(biome.fjordStrength);
+				hasher.Add(biome.spireStrength);
+				hasher.Add(biome.spireHeight);
+				hasher.Add(biome.coastal);
+				hasher.Add(biome.sandyShores);
 				hasher.Add(biome.overhangAmplitude);
 				hasher.Add(biome.archStrength);
 				hasher.Add(biome.caveStrength);
@@ -854,6 +964,7 @@ namespace flex
 			m_InstanceID = s_NextDensityInstanceID.fetch_add(1);
 
 			m_TotalBiomeFrequency = 0.0f;
+			m_bAnyCoastalBiomes = false;
 			real maxOverhang = 0.0f;
 			bool bAnyArches = false;
 			bool bAnyCaves = false;
@@ -864,6 +975,16 @@ namespace flex
 				biome.frequency = glm::max(biome.frequency, 0.0f);
 				biome.wavelength = glm::max(biome.wavelength, 1.0f);
 				biome.terraceHeight = glm::max(biome.terraceHeight, 0.1f);
+				biome.roughness = glm::clamp(biome.roughness, 0.2f, 0.65f);
+				biome.duneStrength = glm::clamp(biome.duneStrength, 0.0f, 1.0f);
+				biome.canyonStrength = glm::clamp(biome.canyonStrength, 0.0f, 1.0f);
+				biome.canyonDepth = glm::max(biome.canyonDepth, 0.0f);
+				biome.fjordStrength = glm::clamp(biome.fjordStrength, 0.0f, 1.0f);
+				biome.spireStrength = glm::clamp(biome.spireStrength, 0.0f, 1.0f);
+				biome.spireHeight = glm::clamp(biome.spireHeight, 0.0f, 600.0f);
+				biome.coastal = glm::clamp(biome.coastal, 0.0f, 1.0f);
+				biome.sandyShores = glm::clamp(biome.sandyShores, 0.0f, 1.0f);
+				m_bAnyCoastalBiomes = m_bAnyCoastalBiomes || biome.coastal > 0.0f;
 				biome.grassiness = glm::clamp(biome.grassiness, 0.0f, 1.0f);
 				biome.treeDensity = glm::max(biome.treeDensity, 0.0f);
 				biome.bushDensity = glm::max(biome.bushDensity, 0.0f);
@@ -955,8 +1076,10 @@ namespace flex
 
 			const real seaLevel = m_Params.seaLevel;
 
-			// Raise low land near the coast so the sea is always contained (e.g. lowlands below sea level)
-			real height = Lerp(column.height, Max(column.height, seaLevel + 3.0f), Smoothstep(0.0f, OCEAN_SHORE_WEIGHT, m));
+			// Raise low land near the coast so the sea is always contained (e.g. lowlands below sea level), except where
+			// fjords open out into the sea
+			const real fjordWater = column.lakeID == OCEAN_ID ? 1.0f - Smoothstep(0.6f, 1.0f, column.lakeT) : 0.0f;
+			real height = Lerp(column.height, Max(column.height, seaLevel + 3.0f), Smoothstep(0.0f, OCEAN_SHORE_WEIGHT, m) * (1.0f - fjordWater));
 
 			// Then slope down to the sea floor
 			const real floorNoise = Fbm2(x / 900.0f, z / 900.0f, 3, DeriveSeed(m_Seed, SEED_OCEAN_FLOOR));
@@ -973,33 +1096,217 @@ namespace flex
 			column.grassiness *= 1.0f - blend;
 			column.groundColour = glm::mix(column.groundColour, glm::vec3(0.56f, 0.51f, 0.40f), blend);
 
-			// The sea surface is marked using the lake fields (lakeT < 1: under water)
+			// The sea surface is marked using the lake fields (lakeT < 1: under water), joining any fjords'
+			const real lakeT = Clamp(1.0f - (m - OCEAN_SHORE_WEIGHT) * 10.0f, -1.0f, 2.0f);
+			column.lakeT = column.lakeID == OCEAN_ID ? Min(column.lakeT, lakeT) : lakeT;
 			column.lakeID = OCEAN_ID;
 			column.waterLevel = seaLevel;
-			column.lakeT = Clamp(1.0f - (m - OCEAN_SHORE_WEIGHT) * 10.0f, -1.0f, 2.0f);
+			}
+
+			real TerrainDensity::Coastalness(real x, real z) const
+			{
+				if (m_Params.oceanCoverage <= 0.0f)
+				{
+					return 0.0f;
+				}
+				// Ocean noise is roughly linear across coasts (where it crosses the threshold)
+				const real inv = 1.0f / m_Params.oceanWavelength;
+				const real t = (m_OceanThreshold - OceanNoise(x * inv, z * inv)) / 0.1f;
+				return std::exp(-t * t);
+			}
+
+			real TerrainDensity::SpireLift(real x, real z, real strength, real height, real& outMaxLift) const
+			{
+				// One spire at most per jittered cell (reaching less than a cell from its center, so 3x3 cells cover it).
+				// Each grows in (rather than popping in) as the strength rises past its own threshold, keeping the height
+				// continuous.
+				const real cellSize = 150.0f;
+				const u32 seed = DeriveSeed(m_Seed, SEED_SPIRES);
+				// Fluted, irregular outlines
+				const real wx = 9.0f * GradientNoise2(x * 0.025f, z * 0.025f, seed + 1) + 3.0f * GradientNoise2(x * 0.09f, z * 0.09f, seed + 3);
+				const real wz = 9.0f * GradientNoise2(x * 0.025f + 3.7f, z * 0.025f, seed + 2) + 3.0f * GradientNoise2(x * 0.09f, z * 0.09f + 5.3f, seed + 4);
+				const real qx = (x + wx) / cellSize;
+				const real qz = (z + wz) / cellSize;
+				const i32 cellX = FastFloor(qx);
+				const i32 cellZ = FastFloor(qz);
+				// Spires stand in clusters, with open ground between them
+				const real cluster = Smoothstep(-0.35f, 0.45f, GradientNoise2(x / 700.0f, z / 700.0f, seed + 5));
+				const real density = strength * (0.25f + 0.95f * cluster);
+				real lift = 0.0f;
+				real maxLift = 0.0f;
+				for (i32 j = -1; j <= 1; ++j)
+				{
+					for (i32 i = -1; i <= 1; ++i)
+					{
+						const u32 h = HashCoords(cellX + i, cellZ + j, seed);
+						const real threshold = 0.25f + HashToUnit(h) * 0.7f;
+						const real grow = Smoothstep(threshold, threshold + 0.15f, density);
+						if (grow <= 0.0f)
+						{
+							continue;
+						}
+						const u32 h2 = HashU32(h ^ 0x2c1b3c6du);
+						const u32 h3 = HashU32(h2 ^ 0x297a2d39u);
+						const real centerX = (real)(cellX + i) + 0.5f + (HashToUnit(h2) - 0.5f) * 0.6f;
+						const real centerZ = (real)(cellZ + j) + 0.5f + (HashToUnit(h3) - 0.5f) * 0.6f;
+						const real size = HashToUnit(HashU32(h3 + 17));
+						const real radius = 0.1f + 0.3f * size * size;
+						const real tall = HashToUnit(HashU32(h3 + 29));
+						const real spireHeight = height * (0.3f + 1.0f * tall * tall + 0.4f * size) * grow;
+						maxLift = Max(maxLift, spireHeight);
+						const real dx = qx - centerX;
+						const real dz = qz - centerZ;
+						const real d2 = dx * dx + dz * dz;
+						if (d2 >= radius * radius)
+						{
+							continue;
+						}
+						const real d = std::sqrt(d2) / radius;
+						// Sheer sides & a slightly domed top
+						const real profile = 1.0f - Smoothstep(0.8f, 1.0f, d);
+						lift = Max(lift, spireHeight * profile * (1.0f - 0.1f * d * d));
+					}
+				}
+				outMaxLift = maxLift;
+				return lift;
+			}
+
+			void TerrainDensity::ApplyFjords(real x, real z, ColumnSample& column) const
+			{
+				// Long, winding channels along the zero crossings of warped noise: a U shaped (glacial) valley with a flat
+				// floor well below sea level & sheer walls
+				const u32 seed = DeriveSeed(m_Seed, SEED_FJORDS);
+				const real inv = 1.0f / 5500.0f;
+				const real px = x * inv;
+				const real pz = z * inv;
+				const real wx = 0.45f * Fbm2(px * 1.6f, pz * 1.6f, 3, seed + 1);
+				const real wz = 0.45f * Fbm2(px * 1.6f + 6.1f, pz * 1.6f + 2.9f, 3, seed + 2);
+				const real channel = Abs(Fbm2(px + wx, pz + wz, 3, seed));
+				const real carve = 1.0f - Smoothstep(0.02f, 0.11f, channel);
+				if (carve <= 0.0f)
+				{
+					return;
+				}
+				const real k = carve * Smoothstep(0.0f, 0.6f, column.fjordStrength);
+				const real seaLevel = m_Params.seaLevel;
+				const real floorHeight = seaLevel - 55.0f + 12.0f * GradientNoise2(x * 0.004f, z * 0.004f, seed + 3);
+				// Walls steepen towards the bottom (cliffs plunging into the water)
+				const real wall = k * k * (2.0f - k);
+				real height = Lerp(column.height, floorHeight, wall);
+				// The sea fills the channel where k > 0.45: low ground beside it (near the edges of fjord biomes) is raised
+				// above sea level so the water is always contained
+				const real lip = Smoothstep(0.05f, 0.3f, k) * (1.0f - Smoothstep(0.5f, 0.62f, k));
+				height = Lerp(height, Max(height, seaLevel + 1.5f), lip);
+				column.height = height;
+
+				column.lakeID = OCEAN_ID;
+				column.waterLevel = seaLevel;
+				column.lakeT = Clamp(1.0f + (0.45f - k) * 4.0f, -1.0f, 2.0f);
+
+				const real keep = 1.0f - Smoothstep(0.2f, 0.5f, k);
+				column.caveStrength *= keep;
+				column.cavernStrength *= keep;
+				column.archStrength *= keep;
+				column.lakeStrength *= keep;
+			}
+
+		// [0, 1] profile of one row of dunes, t in units of the dune spacing (along the wind): a long, gentle windward
+		// slope up to a sharp crest, then a short, steep slip face (& continuous where t wraps)
+		static inline real DuneProfile(real t)
+		{
+			const real u = t - (real)FastFloor(t);
+			const real crest = 0.78f;
+			if (u < crest)
+			{
+				const real a = u / crest;
+				return a * a * (1.6f - 0.6f * a);
+			}
+			const real b = (u - crest) / (1.0f - crest);
+			return 1.0f - b * b * (3.0f - 2.0f * b);
 		}
 
 		real TerrainDensity::BiomeHeight(u32 biomeIndex, real x, real z) const
 		{
 			const BiomeParams& biome = m_Params.biomes[biomeIndex];
 			const real invWavelength = 1.0f / biome.wavelength;
-			const real px = x * invWavelength;
-			const real pz = z * invWavelength;
+			real px = x * invWavelength;
+			real pz = z * invWavelength;
 			const u32 seed = DeriveSeed(m_Seed, SEED_BIOME_BASE + biomeIndex * 16);
 			const u32 octaves = m_BiomeOctaves[biomeIndex];
 
-			real h = 0.0f;
-			if (biome.ridgedness < 1.0f)
+			real height;
+			if (biome.duneStrength >= 1.0f)
 			{
-				h += (1.0f - biome.ridgedness) * ErodedFbm2(px, pz, octaves, seed, 0.47f);
+				height = biome.baseHeight;
 			}
-			if (biome.ridgedness > 0.0f)
+			else
 			{
-				// Shift ridged noise so its mean sits around zero
-				h += biome.ridgedness * (Ridged2(px, pz, octaves, seed + 100) * 2.0f - 0.7f) * (0.75f + 0.25f * ErodedFbm2(px * 0.5f, pz * 0.5f, 4, seed + 200));
+				real h = 0.0f;
+				if (biome.ridgedness < 1.0f)
+				{
+					h += (1.0f - biome.ridgedness) * ErodedFbm2(px, pz, octaves, seed, biome.roughness);
+				}
+				if (biome.ridgedness > 0.0f)
+				{
+					// Warping very ridged terrain bends its ridges into curving, branching arêtes
+					real rx = px;
+					real rz = pz;
+					if (biome.ridgedness > 0.5f)
+					{
+						const real warp = (biome.ridgedness - 0.5f) * 0.9f;
+						rx += warp * Fbm2(px * 0.6f, pz * 0.6f, 2, seed + 300);
+						rz += warp * Fbm2(px * 0.6f + 7.7f, pz * 0.6f + 3.1f, 2, seed + 301);
+					}
+					// Shift ridged noise so its mean sits around zero
+					h += biome.ridgedness * (Ridged2(rx, rz, octaves, seed + 100) * 2.0f - 0.7f) * (0.75f + 0.25f * ErodedFbm2(px * 0.5f, pz * 0.5f, 4, seed + 200));
+				}
+				height = biome.baseHeight + biome.heightAmplitude * h;
 			}
 
-			real height = biome.baseHeight + biome.heightAmplitude * h;
+			if (biome.duneStrength > 0.0f)
+			{
+				// Rows of dunes across a slowly turning wind, their crests meandering & varying in height, crossed
+				// by a smaller second set (so crests meet & branch), over long, low swells
+				const u32 duneSeed = seed + 400;
+				const real windAngle = 0.7f + 0.8f * Fbm2(x / 12000.0f, z / 12000.0f, 2, duneSeed);
+				const real c = std::cos(windAngle);
+				const real s = std::sin(windAngle);
+				const real along = (x * c + z * s) * invWavelength;
+				const real across = (z * c - x * s) * invWavelength;
+				// Crests meander & their spacing varies, so neighbouring crests merge & split
+				const real meander = 0.9f * Fbm2(across * 0.45f, along * 0.15f, 3, duneSeed + 1) + 0.6f * Fbm2(px * 0.1f, pz * 0.1f, 2, duneSeed + 6);
+				// Crests dip & break up in places (into crescent shaped segments)
+				const real crestHeight = Smoothstep(-0.7f, 0.5f, Fbm2(across * 0.6f, along * 0.25f, 2, duneSeed + 2));
+				const real primary = DuneProfile(along + meander) * crestHeight;
+				const real c2 = std::cos(windAngle + 1.1f);
+				const real s2 = std::sin(windAngle + 1.1f);
+				const real along2 = (x * c2 + z * s2) * invWavelength * 1.7f;
+				// The crossing set only shows in patches
+				const real crossing = Smoothstep(0.0f, 0.5f, GradientNoise2(px * 0.15f, pz * 0.15f, duneSeed + 7));
+				const real secondary = crossing * DuneProfile(along2 + 0.8f * Fbm2(along2 * 0.2f, across * 0.5f, 2, duneSeed + 3));
+				const real swells = Fbm2(px * 0.12f, pz * 0.12f, 3, duneSeed + 4);
+				const real size = 0.6f + 0.4f * Fbm2(px * 0.08f + 3.3f, pz * 0.08f, 2, duneSeed + 5);
+				const real dunes = biome.heightAmplitude * (size * (primary + 0.35f * secondary) + 0.9f * swells);
+				height = Lerp(height, biome.baseHeight + dunes, biome.duneStrength);
+			}
+
+			if (biome.canyonStrength > 0.0f)
+			{
+				// Winding canyons along the zero crossings of warped noise: a flat floor, steep walls (stepped by the
+				// terraces below) & smaller side canyons joining them
+				const u32 canyonSeed = seed + 500;
+				const real cx = px * 0.33f;
+				const real cz = pz * 0.33f;
+				const real wx = 0.4f * Fbm2(cx * 1.7f, cz * 1.7f, 2, canyonSeed + 1);
+				const real wz = 0.4f * Fbm2(cx * 1.7f + 5.1f, cz * 1.7f + 2.3f, 2, canyonSeed + 2);
+				const real main = Abs(Fbm2(cx + wx, cz + wz, 3, canyonSeed));
+				const real side = Abs(Fbm2(cx * 2.6f + wz, cz * 2.6f + wx, 3, canyonSeed + 3));
+				const real carveMain = 1.0f - Smoothstep(0.05f, 0.2f, main);
+				// Side canyons are shallower & only exist near the main ones
+				const real carveSide = (1.0f - Smoothstep(0.03f, 0.1f, side)) * 0.6f * (1.0f - Smoothstep(0.15f, 0.45f, main));
+				const real carve = Max(carveMain, carveSide);
+				height -= biome.canyonStrength * biome.canyonDepth * carve;
+			}
 
 			if (biome.terraceStrength > 0.0f)
 			{
@@ -1119,14 +1426,20 @@ namespace flex
 					}
 					else
 					{
-						const real temperature = Temperature(((real)cx + 0.5f) * cellSize, ((real)cy + 0.5f) * cellSize);
+						const real centerX = ((real)cx + 0.5f) * cellSize;
+						const real centerZ = ((real)cy + 0.5f) * cellSize;
+						const real temperature = Temperature(centerX, centerZ);
+						const real coast = m_bAnyCoastalBiomes ? Coastalness(centerX, centerZ) : 0.0f;
 						real biomeWeights[MAX_BIOME_COUNT];
 						real totalWeight = 0.0f;
 						for (i32 b = 0; b < biomeCount; ++b)
 						{
-							const real t = (temperature - m_Params.biomes[b].temperature) / BIOME_TEMPERATURE_RANGE;
+							const BiomeParams& biome = m_Params.biomes[b];
+							const real t = (temperature - biome.temperature) / BIOME_TEMPERATURE_RANGE;
 							// Small floor so every biome can still (rarely) appear anywhere
-							biomeWeights[b] = m_Params.biomes[b].frequency * (std::exp(-t * t) + 0.01f);
+							biomeWeights[b] = biome.frequency * (std::exp(-t * t) + 0.01f);
+							// Coastal biomes are much more likely along coasts (& rare inland)
+							biomeWeights[b] *= Lerp(1.0f, 0.1f + 3.0f * coast, biome.coastal);
 							totalWeight += biomeWeights[b];
 						}
 
@@ -1162,6 +1475,7 @@ namespace flex
 			}
 
 			ColumnSample result = {};
+			real spireHeight = 0.0f;
 			result.primaryBiome = 0;
 			result.secondaryBiome = -1;
 			real totalWeight = 0.0f;
@@ -1182,6 +1496,10 @@ namespace flex
 				result.archStrength += w * biome.archStrength;
 				result.caveStrength += w * biome.caveStrength;
 				result.lakeStrength += w * biome.lakeStrength;
+				result.fjordStrength += w * biome.fjordStrength;
+				result.spireStrength += w * biome.spireStrength;
+				spireHeight += w * biome.spireHeight;
+				result.sandyShores += w * biome.sandyShores;
 				result.grassiness += w * biome.grassiness;
 				result.temperature += w * biome.temperature;
 				result.groundColour.x += w * biome.groundColour.x;
@@ -1218,6 +1536,10 @@ namespace flex
 			result.archStrength *= invTotalWeight;
 			result.caveStrength *= invTotalWeight;
 			result.lakeStrength *= invTotalWeight;
+			result.fjordStrength *= invTotalWeight;
+			result.spireStrength *= invTotalWeight;
+			spireHeight *= invTotalWeight;
+			result.sandyShores *= invTotalWeight;
 			result.grassiness *= invTotalWeight;
 			result.temperature *= invTotalWeight;
 			result.groundColour *= invTotalWeight;
@@ -1229,6 +1551,15 @@ namespace flex
 
 			const real invContinentWavelength = 1.0f / m_Params.continentWavelength;
 			result.height += m_Params.continentAmplitude * Fbm2(x * invContinentWavelength, z * invContinentWavelength, 3, DeriveSeed(m_Seed, SEED_CONTINENT));
+
+			// Spires rise from the blended ground (so across biome borders they only shrink)
+			real maxSpireLift = 0.0f;
+			if (result.spireStrength > 0.01f)
+			{
+				result.height += SpireLift(x, z, result.spireStrength, spireHeight, maxSpireLift);
+				// Lakes would be cut by spires
+				result.lakeStrength *= 1.0f - Smoothstep(0.01f, 0.3f, result.spireStrength);
+			}
 
 			real massifWeight;
 			const real massifHeight = MassifHeight(x, z, massifWeight);
@@ -1253,6 +1584,11 @@ namespace flex
 			result.lakeT = 2.0f;
 			result.archRadius = 0.0f;
 
+			if (result.fjordStrength > 0.01f)
+			{
+				ApplyFjords(x, z, result);
+			}
+
 			if (result.caveStrength > 0.01f)
 			{
 				result.caveEntrance = Smoothstep(0.35f, 0.6f, GradientNoise2(x * 0.004f, z * 0.004f, DeriveSeed(m_Seed, SEED_CAVE_ENTRANCE)));
@@ -1269,6 +1605,8 @@ namespace flex
 			ApplyOcean(x, z, result);
 
 			result.baseHeight = result.height;
+			// (Spires only ever raise the ground, so the highest one nearby bounds it)
+			result.featureTop = result.height + maxSpireLift;
 
 			return result;
 		}
@@ -1290,17 +1628,20 @@ namespace flex
 				real minRim = 1e30f;
 				real maxRim = -1e30f;
 				const i32 rimSampleCount = 8;
+				// Not beside the sea in a fjord
+				bool bNearSea = center.lakeID == OCEAN_ID && center.lakeT < 1.9f;
 				for (i32 i = 0; i < rimSampleCount; ++i)
 				{
 					const real angle = (real)i / (real)rimSampleCount * 6.28318531f;
-					const real rimHeight = SampleBaseColumn(centerX + std::cos(angle) * radius * 1.25f, centerZ + std::sin(angle) * radius * 1.25f).height;
-					minRim = Min(minRim, rimHeight);
-					maxRim = Max(maxRim, rimHeight);
+					const ColumnSample rim = SampleBaseColumn(centerX + std::cos(angle) * radius * 1.25f, centerZ + std::sin(angle) * radius * 1.25f);
+					minRim = Min(minRim, rim.height);
+					maxRim = Max(maxRim, rim.height);
+					bNearSea = bNearSea || (rim.lakeID == OCEAN_ID && rim.lakeT < 1.9f);
 				}
 
 				const real relief = Max(maxRim, center.height) - Min(minRim, center.height);
 				info.level = minRim - 2.5f;
-				info.bValid = relief < m_Params.lakeMaxRelief && (center.height - info.level) < m_Params.lakeMaxRelief * 0.6f;
+				info.bValid = !bNearSea && relief < m_Params.lakeMaxRelief && (center.height - info.level) < m_Params.lakeMaxRelief * 0.6f;
 
 				// Lakes (including their surrounding blend region) mustn't overlap the ocean's surface
 				for (i32 i = 0; i < rimSampleCount && info.bValid; ++i)
@@ -1666,6 +2007,12 @@ namespace flex
 			return Sample(pos, SampleColumn(pos.x, pos.z), edits);
 		}
 
+		// Height above the water level that beaches reach: sea shores get wider beaches than lakes, muddy shores are narrow
+		static real ShoreHeight(const ColumnSample& column)
+		{
+			return (column.lakeID == OCEAN_ID ? 7.0f : 3.0f) * Lerp(0.45f, 1.0f, column.sandyShores);
+		}
+
 		static SurfaceAttributes MaterialSurface(Material material, const ColumnSample& column)
 		{
 			const MaterialInfo& info = s_Materials[(u32)material];
@@ -1756,19 +2103,25 @@ namespace flex
 
 			SurfaceAttributes surface = MixSurface(cliff, ground, flatness);
 
-			// Beaches & lake beds
+			// Beaches & lake beds: sand, or (where shores aren't sandy) narrower muddy, pebbly banks
 			if (column.lakeID != 0)
 			{
 				const real above = pos.y - column.waterLevel;
-				// Sea shores get wider beaches than lakes
-				const real beachHeight = column.lakeID == OCEAN_ID ? 7.0f : 3.0f;
+				const real beachHeight = ShoreHeight(column);
 				const real beach = (1.0f - Smoothstep(beachHeight * 0.4f, beachHeight, above + variation * 0.8f)) * Smoothstep(0.4f, 0.7f, normal.y);
 				if (beach > 0.0f)
 				{
-					SurfaceAttributes sand = MaterialSurface(Material::SAND, column);
+					SurfaceAttributes shore = MaterialSurface(Material::SAND, column);
+					if (column.sandyShores < 1.0f)
+					{
+						SurfaceAttributes mud;
+						mud.colour = glm::vec4(0.25f, 0.22f, 0.16f, 0.0f);
+						mud.weights = glm::vec4(0.25f, 0.0f, 0.75f, 0.0f);
+						shore = MixSurface(mud, shore, column.sandyShores);
+					}
 					const real wet = 1.0f - Smoothstep(-0.5f, 0.6f, above);
-					sand.colour = glm::mix(sand.colour, glm::vec4(0.40f, 0.36f, 0.28f, 0.0f), wet * 0.7f);
-					surface = MixSurface(surface, sand, beach);
+					shore.colour = glm::mix(shore.colour, glm::vec4(0.40f, 0.36f, 0.28f, 0.0f) * Lerp(0.6f, 1.0f, column.sandyShores), wet * 0.7f);
+					surface = MixSurface(surface, shore, beach);
 				}
 			}
 
@@ -2017,7 +2370,10 @@ namespace flex
 			LEAFY, // Light green clumps
 			LOW_SHRUB, // Low, wide mats (heather, dwarf birch, juniper)
 			SCRUB, // Dry, grey-olive tufts
-		};
+			REEDS, // Tall thin stems (& the odd bulrush head) along muddy shores
+			MUSHROOMS, // Clusters of small, brightly capped mushrooms
+			CRYSTALS, // Clusters of pointed crystals
+			};
 
 		struct VegetationInfo
 		{
@@ -2058,7 +2414,16 @@ namespace flex
 			{ 0.04f, 0.0f, -2.0f, PlantSpecies::SAGUARO, PlantSpecies::NONE, 0.0f, 1.0f, 0.05f, BushKind::SCRUB, glm::vec3(0.38f, 0.36f, 0.24f), glm::vec3(0.0f), 0.0f },
 			// VOLCANIC (charred remains of a burnt forest, more of them where the forest was)
 			{ 0.006f, 0.03f, 0.0f, PlantSpecies::CHARRED, PlantSpecies::NONE, 0.0f, 1.0f, 0.03f, BushKind::SCRUB, glm::vec3(0.17f, 0.16f, 0.13f), glm::vec3(0.0f), 0.0f },
-		};
+			// JUNGLE (flowers as the berries)
+			{ 0.22f, 0.5f, 0.0f, PlantSpecies::KAPOK, PlantSpecies::PALM, 0.12f, 1.0f, 0.3f, BushKind::LEAFY, glm::vec3(0.09f, 0.24f, 0.06f), glm::vec3(0.85f, 0.22f, 0.12f), 0.3f },
+			// MUSHROOM
+			{ 0.02f, 0.13f, 0.0f, PlantSpecies::GIANT_MUSHROOM, PlantSpecies::NONE, 0.0f, 1.0f, 0.2f, BushKind::MUSHROOMS, glm::vec3(0.86f, 0.82f, 0.72f), glm::vec3(0.0f), 0.0f },
+			// CRYSTAL
+			{ 0.0f, 0.0f, 0.0f, PlantSpecies::NONE, PlantSpecies::NONE, 0.0f, 1.0f, 0.1f, BushKind::CRYSTALS, glm::vec3(0.70f, 0.56f, 0.92f), glm::vec3(0.0f), 0.0f },
+			};
+			// Shores override the biome's undergrowth: sparse grass on sandy beaches, reed beds along muddy banks
+			static const VegetationInfo s_BeachGrass = { 0.0f, 0.0f, 0.0f, PlantSpecies::NONE, PlantSpecies::NONE, 0.0f, 1.0f, 0.06f, BushKind::SCRUB, glm::vec3(0.55f, 0.52f, 0.33f), glm::vec3(0.0f), 0.0f };
+			static const VegetationInfo s_Reeds = { 0.0f, 0.0f, 0.0f, PlantSpecies::NONE, PlantSpecies::NONE, 0.0f, 1.0f, 0.35f, BushKind::REEDS, glm::vec3(0.34f, 0.38f, 0.17f), glm::vec3(0.24f, 0.15f, 0.08f), 0.5f };
 		static_assert(ARRAY_LENGTH(s_VegetationInfos) == (u32)Vegetation::_COUNT, "s_VegetationInfos must match Vegetation enum");
 
 		static PlantKind SpeciesKind(PlantSpecies species)
@@ -2072,6 +2437,9 @@ namespace flex
 			case PlantSpecies::OAK:
 			case PlantSpecies::WILLOW:
 			case PlantSpecies::ACACIA:
+			case PlantSpecies::KAPOK:
+			case PlantSpecies::PALM:
+			case PlantSpecies::GIANT_MUSHROOM:
 				return PlantKind::DECIDUOUS;
 			case PlantSpecies::SAGUARO:
 				return PlantKind::CACTUS;
@@ -2154,7 +2522,7 @@ namespace flex
 			}
 
 			// Towards the tree line only conifers grow
-			if (SpeciesKind(species) == PlantKind::DECIDUOUS)
+			if (SpeciesKind(species) == PlantKind::DECIDUOUS && species != PlantSpecies::GIANT_MUSHROOM)
 			{
 				const real alpine = Smoothstep(column.peakHeight - 600.0f, column.peakHeight - 250.0f, column.height);
 				if (HashToUnit(HashU32(hash + 78)) < alpine)
@@ -2207,6 +2575,21 @@ namespace flex
 				plant.height = (3.0f + 3.5f * s) * scale;
 				plant.trunkHeight = plant.height;
 				plant.trunkRadius = (0.28f + 0.1f * s) * radiusScale;
+				break;
+			case PlantSpecies::KAPOK:
+				plant.height = (17.0f + 15.0f * s) * scale;
+				plant.trunkHeight = plant.height * 0.75f - 0.3f;
+				plant.trunkRadius = (0.4f + 0.25f * s) * radiusScale;
+				break;
+			case PlantSpecies::PALM:
+				plant.height = (8.0f + 7.0f * s) * scale;
+				plant.trunkHeight = plant.height * 0.9f - 0.3f;
+				plant.trunkRadius = (0.2f + 0.08f * s) * radiusScale;
+				break;
+			case PlantSpecies::GIANT_MUSHROOM:
+				plant.height = (5.0f + 9.0f * s) * scale;
+				plant.trunkHeight = plant.height * 0.85f - 0.3f;
+				plant.trunkRadius = (0.35f + 0.3f * s) * radiusScale;
 				break;
 			case PlantSpecies::CHARRED:
 				// The smallest third are stumps, the rest snags whose tops have burnt & broken off
@@ -2265,6 +2648,17 @@ namespace flex
 			return true;
 		}
 
+		// [0, 1] how much ground at height y is on (or just above) a sandy beach, where trees don't grow
+		static real BeachAmount(const ColumnSample& column, real y)
+		{
+			if (column.lakeID == 0 || column.sandyShores <= 0.25f)
+			{
+				return 0.0f;
+			}
+			const real beachHeight = ShoreHeight(column);
+			return (1.0f - Smoothstep(beachHeight, beachHeight + 3.0f, y - column.waterLevel)) * Smoothstep(0.25f, 0.5f, column.sandyShores);
+		}
+
 		// Calls func(const PlantInfo&) for each plant whose base lies within the given box. Levels >= 2 skip small plants.
 		template<typename Func>
 		static void ForEachPlant(const TerrainDensity& density, const EditList& edits, const glm::vec3& boxMin, const glm::vec3& boxMax, i32 level, Func func)
@@ -2296,7 +2690,19 @@ namespace flex
 
 					const ColumnSample column = density.SampleColumn(x, z);
 					real scale;
-					const PlantSpecies species = ChoosePlantSpecies(density.Params(), column, x, z, h, forestSeed, scale);
+					PlantSpecies species = ChoosePlantSpecies(density.Params(), column, x, z, h, forestSeed, scale);
+					// Palms lean over warm, sandy shores
+					bool bShorePalm = false;
+					if (column.lakeID != 0 && column.lakeT < 1.9f && column.temperature > 0.3f && column.sandyShores > 0.5f)
+					{
+						const real palmChance = 0.1f * Smoothstep(0.3f, 0.6f, column.temperature) * Smoothstep(0.5f, 0.8f, column.sandyShores);
+						if (HashToUnit(HashU32(h + 90)) < palmChance)
+						{
+							species = PlantSpecies::PALM;
+							scale = 1.0f;
+							bShorePalm = true;
+						}
+					}
 					if (species == PlantSpecies::NONE || IsPlantRemoved(edits, x, z))
 					{
 						continue;
@@ -2304,6 +2710,13 @@ namespace flex
 
 					glm::vec3 base;
 					if (!FindPlantGround(density, edits, column, x, z, boxMin, boxMax, base))
+					{
+						continue;
+					}
+
+					// No trees on beaches (dithered just above them), only palms at the back of them
+					const real beach = BeachAmount(column, base.y);
+					if (bShorePalm ? beach < 0.2f || base.y < column.waterLevel + 1.0f : beach > HashToUnit(HashU32(h + 91)))
 					{
 						continue;
 					}
@@ -2365,7 +2778,8 @@ namespace flex
 					// More undergrowth in & around forests
 					const real forest = info.forestTreeChance > 0.0f ? ForestAmount(x, z, forestSeed) : 0.5f;
 					const real bushChance = Min(info.bushChance * biome.bushDensity * (0.5f + forest) * GrassFactor(info.grassResponse, column.grassiness), MAX_BUSH_CHANCE);
-					if (chance >= bushChance)
+					const bool bShore = column.lakeID != 0 && column.lakeT < 1.7f;
+					if (chance >= (bShore ? Max(bushChance, s_Reeds.bushChance) : bushChance))
 					{
 						continue;
 					}
@@ -2377,6 +2791,22 @@ namespace flex
 					}
 					bush.hash = h;
 					bush.vegetation = &info;
+					if (bShore)
+					{
+						// Shores have their own undergrowth
+						if (BeachAmount(column, bush.base.y) > 0.5f)
+						{
+							bush.vegetation = &s_BeachGrass;
+						}
+						else if (column.sandyShores < 0.5f && column.temperature > -0.6f && bush.base.y < column.waterLevel + ShoreHeight(column) + 0.8f)
+						{
+							bush.vegetation = &s_Reeds;
+						}
+						if (chance >= (bush.vegetation == &info ? bushChance : bush.vegetation->bushChance))
+						{
+							continue;
+						}
+					}
 					func(bush);
 				}
 			}
@@ -2708,6 +3138,103 @@ namespace flex
 						}
 					}
 				} break;
+				case PlantSpecies::KAPOK:
+				{
+					// A rainforest emergent: pale buttressed trunk, a wide, layered umbrella of deep green high above
+					const glm::vec3 leaves = glm::vec3(0.07f, 0.19f, 0.05f) * (1.0f + variation * 0.35f);
+					const glm::vec3 kapokBark = glm::vec3(0.52f, 0.48f, 0.40f) * (1.0f + variation * 0.15f);
+					m_Target = &m_Trunks;
+					const real flare = Min(trunkLength * 0.15f, 3.0f);
+					AddFrustum(base, flare, trunkRadius * 2.4f, trunkRadius, trunkSides, angle, kapokBark * 0.9f, barkWeights, false);
+					AddFrustum(base + glm::vec3(0.0f, flare, 0.0f), trunkLength - flare, trunkRadius, trunkRadius * 0.6f, trunkSides, angle, kapokBark, barkWeights, false);
+					m_Target = &m_Foliage;
+					const real canopy = height * 0.3f;
+					AddBlob(base + glm::vec3(0.0f, height * 0.88f, 0.0f), glm::vec3(canopy, canopy * 0.32f, canopy), hash, leaves, leafWeights, bDetailed);
+					if (bDetailed)
+					{
+						for (u32 i = 0; i < 3; ++i)
+						{
+							const real a = angle + TWO_PI * (real)i / 3.0f;
+							const glm::vec3 offset(std::cos(a) * canopy * 0.75f, 0.0f, std::sin(a) * canopy * 0.75f);
+							AddBlob(base + glm::vec3(0.0f, height * (0.8f + 0.05f * (real)i), 0.0f) + offset, glm::vec3(canopy * 0.55f, canopy * 0.25f, canopy * 0.55f), hash + 1 + i, leaves * (1.0f + 0.1f * (real)i), leafWeights, false);
+						}
+						// A lower, smaller layer part way up the trunk
+						AddBlob(base + glm::vec3(0.0f, height * 0.55f, 0.0f), glm::vec3(canopy * 0.45f, canopy * 0.22f, canopy * 0.45f), hash + 5, leaves * 1.15f, leafWeights, false);
+					}
+				} break;
+				case PlantSpecies::PALM:
+				{
+					// A curving trunk leaning one way, topped by a crown of drooping fronds
+					const glm::vec3 fronds = glm::vec3(0.16f, 0.30f, 0.08f) * (1.0f + variation * 0.3f);
+					const glm::vec3 palmBark = glm::vec3(0.45f, 0.38f, 0.28f) * (1.0f + variation * 0.15f);
+					const glm::vec3 lean(std::cos(angle), 0.0f, std::sin(angle));
+					const real leanAmount = 0.12f + 0.2f * HashToUnit(HashU32(hash + 12));
+					m_Target = &m_Trunks;
+					const u32 segments = bDetailed ? 4 : 2;
+					glm::vec3 from = base;
+					for (u32 i = 0; i < segments; ++i)
+					{
+						const real t = (real)(i + 1) / (real)segments;
+						// Bending more towards the top
+						const glm::vec3 to = base + glm::vec3(0.0f, trunkLength * t, 0.0f) + lean * (trunkLength * leanAmount * t * t);
+						const real r0 = trunkRadius * (1.0f - 0.35f * (real)i / (real)segments);
+						AddLimb(from, to, r0, trunkRadius * (1.0f - 0.35f * t), trunkSides, palmBark, barkWeights);
+						from = to;
+					}
+					m_Target = &m_Foliage;
+					const glm::vec3 crown = from;
+					const u32 frondCount = bDetailed ? 8 : 5;
+					const real frondLength = height * 0.38f;
+					for (u32 i = 0; i < frondCount; ++i)
+					{
+						const real a = angle + TWO_PI * ((real)i + 0.4f * HashToUnit(HashU32(hash + 30 + i))) / (real)frondCount;
+						const glm::vec3 out(std::cos(a), 0.0f, std::sin(a));
+						const glm::vec3 mid = crown + out * (frondLength * 0.55f) + glm::vec3(0.0f, frondLength * 0.12f, 0.0f);
+						const glm::vec3 tip = crown + out * frondLength - glm::vec3(0.0f, frondLength * 0.35f, 0.0f);
+						AddLimb(crown, mid, 0.28f, 0.22f, 3, fronds, leafWeights);
+						AddLimb(mid, tip, 0.22f, 0.0f, 3, fronds * 0.9f, leafWeights);
+					}
+					if (bDetailed)
+					{
+						AddBlob(crown - glm::vec3(0.0f, 0.4f, 0.0f), glm::vec3(0.45f), hash + 3, glm::vec3(0.25f, 0.2f, 0.1f), barkWeights, false);
+					}
+				} break;
+				case PlantSpecies::GIANT_MUSHROOM:
+				{
+					// A pale stem under a wide cap in one of a few vivid colours, with a darker underside & paler spots
+					static const glm::vec3 capColours[] =
+					{
+						glm::vec3(0.18f, 0.62f, 0.60f), // Teal
+						glm::vec3(0.50f, 0.26f, 0.72f), // Violet
+						glm::vec3(0.78f, 0.24f, 0.52f), // Magenta
+						glm::vec3(0.82f, 0.42f, 0.14f), // Amber
+					};
+					const u32 colourIndex = HashU32(hash + 21) % ARRAY_LENGTH(capColours);
+					const glm::vec3 cap = capColours[colourIndex] * (1.0f + variation * 0.25f);
+					const glm::vec3 stem = glm::vec3(0.84f, 0.80f, 0.70f) * (1.0f + variation * 0.1f);
+					const glm::vec4 fleshWeights(0.0f, 0.0f, 0.4f, 1.0f);
+					m_Target = &m_Trunks;
+					AddFrustum(base, trunkLength, trunkRadius * 1.35f, trunkRadius * 0.85f, trunkSides, angle, stem, fleshWeights, false);
+					m_Target = &m_Foliage;
+					const real capRadius = height * (0.38f + 0.12f * HashToUnit(HashU32(hash + 22)));
+					const real capHeight = capRadius * 0.42f;
+					const glm::vec3 top = base + glm::vec3(0.0f, height - capHeight * 0.55f, 0.0f);
+					// Gills: an inverted cone from the stem out to the rim
+					AddFrustum(top - glm::vec3(0.0f, capHeight * 0.35f, 0.0f), capHeight * 0.35f, trunkRadius * 0.85f, capRadius * 0.95f, bDetailed ? 10 : 6, angle, cap * 0.45f + stem * 0.25f, fleshWeights, false);
+					AddBlob(top, glm::vec3(capRadius, capHeight, capRadius), hash, cap, fleshWeights, bDetailed);
+					if (bDetailed)
+					{
+						const u32 spots = 5 + HashU32(hash + 23) % 4;
+						for (u32 i = 0; i < spots; ++i)
+						{
+							const real a = TWO_PI * HashToUnit(HashU32(hash + 100 + i));
+							const real r = capRadius * (0.15f + 0.6f * HashToUnit(HashU32(hash + 110 + i)));
+							const real rr = r / capRadius;
+							const glm::vec3 spot = top + glm::vec3(std::cos(a) * r, capHeight * std::sqrt(Max(1.0f - rr * rr, 0.0f)) * 0.95f, std::sin(a) * r);
+							AddBlob(spot, glm::vec3(capRadius * 0.09f, capRadius * 0.04f, capRadius * 0.09f), hash + 120 + i, glm::vec3(0.92f, 0.90f, 0.84f), fleshWeights, false);
+						}
+					}
+				} break;
 				case PlantSpecies::CHARRED:
 				{
 					// Blackened bark, with paler (ashy, splintered) broken ends
@@ -2831,6 +3358,67 @@ namespace flex
 							const glm::vec3 spikeBase = base + glm::vec3(std::cos(a) * d, 0.0f, std::sin(a) * d);
 							AddFrustum(spikeBase, spikeHeight, 0.035f + 0.02f * size, 0.0f, 3, a, colour * 1.2f, leafWeights, false);
 						}
+					}
+				} break;
+				case BushKind::REEDS:
+				{
+					// A clump of tall, thin, slightly leaning stems, some with bulrush heads
+					const u32 stems = bDetailed ? 8 + HashU32(hash + 15) % 6 : 4;
+					const glm::vec3 lean(std::cos(angle) * 0.12f, 1.0f, std::sin(angle) * 0.12f);
+					for (u32 i = 0; i < stems; ++i)
+					{
+						const u32 stemHash = HashU32(hash + 40 + i);
+						const real a = TWO_PI * HashToUnit(stemHash);
+						const real d = (0.15f + 0.5f * HashToUnit(HashU32(stemHash + 1))) * (0.6f + size);
+						const real stemHeight = (1.1f + 1.3f * HashToUnit(HashU32(stemHash + 2))) * (0.7f + 0.5f * size);
+						const glm::vec3 from = base + glm::vec3(std::cos(a) * d, 0.0f, std::sin(a) * d);
+						const glm::vec3 to = from + lean * stemHeight;
+						const glm::vec3 stemColour = glm::mix(colour, glm::vec3(0.52f, 0.46f, 0.28f), 0.4f * HashToUnit(HashU32(stemHash + 3)));
+						AddLimb(from, to, 0.035f, 0.0f, 3, stemColour, leafWeights);
+						if (bDetailed && HashToUnit(HashU32(stemHash + 4)) < info.berryFraction * 0.5f)
+						{
+							AddLimb(from + lean * (stemHeight * 0.72f), from + lean * (stemHeight * 0.86f), 0.07f, 0.06f, 4, info.berryColour, leafWeights);
+						}
+					}
+				} break;
+				case BushKind::MUSHROOMS:
+				{
+					// A few small mushrooms with vivid caps
+					static const glm::vec3 capColours[] =
+					{
+						glm::vec3(0.25f, 0.78f, 0.72f),
+						glm::vec3(0.58f, 0.32f, 0.85f),
+						glm::vec3(0.88f, 0.30f, 0.60f),
+						glm::vec3(0.92f, 0.58f, 0.20f),
+					};
+					const glm::vec4 fleshWeights(0.0f, 0.0f, 0.4f, 1.0f);
+					const glm::vec3 cap = capColours[HashU32(hash + 21) % ARRAY_LENGTH(capColours)] * (1.0f + variation * 0.25f);
+					const u32 count = bDetailed ? 2 + HashU32(hash + 15) % 4 : 1;
+					for (u32 i = 0; i < count; ++i)
+					{
+						const u32 h = HashU32(hash + 40 + i);
+						const real a = TWO_PI * HashToUnit(h);
+						const real d = i == 0 ? 0.0f : 0.25f + 0.45f * HashToUnit(HashU32(h + 1));
+						const real s = (0.3f + 0.9f * size) * (i == 0 ? 1.0f : 0.4f + 0.5f * HashToUnit(HashU32(h + 2)));
+						const glm::vec3 p = base + glm::vec3(std::cos(a) * d, 0.0f, std::sin(a) * d);
+						AddFrustum(p, s * 0.85f, s * 0.11f, s * 0.08f, bDetailed ? 5 : 4, a, colour, fleshWeights, false);
+						AddBlob(p + glm::vec3(0.0f, s * 0.85f, 0.0f), glm::vec3(s * 0.42f, s * 0.2f, s * 0.42f), h, cap, fleshWeights, false);
+					}
+				} break;
+				case BushKind::CRYSTALS:
+				{
+					// Pointed, glossy crystals splaying out from a common base
+					const glm::vec4 crystalWeights(0.0f, 0.1f, 0.0f, 1.0f);
+					const u32 count = bDetailed ? 3 + HashU32(hash + 15) % 4 : 2;
+					for (u32 i = 0; i < count; ++i)
+					{
+						const u32 h = HashU32(hash + 40 + i);
+						const real a = TWO_PI * HashToUnit(h);
+						const real tilt = i == 0 ? 0.15f : 0.35f + 0.6f * HashToUnit(HashU32(h + 1));
+						const glm::vec3 dir = glm::normalize(glm::vec3(std::cos(a) * tilt, 1.0f, std::sin(a) * tilt));
+						const real length = (0.5f + 1.6f * HashToUnit(HashU32(h + 2))) * (0.6f + size) * (i == 0 ? 1.4f : 1.0f);
+						const glm::vec3 crystalColour = glm::mix(colour, glm::vec3(0.55f, 0.82f, 0.92f), 0.6f * HashToUnit(HashU32(h + 3)));
+						AddLimb(base - dir * 0.3f, base + dir * length, length * 0.16f, 0.0f, bDetailed ? 6 : 4, crystalColour, crystalWeights);
 					}
 				} break;
 				}
@@ -4830,7 +5418,7 @@ namespace flex
 						const real pz = ((real)index.z + (real)z / (sampleCount - 1)) * size;
 						const ColumnSample column = m_Density->SampleColumn(px, pz);
 						minHeight = glm::min(minHeight, column.height);
-						maxHeight = glm::max(maxHeight, column.height);
+						maxHeight = glm::max(maxHeight, column.featureTop);
 						if (column.lakeID != 0)
 						{
 							maxHeight = glm::max(maxHeight, column.waterLevel);

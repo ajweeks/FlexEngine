@@ -9,6 +9,20 @@ IGNORE_WARNINGS_POP
 // Drivable raycast vehicle
 namespace flex
 {
+	// Streamed terrain only has collision near the player, so dynamic objects elsewhere (vehicles left behind, or
+	// anything loaded with a world before its terrain's collision is ready) would fall through it forever. Call this
+	// from FixedUpdate: it holds the body still (no gravity) while there's terrain below whose collision isn't loaded.
+	struct TerrainCollisionHold
+	{
+		bool bHeld = false;
+		sec secUntilCheck = 0.0f;
+		btVector3 gravity = btVector3(0.0f, -9.81f, 0.0f);
+
+		// Returns true while held
+		bool Update(btRigidBody* rb, real checkDistance);
+		void Release(btRigidBody* rb);
+	};
+
 	class Vehicle final : public GameObject
 	{
 	public:
@@ -26,6 +40,7 @@ namespace flex
 		virtual void PostInitialize() override;
 		virtual void Destroy(bool bDetachFromParent = true) override;
 		virtual void Update() override;
+		virtual void FixedUpdate() override;
 
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 
@@ -92,6 +107,13 @@ namespace flex
 		real m_SuspensionDamping = 2.3f;
 		real m_SuspensionCompression = 4.4f;
 		real m_SuspensionRestLength = 0.6f;
+		// Fraction of the pitching moment from the drive force (which acts at the contact patch, below the centre of
+		// mass) that is cancelled, like a real suspension's anti-squat geometry. Without it, powerful light vehicles wheelie.
+		real m_AntiSquat = 0.8f;
+		// The drive force fades out approaching this speed (m/s), there's no air resistance to limit it otherwise
+		real m_TopSpeed = 38.0f;
+		// Tire positions in the prefab (where the wheels sit at rest), the suspension's hard points are above them
+		glm::vec3 m_TireRestPositions[m_TireCount];
 
 		MaterialID m_GlassMatID = InvalidMaterialID;
 		MaterialID m_CarPaintMatID = InvalidMaterialID;
@@ -120,6 +142,8 @@ namespace flex
 		const sec SEC_UPSIDE_DOWN_BEFORE_FLIP = 2.0f;
 
 		bool m_bOccupied = false;
+
+		TerrainCollisionHold m_TerrainHold;
 
 		bool m_bFlippingRightSideUp = false;
 		sec m_SecFlipppingRightSideUp = 0.0f;
@@ -171,6 +195,13 @@ namespace flex
 		// Returns false if there's no water there.
 		static bool SampleWaterHeight(const glm::vec3& posWS, real& outHeight);
 
+		// Local space bounds of the hull (e.g. for placing a boat from the inventory, whose template has no mesh)
+		static void GetHullBounds(glm::vec3& outMin, glm::vec3& outMax);
+		// Height of an empty boat's origin above the water it floats on
+		static real GetFloatHeight();
+		// Placement preview: the hull's outline at the given transform
+		static void DrawPlacementOutline(const glm::vec3& posWS, const glm::quat& rotWS, const glm::vec4& colour);
+
 	private:
 		void CreateMeshes();
 		void UpdateOars();
@@ -192,6 +223,8 @@ namespace flex
 		real m_ForwardDrag = 45.0f;
 		real m_LateralDrag = 650.0f;
 		real m_AngularDrag = 220.0f;
+
+		TerrainCollisionHold m_TerrainHold;
 
 		bool m_bOccupied = false;
 	};

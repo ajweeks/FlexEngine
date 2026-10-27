@@ -23,16 +23,16 @@ namespace flex
 	namespace
 	{
 		// Hologram materials are shared by colour (the colour is a material constant)
-		MaterialID GetHologramMaterial(const glm::vec4& colour)
+		MaterialID GetHologramMaterial(const glm::vec4& colour, bool bXRay)
 		{
 			char name[96];
-			snprintf(name, sizeof(name), "Placement preview %.3f %.3f %.3f %.3f", colour.r, colour.g, colour.b, colour.a);
+			snprintf(name, sizeof(name), "Placement preview%s %.3f %.3f %.3f %.3f", bXRay ? " xray" : "", colour.r, colour.g, colour.b, colour.a);
 			MaterialID materialID = g_Renderer->GetMaterialID(name);
 			if (materialID == InvalidMaterialID)
 			{
 				MaterialCreateInfo createInfo = {};
 				createInfo.name = name;
-				createInfo.shaderName = "hologram";
+				createInfo.shaderName = bXRay ? "hologram_xray" : "hologram";
 				// Alpha is the preview's opacity
 				createInfo.constEmissive = colour;
 				createInfo.bSerializable = false;
@@ -193,7 +193,7 @@ namespace flex
 	void PlacementPreview::Rebuild(GameObject* object)
 	{
 		m_bMeshDirty = false;
-		const MaterialID materialID = GetHologramMaterial(m_Colour);
+		const MaterialID materialID = GetHologramMaterial(m_Colour, false);
 		Mesh* mesh = object->SetMesh(new Mesh(object));
 		if (m_Geometry.Empty() || materialID == InvalidMaterialID)
 		{
@@ -214,7 +214,15 @@ namespace flex
 			vertexData.texCoords_UV.push_back(glm::vec2(m_Geometry.positions[i].x + m_Geometry.positions[i].y, m_Geometry.positions[i].z));
 		}
 		vertexData.colours_R32G32B32A32.assign(vertexCount, VEC4_ONE);
-		MeshComponent::LoadFromMemory(mesh, vertexData, m_Geometry.indices, materialID);
+		RenderObjectCreateInfo renderInfo = {};
+		renderInfo.visibleInSceneExplorer = false;
+		MeshComponent::LoadFromMemory(mesh, vertexData, m_Geometry.indices, materialID, &renderInfo);
+		if (m_bXRay)
+		{
+			// The same triangles again, as dashes only where the depth test hides them (reversed-Z: farther is less)
+			renderInfo.depthTestReadFunc = DepthTestFunc::LESS;
+			MeshComponent::LoadFromMemory(mesh, vertexData, m_Geometry.indices, GetHologramMaterial(m_Colour, true), &renderInfo);
+		}
 		mesh->PostInitialize();
 	}
 

@@ -390,6 +390,7 @@ namespace flex
 				{ "solar panel", LOC_ID(Item_SolarPanel) },
 				{ "battery", LOC_ID(Item_Battery) },
 				{ "lamp", LOC_ID(Item_Lamp) },
+				{ "bed", LOC_ID(Item_Bed) },
 				{ "mineral deposit quartz", LOC_ID(Item_Quartz) },
 				{ "mineral deposit aluminum", LOC_ID(Item_Aluminum) },
 				{ "mineral deposit tin", LOC_ID(Item_Tin) },

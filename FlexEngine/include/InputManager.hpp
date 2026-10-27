@@ -58,6 +58,8 @@ namespace flex
 
 		bool GetActionBindingName(Action action, StringBuilder& outStrBuff) const;
 		const InputBinding& GetActionBinding(Action action) const { return m_InputBindings[(i32)action]; }
+		// Rebinds an action's key & mouse button (e.g. from the Controls screen). Other parts of the binding (gamepad, axes) are kept
+		void SetActionKeyAndMouse(Action action, KeyCode keyCode, MouseButton mouseButton) { m_InputBindings[(i32)action].keyCode = keyCode; m_InputBindings[(i32)action].mouseButton = mouseButton; }
 
 		void CursorPosCallback(double x, double y);
 		void MouseButtonCallback(MouseButton mouseButton, KeyAction keyAction, i32 mods);

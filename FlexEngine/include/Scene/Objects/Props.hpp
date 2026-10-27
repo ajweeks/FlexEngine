@@ -166,6 +166,26 @@ namespace flex
 		MaterialID captureMatID = 0;
 	};
 
+	// A placeable bed. Interacting at night sleeps until morning.
+	class Bed final : public GameObject
+	{
+	public:
+		Bed(const std::string& name, const GameObjectID& gameObjectID = InvalidGameObjectID, const PrefabIDPair& sourcePrefabID = InvalidPrefabIDPair, bool bIsPrefabTemplate = false);
+
+		static PropertyCollection* BuildTypeUniquePropertyCollection();
+
+		virtual void Initialize() override;
+
+		// Sleeps until morning if it's night, otherwise tells the player they aren't tired
+		void Sleep(Player* player);
+
+		// Time of day (see BaseScene) the player wakes up at
+		static constexpr real MORNING_TIME_OF_DAY = 0.78f;
+
+	private:
+		void CreateMeshes();
+	};
+
 	class Skybox final : public GameObject
 	{
 	public:

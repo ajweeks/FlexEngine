@@ -16,6 +16,7 @@ layout (location = 4) out vec4 ex_Weights;
 
 layout (binding = 0) uniform UBOConstant
 {
+	vec4 renderOrigin; // xyz: see Renderer::RenderOriginFor
 	mat4 view;
 	mat4 viewProjection;
 } uboConstant;
@@ -26,7 +27,9 @@ void main()
 	ex_NormalWS = in_Normal;
 	ex_Weights = in_ExtraVec4;
 
-    vec4 posWS = vec4(in_Position, 1.0);
+    // Vertices are in world space, everything else in render space (relative to renderOrigin, near the camera). The
+    // subtraction is exact since both are close (or the origin is zero).
+    vec4 posWS = vec4(in_Position - uboConstant.renderOrigin.xyz, 1.0);
     ex_PositionWS = posWS.xyz;
 	ex_Depth = (uboConstant.view * posWS).z;
     gl_Position = uboConstant.viewProjection * posWS;

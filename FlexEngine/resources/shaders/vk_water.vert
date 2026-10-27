@@ -37,6 +37,7 @@ struct OceanColours
 layout (binding = 0) uniform UBOConstant
 {
 	vec4 camPos;
+	vec4 renderOrigin; // xyz: see Renderer::RenderOriginFor
 	mat4 view;
 	mat4 projection;
 	DirectionalLight dirLight;
@@ -58,7 +59,9 @@ void main()
 		normalize(mat3(uboDynamic.model) * bitan), 
 		normalize(mat3(uboDynamic.model) * in_Normal));
 
+    // Vertices are in world space (only rotated & scaled by the model matrix), everything else in render space
     vec4 posWS = uboDynamic.model * vec4(in_Position, 0.0);
+    posWS.xyz -= uboConstant.renderOrigin.xyz;
     ex_PositionWS = posWS.xyz;
     gl_Position = (uboConstant.projection * uboConstant.view) * vec4(posWS.xyz, 1.0);
     ex_Colour = in_Colour;

@@ -15,6 +15,7 @@ IGNORE_WARNINGS_PUSH
 IGNORE_WARNINGS_POP
 
 #include "Scene/Objects/Industry.hpp"
+#include "Physics/RigidBody.hpp"
 #include "Editor.hpp"
 #include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
@@ -91,6 +92,16 @@ namespace flex
 		}
 
 		GameObject::Update();
+	}
+
+	void Battery::FixedUpdate()
+	{
+		GameObject::FixedUpdate();
+
+		if (m_RigidBody != nullptr && !m_RigidBody->IsStatic() && !m_RigidBody->IsKinematic())
+		{
+			terrainHold.Update(m_RigidBody->GetRigidBodyInternal(), 4.0f);
+		}
 	}
 
 	void Battery::OnCharge(real amount)

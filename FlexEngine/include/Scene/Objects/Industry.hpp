@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Scene/GameObject.hpp"
+#include "Scene/Objects/Vehicle.hpp" // For TerrainCollisionHold
 #include "Timer.hpp"
 
 // Power & mining objects: batteries, solar panels, head lamps, power poles, mineral deposits, miners, speakers & hand tools (pickaxes, axes & shovels)
@@ -15,6 +16,7 @@ namespace flex
 		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual void Update() override;
+		virtual void FixedUpdate() override;
 		virtual void OnCharge(real amount) override;
 
 		virtual GameObject* CopySelf(
@@ -28,6 +30,8 @@ namespace flex
 
 		real chargeAmount = 0.0f;
 		real chargeCapacity = 100.0f;
+
+		TerrainCollisionHold terrainHold;
 		real flashTimer = 0.0f;
 		static const real flashDuration;
 

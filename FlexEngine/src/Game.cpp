@@ -305,6 +305,7 @@ namespace flex
 		m_SettingsFile.RegisterProperty("terrain quality", &m_Settings.terrainQuality);
 		m_SettingsFile.RegisterProperty("show minimap", &m_Settings.bShowMinimap);
 		m_SettingsFile.RegisterProperty("language", &m_Settings.language);
+		m_SettingsFile.RegisterProperty("key bindings", &m_Settings.keyBindings);
 	}
 
 	Game::~Game()
@@ -317,6 +318,7 @@ namespace flex
 		{
 			m_SettingsFile.Serialize();
 		}
+		LoadBindings();
 
 		// Before the player controller, so the pause key opens the pause menu
 		g_InputManager->BindActionCallback(&m_ActionCallback, 30);
@@ -422,7 +424,13 @@ namespace flex
 		if (m_BuildTestStep == 0)
 		{
 			// The flattest spot nearby (above the sea) to build the hut on, so it can be seen from all sides
-			const glm::vec3 start = player->GetTransform()->GetWorldPosition();
+			glm::vec3 start = player->GetTransform()->GetWorldPosition();
+			// (FLEX_TEST_WORLD_POS=<x>,<z> builds there instead, e.g. far from the world origin)
+			real worldX, worldZ;
+			if (getenv("FLEX_TEST_WORLD_POS") != nullptr && sscanf(getenv("FLEX_TEST_WORLD_POS"), "%f,%f", &worldX, &worldZ) == 2)
+			{
+				start = glm::vec3(worldX, terrainGenerator->SampleColumn(worldX, worldZ).height, worldZ);
+			}
 			real bestBumpiness = FLT_MAX;
 			glm::vec3 base = start;
 			for (i32 i = 0; i < 160; ++i)
@@ -631,6 +639,10 @@ namespace flex
 				s_bControlsCaptured = true;
 				m_TourTime = 0.0f;
 			}
+			else if (s_bControlsCaptured && getenv("FLEX_UI_TEST") != nullptr && m_Screen == Screen::CONTROLS && TourRebindTest())
+			{
+				m_TourTime = 0.0f;
+			}
 			else if (s_bControlsCaptured && m_TourTime > 0.25f)
 			{
 				SetScreen(Screen::MAP);
@@ -644,7 +656,20 @@ namespace flex
 			real extent;
 			TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
 			const bool bMapReady = (terrainGenerator != nullptr && terrainGenerator->GetLargeMap(textureID, center, extent) && m_TourTime > 1.0f) || m_TourTime > 20.0f;
-			if (m_bMapFollowPlayer && !m_bTourMapCaptured && bMapReady)
+			if (m_bMapFollowPlayer && !m_bTourMapCaptured && bMapReady && getenv("FLEX_UI_TEST") != nullptr && !m_bTourWaypointsPlaced)
+			{
+				// Waypoints around the player, & the mouse over the first
+				m_bTourWaypointsPlaced = true;
+				const glm::vec3 pos = g_SceneManager->CurrentScene()->GetPlayer(0)->GetTransform()->GetWorldPosition();
+				ToggleWaypoint(glm::vec2(pos.x + 400.0f, pos.z), 1.0f);
+				ToggleWaypoint(glm::vec2(pos.x - 300.0f, pos.z + 500.0f), 1.0f);
+				ToggleWaypoint(glm::vec2(pos.x - 900.0f, pos.z - 700.0f), 1.0f);
+				const real mapSize = glm::min(m_UI.Width(), m_UI.Height()) * 0.78f;
+				const glm::vec2 mapCenter(m_UI.Width() * 0.5f, m_UI.Height() * 0.5f + 10.0f * m_UI.Scale());
+				{ const glm::vec2 mousePos = mapCenter + glm::vec2(400.0f / (2.0f * m_MapExtent) * mapSize, 0.0f); g_InputManager->CursorPosCallback(mousePos.x, mousePos.y); }
+				m_TourTime = 0.0f;
+			}
+			else if (m_bMapFollowPlayer && !m_bTourMapCaptured && bMapReady && (getenv("FLEX_UI_TEST") == nullptr || m_TourTime > 0.5f))
 			{
 				// The screenshot is of the frame rendered after this update, so the pan below waits until later
 				Screenshot("map");
@@ -806,6 +831,11 @@ namespace flex
 
 	EventReply Game::OnActionEvent(Action action, ActionEvent actionEvent)
 	{
+		if (m_Screen == Screen::CONTROLS && m_RebindIndex >= 0 && action == Action::PAUSE)
+		{
+			// Waiting for a key on the Controls screen: whatever pause is bound to is a candidate (Esc cancels, see DrawControls)
+			return EventReply::CONSUMED;
+		}
 		if (m_Screen == Screen::NONE || action != Action::PAUSE || actionEvent != ActionEvent::ACTION_TRIGGER)
 		{
 			return EventReply::UNCONSUMED;
@@ -841,6 +871,14 @@ namespace flex
 
 	void Game::LateUpdate()
 	{
+		if (m_bWorldLoaded && g_SceneManager->HasSceneLoaded())
+		{
+			if (Player* player = g_SceneManager->CurrentScene()->GetPlayer(0))
+			{
+				player->LateUpdateHints();
+			}
+		}
+
 		if (m_Screen == Screen::NONE || m_bWorldLoaded)
 		{
 			return;
@@ -967,6 +1005,11 @@ namespace flex
 			if (g_InputManager->GetKeyPressed(GameKeys::MAP) && player != nullptr && !player->IsAnyInventoryShowing())
 			{
 				SetScreen(Screen::MAP);
+			}
+			else if (g_InputManager->GetKeyPressed(GameKeys::WAYPOINT) && player != nullptr && !player->IsAnyInventoryShowing())
+			{
+				const glm::vec3 playerPos = player->GetTransform()->GetWorldPosition();
+				ToggleWaypoint(glm::vec2(playerPos.x, playerPos.z), 20.0f);
 			}
 		} break;
 		default:
@@ -1346,6 +1389,266 @@ namespace flex
 		}
 	}
 
+	namespace
+	{
+		// Something on the Controls screen that can be rebound: a GameKeys entry or an Action
+		struct BindRef
+		{
+			const GameKeys::Entry* entry = nullptr;
+			Action action = Action::_NONE;
+			Action mirrorAction = Action::_NONE; // Rebound together (the vehicle's controls follow walking)
+			i32 actionShareTag = 0;
+
+			bool IsValid() const { return entry != nullptr || action != Action::_NONE; }
+			bool AcceptsKey() const { return entry == nullptr || entry->key != nullptr; }
+			bool AcceptsMouse() const { return entry == nullptr || entry->mouse != nullptr; }
+			i32 Tag() const { return entry != nullptr ? entry->shareTag : actionShareTag; }
+			bool SameAs(const BindRef& other) const { return entry == other.entry && action == other.action; }
+			KeyCode GetKey() const
+			{
+				if (entry != nullptr)
+				{
+					return entry->key != nullptr ? entry->key->code : KeyCode::_NONE;
+				}
+				return g_InputManager->GetActionBinding(action).keyCode;
+			}
+			MouseButton GetMouse() const
+			{
+				if (entry != nullptr)
+				{
+					return entry->mouse != nullptr ? entry->mouse->button : MouseButton::_NONE;
+				}
+				return g_InputManager->GetActionBinding(action).mouseButton;
+			}
+			void Set(KeyCode key, MouseButton mouse) const
+			{
+				if (entry != nullptr)
+				{
+					if (entry->key != nullptr) entry->key->code = key;
+					if (entry->mouse != nullptr) entry->mouse->button = mouse;
+					return;
+				}
+				g_InputManager->SetActionKeyAndMouse(action, key, mouse);
+				if (mirrorAction != Action::_NONE)
+				{
+					g_InputManager->SetActionKeyAndMouse(mirrorAction, key, mouse);
+				}
+			}
+		};
+
+		// Actions the Controls screen can rebind (with the ones that follow them)
+		const Action REBINDABLE_ACTIONS[][2] =
+		{
+			{ Action::MOVE_FORWARD, Action::VEHICLE_ACCELERATE }, { Action::MOVE_LEFT, Action::VEHICLE_TURN_LEFT },
+			{ Action::MOVE_BACKWARD, Action::VEHICLE_REVERSE }, { Action::MOVE_RIGHT, Action::VEHICLE_TURN_RIGHT },
+			{ Action::PLACE_ITEM, Action::_NONE }, { Action::SHOW_INVENTORY, Action::_NONE },
+			{ Action::INTERACT_RIGHT_HAND, Action::_NONE }, { Action::PICKUP_ITEM, Action::_NONE },
+			{ Action::DROP_ITEM, Action::_NONE }, { Action::ENTER_TRACK_BUILD_MODE, Action::_NONE },
+			{ Action::PAUSE, Action::_NONE }, { Action::TAKE_SCREENSHOT, Action::_NONE },
+		};
+	} // anonymous namespace
+
+	// FLEX_UI_TEST=1: while the tour is on the Controls screen, rebinds some controls with injected key presses & checks the
+	// result (printing UITEST lines). Returns true while it still has steps to do.
+	bool Game::TourRebindTest()
+	{
+		static i32 stage = 0;
+		static real stageTime = 0.0f;
+		stageTime += g_UnpausedDeltaTime;
+		auto Wait = [&](real t) { return stageTime > t; };
+		// (Released a frame later, so it counts as pressed for a frame)
+		static KeyCode s_PendingRelease = KeyCode::_NONE;
+		static MouseButton s_PendingMouseRelease = MouseButton::_NONE;
+		if (s_PendingRelease != KeyCode::_NONE)
+		{
+			g_InputManager->KeyCallback(s_PendingRelease, KeyAction::KEY_RELEASE, 0);
+			s_PendingRelease = KeyCode::_NONE;
+		}
+		if (s_PendingMouseRelease != MouseButton::_NONE)
+		{
+			g_InputManager->MouseButtonCallback(s_PendingMouseRelease, KeyAction::KEY_RELEASE, 0);
+			s_PendingMouseRelease = MouseButton::_NONE;
+		}
+		auto Press = [&](KeyCode key) { g_InputManager->KeyCallback(key, KeyAction::KEY_PRESS, 0); s_PendingRelease = key; };
+		auto Advance = [&]() { ++stage; stageTime = 0.0f; };
+		auto Screenshot = [](const char* name)
+		{
+			const std::string directory = RelativePathToAbsolute(SCREENSHOT_DIRECTORY);
+			Platform::CreateDirectoryRecursive(directory);
+			g_Renderer->RequestScreenshot(directory + "tour_" + name + ".png");
+		};
+		switch (stage)
+		{
+		case 0: m_RebindIndex = 0; Advance(); break; // Move forward
+		case 1: if (Wait(0.5f)) { Screenshot("controls_rebind"); Advance(); } break;
+		case 2: if (Wait(0.3f)) { Press(KeyCode::KEY_J); Advance(); } break;
+		case 3:
+			if (Wait(0.3f))
+			{
+				Print("UITEST: move forward = %s (expect J), bindings \"%s\"\n", KeyCodeStrings[(i32)g_InputManager->GetActionBinding(Action::MOVE_FORWARD).keyCode], m_Settings.keyBindings.c_str());
+				m_RebindIndex = 5; // Sprint (Shift) -> A, which Move left has
+				Advance();
+			}
+			break;
+		case 4: if (Wait(0.3f)) { Press(KeyCode::KEY_A); Advance(); } break;
+		case 5:
+			if (Wait(0.3f))
+			{
+				Print("UITEST: sprint = %s (expect A), move left = %s (expect L Shift), message \"%s\"\n", KeyCodeStrings[(i32)GameKeys::SPRINT.code],
+					KeyCodeStrings[(i32)g_InputManager->GetActionBinding(Action::MOVE_LEFT).keyCode], m_RebindMessage.c_str());
+				Screenshot("controls_swapped");
+				m_RebindIndex = 5; // Mouse button on a key control: rejected
+				g_InputManager->MouseButtonCallback(MouseButton::MIDDLE, KeyAction::KEY_PRESS, 0);
+				s_PendingMouseRelease = MouseButton::MIDDLE;
+				Advance();
+			}
+			break;
+		case 6:
+			if (Wait(0.3f))
+			{
+				Print("UITEST: after a mouse button on sprint: still waiting = %d (expect 1), message \"%s\"\n", (i32)(m_RebindIndex >= 0), m_RebindMessage.c_str());
+				Press(KeyCode::KEY_ESCAPE);
+				Advance();
+			}
+			break;
+		case 7:
+			if (Wait(0.3f))
+			{
+				Print("UITEST: after Esc: waiting = %d (expect 0), screen is controls = %d (expect 1)\n", (i32)(m_RebindIndex >= 0), (i32)(m_Screen == Screen::CONTROLS));
+				ResetBindings();
+				Print("UITEST: reset: sprint = %s, move left = %s, move forward = %s, bindings \"%s\"\n", KeyCodeStrings[(i32)GameKeys::SPRINT.code],
+					KeyCodeStrings[(i32)g_InputManager->GetActionBinding(Action::MOVE_LEFT).keyCode], KeyCodeStrings[(i32)g_InputManager->GetActionBinding(Action::MOVE_FORWARD).keyCode], m_Settings.keyBindings.c_str());
+				// Left rebound for the settings round trip below
+				GameKeys::CAMPFIRE.code = KeyCode::KEY_K;
+				SaveBindings();
+				GameKeys::CAMPFIRE.code = KeyCode::KEY_H;
+				LoadBindings();
+				Print("UITEST: reloaded campfire = %s (expect K)\n", KeyCodeStrings[(i32)GameKeys::CAMPFIRE.code]);
+				ResetBindings();
+				Advance();
+			}
+			break;
+		default:
+			return false;
+		}
+		return true;
+	}
+
+	// Saved in the settings as "id=key,mouse;..." for each binding that differs from its default (Actions have "action:" in front)
+	void Game::SaveBindings()
+	{
+		std::string saved;
+		auto Append = [&](const std::string& id, KeyCode key, MouseButton mouse)
+		{
+			saved += id + "=" + std::to_string((i32)key) + "," + std::to_string((i32)mouse) + ";";
+		};
+		for (const GameKeys::Entry& entry : GameKeys::Registry())
+		{
+			const KeyCode key = entry.key != nullptr ? entry.key->code : KeyCode::_NONE;
+			const MouseButton mouse = entry.mouse != nullptr ? entry.mouse->button : MouseButton::_NONE;
+			if (key != entry.defaultKey || mouse != entry.defaultMouse)
+			{
+				Append(entry.id, key, mouse);
+			}
+		}
+		for (const Action(&pair)[2] : REBINDABLE_ACTIONS)
+		{
+			const InputBinding& binding = g_InputManager->GetActionBinding(pair[0]);
+			const auto defaultIter = m_DefaultActionBindings.find((i32)pair[0]);
+			if (defaultIter != m_DefaultActionBindings.end() && (binding.keyCode != defaultIter->second.first || binding.mouseButton != defaultIter->second.second))
+			{
+				Append(std::string("action:") + ActionStrings[(i32)pair[0]], binding.keyCode, binding.mouseButton);
+			}
+		}
+		m_Settings.keyBindings = saved;
+		m_SettingsFile.Serialize();
+	}
+
+	// Remembers the Actions' default bindings & applies the saved ones
+	void Game::LoadBindings()
+	{
+		if (m_DefaultActionBindings.empty())
+		{
+			for (const Action(&pair)[2] : REBINDABLE_ACTIONS)
+			{
+				const InputBinding& binding = g_InputManager->GetActionBinding(pair[0]);
+				m_DefaultActionBindings[(i32)pair[0]] = { binding.keyCode, binding.mouseButton };
+			}
+		}
+
+		size_t start = 0;
+		while (start < m_Settings.keyBindings.size())
+		{
+			size_t end = m_Settings.keyBindings.find(';', start);
+			if (end == std::string::npos)
+			{
+				end = m_Settings.keyBindings.size();
+			}
+			const std::string item = m_Settings.keyBindings.substr(start, end - start);
+			start = end + 1;
+			const size_t equals = item.find('=');
+			const size_t comma = item.find(',');
+			if (equals == std::string::npos || comma == std::string::npos || comma < equals)
+			{
+				continue;
+			}
+			const std::string id = item.substr(0, equals);
+			const i32 key = atoi(item.substr(equals + 1, comma - equals - 1).c_str());
+			const i32 mouse = atoi(item.substr(comma + 1).c_str());
+			if (key < 0 || key > (i32)KeyCode::_NONE || mouse < 0 || mouse > (i32)MouseButton::_NONE)
+			{
+				continue;
+			}
+			if (id.compare(0, 7, "action:") == 0)
+			{
+				for (const Action(&pair)[2] : REBINDABLE_ACTIONS)
+				{
+					if (id.compare(7, std::string::npos, ActionStrings[(i32)pair[0]]) == 0)
+					{
+						g_InputManager->SetActionKeyAndMouse(pair[0], (KeyCode)key, (MouseButton)mouse);
+						if (pair[1] != Action::_NONE)
+						{
+							g_InputManager->SetActionKeyAndMouse(pair[1], (KeyCode)key, (MouseButton)mouse);
+						}
+					}
+				}
+			}
+			else
+			{
+				for (const GameKeys::Entry& entry : GameKeys::Registry())
+				{
+					if (id == entry.id)
+					{
+						if (entry.key != nullptr) entry.key->code = (KeyCode)key;
+						if (entry.mouse != nullptr) entry.mouse->button = (MouseButton)mouse;
+					}
+				}
+			}
+		}
+	}
+
+	void Game::ResetBindings()
+	{
+		for (const GameKeys::Entry& entry : GameKeys::Registry())
+		{
+			if (entry.key != nullptr) entry.key->code = entry.defaultKey;
+			if (entry.mouse != nullptr) entry.mouse->button = entry.defaultMouse;
+		}
+		for (const Action(&pair)[2] : REBINDABLE_ACTIONS)
+		{
+			const auto defaultIter = m_DefaultActionBindings.find((i32)pair[0]);
+			if (defaultIter != m_DefaultActionBindings.end())
+			{
+				g_InputManager->SetActionKeyAndMouse(pair[0], defaultIter->second.first, defaultIter->second.second);
+				if (pair[1] != Action::_NONE)
+				{
+					g_InputManager->SetActionKeyAndMouse(pair[1], defaultIter->second.first, defaultIter->second.second);
+				}
+			}
+		}
+		SaveBindings();
+	}
+
 	void Game::DrawControls()
 	{
 		const real s = m_UI.Scale();
@@ -1360,7 +1663,7 @@ namespace flex
 		DrawTitle(LOC(Controls_Title), LOC(Controls_Subtitle));
 
 		// Keys come from the input bindings (Actions) & GameKeys (keys the game checks directly), so this stays right
-		// when either changes
+		// when either changes. Clicking a row rebinds it (see ApplyBindings for how they're saved).
 		using Keys = std::vector<std::string>;
 		auto KeyName = [](KeyCode keyCode) { return std::string(KeyCodeStrings[(u32)keyCode]); };
 		auto MouseName = [](MouseButton button) { return std::string(MouseButtonStrings[(u32)button]); };
@@ -1401,71 +1704,191 @@ namespace flex
 		struct Row
 		{
 			const char* label;
-			Keys keys;
+			Keys keys; // Used when bind isn't valid (fixed controls)
+			BindRef bind;
 		};
 		struct Section
 		{
 			const char* title;
 			std::vector<Row> rows;
 		};
+		auto G = [](const char* id)
+		{
+			BindRef ref;
+			for (const GameKeys::Entry& entry : GameKeys::Registry())
+			{
+				if (strcmp(entry.id, id) == 0)
+				{
+					ref.entry = &entry;
+				}
+			}
+			return ref;
+		};
+		auto A = [](Action action, Action mirror = Action::_NONE, i32 shareTag = 0)
+		{
+			BindRef ref;
+			ref.action = action;
+			ref.mirrorAction = mirror;
+			ref.actionShareTag = shareTag;
+			return ref;
+		};
 		// One column each, except the last column which holds the last two sections
 		const Section sections[] =
 		{
 			{ LOC(Controls_Movement), {
-				{ LOC(Controls_Move), Bound({ Action::MOVE_FORWARD, Action::MOVE_LEFT, Action::MOVE_BACKWARD, Action::MOVE_RIGHT }) },
-				{ LOC(Controls_Look), { LOC(Controls_KeyMouse) } },
-				{ LOC(Controls_Jump), Bound({ Action::PLACE_ITEM }) },
-				{ LOC(Controls_Sprint), { KeyName(GameKeys::SPRINT) } },
-				{ LOC(Controls_Climb), { KeyName(GameKeys::CLIMB) } },
-				{ LOC(Controls_Crouch), { KeyName(GameKeys::CROUCH) } },
-				{ LOC(Controls_GrapplingHook), { KeyName(GameKeys::GRAPPLING_HOOK) } },
+				{ LOC(Controls_MoveForward), {}, A(Action::MOVE_FORWARD, Action::VEHICLE_ACCELERATE) },
+				{ LOC(Controls_MoveLeft), {}, A(Action::MOVE_LEFT, Action::VEHICLE_TURN_LEFT) },
+				{ LOC(Controls_MoveBackward), {}, A(Action::MOVE_BACKWARD, Action::VEHICLE_REVERSE) },
+				{ LOC(Controls_MoveRight), {}, A(Action::MOVE_RIGHT, Action::VEHICLE_TURN_RIGHT) },
+				{ LOC(Controls_Look), { LOC(Controls_KeyMouse) }, {} },
+				{ LOC(Controls_Jump), {}, A(Action::PLACE_ITEM) },
+				{ LOC(Controls_Sprint), {}, G("sprint") },
+				{ LOC(Controls_Climb), {}, G("climb") },
+				{ LOC(Controls_Crawl), {}, G("crawl") },
+				{ LOC(Controls_Crouch), {}, G("crouch") },
+				{ LOC(Controls_GrapplingHook), {}, G("grappling hook") },
 			} },
 			{ LOC(Controls_Items), {
-				{ LOC(Controls_UseItem), { MouseName(GameKeys::USE_ITEM) } },
-				{ LOC(Controls_UseItemSecondary), { MouseName(GameKeys::USE_ITEM_SECONDARY) } },
-				{ LOC(Controls_FlattenTerrain), { MouseName(GameKeys::TERRAIN_FLATTEN) } },
-				{ LOC(Controls_SelectItem), selectItemKeys },
-				{ LOC(Controls_Inventory), Bound({ Action::SHOW_INVENTORY }) },
-				{ LOC(Controls_Interact), Bound({ Action::INTERACT_RIGHT_HAND }) },
-				{ LOC(Controls_PickUp), Bound({ Action::PICKUP_ITEM }) },
-				{ LOC(Controls_Drop), Bound({ Action::DROP_ITEM }) },
+				{ LOC(Controls_UseItem), {}, G("use item") },
+				{ LOC(Controls_UseItemSecondary), {}, G("use item secondary") },
+				{ LOC(Controls_FlattenTerrain), {}, G("terrain flatten") },
+				{ LOC(Controls_SelectItem), selectItemKeys, {} },
+				{ LOC(Controls_Inventory), {}, A(Action::SHOW_INVENTORY) },
+				{ LOC(Controls_Interact), {}, A(Action::INTERACT_RIGHT_HAND, Action::_NONE, 3) },
+				{ LOC(Controls_PickUp), {}, A(Action::PICKUP_ITEM) },
+				{ LOC(Controls_Drop), {}, A(Action::DROP_ITEM) },
 			} },
 			{ LOC(Controls_Building), {
-				{ LOC(Controls_BuildMode), { KeyName(GameKeys::BUILD_MODE) } },
-				{ LOC(Controls_BuildRotate), { KeyName(GameKeys::BUILD_ROTATE) } },
-				{ LOC(Controls_BuildMaterial), { KeyName(GameKeys::BUILD_MATERIAL) } },
-				{ LOC(Controls_Campfire), { KeyName(GameKeys::CAMPFIRE) } },
-				{ LOC(Controls_TerrainMaterial), { KeyName(GameKeys::TERRAIN_MATERIAL) } },
-				{ LOC(Controls_TrackBuild), Bound({ Action::ENTER_TRACK_BUILD_MODE }) },
+				{ LOC(Controls_BuildMode), {}, G("build mode") },
+				{ LOC(Controls_BuildRotate), {}, G("build rotate") },
+				{ LOC(Controls_BuildMaterial), {}, G("build material") },
+				{ LOC(Controls_Campfire), {}, G("campfire") },
+				{ LOC(Controls_LightCampfire), {}, G("light campfire") },
+				{ LOC(Controls_TerrainMaterial), {}, G("terrain material") },
+				{ LOC(Controls_TrackBuild), {}, A(Action::ENTER_TRACK_BUILD_MODE) },
 			} },
 			{ LOC(Controls_General), {
-				{ LOC(Controls_Map), { KeyName(GameKeys::MAP) } },
-				{ LOC(Controls_Pause), Bound({ Action::PAUSE }) },
-				{ LOC(Controls_Screenshot), Bound({ Action::TAKE_SCREENSHOT }) },
+				{ LOC(Controls_Map), {}, G("map") },
+				{ LOC(Controls_MapRecenter), {}, G("map recenter") },
+				{ LOC(Controls_Waypoint), {}, G("waypoint") },
+				{ LOC(Controls_MapWaypoint), {}, G("map waypoint") },
+				{ LOC(Controls_Pause), {}, A(Action::PAUSE) },
+				{ LOC(Controls_Screenshot), {}, A(Action::TAKE_SCREENSHOT) },
 			} },
 		};
 
-		const real rowHeight = 38.0f * s;
-		const real headingHeight = 52.0f * s;
+		// Every row that can be rebound, in order (m_RebindIndex is an index into this)
+		std::vector<const Row*> rebindable;
+		for (const Section& section : sections)
+		{
+			for (const Row& row : section.rows)
+			{
+				if (row.bind.IsValid())
+				{
+					rebindable.push_back(&row);
+				}
+			}
+		}
+		if (m_RebindIndex >= (i32)rebindable.size())
+		{
+			m_RebindIndex = -1;
+		}
+
+		// Waiting for a key: the next key or mouse button pressed is the new binding (Esc cancels)
+		if (m_RebindIndex >= 0)
+		{
+			const BindRef& target = rebindable[m_RebindIndex]->bind;
+			KeyCode newKey = KeyCode::_NONE;
+			MouseButton newMouse = MouseButton::_NONE;
+			bool bCancel = false;
+			if (g_InputManager->GetKeyPressed(KeyCode::KEY_ESCAPE))
+			{
+				bCancel = true;
+			}
+			else
+			{
+				for (i32 i = 0; i < (i32)KeyCode::_NONE; ++i)
+				{
+					if (g_InputManager->GetKeyPressed((KeyCode)i))
+					{
+						newKey = (KeyCode)i;
+						break;
+					}
+				}
+				for (i32 i = 0; i < (i32)MouseButton::COUNT && newKey == KeyCode::_NONE; ++i)
+				{
+					if (g_InputManager->IsMouseButtonPressed((MouseButton)i))
+					{
+						newMouse = (MouseButton)i;
+						break;
+					}
+				}
+			}
+
+			if (bCancel)
+			{
+				m_RebindIndex = -1;
+			}
+			else if (newKey != KeyCode::_NONE || newMouse != MouseButton::_NONE)
+			{
+				const bool bNumberKey = newKey >= KeyCode::KEY_0 && newKey <= KeyCode::KEY_9; // (Select item)
+				if (bNumberKey || (newKey != KeyCode::_NONE && !target.AcceptsKey()) || (newMouse != MouseButton::_NONE && !target.AcceptsMouse()))
+				{
+					m_RebindMessage = LOC(Controls_RebindInvalid);
+					m_RebindMessageTime = m_ScreenTime;
+				}
+				else
+				{
+					const KeyCode oldKey = target.GetKey();
+					const MouseButton oldMouse = target.GetMouse();
+					m_RebindMessage.clear();
+					// Whatever else used this key gets this row's old one (shared keys, like Shift for sprint &
+					// climb, are meant to overlap)
+					for (const Row* other : rebindable)
+					{
+						if (other->bind.SameAs(target) || (target.Tag() != 0 && other->bind.Tag() == target.Tag()))
+						{
+							continue;
+						}
+						const bool bKeyClash = newKey != KeyCode::_NONE && other->bind.GetKey() == newKey;
+						const bool bMouseClash = newMouse != MouseButton::_NONE && other->bind.GetMouse() == newMouse;
+						if (bKeyClash || bMouseClash)
+						{
+							other->bind.Set(bKeyClash ? (other->bind.AcceptsKey() ? oldKey : KeyCode::_NONE) : other->bind.GetKey(),
+								bMouseClash ? (other->bind.AcceptsMouse() ? oldMouse : MouseButton::_NONE) : other->bind.GetMouse());
+							m_RebindMessage = LOCF(Controls_RebindSwapped, other->label);
+							m_RebindMessageTime = m_ScreenTime;
+						}
+					}
+					target.Set(newKey, newMouse);
+					m_RebindIndex = -1;
+					SaveBindings();
+				}
+			}
+		}
+
+		const real rowHeight = 34.0f * s;
+		const real headingHeight = 50.0f * s;
 		const real columnGap = UITheme::SPACE_XXL * s;
 		const real panelWidth = glm::min(1440.0f * s, m_UI.Width() - 2.0f * UITheme::SCREEN_MARGIN * s);
-		const real sectionGap = UITheme::SPACE_L * s;
+		const real sectionGap = UITheme::SPACE_M * s;
 		real columnHeights[3] = {};
 		for (u32 sectionIndex = 0; sectionIndex < ARRAY_LENGTH(sections); ++sectionIndex)
 		{
 			real& height = columnHeights[glm::min(sectionIndex, 2u)];
 			height += (height > 0.0f ? sectionGap : 0.0f) + headingHeight + (real)sections[sectionIndex].rows.size() * rowHeight;
 		}
-		const real panelHeight = 2.0f * UITheme::SPACE_XL * s + glm::max(columnHeights[0], glm::max(columnHeights[1], columnHeights[2]));
-		const UIRect panel(UITheme::SCREEN_MARGIN * s, 400.0f * s, panelWidth, panelHeight);
+		const real panelHeight = 2.0f * UITheme::SPACE_L * s + glm::max(columnHeights[0], glm::max(columnHeights[1], columnHeights[2]));
+		const UIRect panel(UITheme::SCREEN_MARGIN * s, 330.0f * s, panelWidth, panelHeight);
 		m_UI.Panel(panel);
-		const UIRect content = panel.Inset(UITheme::SPACE_XL * s);
+		const UIRect content = panel.Inset(UITheme::SPACE_L * s);
 		const real columnWidth = (content.w - 2.0f * columnGap) / 3.0f;
 
 		const real keyTextSize = UITheme::TEXT_CAPTION * s;
-		const real keyHeight = 28.0f * s;
+		const real keyHeight = 26.0f * s;
 		const real keyPadding = 10.0f * s;
 		UIRect column;
+		i32 rebindIndex = 0;
 		for (u32 sectionIndex = 0; sectionIndex < ARRAY_LENGTH(sections); ++sectionIndex)
 		{
 			const u32 columnIndex = glm::min(sectionIndex, 2u);
@@ -1487,29 +1910,87 @@ namespace flex
 			{
 				const UIRect rect = column.CutTop(rowHeight);
 				const real centerY = rect.y + rect.h * 0.5f;
-				m_UI.Text(row.label, rect.x, centerY, UITheme::TEXT_BODY * s, UITheme::TEXT_SECONDARY);
+				Keys keys = row.keys;
+				const bool bRebindable = row.bind.IsValid();
+				const bool bWaiting = bRebindable && rebindIndex == m_RebindIndex;
+				if (bRebindable)
+				{
+					const UIRect hitRect(rect.x - 6.0f * s, rect.y, rect.w + 12.0f * s, rect.h);
+					if (!bWaiting && m_RebindIndex < 0 && m_UI.IsMouseOver(hitRect))
+					{
+						m_UI.FillRect(hitRect, UITheme::WithAlpha(UITheme::RAISED_HOVER, 0.6f), UITheme::RADIUS_S * s);
+						if (m_UI.IsMousePressed())
+						{
+							m_RebindIndex = rebindIndex;
+							m_RebindMessage.clear();
+						}
+					}
+					const KeyCode key = row.bind.GetKey();
+					const MouseButton mouse = row.bind.GetMouse();
+					keys.clear();
+					if (key != KeyCode::_NONE)
+					{
+						keys.push_back(KeyName(key));
+					}
+					if (mouse != MouseButton::_NONE)
+					{
+						keys.push_back(MouseName(mouse));
+					}
+					if (keys.empty())
+					{
+						keys.push_back(LOC(Input_Unbound));
+					}
+					if (bWaiting)
+					{
+						keys = { LOC(Controls_PressKey) };
+					}
+					++rebindIndex;
+				}
+				m_UI.Text(row.label, rect.x, centerY, UITheme::TEXT_BODY * s, bWaiting ? UITheme::TEXT_PRIMARY : UITheme::TEXT_SECONDARY);
 				// Key caps, right aligned
 				real right = rect.x + rect.w;
-				for (auto iter = row.keys.rbegin(); iter != row.keys.rend(); ++iter)
+				for (auto iter = keys.rbegin(); iter != keys.rend(); ++iter)
 				{
 					const real width = glm::max(m_UI.MeasureText(*iter, keyTextSize) + keyPadding * 2.0f, keyHeight);
 					const UIRect cap(right - width, centerY - keyHeight * 0.5f, width, keyHeight);
-					m_UI.FillRectGradient(cap, UITheme::RAISED_HOVER, UITheme::RAISED, UITheme::RADIUS_S * s);
-					m_UI.Text(*iter, cap.x + cap.w * 0.5f, centerY, keyTextSize, UITheme::TEXT_PRIMARY, TextAlign::CENTER);
+					if (bWaiting)
+					{
+						m_UI.FillRect(cap, UITheme::EMBER_DEEP, UITheme::RADIUS_S * s);
+					}
+					else
+					{
+						m_UI.FillRectGradient(cap, UITheme::RAISED_HOVER, UITheme::RAISED, UITheme::RADIUS_S * s);
+					}
+					m_UI.Text(*iter, cap.x + cap.w * 0.5f, centerY, keyTextSize, bWaiting ? UITheme::TEXT_ON_ACCENT : UITheme::TEXT_PRIMARY, TextAlign::CENTER);
 					right -= width + UITheme::SPACE_XS * s * 1.5f;
 				}
 			}
 		}
 
-		const UIRect back(panel.x, panel.y + panel.h + UITheme::SPACE_XL * s, 440.0f * s, UITheme::BUTTON_HEIGHT * s);
+		const UIRect back(panel.x, panel.y + panel.h + UITheme::SPACE_L * s, 440.0f * s, UITheme::BUTTON_HEIGHT * s);
 		if (m_UI.Button("back", back, LOC(Common_Back), true))
 		{
+			m_RebindIndex = -1;
 			SetScreen(m_ScreenBeforeSettings);
 			if (m_ScreenBeforeSettings == Screen::PAUSED)
 			{
 				g_EngineInstance->SetSimulationPaused(true);
 			}
 		}
+		const UIRect reset(back.x + back.w + UITheme::SPACE_L * s, back.y, 360.0f * s, back.h);
+		if (m_UI.Button("reset", reset, LOC(Controls_ResetDefaults)))
+		{
+			m_RebindIndex = -1;
+			ResetBindings();
+			m_RebindMessage = LOC(Controls_RebindReset);
+			m_RebindMessageTime = m_ScreenTime;
+		}
+
+		// Hint, or what the last change did
+		const bool bShowMessage = !m_RebindMessage.empty() && m_ScreenTime - m_RebindMessageTime < 5.0f;
+		const std::string hint = m_RebindIndex >= 0 ? LOC(Controls_RebindWaiting) : (bShowMessage ? m_RebindMessage : std::string(LOC(Controls_RebindHint)));
+		m_UI.Text(hint, reset.x + reset.w + UITheme::SPACE_XL * s, back.y + back.h * 0.5f, UITheme::TEXT_SMALL * s,
+			(m_RebindIndex >= 0 || bShowMessage) ? UITheme::EMBER : UITheme::TEXT_SECONDARY);
 	}
 
 	void Game::DrawLoading()
@@ -1806,6 +2287,7 @@ namespace flex
 			const glm::vec2 treasurePx = Row(LOC(Map_LegendTreasure));
 			EnqueueOverlayQuad(treasurePx, glm::vec2(7.0f * s), UITheme::INK, screenSize);
 			EnqueueOverlayQuad(treasurePx, glm::vec2(5.0f * s), UITheme::GOLD, screenSize);
+			terrainGenerator->DrawMapWaypoint(Row(LOC(Map_LegendWaypoint)), 0, 18.0f * s, 90);
 			terrainGenerator->DrawMapPlayerArrow(Row(LOC(Map_LegendYou)), glm::vec2(0.0f, -1.0f), 26.0f * s, 90);
 		}
 
@@ -1814,10 +2296,23 @@ namespace flex
 			m_UI.Text(LOC(Map_Mapping), mapRect.x + mapRect.w * 0.5f, mapRect.y + mapRect.h * 0.5f, UITheme::TEXT_BODY_LARGE * s, UITheme::TEXT_SECONDARY, TextAlign::CENTER);
 		}
 
+		bool bWaypointClick = false;
 		// Treasure chests found so far
 		std::vector<glm::vec3> chestPositions;
 		std::vector<bool> chestOpened;
 		TreasureChest::GetKnownSites(chestPositions, chestOpened);
+		// What the mouse is over (the closest marker within reach), for the tooltip
+		std::string hoverTip;
+		real hoverTipDistance = 12.0f * s;
+		auto ConsiderTip = [&](const glm::vec2& px, const std::string& text)
+		{
+			const real d = glm::distance(px, mouse);
+			if (d < hoverTipDistance && mapRect.Contains(mouse))
+			{
+				hoverTipDistance = d;
+				hoverTip = text;
+			}
+		};
 		for (u32 i = 0; i < (u32)chestPositions.size(); ++i)
 		{
 			const glm::vec2 px = WorldToMap(glm::vec2(chestPositions[i].x, chestPositions[i].z));
@@ -1825,8 +2320,39 @@ namespace flex
 			{
 				EnqueueOverlayQuad(px, glm::vec2(7.0f * s), UITheme::INK, screenSize);
 				EnqueueOverlayQuad(px, glm::vec2(5.0f * s), chestOpened[i] ? UITheme::Hex(0x8C8273) : UITheme::GOLD, screenSize);
+				const real chestDistance = glm::distance(glm::vec2(playerPos.x, playerPos.z), glm::vec2(chestPositions[i].x, chestPositions[i].z));
+				ConsiderTip(px, LOCF(Map_TipChest, chestOpened[i] ? LOC(Map_LegendOpened) : LOC(Map_LegendTreasure), chestDistance / 1000.0f));
 			}
 		}
+
+		// Waypoints (right click places one at the cursor, or removes the one under it)
+		{
+			TerrainGenerator::MapWaypoint* waypoints = TerrainGenerator::GetMapWaypoints();
+			for (u32 i = 0; i < TerrainGenerator::MAX_MAP_WAYPOINTS; ++i)
+			{
+				if (!waypoints[i].bUsed)
+				{
+					continue;
+				}
+				const glm::vec2 px = WorldToMap(waypoints[i].pos);
+				if (mapRect.Inset(4.0f * s).Contains(px))
+				{
+					terrainGenerator->DrawMapWaypoint(px, i, 20.0f * s, 90);
+					m_UI.Text(std::to_string(i + 1), px.x + 13.0f * s, px.y - 13.0f * s, UITheme::TEXT_CAPTION * s, UITheme::TEXT_PRIMARY);
+					ConsiderTip(px, LOCF(Map_TipWaypoint, (i32)(i + 1), glm::distance(glm::vec2(playerPos.x, playerPos.z), waypoints[i].pos) / 1000.0f));
+				}
+			}
+
+			const bool bClick = g_InputManager->IsMouseButtonPressed(GameKeys::MAP_WAYPOINT) || g_InputManager->GetKeyPressed(GameKeys::WAYPOINT);
+			if (bClick && m_ScreenTime > 0.1f && mapRect.Contains(mouse) && !m_bMapPanning)
+			{
+				// (Removing is for the waypoint under the cursor)
+				ToggleWaypoint(MapToWorld(mouse), 2.0f * 12.0f * s * viewExtent / mapRect.w);
+				bWaypointClick = true;
+			}
+		}
+
+		ConsiderTip(WorldToMap(glm::vec2(playerPos.x, playerPos.z)), LOC(Map_LegendYou));
 
 		// The player & their heading (pinned to the edge when outside the view)
 		{
@@ -1853,7 +2379,7 @@ namespace flex
 			const real distance = glm::distance(glm::vec2(playerPos.x, playerPos.z), target);
 			m_UI.Text(LOCF(Map_Hover, description.c_str(), column.height, distance / 1000.0f), frame.x + frame.w, frame.y + frame.h + 30.0f * s, UITheme::TEXT_SMALL * s, UITheme::TEXT_PRIMARY, TextAlign::RIGHT);
 
-			if (m_UI.IsMousePressed())
+			if (m_UI.IsMousePressed() && !bWaypointClick)
 			{
 				// Above the surface; the player is placed on the ground below (or the nearest dry land)
 				player->TeleportOnTerrain(glm::vec3(target.x, glm::max(column.height, column.waterLevel) + 250.0f, target.y));
@@ -1863,9 +2389,74 @@ namespace flex
 			}
 		}
 
+		if (!hoverTip.empty())
+		{
+			m_UI.Tooltip(hoverTip);
+		}
+		if (!m_MapMessage.empty() && m_ScreenTime - m_MapMessageTime < 3.0f)
+		{
+			m_UI.Text(m_MapMessage, frame.x + frame.w * 0.3f, frame.y + frame.h + 30.0f * s, UITheme::TEXT_SMALL * s, UITheme::EMBER, TextAlign::CENTER);
+		}
+
 		if (g_InputManager->GetKeyPressed(GameKeys::MAP) && m_ScreenTime > 0.1f)
 		{
 			SetScreen(Screen::PLAYING);
+		}
+	}
+
+	// Places a waypoint in the first free slot, or removes the one within removeRadius (metres) of pos
+	void Game::ToggleWaypoint(const glm::vec2& pos, real removeRadius)
+	{
+		TerrainGenerator::MapWaypoint* waypoints = TerrainGenerator::GetMapWaypoints();
+		i32 closest = -1;
+		real closestDistance = removeRadius;
+		for (u32 i = 0; i < TerrainGenerator::MAX_MAP_WAYPOINTS; ++i)
+		{
+			const real d = glm::distance(waypoints[i].pos, pos);
+			if (waypoints[i].bUsed && d <= closestDistance)
+			{
+				closestDistance = d;
+				closest = (i32)i;
+			}
+		}
+
+		std::string message;
+		if (closest >= 0)
+		{
+			waypoints[closest].bUsed = false;
+			message = LOCF(Waypoint_Removed, closest + 1);
+		}
+		else
+		{
+			i32 freeSlot = -1;
+			for (u32 i = 0; i < TerrainGenerator::MAX_MAP_WAYPOINTS && freeSlot < 0; ++i)
+			{
+				if (!waypoints[i].bUsed)
+				{
+					freeSlot = (i32)i;
+				}
+			}
+			if (freeSlot < 0)
+			{
+				message = LOC(Waypoint_Full);
+			}
+			else
+			{
+				waypoints[freeSlot].bUsed = true;
+				waypoints[freeSlot].pos = pos;
+				message = LOCF(Waypoint_Placed, freeSlot + 1);
+			}
+		}
+
+		m_MapMessage = message;
+		m_MapMessageTime = m_ScreenTime;
+		if (m_Screen == Screen::PLAYING)
+		{
+			Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+			if (player != nullptr)
+			{
+				player->ShowNotification(message);
+			}
 		}
 	}
 
@@ -1997,6 +2588,7 @@ namespace flex
 			worldObj.TryGetString("last played", info.lastPlayed);
 			worldObj.TryGetFloat("play time", info.playTime);
 			worldObj.TryGetString("created", info.created);
+			worldObj.TryGetInt("terrain version", info.terrainVersion);
 			info.stats.Parse(worldObj);
 			m_Worlds.push_back(info);
 		}
@@ -2020,6 +2612,7 @@ namespace flex
 		worldObj.fields.emplace_back("version", JSONValue(WORLD_FILE_VERSION));
 		worldObj.fields.emplace_back("name", JSONValue(name));
 		worldObj.fields.emplace_back("seed", JSONValue(seed));
+		worldObj.fields.emplace_back("terrain version", JSONValue((i32)terrain::GENERATOR_VERSION));
 		worldObj.fields.emplace_back("created", JSONValue(Platform::GetDateString_YMDHMS()));
 		worldObj.fields.emplace_back("last played", JSONValue(Platform::GetDateString_YMDHMS()));
 		if (!save::WriteWorldFile(directory, worldObj))
@@ -2105,6 +2698,29 @@ namespace flex
 			for (const JSONField& field : chestFields)
 			{
 				openedChests.insert((u64)std::stoull(field.value.AsString()));
+			}
+		}
+
+		{
+			TerrainGenerator::MapWaypoint* waypoints = TerrainGenerator::GetMapWaypoints();
+			for (u32 i = 0; i < TerrainGenerator::MAX_MAP_WAYPOINTS; ++i)
+			{
+				waypoints[i].bUsed = false;
+			}
+			std::string waypointStr;
+			worldObj.TryGetString("waypoints", waypointStr);
+			const char* c = waypointStr.c_str();
+			u32 slot;
+			float x, z;
+			i32 consumed = 0;
+			while (sscanf(c, "%u,%f,%f;%n", &slot, &x, &z, &consumed) == 3)
+			{
+				c += consumed;
+				if (slot < TerrainGenerator::MAX_MAP_WAYPOINTS)
+				{
+					waypoints[slot].bUsed = true;
+					waypoints[slot].pos = glm::vec2(x, z);
+				}
 			}
 		}
 
@@ -2242,6 +2858,7 @@ namespace flex
 		worldObj.fields.emplace_back("version", JSONValue(WORLD_FILE_VERSION));
 		worldObj.fields.emplace_back("name", JSONValue(m_CurrentWorld.name));
 		worldObj.fields.emplace_back("seed", JSONValue(m_CurrentWorld.seed));
+		worldObj.fields.emplace_back("terrain version", JSONValue(m_CurrentWorld.terrainVersion));
 		worldObj.fields.emplace_back("last played", JSONValue(m_CurrentWorld.lastPlayed));
 		worldObj.fields.emplace_back("play time", JSONValue(m_CurrentWorld.playTime, 1));
 		if (!m_CurrentWorld.created.empty())
@@ -2285,6 +2902,21 @@ namespace flex
 			chestFields.emplace_back("", JSONValue(std::to_string(chest)));
 		}
 		worldObj.fields.emplace_back("opened chests", JSONValue(chestFields));
+		{
+			// Waypoints, as "slot,x,z;" for each one placed
+			std::string waypointStr;
+			const TerrainGenerator::MapWaypoint* waypoints = TerrainGenerator::GetMapWaypoints();
+			for (u32 i = 0; i < TerrainGenerator::MAX_MAP_WAYPOINTS; ++i)
+			{
+				if (waypoints[i].bUsed)
+				{
+					char buffer[96];
+					snprintf(buffer, ARRAY_LENGTH(buffer), "%u,%.2f,%.2f;", i, waypoints[i].pos.x, waypoints[i].pos.y);
+					waypointStr += buffer;
+				}
+			}
+			worldObj.fields.emplace_back("waypoints", JSONValue(waypointStr));
+		}
 
 		m_CurrentWorld.stats.chestsOpened = (u32)TreasureChest::GetOpenedChests().size();
 		m_CurrentWorld.stats.exploredCells = (u32)m_ExploredCells.size();

@@ -9,6 +9,7 @@ IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionShapes/btSphereShape.h>
 
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <BulletCollision/CollisionShapes/btBoxShape.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 
 #include <glm/gtx/rotate_vector.hpp>
@@ -203,6 +204,7 @@ namespace flex
 		UpdateTerrainSafety();
 		UpdateTeleportFade();
 		DrawTeleportFade();
+		UpdateSleep();
 
 		m_Controller->Update();
 		m_Traversal->Update();
@@ -219,6 +221,8 @@ namespace flex
 		}
 		m_BuildMode.Update();
 
+		m_CrawlAmount = glm::clamp(m_CrawlAmount + (m_bCrawling ? 1.0f : -1.0f) * g_DeltaTime * 6.0f, 0.0f, 1.0f);
+
 		// Chopping & campfires (before digging, which it takes the mouse buttons from while aiming at a plant)
 		m_ToolSwingTimer = glm::max(m_ToolSwingTimer - g_DeltaTime, 0.0f);
 		m_Woodcraft->Update();
@@ -227,10 +231,6 @@ namespace flex
 		if (TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive())
 		{
 			TreasureChest::UpdateNearby(terrainGenerator, m_Transform.GetWorldPosition());
-			if (m_bPossessed)
-			{
-				TreasureChest::UpdateHints(terrainGenerator, this);
-			}
 		}
 
 		for (i32 i = (i32)m_Notifications.size() - 1; i >= 0; --i)
@@ -508,7 +508,7 @@ namespace flex
 
 	glm::vec3 Player::GetEyePosition() const
 	{
-		return m_Transform.GetWorldPosition() + VEC3_UP * (m_Height * 0.5f - 0.2f);
+		return m_Transform.GetWorldPosition() + VEC3_UP * (m_Height * 0.5f - 0.2f - CRAWL_EYE_DROP * m_CrawlAmount);
 	}
 
 	PlayerController* Player::GetController()
@@ -674,6 +674,134 @@ namespace flex
 
 		// Touching (or very nearly touching) ground which isn't too steep to stand on
 		m_bGrounded = m_bGroundHit && m_GroundGap < 0.12f && m_GroundNormal.y > WALKABLE_NORMAL_Y;
+	}
+
+	void Player::LateUpdateHints()
+	{
+		// After the camera has updated this frame (the glints are projected with its view), but before rendering
+		if (m_bPossessed)
+		{
+			if (TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive())
+			{
+				TreasureChest::UpdateHints(terrainGenerator, this);
+			}
+		}
+	}
+
+	void Player::StartSleeping(real wakeTimeOfDay)
+	{
+		if (m_SleepTimer > 0.0f)
+		{
+			return;
+		}
+		m_SleepTimer = SLEEP_DURATION;
+		m_SleepWakeTimeOfDay = wakeTimeOfDay;
+	}
+
+	void Player::UpdateSleep()
+	{
+		// FLEX_TEST_CRAWL=<any>: puts the player on a small high platform, crawls toward its edge & checks they don't fall off (then walks off as a control)
+		static const bool s_bTestCrawl = getenv("FLEX_TEST_CRAWL") != nullptr;
+		if (s_bTestCrawl && m_bPossessed)
+		{
+			static sec s_Time = 0.0f;
+			static i32 s_Step = 0;
+			static glm::vec3 s_Center;
+			s_Time += g_UnpausedDeltaTime;
+			const real platformHalf = 5.0f;
+			if (s_Step == 0 && s_Time > 3.0f && m_bGrounded)
+			{
+				s_Center = m_Transform.GetWorldPosition() + VEC3_UP * 60.0f;
+				GameObject* platform = new GameObject("Test platform", BaseObjectSID);
+				platform->GetTransform()->SetWorldPosition(s_Center - VEC3_UP * (m_Height * 0.5f + 0.5f));
+				btBoxShape* box = new btBoxShape(btVector3(platformHalf, 0.5f, platformHalf));
+				platform->SetCollisionShape(box);
+				RigidBody* rigidBody = platform->SetRigidBody(new RigidBody((u32)CollisionType::STATIC, (u32)CollisionType::DEFAULT & ~(u32)CollisionType::STATIC));
+				rigidBody->SetStatic(true);
+				g_SceneManager->CurrentScene()->AddRootObject(platform);
+				m_Transform.SetWorldPosition(s_Center);
+				s_Step = 1;
+				s_Time = 0.0f;
+			}
+			else if (s_Step == 1 && s_Time > 1.5f)
+			{
+				m_bTestForceCrawl = true;
+				m_TestWalkDir = VEC3_RIGHT;
+				s_Step = 2;
+				s_Time = 0.0f;
+			}
+			else if (s_Step == 2 && s_Time > 8.0f)
+			{
+				const glm::vec3 pos = m_Transform.GetWorldPosition();
+				const bool bPass = pos.y > s_Center.y - 1.0f && pos.x - s_Center.x > platformHalf * 0.5f;
+				Print("Crawl test: %s (crawled %.1fm toward the edge, height change %.2fm)\n", bPass ? "PASS" : "FAIL", pos.x - s_Center.x, pos.y - s_Center.y);
+				m_bTestForceCrawl = false;
+				s_Step = 3;
+				s_Time = 0.0f;
+			}
+			else if (s_Step == 3 && s_Time > 3.0f)
+			{
+				const bool bFell = m_Transform.GetWorldPosition().y < s_Center.y - 3.0f;
+				Print("Crawl test control: walking off the edge %s\n", bFell ? "fell as expected (PASS)" : "did not fall (FAIL)");
+				m_TestWalkDir = VEC3_ZERO;
+				s_Step = 4;
+			}
+		}
+
+		// FLEX_TEST_BED=<any>: once playing, places a bed in front of the player at midnight, sleeps in it & checks it's morning afterwards
+		static const bool s_bTestBed = getenv("FLEX_TEST_BED") != nullptr;
+		if (s_bTestBed && m_bPossessed && m_bGrounded)
+		{
+			static sec s_TestTime = 0.0f;
+			static i32 s_TestStep = 0;
+			s_TestTime += g_UnpausedDeltaTime;
+			BaseScene* scene = g_SceneManager->CurrentScene();
+			if (s_TestStep == 0 && s_TestTime > 3.0f)
+			{
+				scene->SetTimeOfDay(0.5f);
+				Bed* bed = new Bed("Test bed");
+				bed->GetTransform()->SetWorldPosition(m_Transform.GetWorldPosition() + m_Transform.GetForward() * 3.0f - VEC3_UP * (m_Height * 0.5f));
+				scene->AddRootObject(bed);
+				bed->Sleep(this);
+				Print("Bed test: sleeping at time of day %.2f\n", scene->GetTimeOfDay());
+				s_TestStep = 1;
+			}
+			else if (s_TestStep == 1 && m_SleepTimer <= 0.0f && s_TestTime > 4.0f)
+			{
+				const bool bPass = glm::abs(scene->GetTimeOfDay() - Bed::MORNING_TIME_OF_DAY) < 0.01f;
+				Print("Bed test: %s (time of day %.2f after sleeping)\n", bPass ? "PASS" : "FAIL", scene->GetTimeOfDay());
+				s_TestStep = 2;
+			}
+		}
+
+		if (m_SleepTimer <= 0.0f)
+		{
+			return;
+		}
+
+		const sec previous = m_SleepTimer;
+		m_SleepTimer = glm::max(m_SleepTimer - g_UnpausedDeltaTime, 0.0f);
+		// Halfway through, with the screen black, time jumps to morning
+		if (previous > SLEEP_DURATION * 0.5f && m_SleepTimer <= SLEEP_DURATION * 0.5f)
+		{
+			g_SceneManager->CurrentScene()->SetTimeOfDay(m_SleepWakeTimeOfDay);
+			ShowNotification(LOC(Notify_BedWake));
+		}
+
+		// 0 -> 1 -> 0 (held black around the middle)
+		const real t = 1.0f - m_SleepTimer / SLEEP_DURATION;
+		const real alpha = glm::clamp((0.5f - glm::abs(t - 0.5f)) * 4.0f, 0.0f, 1.0f);
+		const glm::vec2i windowSize = g_Window->GetSize();
+		const real aspectRatio = (real)glm::max(windowSize.x, 1) / (real)glm::max(windowSize.y, 1);
+		SpriteQuadDrawInfo drawInfo = {};
+		drawInfo.anchor = AnchorPoint::CENTER;
+		drawInfo.bScreenSpace = true;
+		drawInfo.bReadDepth = false;
+		drawInfo.bEnableAlbedoSampler = false;
+		drawInfo.zOrder = Z_ORDER_UI + 40;
+		drawInfo.colour = glm::vec4(0.0f, 0.0f, 0.0f, glm::smoothstep(0.0f, 1.0f, alpha));
+		drawInfo.scale = glm::vec3(aspectRatio * 1.05f, 1.05f, 1.0f);
+		g_Renderer->EnqueueSprite(drawInfo);
 	}
 
 	void Player::UpdateIsPossessed()
@@ -946,6 +1074,7 @@ namespace flex
 			switch (nearby->GetTypeID())
 			{
 			case TreasureChestSID: prompt = LOC(Prompt_OpenChest); break;
+			case BedSID: prompt = LOC(Prompt_Sleep); break;
 			case VehicleSID: prompt = LOC(Prompt_Drive); break;
 			case RowBoatSID: prompt = LOC(Prompt_Row); break;
 			case TerminalSID: prompt = LOC(Prompt_UseTerminal); break;

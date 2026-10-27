@@ -17,14 +17,14 @@
 		"collider" : 
 		{
 			"shape" : "box",
-			"half extents" : "1.000,2.001,1.000"
+			"half extents" : "1.036,2.092,1.036"
 		},
 		"rigid body" : 
 		{
 			"mass" : 1.000000,
 			"kinematic" : false,
 			"static" : false,
-			"mask" : 1,
+			"mask" : 5,
 			"group" : 1
 		},
 		"children" : 

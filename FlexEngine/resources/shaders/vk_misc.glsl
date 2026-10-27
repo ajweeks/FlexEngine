@@ -142,6 +142,16 @@ struct ShadowSamplingData
 	vec2 _pad;
 };
 
+// Point light shadows (see VulkanRenderer::UpdatePointShadowSlots), indexed like the point lights
+struct PointShadowData
+{
+	// [2i]: xyz: render space position light i's shadow faces were rendered from, w: its first array layer (< 0: unshadowed)
+	// [2i+1]: x: shadow strength, y: near plane, z: far plane (range)
+	vec4 lights[NUM_POINT_LIGHTS * 2];
+	// x: tan of each face's half FOV, y: receiver normal offset (texels), z: depth comparison bias, w: face resolution
+	vec4 params;
+};
+
 struct SSAOSamplingData
 {
 	int enabled; // TODO: Make specialization constant
@@ -340,6 +350,86 @@ float DoShadowMapping(DirectionalLight dirLight, ShadowSamplingData shadowSampli
 	lit = mix(lit, 1.0, fade);
 
 	return 1.0 - (1.0 - lit) * dirLight.shadowDarkness;
+}
+
+// Returns how much of point light lightIndex reaches posWS (render space) [0: shadowed, 1: lit]. A cube map of six
+// faces (+x, -x, +y, -y, +z, -z) in consecutive layers of shadowMaps, each a reversed-Z perspective view whose basis
+// must match VulkanRenderer::GetPointShadowFaceBasis/GetPointShadowFaceViewProj.
+float PointLightShadow(PointShadowData data, int lightIndex, vec3 posWS, vec3 N, sampler2DArrayShadow shadowMaps)
+{
+	vec4 light = data.lights[lightIndex * 2];
+	vec4 info = data.lights[lightIndex * 2 + 1];
+	if (light.w < 0.0 || info.x <= 0.0)
+	{
+		return 1.0;
+	}
+
+	float tanHalf = data.params.x;
+	float nearPlane = info.y;
+	float farPlane = info.z;
+
+	vec3 v = posWS - light.xyz;
+	float dist = length(v);
+	if (dist >= farPlane)
+	{
+		return 1.0;
+	}
+
+	// Offset the receiver along its normal by about a texel at its distance (acne without a large depth bias)
+	float texelSize = 2.0 * tanHalf * max(dist, nearPlane) / data.params.w;
+	v += N * (texelSize * data.params.y);
+
+	vec3 av = abs(v);
+	int face;
+	vec3 F, up;
+	if (av.x >= av.y && av.x >= av.z)
+	{
+		face = v.x >= 0.0 ? 0 : 1;
+		F = vec3(sign(v.x), 0.0, 0.0);
+		up = vec3(0.0, 1.0, 0.0);
+	}
+	else if (av.y >= av.z)
+	{
+		face = v.y >= 0.0 ? 2 : 3;
+		F = vec3(0.0, sign(v.y), 0.0);
+		up = vec3(0.0, 0.0, 1.0);
+	}
+	else
+	{
+		face = v.z >= 0.0 ? 4 : 5;
+		F = vec3(0.0, 0.0, sign(v.z));
+		up = vec3(0.0, 1.0, 0.0);
+	}
+	// Like glm::lookAt (left handed)
+	vec3 s = normalize(cross(up, F));
+	vec3 u = cross(F, s);
+	float c = max(dot(v, F), nearPlane);
+	vec2 ndc = vec2(dot(v, s), dot(v, u)) / (c * tanHalf);
+	vec2 uv = vec2(0.5 + 0.5 * ndc.x, 0.5 - 0.5 * ndc.y);
+	// Reversed-Z perspective depth of the receiver
+	float depth = nearPlane / (farPlane - nearPlane) * (farPlane / c - 1.0);
+	float refDepth = depth + data.params.z;
+	float layer = light.w + float(face);
+
+	float lit;
+	if (QUALITY_LEVEL >= 1)
+	{
+		// 4 bilinear PCF taps (a 3x3 texel footprint)
+		float texel = 1.0 / data.params.w;
+		lit = texture(shadowMaps, vec4(uv + vec2(-0.5, -0.5) * texel, layer, refDepth));
+		lit += texture(shadowMaps, vec4(uv + vec2(0.5, -0.5) * texel, layer, refDepth));
+		lit += texture(shadowMaps, vec4(uv + vec2(-0.5, 0.5) * texel, layer, refDepth));
+		lit += texture(shadowMaps, vec4(uv + vec2(0.5, 0.5) * texel, layer, refDepth));
+		lit *= 0.25;
+	}
+	else
+	{
+		lit = texture(shadowMaps, vec4(uv, layer, refDepth));
+	}
+
+	// Fade out towards the range so the cutoff isn't visible
+	lit = mix(lit, 1.0, smoothstep(farPlane * 0.85, farPlane, dist));
+	return mix(1.0, lit, info.x);
 }
 
 vec3 ColourByShadowCascade(uint cascadeIndex)

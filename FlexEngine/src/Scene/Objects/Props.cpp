@@ -1,6 +1,8 @@
 #include "stdafx.hpp"
 
 IGNORE_WARNINGS_PUSH
+#include <BulletCollision/CollisionShapes/btBoxShape.h>
+#include <BulletCollision/CollisionShapes/btCompoundShape.h>
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
 #include <BulletCollision/CollisionShapes/btCylinderShape.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
@@ -28,7 +30,10 @@ IGNORE_WARNINGS_POP
 #include "Scene/BaseScene.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/Objects/Building.hpp" // For AppendBoxToVertexData
 #include "Scene/Objects/Industry.hpp" // For BuildHandToolMesh
+#include "Localization.hpp"
+#include "Player.hpp"
 #include "Scene/SceneManager.hpp"
 
 namespace flex
@@ -778,4 +783,114 @@ namespace flex
 	{
 		AudioManager::PlaySource(BaseScene::s_PickupAudioID);
 	}
+	namespace
+	{
+		const glm::vec3 BED_HALF_EXTENTS(0.5f, 0.3f, 1.0f);
+
+		MaterialID GetOrCreateBedMaterial(const char* name, const glm::vec4& albedo, real roughness)
+		{
+			MaterialID materialID = g_Renderer->GetMaterialID(name);
+			if (materialID == InvalidMaterialID)
+			{
+				MaterialCreateInfo createInfo = {};
+				createInfo.name = name;
+				createInfo.shaderName = "pbr";
+				// Colours are given in sRGB, materials take linear values
+				createInfo.constAlbedo = glm::vec4(glm::pow(glm::vec3(albedo), glm::vec3(2.2f)), albedo.a);
+				createInfo.constRoughness = roughness;
+				createInfo.constMetallic = 0.0f;
+				createInfo.bSerializable = false;
+				materialID = g_Renderer->InitializeMaterial(&createInfo);
+			}
+			return materialID;
+		}
+	} // anonymous namespace
+
+	Bed::Bed(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /* = false */) :
+		GameObject(name, BedSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
+	{
+		m_bInteractable = true;
+	}
+
+	PropertyCollection* Bed::BuildTypeUniquePropertyCollection()
+	{
+		return GameObject::BuildPropertyCollection();
+	}
+
+	void Bed::CreateMeshes()
+	{
+		struct Part
+		{
+			MaterialID materialID;
+			std::vector<std::pair<glm::vec3, glm::vec3>> boxes; // center, half extents
+		};
+		const glm::vec3 h = BED_HALF_EXTENTS;
+		Part parts[3];
+		parts[0].materialID = GetOrCreateBedMaterial("Bed wood", glm::vec4(0.4f, 0.25f, 0.12f, 1.0f), 0.8f);
+		parts[1].materialID = GetOrCreateBedMaterial("Bed blanket", glm::vec4(0.7f, 0.18f, 0.16f, 1.0f), 0.95f);
+		parts[2].materialID = GetOrCreateBedMaterial("Bed pillow", glm::vec4(0.9f, 0.88f, 0.8f, 1.0f), 0.95f);
+		const real legHeight = 0.12f;
+		const real frameHeight = 0.08f;
+		// Four legs, a low frame & a headboard at +z
+		for (real x : { -h.x + 0.05f, h.x - 0.05f })
+		{
+			for (real z : { -h.z + 0.05f, h.z - 0.05f })
+			{
+				parts[0].boxes.push_back({ glm::vec3(x, legHeight * 0.5f, z), glm::vec3(0.05f, legHeight * 0.5f, 0.05f) });
+			}
+		}
+		parts[0].boxes.push_back({ glm::vec3(0.0f, legHeight + frameHeight * 0.5f, 0.0f), glm::vec3(h.x, frameHeight * 0.5f, h.z) });
+		parts[0].boxes.push_back({ glm::vec3(0.0f, h.y, h.z - 0.03f), glm::vec3(h.x, h.y - 0.05f, 0.03f) });
+		// Mattress with a blanket over the foot
+		const real mattressTop = legHeight + frameHeight + 0.14f;
+		parts[1].boxes.push_back({ glm::vec3(0.0f, legHeight + frameHeight + 0.07f, -0.1f), glm::vec3(h.x - 0.03f, 0.07f, h.z - 0.15f) });
+		parts[1].boxes.push_back({ glm::vec3(0.0f, mattressTop + 0.015f, -0.45f), glm::vec3(h.x - 0.02f, 0.03f, 0.55f) });
+		parts[2].boxes.push_back({ glm::vec3(0.0f, mattressTop + 0.06f, h.z - 0.35f), glm::vec3(0.3f, 0.06f, 0.18f) });
+
+		Mesh* mesh = SetMesh(new Mesh(this));
+		for (Part& part : parts)
+		{
+			VertexBufferDataCreateInfo vertexData = {};
+			vertexData.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(part.materialID)->shaderID)->vertexAttributes;
+			std::vector<u32> indices;
+			for (const auto& box : part.boxes)
+			{
+				AppendBoxToVertexData(box.first, box.second, QUAT_IDENTITY, vertexData, indices);
+			}
+			MeshComponent::LoadFromMemory(mesh, vertexData, indices, part.materialID);
+		}
+	}
+
+	void Bed::Initialize()
+	{
+		CreateMeshes();
+
+		if (m_RigidBody == nullptr)
+		{
+			btCompoundShape* shape = new btCompoundShape();
+			shape->addChildShape(btTransform(btQuaternion::getIdentity(), btVector3(0.0f, BED_HALF_EXTENTS.y, 0.0f)),
+				new btBoxShape(ToBtVec3(BED_HALF_EXTENTS)));
+			SetCollisionShape(shape);
+			RigidBody* rigidBody = SetRigidBody(new RigidBody((u32)CollisionType::STATIC, (u32)CollisionType::DEFAULT & ~(u32)CollisionType::STATIC));
+			rigidBody->SetStatic(true);
+		}
+
+		GameObject::Initialize();
+	}
+
+	void Bed::Sleep(Player* player)
+	{
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		if (player == nullptr || scene == nullptr || player->IsSleeping())
+		{
+			return;
+		}
+		if (BaseScene::GetSunDirection(scene->GetTimeOfDay()).y > 0.05f)
+		{
+			player->ShowNotification(LOC(Notify_BedNotTired));
+			return;
+		}
+		player->StartSleeping(MORNING_TIME_OF_DAY);
+	}
+
 } // namespace flex

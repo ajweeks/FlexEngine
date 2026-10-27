@@ -281,9 +281,10 @@ namespace flex
 		{
 		case BuildPieceType::FLOOR:
 			outBoxes.push_back({ glm::vec3(0.0f, 0.1f, 0.0f), glm::vec3(half, 0.1f, half), QUAT_IDENTITY, 0 });
-			// Beams along two edges
-			outBoxes.push_back({ glm::vec3(0.0f, 0.1f, half - 0.08f), glm::vec3(half, 0.12f, 0.08f), QUAT_IDENTITY, 1 });
-			outBoxes.push_back({ glm::vec3(0.0f, 0.1f, -half + 0.08f), glm::vec3(half, 0.12f, 0.08f), QUAT_IDENTITY, 1 });
+			// Beams along two edges, poking out of the slab's sides by a few mm so none of their faces are coplanar with the
+			// slab's (they z-fight, worse with distance)
+			outBoxes.push_back({ glm::vec3(0.0f, 0.1f, half - 0.08f + 0.0015f), glm::vec3(half + 0.003f, 0.12f, 0.08f + 0.0015f), QUAT_IDENTITY, 1 });
+			outBoxes.push_back({ glm::vec3(0.0f, 0.1f, -half + 0.08f - 0.0015f), glm::vec3(half + 0.003f, 0.12f, 0.08f + 0.0015f), QUAT_IDENTITY, 1 });
 			break;
 		case BuildPieceType::WALL:
 			// Along the cell's +z edge
@@ -335,26 +336,75 @@ namespace flex
 		}
 	}
 
-	btCollisionShape* BuildPiece::CreateCollisionShape(BuildPieceType type, real length, real size)
+	void BuildPiece::GetSolidBoxes(BuildPieceType type, real size, std::vector<Box>& outBoxes)
 	{
-		std::vector<Box> boxes;
 		switch (type)
 		{
 		case BuildPieceType::FLOOR:
 		case BuildPieceType::WALL:
 		case BuildPieceType::ROOF:
-			GetBoxes(type, length, size, boxes);
+			GetBoxes(type, 0.0f, size, outBoxes);
 			break;
 		case BuildPieceType::STAIRS:
 		{
 			// A smooth ramp under the step edges, which is easy to walk up
 			const real half = size * 0.5f;
-			boxes.push_back({ glm::vec3(0.0f, half - 0.12f, 0.0f), glm::vec3(half * 0.8f, 0.08f, half * 1.4142f), glm::angleAxis(glm::radians(-45.0f), VEC3_RIGHT), 0 });
+			outBoxes.push_back({ glm::vec3(0.0f, half - 0.12f, 0.0f), glm::vec3(half * 0.8f, 0.08f, half * 1.4142f), glm::angleAxis(glm::radians(-45.0f), VEC3_RIGHT), 0 });
 			// Fill underneath so it can't be walked through from the side
-			boxes.push_back({ glm::vec3(0.0f, half * 0.5f, half * 0.5f), glm::vec3(half * 0.8f, half * 0.5f, half * 0.5f), QUAT_IDENTITY, 0 });
+			outBoxes.push_back({ glm::vec3(0.0f, half * 0.5f, half * 0.5f), glm::vec3(half * 0.8f, half * 0.5f, half * 0.5f), QUAT_IDENTITY, 0 });
 		} break;
 		default:
 			// Torches, ladders & ropes don't block movement
+			break;
+		}
+	}
+
+	bool BuildPiece::IsGridPiece(BuildPieceType type)
+	{
+		return type == BuildPieceType::FLOOR || type == BuildPieceType::WALL || type == BuildPieceType::ROOF || type == BuildPieceType::STAIRS;
+	}
+
+	void BuildPiece::GetOccupancyBoxes(BuildPieceType type, real size, std::vector<Box>& outBoxes)
+	{
+		const real half = size * 0.5f;
+		// Height of a floor's slab (& its beams): pieces in the same cell stand on top of it
+		const real slab = 0.22f;
+		switch (type)
+		{
+		case BuildPieceType::FLOOR:
+			outBoxes.push_back({ glm::vec3(0.0f, 0.1f, 0.0f), glm::vec3(half, 0.1f, half), QUAT_IDENTITY, 0 });
+			break;
+		case BuildPieceType::WALL:
+			// The panel without its posts, short of the corners so walls meeting at a corner don't overlap
+			outBoxes.push_back({ glm::vec3(0.0f, (size + slab) * 0.5f, half - 0.1f), glm::vec3(half - 0.2f, (size - slab) * 0.5f, 0.1f), QUAT_IDENTITY, 0 });
+			break;
+		case BuildPieceType::ROOF:
+			// Thin & without the overhang, so roofs side by side, in a row down a slope or meeting at a ridge only touch
+			outBoxes.push_back({ glm::vec3(0.0f, half, 0.0f), glm::vec3(half, 0.03f, half * 1.4142f), glm::angleAxis(glm::radians(-45.0f), VEC3_RIGHT), 0 });
+			break;
+		case BuildPieceType::STAIRS:
+		{
+			// The steps, above a floor's slab
+			std::vector<Box> steps;
+			GetBoxes(type, 0.0f, size, steps);
+			for (const Box& step : steps)
+			{
+				const real top = step.center.y + step.halfExtents.y;
+				outBoxes.push_back({ glm::vec3(step.center.x, (top + slab) * 0.5f, step.center.z), glm::vec3(step.halfExtents.x, (top - slab) * 0.5f, step.halfExtents.z), QUAT_IDENTITY, 0 });
+			}
+		} break;
+		default:
+			break;
+		}
+	}
+
+	btCollisionShape* BuildPiece::CreateCollisionShape(BuildPieceType type, real length, real size)
+	{
+		FLEX_UNUSED(length);
+		std::vector<Box> boxes;
+		GetSolidBoxes(type, size, boxes);
+		if (boxes.empty())
+		{
 			return nullptr;
 		}
 
@@ -561,7 +611,7 @@ namespace flex
 		return VEC3_ZERO;
 	}
 
-	BuildPiece* BuildPiece::FindClimbable(const glm::vec3& pos, real maxDistance)
+	BuildPiece* BuildPiece::FindClimbable(const glm::vec3& pos, real maxDistance, real reachAbove /* = 0.5f */)
 	{
 		BuildPiece* closest = nullptr;
 		real closestDistance = maxDistance;
@@ -574,7 +624,7 @@ namespace flex
 			const glm::vec3 bottom = piece->GetClimbBottom();
 			const glm::vec3 top = piece->GetClimbTop();
 			// The player's capsule (about 2m tall, centered on pos) must overlap the climbable's height
-			if (pos.y < bottom.y - 0.5f || pos.y > top.y + 1.2f)
+			if (pos.y < bottom.y - reachAbove || pos.y > top.y + 1.2f)
 			{
 				continue;
 			}
@@ -626,6 +676,303 @@ namespace flex
 	}
 
 	//
+	// Placement rules
+	//
+
+	namespace
+	{
+		struct OrientedBox
+		{
+			glm::vec3 center;
+			glm::vec3 axes[3];
+			glm::vec3 halfExtents;
+		};
+
+		OrientedBox ToWorld(const BuildPiece::Box& box, const glm::vec3& pos, const glm::quat& rot)
+		{
+			OrientedBox result;
+			const glm::quat boxRot = rot * box.rotation;
+			result.center = pos + rot * box.center;
+			result.axes[0] = boxRot * glm::vec3(1.0f, 0.0f, 0.0f);
+			result.axes[1] = boxRot * glm::vec3(0.0f, 1.0f, 0.0f);
+			result.axes[2] = boxRot * glm::vec3(0.0f, 0.0f, 1.0f);
+			result.halfExtents = box.halfExtents;
+			return result;
+		}
+
+		// Separating axis test: the boxes overlap when they interpenetrate by more than tolerance along every axis
+		bool OrientedBoxesOverlap(const OrientedBox& a, const OrientedBox& b, real tolerance)
+		{
+			glm::vec3 axes[15];
+			u32 axisCount = 0;
+			for (u32 i = 0; i < 3; ++i)
+			{
+				axes[axisCount++] = a.axes[i];
+				axes[axisCount++] = b.axes[i];
+			}
+			for (u32 i = 0; i < 3; ++i)
+			{
+				for (u32 j = 0; j < 3; ++j)
+				{
+					const glm::vec3 axis = glm::cross(a.axes[i], b.axes[j]);
+					const real length = glm::length(axis);
+					// Parallel edges: already covered by the face axes
+					if (length > 1e-3f)
+					{
+						axes[axisCount++] = axis / length;
+					}
+				}
+			}
+
+			const glm::vec3 offset = b.center - a.center;
+			for (u32 i = 0; i < axisCount; ++i)
+			{
+				const glm::vec3& axis = axes[i];
+				real radiusA = 0.0f;
+				real radiusB = 0.0f;
+				for (u32 k = 0; k < 3; ++k)
+				{
+					radiusA += glm::abs(glm::dot(a.axes[k], axis)) * a.halfExtents[k];
+					radiusB += glm::abs(glm::dot(b.axes[k], axis)) * b.halfExtents[k];
+				}
+				const real penetration = radiusA + radiusB - glm::abs(glm::dot(offset, axis));
+				if (penetration <= tolerance)
+				{
+					return false;
+				}
+			}
+			return true;
+		}
+
+		bool AnyBoxesOverlap(const std::vector<BuildPiece::Box>& boxesA, const glm::vec3& posA, const glm::quat& rotA,
+			const std::vector<BuildPiece::Box>& boxesB, const glm::vec3& posB, const glm::quat& rotB)
+		{
+			for (const BuildPiece::Box& boxA : boxesA)
+			{
+				const OrientedBox a = ToWorld(boxA, posA, rotA);
+				for (const BuildPiece::Box& boxB : boxesB)
+				{
+					if (OrientedBoxesOverlap(a, ToWorld(boxB, posB, rotB), BUILD_OVERLAP_TOLERANCE))
+					{
+						return true;
+					}
+				}
+			}
+			return false;
+		}
+	} // anonymous namespace
+
+	bool BuildPiecesOverlap(const BuildPlacement& a, const BuildPlacement& b)
+	{
+		if (!BuildPiece::IsGridPiece(a.type) || !BuildPiece::IsGridPiece(b.type))
+		{
+			return false;
+		}
+
+		// Cheap reject: grid pieces fit within a sphere of about their cell's size around their position
+		const real reach = (a.size + b.size) * 1.1f;
+		if (glm::distance2(a.pos, b.pos) > reach * reach)
+		{
+			return false;
+		}
+
+		if (a.type == BuildPieceType::WALL && b.type == BuildPieceType::WALL)
+		{
+			// Walls on either side of the same edge don't touch, but there's only room for one
+			const glm::vec3 edgeA = a.pos + a.rot * glm::vec3(0.0f, 0.0f, a.size * 0.5f);
+			const glm::vec3 edgeB = b.pos + b.rot * glm::vec3(0.0f, 0.0f, b.size * 0.5f);
+			const bool bParallel = glm::abs(glm::dot(a.rot * VEC3_RIGHT, b.rot * VEC3_RIGHT)) > 0.9f;
+			if (bParallel &&
+				glm::distance(glm::vec2(edgeA.x, edgeA.z), glm::vec2(edgeB.x, edgeB.z)) < 0.3f &&
+				glm::abs(edgeA.y - edgeB.y) < glm::min(a.size, b.size) - 0.1f)
+			{
+				return true;
+			}
+		}
+
+		std::vector<BuildPiece::Box> boxesA, boxesB;
+		BuildPiece::GetOccupancyBoxes(a.type, a.size, boxesA);
+		BuildPiece::GetOccupancyBoxes(b.type, b.size, boxesB);
+		return AnyBoxesOverlap(boxesA, a.pos, a.rot, boxesB, b.pos, b.rot);
+	}
+
+	bool BuildPieceOverlapsAABB(const BuildPlacement& piece, const glm::vec3& aabbMin, const glm::vec3& aabbMax)
+	{
+		std::vector<BuildPiece::Box> boxes;
+		BuildPiece::GetSolidBoxes(piece.type, piece.size, boxes);
+		const std::vector<BuildPiece::Box> aabb = { { (aabbMin + aabbMax) * 0.5f, (aabbMax - aabbMin) * 0.5f, QUAT_IDENTITY, 0 } };
+		return AnyBoxesOverlap(boxes, piece.pos, piece.rot, aabb, VEC3_ZERO, QUAT_IDENTITY);
+	}
+
+	BuildPlacement ExtendBuildPiece(const BuildPlacement& aimed, const glm::vec3& hitPos)
+	{
+		const real s = aimed.size;
+		const real half = s * 0.5f;
+		const glm::vec3 local = glm::inverse(aimed.rot) * (hitPos - aimed.pos);
+
+		glm::vec3 offset(0.0f);
+		glm::quat extraRot = QUAT_IDENTITY;
+		// Comparisons prefer the first option on ties, so the same hit point always gives the same result
+		switch (aimed.type)
+		{
+		case BuildPieceType::FLOOR:
+			if (glm::abs(local.x) >= glm::abs(local.z))
+			{
+				offset = glm::vec3(local.x >= 0.0f ? s : -s, 0.0f, 0.0f);
+			}
+			else
+			{
+				offset = glm::vec3(0.0f, 0.0f, local.z >= 0.0f ? s : -s);
+			}
+			break;
+		case BuildPieceType::WALL:
+		{
+			// Along the wall (local x) or on top of it, whichever edge is nearest
+			const real toSide = half - glm::abs(local.x);
+			const real toTop = s - local.y;
+			if (toSide <= toTop)
+			{
+				offset = glm::vec3(local.x >= 0.0f ? s : -s, 0.0f, 0.0f);
+			}
+			else
+			{
+				offset = glm::vec3(0.0f, s, 0.0f);
+			}
+		} break;
+		case BuildPieceType::STAIRS:
+		case BuildPieceType::ROOF:
+		{
+			// Sides (local x) or ends (local z, the slope rising towards +z)
+			if (glm::abs(local.x) >= glm::abs(local.z))
+			{
+				offset = glm::vec3(local.x >= 0.0f ? s : -s, 0.0f, 0.0f);
+			}
+			else if (local.z < 0.0f)
+			{
+				// Down the slope
+				offset = glm::vec3(0.0f, -s, -s);
+			}
+			else if (aimed.type == BuildPieceType::STAIRS)
+			{
+				// Up the slope
+				offset = glm::vec3(0.0f, s, s);
+			}
+			else
+			{
+				// A roof sloping back down from the ridge
+				offset = glm::vec3(0.0f, 0.0f, s);
+				extraRot = glm::angleAxis(PI, VEC3_UP);
+			}
+		} break;
+		default:
+			break;
+		}
+
+		BuildPlacement result = aimed;
+		result.pos = aimed.pos + aimed.rot * offset;
+		result.rot = glm::normalize(aimed.rot * extraRot);
+		return result;
+	}
+
+	bool RunBuildingSelfTests()
+	{
+		bool bPassed = true;
+		auto Check = [&bPassed](bool bValue, const char* what)
+		{
+			if (!bValue)
+			{
+				PrintError("Building test failed: %s\n", what);
+				bPassed = false;
+			}
+		};
+		auto Piece = [](BuildPieceType type, const glm::vec3& pos, real yawQuarterTurns)
+		{
+			BuildPlacement placement;
+			placement.type = type;
+			placement.pos = pos;
+			placement.rot = glm::angleAxis(yawQuarterTurns * PI_DIV_TWO, VEC3_UP);
+			return placement;
+		};
+		auto Near = [](const glm::vec3& a, const glm::vec3& b) { return glm::distance(a, b) < 0.01f; };
+
+		const real g = BuildPiece::GRID_SIZE;
+		const glm::vec3 base(8.0f * g + g * 0.5f, 12.25f, -3.0f * g + g * 0.5f);
+		const BuildPlacement floor = Piece(BuildPieceType::FLOOR, base, 0.0f);
+
+		// Overlaps
+		Check(BuildPiecesOverlap(floor, floor), "a floor overlaps itself");
+		Check(BuildPiecesOverlap(floor, Piece(BuildPieceType::FLOOR, base + glm::vec3(1.0f, 0.0f, 0.0f), 0.0f)), "floors offset by 1m overlap");
+		Check(!BuildPiecesOverlap(floor, Piece(BuildPieceType::FLOOR, base + glm::vec3(g, 0.0f, 0.0f), 0.0f)), "neighbouring floors don't overlap");
+		Check(!BuildPiecesOverlap(floor, Piece(BuildPieceType::FLOOR, base + glm::vec3(g, 0.0f, g), 1.0f)), "diagonal floors don't overlap");
+		Check(!BuildPiecesOverlap(floor, Piece(BuildPieceType::FLOOR, base + glm::vec3(0.0f, g, 0.0f), 0.0f)), "floors above each other don't overlap");
+		for (i32 i = 0; i < 4; ++i)
+		{
+			const BuildPlacement wall = Piece(BuildPieceType::WALL, base, (real)i);
+			Check(!BuildPiecesOverlap(floor, wall), "a wall on a floor's edge doesn't overlap it");
+			Check(!BuildPiecesOverlap(Piece(BuildPieceType::WALL, base, (real)((i + 1) % 4)), wall), "walls meeting at a corner don't overlap");
+			Check(!BuildPiecesOverlap(Piece(BuildPieceType::FLOOR, base + glm::vec3(0.0f, g, 0.0f), 0.0f), wall), "a floor on top of walls doesn't overlap them");
+			for (i32 j = 0; j < 4; ++j)
+			{
+				Check(!BuildPiecesOverlap(Piece(BuildPieceType::ROOF, base + glm::vec3(0.0f, g, 0.0f), (real)j), wall), "a roof on top of walls doesn't overlap them");
+			}
+			Check(BuildPiecesOverlap(Piece(BuildPieceType::ROOF, base, (real)i), wall), "a roof in a walled cell (same level) overlaps the walls");
+		}
+		const BuildPlacement wall = Piece(BuildPieceType::WALL, base, 0.0f);
+		Check(BuildPiecesOverlap(wall, wall), "a wall overlaps itself");
+		Check(BuildPiecesOverlap(wall, Piece(BuildPieceType::WALL, base + glm::vec3(0.0f, 0.0f, g), 2.0f)), "walls on both sides of one edge overlap");
+		Check(!BuildPiecesOverlap(wall, Piece(BuildPieceType::WALL, base + glm::vec3(g, 0.0f, 0.0f), 0.0f)), "walls in a row don't overlap");
+		Check(!BuildPiecesOverlap(wall, Piece(BuildPieceType::WALL, base + glm::vec3(0.0f, g, 0.0f), 0.0f)), "stacked walls don't overlap");
+		Check(!BuildPiecesOverlap(floor, Piece(BuildPieceType::STAIRS, base, 1.0f)), "stairs on a floor don't overlap it");
+		Check(BuildPiecesOverlap(Piece(BuildPieceType::STAIRS, base, 0.0f), wall), "stairs running into a wall overlap it");
+		Check(!BuildPiecesOverlap(Piece(BuildPieceType::STAIRS, base, 1.0f), Piece(BuildPieceType::STAIRS, base + glm::vec3(0.0f, 0.0f, g), 1.0f)), "stairs side by side don't overlap");
+
+		// Extending from the aimed edge
+		for (i32 rot = 0; rot < 4; ++rot)
+		{
+			for (BuildPieceType type : { BuildPieceType::FLOOR, BuildPieceType::WALL, BuildPieceType::STAIRS, BuildPieceType::ROOF })
+			{
+				const BuildPlacement aimed = Piece(type, base, (real)rot);
+				const glm::vec3 hits[] = { glm::vec3(1.8f, 0.2f, 0.3f), glm::vec3(-1.8f, 0.2f, 0.3f), glm::vec3(0.3f, 0.2f, 1.8f), glm::vec3(0.3f, 0.2f, -1.8f), glm::vec3(0.3f, 3.9f, 1.9f) };
+				for (const glm::vec3& localHit : hits)
+				{
+					const BuildPlacement extended = ExtendBuildPiece(aimed, aimed.pos + aimed.rot * localHit);
+					Check(extended.type == type, "extending keeps the type");
+					Check(!BuildPiecesOverlap(aimed, extended), "an extension doesn't overlap the piece it extends");
+					Check(glm::distance(extended.pos, aimed.pos) > g * 0.9f, "an extension moves at least a cell");
+					// Still on the grid
+					const glm::vec3 delta = (extended.pos - aimed.pos) / g;
+					Check(Near(delta, glm::round(delta)), "an extension stays on the grid");
+				}
+			}
+		}
+		Check(Near(ExtendBuildPiece(floor, base + glm::vec3(1.9f, 0.2f, 0.5f)).pos, base + glm::vec3(g, 0.0f, 0.0f)), "aiming at a floor's +x edge extends it towards +x");
+		Check(Near(ExtendBuildPiece(floor, base + glm::vec3(0.5f, 0.2f, -1.9f)).pos, base + glm::vec3(0.0f, 0.0f, -g)), "aiming at a floor's -z edge extends it towards -z");
+		const BuildPlacement turnedWall = Piece(BuildPieceType::WALL, base, 1.0f); // Along the cell's +x edge, running along z
+		Check(Near(ExtendBuildPiece(turnedWall, base + glm::vec3(1.9f, 2.0f, -1.7f)).pos, base + glm::vec3(0.0f, 0.0f, -g)), "aiming near a wall's end extends it along its length");
+		Check(Near(ExtendBuildPiece(turnedWall, base + glm::vec3(1.9f, 3.8f, 0.2f)).pos, base + glm::vec3(0.0f, g, 0.0f)), "aiming near a wall's top stacks another on it");
+		const BuildPlacement stairs = Piece(BuildPieceType::STAIRS, base, 0.0f);
+		Check(Near(ExtendBuildPiece(stairs, base + glm::vec3(0.0f, 3.5f, 1.8f)).pos, base + glm::vec3(0.0f, g, g)), "aiming at the top of stairs continues them upwards");
+		const BuildPlacement ridge = ExtendBuildPiece(Piece(BuildPieceType::ROOF, base, 0.0f), base + glm::vec3(0.0f, 3.9f, 1.8f));
+		Check(Near(ridge.pos, base + glm::vec3(0.0f, 0.0f, g)) && Near(ridge.rot * VEC3_FORWARD, -VEC3_FORWARD), "aiming at a roof's ridge adds a mirrored roof");
+		Check(Near(ExtendBuildPiece(floor, base + glm::vec3(1.9f, 0.2f, 0.5f)).pos, ExtendBuildPiece(floor, base + glm::vec3(1.9f, 0.2f, 0.5f)).pos), "extending is deterministic");
+
+		// The player's bounds
+		const glm::vec3 feet = base + glm::vec3(0.0f, 0.2f, 0.0f);
+		const glm::vec3 playerMin = feet + glm::vec3(-0.4f, 0.0f, -0.4f);
+		const glm::vec3 playerMax = feet + glm::vec3(0.4f, 1.8f, 0.4f);
+		Check(!BuildPieceOverlapsAABB(floor, playerMin, playerMax), "a player standing on a floor doesn't overlap it");
+		Check(BuildPieceOverlapsAABB(floor, playerMin - VEC3_UP * 0.15f, playerMax - VEC3_UP * 0.15f), "a player sunk into a floor overlaps it");
+		Check(!BuildPieceOverlapsAABB(wall, playerMin, playerMax), "a player in the middle of a cell doesn't overlap its walls");
+		Check(BuildPieceOverlapsAABB(wall, playerMin + glm::vec3(0.0f, 0.0f, 1.5f), playerMax + glm::vec3(0.0f, 0.0f, 1.5f)), "a player at a cell's edge overlaps a wall there");
+
+		if (bPassed)
+		{
+			Print("Building placement tests passed\n");
+		}
+		return bPassed;
+	}
+
+	//
 	// BuildMode
 	//
 
@@ -638,9 +985,15 @@ namespace flex
 
 	void BuildMode::SetActive(bool bActive)
 	{
+		if (bActive == m_bActive)
+		{
+			// (Called every frame by the build test tour, which shouldn't reset the placement state)
+			return;
+		}
 		m_bActive = bActive;
 		m_bPlacementValid = false;
 		m_bPlacementHasPosition = false;
+		m_BlockReason = BuildBlockReason::NONE;
 		if (!bActive)
 		{
 			DestroyPreview();
@@ -783,9 +1136,11 @@ namespace flex
 		return result;
 	}
 
-	bool BuildMode::ComputePlacement(glm::vec3& outPos, glm::quat& outRot, real& outLength, bool& outHasPosition) const
+	bool BuildMode::ComputePlacement(glm::vec3& outPos, glm::quat& outRot, real& outLength, bool& outHasPosition)
 	{
 		outHasPosition = false;
+		m_BlockReason = BuildBlockReason::NO_TARGET;
+		m_BlockingType = BuildPieceType::_COUNT;
 		BaseCamera* camera = g_CameraManager->CurrentCamera();
 		const glm::vec3 origin = camera->position;
 		const glm::vec3 dir = camera->forward;
@@ -799,6 +1154,7 @@ namespace flex
 		}
 
 		outHasPosition = true;
+		m_BlockReason = BuildBlockReason::NONE;
 		const real grid = BuildPiece::GRID_SIZE;
 		const glm::vec3 heading = glm::normalize(glm::vec3(dir.x, 0.0f, dir.z) + glm::vec3(1e-5f, 0.0f, 0.0f));
 		outLength = 0.0f;
@@ -811,7 +1167,12 @@ namespace flex
 			const glm::vec3 lean = glm::normalize(VEC3_UP + glm::vec3(hitNormal.x, 0.0f, hitNormal.z) * 0.9f);
 			outRot = glm::rotation(VEC3_UP, glm::abs(hitNormal.y) > 0.7f ? VEC3_UP : lean);
 			outPos = hitPos - (outRot * VEC3_UP) * 0.15f;
-			return hitNormal.y > -0.5f;
+			if (hitNormal.y <= -0.5f)
+			{
+				m_BlockReason = BuildBlockReason::CEILING;
+				return false;
+			}
+			return true;
 		}
 		case BuildPieceType::LADDER:
 		{
@@ -851,6 +1212,49 @@ namespace flex
 			break;
 		}
 
+		BuildPiece* hitPiece = (hitObject != nullptr && hitObject->GetTypeID() == BuildPieceSID) ? (BuildPiece*)hitObject : nullptr;
+		if (hitPiece == nullptr)
+		{
+			// Floors placed on uneven ground are partly buried, so the terrain (which the ray is also tested against)
+			// often hides them, mostly near their edges. Treat a hit on the ground just above or below a floor as a hit
+			// on the floor, so pieces line up with it instead of the terrain.
+			for (BuildPiece* piece : BuildPiece::GetAllPieces())
+			{
+				if (piece->GetPieceType() != BuildPieceType::FLOOR)
+				{
+					continue;
+				}
+				const glm::vec3 piecePos = piece->GetTransform()->GetWorldPosition();
+				const glm::vec3 local = glm::inverse(piece->GetTransform()->GetWorldRotation()) * (hitPos - piecePos);
+				const real half = piece->GetSize() * 0.5f + 0.05f;
+				if (glm::abs(local.x) <= half && glm::abs(local.z) <= half && local.y > -0.5f && local.y < 1.0f &&
+					(hitPiece == nullptr || piecePos.y > hitPiece->GetTransform()->GetWorldPosition().y))
+				{
+					hitPiece = piece;
+				}
+			}
+			if (hitPiece != nullptr)
+			{
+				hitPos.y = hitPiece->GetTransform()->GetWorldPosition().y + 0.2f;
+				hitNormal = VEC3_UP;
+			}
+		}
+
+		// Aiming at a piece of the same type: extend it out from the edge aimed nearest to
+		if (hitPiece != nullptr && hitPiece->GetPieceType() == m_SelectedType && glm::abs(hitPiece->GetSize() - grid) < 0.01f)
+		{
+			BuildPlacement aimed;
+			aimed.type = m_SelectedType;
+			aimed.pos = hitPiece->GetTransform()->GetWorldPosition();
+			aimed.rot = hitPiece->GetTransform()->GetWorldRotation();
+			aimed.size = grid;
+			const BuildPlacement extended = ExtendBuildPiece(aimed, hitPos);
+			outPos = extended.pos;
+			outRot = extended.rot;
+			m_BlockReason = CheckGridPlacement(outPos, outRot);
+			return m_BlockReason == BuildBlockReason::NONE;
+		}
+
 		// Grid pieces: cells are aligned to a world grid horizontally. Vertically they line up with the piece being
 		// aimed at, or start at the terrain's height.
 		const glm::vec3 p = hitPos + hitNormal * 0.1f;
@@ -858,9 +1262,8 @@ namespace flex
 		// Cells line up with the world grid, or with the piece being aimed at when it's on a grid of the same size
 		// that's offset from the world's (e.g. pieces placed by scripts)
 		glm::vec2 gridOrigin(0.0f);
-		if (hitObject != nullptr && hitObject->GetTypeID() == BuildPieceSID)
+		if (hitPiece != nullptr)
 		{
-			BuildPiece* hitPiece = (BuildPiece*)hitObject;
 			const glm::vec3 piecePos = hitPiece->GetTransform()->GetWorldPosition();
 			const real pieceGrid = hitPiece->GetSize();
 			levelY = piecePos.y + glm::floor((p.y - piecePos.y) / pieceGrid + 0.001f) * pieceGrid;
@@ -872,6 +1275,33 @@ namespace flex
 		else
 		{
 			levelY = glm::round(hitPos.y * 4.0f) / 4.0f;
+			// Building next to existing pieces: line up with the nearest one's grid (it may be offset from the
+			// world's), & with its level when the ground is about as high, so new pieces meet it instead of overlapping
+			BuildPiece* nearest = nullptr;
+			real nearestDistanceSq = grid * grid * 2.25f;
+			for (BuildPiece* piece : BuildPiece::GetAllPieces())
+			{
+				if (!BuildPiece::IsGridPiece(piece->GetPieceType()) || glm::abs(piece->GetSize() - grid) > 0.01f)
+				{
+					continue;
+				}
+				const glm::vec3 piecePos = piece->GetTransform()->GetWorldPosition();
+				const real distanceSq = glm::distance2(glm::vec2(piecePos.x, piecePos.z), glm::vec2(p.x, p.z));
+				if (distanceSq < nearestDistanceSq && glm::abs(piecePos.y - hitPos.y) < grid)
+				{
+					nearest = piece;
+					nearestDistanceSq = distanceSq;
+				}
+			}
+			if (nearest != nullptr)
+			{
+				const glm::vec3 piecePos = nearest->GetTransform()->GetWorldPosition();
+				gridOrigin = glm::vec2(piecePos.x, piecePos.z) - glm::vec2(grid * 0.5f);
+				if (glm::abs(piecePos.y - hitPos.y) < 1.0f)
+				{
+					levelY = piecePos.y;
+				}
+			}
 		}
 
 		const glm::vec2 cell(glm::floor((p.x - gridOrigin.x) / grid), glm::floor((p.z - gridOrigin.y) / grid));
@@ -880,7 +1310,8 @@ namespace flex
 		real yaw;
 		if (m_SelectedType == BuildPieceType::WALL)
 		{
-			// On the cell edge nearest the aimed point (walls are built along the cell's local +z edge)
+			// On the cell edge nearest the aimed point (walls are built along the cell's local +z edge). Rotating
+			// doesn't apply: it used to move the wall to another edge than the one aimed at.
 			const glm::vec2 local(p.x - cellCenter.x, p.z - cellCenter.z);
 			if (glm::abs(local.x) > glm::abs(local.y))
 			{
@@ -896,36 +1327,68 @@ namespace flex
 			// Stairs & roofs rise away from the player
 			yaw = std::atan2(heading.x, heading.z);
 			yaw = glm::round(yaw / PI_DIV_TWO) * PI_DIV_TWO;
+			yaw += (real)m_Rotation * PI_DIV_TWO;
 		}
-		yaw += (real)m_Rotation * PI_DIV_TWO;
 
 		outPos = cellCenter;
 		outRot = glm::angleAxis(yaw, VEC3_UP);
+		m_BlockReason = CheckGridPlacement(outPos, outRot);
+		return m_BlockReason == BuildBlockReason::NONE;
+	}
 
-		// Already occupied: stack on top instead
-		const glm::vec3 firstPos = outPos;
-		for (u32 attempt = 0; attempt < 4; ++attempt)
+	BuildBlockReason BuildMode::CheckGridPlacement(const glm::vec3& pos, const glm::quat& rot)
+	{
+		BuildPlacement placement;
+		placement.type = m_SelectedType;
+		placement.pos = pos;
+		placement.rot = rot;
+		placement.size = BuildPiece::GRID_SIZE;
+
+		for (BuildPiece* piece : BuildPiece::GetAllPieces())
 		{
-			bool bOccupied = false;
-			for (BuildPiece* piece : BuildPiece::GetAllPieces())
+			BuildPlacement other;
+			other.type = piece->GetPieceType();
+			other.pos = piece->GetTransform()->GetWorldPosition();
+			other.rot = piece->GetTransform()->GetWorldRotation();
+			other.size = piece->GetSize();
+			if (BuildPiecesOverlap(placement, other))
 			{
-				if (piece->GetPieceType() == m_SelectedType &&
-					glm::distance(piece->GetTransform()->GetWorldPosition(), outPos) < 0.1f &&
-					glm::abs(glm::dot(piece->GetTransform()->GetWorldRotation(), outRot)) > 0.99f)
-				{
-					bOccupied = true;
-					break;
-				}
+				m_BlockingType = other.type;
+				return BuildBlockReason::OVERLAPS_PIECE;
 			}
-			if (!bOccupied)
-			{
-				return true;
-			}
-			outPos.y += grid;
 		}
-		// Blocked: show the preview where it was aimed
-		outPos = firstPos;
-		return false;
+
+		// Pieces placed around the player would trap them (or push them through the ground)
+		btVector3 playerMin, playerMax;
+		m_Player->GetRigidBody()->GetRigidBodyInternal()->getAabb(playerMin, playerMax);
+		if (BuildPieceOverlapsAABB(placement, ToVec3(playerMin), ToVec3(playerMax)))
+		{
+			return BuildBlockReason::OVERLAPS_PLAYER;
+		}
+
+		return BuildBlockReason::NONE;
+	}
+
+	void BuildMode::DrawTargetHighlight(BuildPiece* piece) const
+	{
+		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
+		std::vector<BuildPiece::Box> boxes;
+		BuildPiece::GetBoxes(piece->GetPieceType(), piece->GetLength(), piece->GetSize(), boxes);
+		const glm::vec3 pos = piece->GetTransform()->GetWorldPosition();
+		const glm::quat rot = piece->GetTransform()->GetWorldRotation();
+		// Pulses so it reads as "selected" rather than as part of the piece
+		const real pulse = 0.75f + 0.25f * glm::sin(AnimationTime() * 8.0f);
+		const btVector3 colour(1.0f * pulse, 0.3f * pulse, 0.2f * pulse);
+		for (const BuildPiece::Box& box : boxes)
+		{
+			const btTransform transform(ToBtQuaternion(rot * box.rotation), ToBtVec3(pos + rot * box.center));
+			// A few nested outlines, since debug lines are only a pixel wide
+			for (real inflate : { 0.02f, 0.04f, 0.06f })
+			{
+				const btVector3 extents = ToBtVec3(box.halfExtents + glm::vec3(inflate));
+				debugRenderer->drawBox(-extents, extents, transform, colour);
+			}
+		}
 	}
 
 	void BuildMode::Update()
@@ -942,6 +1405,7 @@ namespace flex
 		{
 			m_bPlacementValid = false;
 			m_bPlacementHasPosition = false;
+			m_BlockReason = BuildBlockReason::NONE;
 			UpdatePreview(false);
 			return;
 		}
@@ -978,13 +1442,10 @@ namespace flex
 		const bool bTossing = m_SelectedType == BuildPieceType::ROPE;
 		UpdatePreview(m_bPlacementHasPosition && !bTossing);
 
-		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
-
 		BuildPiece* targeted = GetTargetedPiece();
 		if (targeted != nullptr)
 		{
-			const glm::vec3 pos = targeted->GetTransform()->GetWorldPosition();
-			debugRenderer->drawSphere(ToBtVec3(pos), 0.15f, btVector3(1.0f, 0.4f, 0.3f));
+			DrawTargetHighlight(targeted);
 		}
 
 		if (m_Cooldown <= 0.0f)
@@ -1061,6 +1522,19 @@ namespace flex
 		const bool bUsesMaterial = m_SelectedType == BuildPieceType::FLOOR || m_SelectedType == BuildPieceType::WALL ||
 			m_SelectedType == BuildPieceType::ROOF || m_SelectedType == BuildPieceType::STAIRS;
 		std::vector<std::string> lines;
+		// Why the piece can't go where it's aimed (shown above the title)
+		std::string blocked;
+		if (!m_bPlacementValid && m_SelectedType != BuildPieceType::ROPE)
+		{
+			switch (m_BlockReason)
+			{
+			case BuildBlockReason::NO_TARGET: blocked = LOC(Build_Blocked_NoTarget); break;
+			case BuildBlockReason::OVERLAPS_PIECE: blocked = LOCF(Build_Blocked_Piece, m_BlockingType < BuildPieceType::_COUNT ? BuildPieceDisplayName(m_BlockingType) : ""); break;
+			case BuildBlockReason::OVERLAPS_PLAYER: blocked = LOC(Build_Blocked_Player); break;
+			case BuildBlockReason::CEILING: blocked = LOC(Build_Blocked_Ceiling); break;
+			default: break;
+			}
+		}
 		lines.push_back(bUsesMaterial ? LOCF(Build_TitleMaterial, BuildPieceDisplayName(m_SelectedType), BuildMaterialDisplayName(m_SelectedMaterial)) : LOCF(Build_Title, BuildPieceDisplayName(m_SelectedType)));
 		lines.push_back(pieces);
 		lines.push_back(LOC(Build_Controls));
@@ -1072,6 +1546,10 @@ namespace flex
 		{
 			g_Renderer->DrawStringSS(lines[i], i == 0 ? titleColour : textColour, AnchorPoint::BOTTOM, glm::vec2(0.0f, yOffset), 1.5f, 0.6f);
 			yOffset += lineHeight;
+		}
+		if (!blocked.empty())
+		{
+			g_Renderer->DrawStringSS(blocked, glm::vec4(1.0f, 0.45f, 0.35f, 1.0f), AnchorPoint::BOTTOM, glm::vec2(0.0f, yOffset), 1.5f, 0.6f);
 		}
 	}
 } // namespace flex

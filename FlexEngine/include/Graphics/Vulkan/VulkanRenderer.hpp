@@ -278,6 +278,8 @@ namespace flex
 			void SaveAndDestroyPipelineCache();
 			std::string GetPipelineCacheFilePath() const;
 			void PhysicsDebugRender();
+			// Draws only the debug renderer's lines from the editor object batches
+			void DrawDebugLinesOnly(VkCommandBuffer& commandBuffer);
 			// Screenshots copy the frame's swap chain image into a staging buffer (as part of the frame), then save it
 			// once the frame has finished
 			void RecordScreenshotCopy(VkCommandBuffer commandBuffer, u32 swapChainImageIndex);
@@ -354,6 +356,46 @@ namespace flex
 			u32 GetShadowDynamicUBOOffset(RenderID renderID) const;
 			bool RenderObjectCastsShadow(VulkanRenderObject* renderObject) const;
 			void DrawShaderBatch(const ShaderBatchPair& shaderBatches, VkCommandBuffer& commandBuffer, DrawCallInfo* drawCallInfo = nullptr);
+
+			// Point light shadows (see docs/gi_plan.md): a pool of slots, each a cube map (6 faces of a 2D array) rendered
+			// from a light's position. Slots are keyed by position (torches swap light IDs as the camera moves), each face
+			// is cached until a hash of the casters in its frustum changes, & at most faceBudget faces are drawn per frame.
+			struct PointShadowSlot
+			{
+				glm::vec3 pos = VEC3_ZERO; // World space, where the faces were (or are being) rendered from
+				real fade = 0.0f; // Shadow strength, fades in once every face is ready & out before the slot is reused
+				real score = 0.0f;
+				u64 faceHash[6] = {};
+				u64 currentHash[6] = {};
+				u64 faceRenderedFrame[6] = {};
+				bool bFaceValid[6] = {};
+				bool bInUse = false; // Assigned to a light position
+				bool bWanted = false; // Among the lights that should have shadows this frame
+				bool bReferenced = false; // Used by the uniform data uploaded this frame (so can't be reassigned yet)
+				// Casters overlapping each face (shader batch, render ID), gathered every frame
+				std::vector<std::pair<const ShaderBatchPair*, RenderID>> faceCasters[6];
+			};
+			void CreatePointShadowResources();
+			void DestroyPointShadowResources();
+			// Called before the constant uniform buffers are written: matches lights to ready slots & fades them
+			void UpdatePointShadowUniformData();
+			// Called once batches are up to date: assigns slots to lights, hashes casters & picks the faces to render
+			void UpdatePointShadowSlots();
+			void RenderPointShadows(VkCommandBuffer commandBuffer);
+			// The view projection (render space) of one face, & its basis (shared with PointLightShadow in vk_misc.glsl)
+			glm::mat4 GetPointShadowFaceViewProj(const glm::vec3& lightPosRS, u32 face) const;
+			static void GetPointShadowFaceBasis(u32 face, glm::vec3& outForward, glm::vec3& outUp);
+			real GetPointShadowTanHalfFOV() const;
+			std::vector<PointShadowSlot> m_PointShadowSlots;
+			std::vector<std::pair<u32, u32>> m_PointShadowFacesToRender; // (slot, face)
+			PointShadowData m_PointShadowData = {};
+			VDeleter<VkImage> m_PointShadowImage;
+			VDeleter<VkDeviceMemory> m_PointShadowImageMemory;
+			VDeleter<VkImageView> m_PointShadowImageView;
+			std::vector<Cascade*> m_PointShadowFaces; // A view & frame buffer per layer
+			u32 m_PointShadowResolution = 0; // As allocated
+			i32 m_PointShadowSlotCount = 0;
+			u64 m_PointShadowFrameIndex = 0;
 			// World space bounding sphere to cull an object with (w <= 0: never culled)
 			glm::vec4 GetCullSphere(VulkanRenderObject* renderObject) const;
 			// Side planes of the current camera's frustum, for culling (updated at the start of each frame)

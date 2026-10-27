@@ -13,6 +13,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "Game.hpp"
+#include "GameSounds.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
@@ -104,6 +105,7 @@ namespace flex
 			{ "solar panel", 1, 2, 0.35f },
 			{ "battery", 1, 3, 0.4f },
 			{ "lamp", 2, 4, 0.4f },
+			{ "bed", 1, 1, 0.3f },
 			{ "mineral deposit quartz", 3, 8, 0.4f },
 			{ "mineral deposit aluminum", 3, 8, 0.35f },
 			{ "mineral deposit tin", 3, 8, 0.35f },
@@ -434,6 +436,9 @@ namespace flex
 			{
 				continue;
 			}
+
+			// The hum, which stops once the chest has been opened (it's skipped above), is positional so it can be followed
+			GameSounds::ReportTreasure(site.pos + glm::vec3(0.0f, CHEST_HALF_EXTENTS.y, 0.0f));
 
 			// The chime
 			const real playerDistance = glm::distance(playerPos, site.pos);

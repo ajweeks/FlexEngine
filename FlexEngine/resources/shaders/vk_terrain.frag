@@ -6,10 +6,12 @@ layout (constant_id = 6) const int ENABLE_WATER_CLIP = 0;
 
 layout (binding = 0) uniform UBOConstant
 {
+	vec4 renderOrigin; // xyz: see Renderer::RenderOriginFor
 	mat4 view;
 	mat4 viewProjection;
 	DirectionalLight dirLight;
 	PointLight pointLights[NUM_POINT_LIGHTS];
+	PointShadowData pointShadowData;
 	SpotLight spotLights[NUM_SPOT_LIGHTS];
 	AreaLight areaLights[NUM_AREA_LIGHTS];
 	SkyboxData skyboxData;
@@ -22,11 +24,12 @@ layout (binding = 0) uniform UBOConstant
 layout (location = 0) in vec4 ex_Colour; // rgb: albedo (sRGB), a: marble vein strength (< 0: water)
 layout (location = 1) in vec3 ex_NormalWS;
 layout (location = 2) in float ex_Depth;
-layout (location = 3) in vec3 ex_PositionWS;
+layout (location = 3) in vec3 ex_PositionWS; // Render space (relative to renderOrigin)
 layout (location = 4) in vec4 ex_Weights; // Procedural texture weights: grass, layered rock, granular, snow
 
 layout (binding = 1) uniform sampler2D albedoSampler;
 layout (binding = 2) uniform sampler2DArrayShadow shadowCascadeSampler;
+layout (binding = 3) uniform sampler2DArrayShadow pointShadowSampler;
 
 layout (location = 0) out vec4 fragmentColour;
 
@@ -110,8 +113,10 @@ void main()
 	vec3 viewDir = viewVec / max(dist, 0.0001);
 	vec3 V = -viewDir;
 
-	g_NoiseOrigin = floor(camPos / NOISE_ORIGIN_GRID) * NOISE_ORIGIN_GRID;
-	g_NoiseLocal = posWS - g_NoiseOrigin;
+	// (posWS & camPos are in render space, the noise origin in world space)
+	vec3 renderOrigin = uboConstant.renderOrigin.xyz;
+	g_NoiseOrigin = floor((camPos + renderOrigin) / NOISE_ORIGIN_GRID) * NOISE_ORIGIN_GRID;
+	g_NoiseLocal = posWS - (g_NoiseOrigin - renderOrigin);
 
 	float linDepth = (ex_Depth - uboConstant.zNear) / (uboConstant.zFar - uboConstant.zNear);
 
@@ -239,7 +244,8 @@ void main()
 			if (bMidDetail)
 			{
 				vec4 veinWarp = Noise(1.0 / 4.0);
-				float veinLine = abs(sin(posWS.x * 0.35 + posWS.y * 0.6 + posWS.z * 0.2 + veinWarp.x * 6.0));
+				vec3 veinPos = posWS + renderOrigin;
+				float veinLine = abs(sin(veinPos.x * 0.35 + veinPos.y * 0.6 + veinPos.z * 0.2 + veinWarp.x * 6.0));
 				float veinMask = 1.0 - smoothstep(0.0, 0.12, veinLine);
 				albedo = mix(albedo, albedo * vec3(0.45, 0.47, 0.5), veinMask * vein * midDetail);
 			}
@@ -277,6 +283,10 @@ void main()
 		vec3 L = normalize(uboConstant.pointLights[i].position - posWS);
 		vec3 radiance = uboConstant.pointLights[i].colour.rgb * attenuation * uboConstant.pointLights[i].brightness;
 		float NoL = max(dot(N, L), 0.0);
+		if (NoL > 0.0)
+		{
+			radiance *= PointLightShadow(uboConstant.pointShadowData, i, posWS, normalize(ex_NormalWS), pointShadowSampler);
+		}
 
 		localLight += radiance * NoL;
 	}

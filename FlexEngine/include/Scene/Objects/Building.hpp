@@ -71,7 +71,8 @@ namespace flex
 		glm::vec3 GetClimbFacing() const;
 
 		// The nearest climbable within maxDistance (horizontally) of pos, whose height range includes pos
-		static BuildPiece* FindClimbable(const glm::vec3& pos, real maxDistance);
+		// reachAbove: how far above pos.y the end of a rope or ladder may be & still be grabbed (reaching up)
+		static BuildPiece* FindClimbable(const glm::vec3& pos, real maxDistance, real reachAbove = 0.5f);
 		static const std::vector<BuildPiece*>& GetAllPieces() { return s_Pieces; }
 
 		struct Box
@@ -84,6 +85,13 @@ namespace flex
 
 		// The boxes making up a piece (local space), used for its mesh & placement previews
 		static void GetBoxes(BuildPieceType type, real length, real size, std::vector<Box>& outBoxes);
+		// The boxes the piece collides with (local space, empty for torches, ladders & ropes)
+		static void GetSolidBoxes(BuildPieceType type, real size, std::vector<Box>& outBoxes);
+		// The space a grid piece (floor, wall, roof, stairs) claims, for keeping pieces from overlapping (local space).
+		// They're shaped so pieces on neighbouring cells & edges only touch: walls & stairs start above a floor's slab
+		// (so they can stand on one in the same cell), walls stop short of the cell's corners, & roofs have no overhang.
+		static void GetOccupancyBoxes(BuildPieceType type, real size, std::vector<Box>& outBoxes);
+		static bool IsGridPiece(BuildPieceType type);
 
 		static constexpr real GRID_SIZE = 4.0f;
 		// Grid size used before it was made coarser: pieces saved without a size were built on it
@@ -111,6 +119,40 @@ namespace flex
 		static std::vector<BuildPiece*> s_Pieces;
 	};
 
+	// A grid piece somewhere (placed or not)
+	struct BuildPlacement
+	{
+		BuildPieceType type = BuildPieceType::FLOOR;
+		glm::vec3 pos = VEC3_ZERO;
+		glm::quat rot = QUAT_IDENTITY;
+		real size = BuildPiece::GRID_SIZE;
+	};
+
+	// Why a piece can't be placed where it's aimed
+	enum class BuildBlockReason : u8
+	{
+		NONE,
+		NO_TARGET,       // Nothing within reach to build on
+		OVERLAPS_PIECE,  // Another build piece is in the way
+		OVERLAPS_PLAYER, // The player would be stuck inside it
+		CEILING,         // Torches can't hang from ceilings
+	};
+
+	// How far (in meters) solid shapes may interpenetrate before they count as overlapping
+	static constexpr real BUILD_OVERLAP_TOLERANCE = 0.05f;
+
+	// Whether two grid pieces overlap (using their occupancy boxes, so pieces sharing a face or an edge don't). Two
+	// walls on the same cell edge (one from each side) also count as overlapping.
+	bool BuildPiecesOverlap(const BuildPlacement& a, const BuildPlacement& b);
+	// Whether a piece's solid (collision) shape overlaps a world space box, e.g. the player's bounds
+	bool BuildPieceOverlapsAABB(const BuildPlacement& piece, const glm::vec3& aabbMin, const glm::vec3& aabbMax);
+	// Where another piece of the same type goes to extend `aimed` out from its edge nearest to hitPos (world space):
+	// floors extend sideways; walls along their length or upwards; stairs & roofs sideways, or up/down their slope
+	// (a roof's high edge gets a mirrored roof, making a ridge). Deterministic for a given hit point.
+	BuildPlacement ExtendBuildPiece(const BuildPlacement& aimed, const glm::vec3& hitPos);
+	// Overlap & extension checks (run by --test)
+	bool RunBuildingSelfTests();
+
 	// Placing & removing build pieces (owned by a player)
 	class BuildMode final
 	{
@@ -128,7 +170,11 @@ namespace flex
 	private:
 		// Returns whether the piece can be placed. outHasPosition is set when there's somewhere to show a preview
 		// (even if placing there isn't allowed, e.g. the spot is already taken)
-		bool ComputePlacement(glm::vec3& outPos, glm::quat& outRot, real& outLength, bool& outHasPosition) const;
+		bool ComputePlacement(glm::vec3& outPos, glm::quat& outRot, real& outLength, bool& outHasPosition);
+		// Why the grid piece at pos/rot can't be placed (NONE if it can), setting m_BlockingType when a piece is in the way
+		BuildBlockReason CheckGridPlacement(const glm::vec3& pos, const glm::quat& rot);
+		// Wireframe around the piece right click would remove
+		void DrawTargetHighlight(BuildPiece* piece) const;
 		// Translucent, emissive copy of the selected piece where it would be placed
 		void UpdatePreview(bool bShow);
 		void DestroyPreview();
@@ -148,6 +194,8 @@ namespace flex
 		glm::quat m_PlacementRot = QUAT_IDENTITY;
 		real m_PlacementLength = 0.0f;
 		bool m_bPlacementHasPosition = false;
+		BuildBlockReason m_BlockReason = BuildBlockReason::NONE;
+		BuildPieceType m_BlockingType = BuildPieceType::_COUNT;
 
 		GameObjectID m_PreviewID = InvalidGameObjectID;
 		i32 m_PreviewCreatedFrame = 0;

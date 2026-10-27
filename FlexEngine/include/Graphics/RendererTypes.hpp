@@ -130,6 +130,17 @@ namespace flex
 		real pad[2];												// 312
 	};
 
+	// Point light shadows (see VulkanRenderer::UpdatePointShadowSlots), indexed like the point lights. 528 bytes
+	struct PointShadowData
+	{
+		// [2i]: xyz: render space position light i's shadow faces were rendered from, w: its first array layer (< 0: unshadowed)
+		// [2i+1]: x: shadow strength (fades in & out), y: near plane, z: far plane (range)
+		glm::vec4 lights[MAX_POINT_LIGHT_COUNT * 2];	// 0
+		// x: tan of each face's half FOV (over 45 degrees by a guard band), y: receiver normal offset (texels),
+		// z: depth comparison bias (normalized depth), w: face resolution
+		glm::vec4 params;								// 512
+	};
+
 	// 112 bytes
 	struct SHCoeffs
 	{
@@ -348,6 +359,9 @@ namespace flex
 	// NOTE: The order of variables here must match the order used in shaders
 	DECL_UNIFORM(U_MODEL, "model", sizeof(glm::mat4)); // TODO: Rename to OBJECT_TO_WORLD
 	DECL_UNIFORM(U_CAM_POS, "camPos", sizeof(glm::vec4));
+	// xyz: world position of render space's origin (see Renderer::RenderOriginFor). Only for shaders that need absolute world
+	// coordinates (e.g. procedural textures), since every other position the GPU sees is relative to it.
+	DECL_UNIFORM(U_RENDER_ORIGIN, "renderOrigin", sizeof(glm::vec4));
 	DECL_UNIFORM(U_VIEW, "view", sizeof(glm::mat4));
 	DECL_UNIFORM(U_VIEW_INV, "invView", sizeof(glm::mat4));
 	DECL_UNIFORM(U_VIEW_PROJECTION, "viewProjection", sizeof(glm::mat4));
@@ -356,6 +370,7 @@ namespace flex
 	DECL_UNIFORM(U_COLOUR_MULTIPLIER, "colourMultiplier", sizeof(glm::vec4));
 	DECL_UNIFORM(U_DIR_LIGHT, "dirLight", (u32)sizeof(DirLightData));
 	DECL_UNIFORM(U_POINT_LIGHTS, "pointLights", sizeof(PointLightData)* MAX_POINT_LIGHT_COUNT);
+	DECL_UNIFORM(U_POINT_SHADOW_DATA, "pointShadowData", sizeof(PointShadowData));
 	DECL_UNIFORM(U_SPOT_LIGHTS, "spotLights", sizeof(SpotLightData)* MAX_SPOT_LIGHT_COUNT);
 	DECL_UNIFORM(U_AREA_LIGHTS, "areaLights", sizeof(AreaLightData)* MAX_AREA_LIGHT_COUNT);
 	DECL_UNIFORM(U_CONST_ALBEDO, "constAlbedo", (u32)sizeof(glm::vec4));
@@ -413,6 +428,7 @@ namespace flex
 	DECL_UNIFORM(U_LTC_MATRICES_SAMPLER, "ltcMatricesSampler", 0);
 	DECL_UNIFORM(U_LTC_AMPLITUDES_SAMPLER, "ltcAmplitudesSampler", 0);
 	DECL_UNIFORM(U_SHADOW_CASCADES_SAMPLER, "shadowCascadeSampler", 0);
+	DECL_UNIFORM(U_POINT_SHADOW_SAMPLER, "pointShadowSampler", 0);
 	DECL_UNIFORM(U_SCENE_SAMPLER, "sceneSampler", 0);
 	DECL_UNIFORM(U_HISTORY_SAMPLER, "historySampler", 0);
 	DECL_UNIFORM(U_PREFILTER_MAP, "prefilterMap", 0);
@@ -1421,6 +1437,9 @@ namespace flex
 		bool bCompute = false;
 
 		bool bNeedPushConstantBlock = false;
+		// Whether the model matrix is a world transform, so it's moved into render space (see Renderer::RenderOriginFor)
+		// when uploaded. Set automatically for shaders which use the camera's matrices.
+		bool bWorldSpaceModel = false;
 		bool bGenerateVertexBufferForAll = false;
 		bool bTextureArr = false;
 		u32 pushConstantBlockSize = 0;

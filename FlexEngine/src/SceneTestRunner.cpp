@@ -5,6 +5,7 @@
 #include <csignal>
 
 IGNORE_WARNINGS_PUSH
+#include <BulletCollision/CollisionShapes/btCollisionShape.h>
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
@@ -924,6 +925,11 @@ namespace flex
 						const glm::vec3 toRope = bottom - pos;
 						Look(player, glm::normalize(glm::vec3(toRope.x, 0.0f, toRope.z) + glm::vec3(1e-5f, 0.0f, 0.0f)), 0.0f);
 						Press(KeyCode::KEY_W);
+						// A rope end hanging out of standing reach is grabbed by jumping up to it
+						if (bottom.y - pos.y > 2.0f)
+						{
+							Press(KeyCode::KEY_SPACE);
+						}
 						m_Count = 0;
 						m_SubStep = 4;
 						m_SubStepTime = m_StepTime;
@@ -944,6 +950,7 @@ namespace flex
 						if (bOnTop || m_StepTime > m_SubStepTime + 25.0f)
 						{
 							Release(KeyCode::KEY_W);
+							Release(KeyCode::KEY_SPACE);
 							Print("Traversal test: climbing the rope %s (climbed for %u frames, feet %.1fm below the top)\n", bOnTop ? "got on top of the cliff" : "didn't get on top of the cliff", m_Count, m_TopY - feetY);
 							if (!bOnTop || m_Count == 0)
 							{
@@ -1257,6 +1264,16 @@ namespace flex
 			// A wall of rock (overlapping spheres, rounded on top) across the given direction, layers high
 			static void BuildBlock(TerrainGenerator* terrainGenerator, const glm::vec3& base, const glm::vec3& heading, real radius, u32 layers)
 			{
+				// Clear any trees from the block & the ground around it first: trunks inside or beside the block would
+				// catch ropes & block the player, and which ones exist depends on the LOD loaded when they're tested
+				const real clearRadius = radius * 2.5f + 8.0f;
+				std::vector<terrain::PlantInfo> plants;
+				terrainGenerator->FindPlants(base - glm::vec3(clearRadius, 60.0f, clearRadius), base + glm::vec3(clearRadius, 60.0f, clearRadius), plants);
+				for (const terrain::PlantInfo& plant : plants)
+				{
+					terrainGenerator->RemovePlant(plant);
+				}
+
 				const glm::vec3 right = glm::cross(heading, VEC3_UP);
 				for (u32 layer = 0; layer < layers; ++layer)
 				{
@@ -1453,13 +1470,17 @@ namespace flex
 
 		TraversalTestScript* s_TraversalTest = nullptr;
 
-		// FLEX_VEHICLE_TEST=car|boat: drives a vehicle (or rows a boat on the nearest water) with injected input,
-		// printing camera smoothness measurements & saving screenshots (brake lights, camera pitch, boat interior)
+		// FLEX_VEHICLE_TEST=car|buggy|boat|lineup: drives a vehicle (or rows a boat on the nearest water) with injected input,
+		// printing camera smoothness measurements & saving screenshots (brake lights, camera pitch, boat interior).
+		// buggy: the dune buggy at full throttle, printing how far it pitched. lineup: places every vehicle & a battery
+		// (as the inventory does) on flat ground & photographs them.
 		class VehicleTestScript
 		{
 		public:
-			explicit VehicleTestScript(bool bBoat) :
-				m_bBoat(bBoat)
+			explicit VehicleTestScript(const char* mode) :
+				m_bBoat(strcmp(mode, "boat") == 0),
+				m_bBuggy(strcmp(mode, "buggy") == 0),
+				m_bLineup(strcmp(mode, "lineup") == 0)
 			{
 			}
 
@@ -1505,6 +1526,12 @@ namespace flex
 					}
 					else if (!player->IsAwaitingTerrainCollision() && player->IsGrounded() && m_Time > 2.0f)
 					{
+						if (m_bLineup)
+						{
+							SpawnLineup(terrainGenerator);
+							NextState(State::LINEUP);
+							break;
+						}
 						GameObject* vehicle = m_bBoat ? SpawnBoatOnWater(terrainGenerator, player) : SpawnCar(terrainGenerator);
 						if (vehicle == nullptr)
 						{
@@ -1552,7 +1579,25 @@ namespace flex
 					}
 
 					// Cruise at a steady speed, so the measurements are of the camera rather than of the car crashing
-					if (!m_bBoat)
+					// (the buggy is held at full throttle, to check it doesn't wheelie or tip over)
+					if (m_bBuggy)
+					{
+						const glm::vec3 forward = vehicle->GetTransform()->GetForward();
+						const glm::vec3 up = vehicle->GetTransform()->GetUp();
+						m_MaxPitch = glm::max(m_MaxPitch, std::asin(glm::clamp(forward.y, -1.0f, 1.0f)));
+						m_MinPitch = glm::min(m_MinPitch, std::asin(glm::clamp(forward.y, -1.0f, 1.0f)));
+						m_MinUp = glm::min(m_MinUp, up.y);
+						m_MaxSpeed = glm::max(m_MaxSpeed, glm::length(ToVec3(vehicle->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity())));
+						SetKey(KeyCode::KEY_W, true);
+						if (glm::mod(m_Time, 0.5f) < g_DeltaTime)
+						{
+							const glm::vec3 right = vehicle->GetTransform()->GetRight();
+							Print("Vehicle test (buggy) t=%.1f: speed %.1fm/s pitch %.1f roll %.1f up %.2f\n", m_Time,
+								glm::length(ToVec3(vehicle->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity())),
+								glm::degrees(std::asin(glm::clamp(forward.y, -1.0f, 1.0f))), glm::degrees(std::asin(glm::clamp(right.y, -1.0f, 1.0f))), up.y);
+						}
+					}
+					else if (!m_bBoat)
 					{
 						const real speed = glm::length(ToVec3(vehicle->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity()));
 						SetKey(KeyCode::KEY_W, speed < 14.0f);
@@ -1578,6 +1623,11 @@ namespace flex
 					}
 					if (Crossed(14.0f))
 					{
+						if (m_bBuggy)
+						{
+							Print("Vehicle test (buggy): max pitch %.1f deg (nose up), min pitch %.1f deg, min up %.2f, max speed %.1fm/s%s\n",
+								glm::degrees(m_MaxPitch), glm::degrees(m_MinPitch), m_MinUp, m_MaxSpeed, (m_MinUp < 0.5f || m_MaxPitch > glm::radians(25.0f)) ? " TIPPED" : "");
+						}
 						VehicleCamera::PrintStats(m_bBoat ? "boat" : "car");
 						VehicleCamera::SetStatsEnabled(false);
 						SetKey(KeyCode::KEY_W, false);
@@ -1663,9 +1713,158 @@ namespace flex
 					{
 						if (m_bBoat)
 						{
-							// Back to dry land (the scene check expects the player to be standing on the terrain)
-							player->TeleportOnTerrain(m_SearchCenter);
+							// Place another boat from the inventory, onto the water
+							NextState(State::PLACE);
+							break;
 						}
+						m_State = State::DONE;
+					}
+				} break;
+				case State::PLACE:
+				{
+					if (Crossed(0.1f))
+					{
+						const PrefabID boatID = g_ResourceManager->GetPrefabID("row boat");
+						const i32 slot = player->GetNextFreeQuickAccessInventorySlot();
+						player->AddToInventory(boatID, 1, GameObjectStack::UserData{}, InventoryType::QUICK_ACCESS);
+						if (slot >= 0)
+						{
+							player->SetSelectedQuickAccessItemSlot(slot);
+						}
+						// Face the open water
+						glm::vec3 toWater = m_WaterPos - player->GetTransform()->GetWorldPosition();
+						toWater.y = 0.0f;
+						if (glm::length(toWater) < 1.0f)
+						{
+							toWater = VEC3_FORWARD;
+						}
+						player->GetTransform()->SetWorldRotation(glm::angleAxis(std::atan2(toWater.x, toWater.z), VEC3_UP));
+						for (GameObject* object : g_SceneManager->CurrentScene()->GetRootObjects())
+						{
+							m_ExistingBoatIDs.insert(object->ID);
+						}
+						Press(KeyCode::KEY_SPACE);
+					}
+					if (Crossed(0.5f))
+					{
+						// The hull outline preview, from behind the player
+						RequestScreenshot("boat_place_preview");
+					}
+					if (Crossed(0.6f))
+					{
+						Release(KeyCode::KEY_SPACE);
+					}
+					if (Crossed(4.5f))
+					{
+						RequestScreenshot("boat_placed");
+					}
+					if (Crossed(5.0f))
+					{
+						GameObject* placed = nullptr;
+						for (GameObject* object : g_SceneManager->CurrentScene()->GetRootObjects())
+						{
+							if (object->GetTypeID() == RowBoatSID && m_ExistingBoatIDs.count(object->ID) == 0)
+							{
+								placed = object;
+							}
+						}
+						if (placed == nullptr)
+						{
+							PrintError("Boat test: placing a boat from the inventory failed\n");
+						}
+						else
+						{
+							PrintStatus(placed, "placed from inventory");
+							if (((RowBoat*)placed)->GetSubmergedFraction() <= 0.0f)
+							{
+								PrintError("Boat test: the placed boat isn't floating\n");
+							}
+						}
+						// Back to dry land (the scene check expects the player to be standing on the terrain)
+						player->TeleportOnTerrain(m_SearchCenter);
+						m_State = State::DONE;
+					}
+				} break;
+				case State::LINEUP:
+				{
+					// Let them settle, then look at them from a few sides
+					const glm::vec3 center = m_DriveStart + VEC3_RIGHT * 9.0f;
+					// The last view is a close-up of the battery & tools, from the side at ground level
+					const glm::vec3 viewOffsets[] = { glm::vec3(0.0f, 2.5f, -11.0f), glm::vec3(0.0f, 2.5f, 11.0f), glm::vec3(-3.0f, 9.0f, -6.0f), glm::vec3(0.0f, 1.2f, 8.0f) };
+					// One view after another, each shown for some frames (time can jump when the camera moves far)
+					const i32 viewIndex = m_LineupShots;
+					if (Crossed(4.0f))
+					{
+						for (const GameObjectID& id : m_LineupIDs)
+						{
+							if (GameObject* object = id.Get())
+							{
+								const glm::vec3 pos = object->GetTransform()->GetWorldPosition();
+								real groundHeight = 0.0f;
+								glm::vec3 hitPos, hitNormal;
+								if (terrainGenerator->Raycast(pos + VEC3_UP * 20.0f, -VEC3_UP, 60.0f, hitPos, hitNormal))
+								{
+									groundHeight = hitPos.y;
+								}
+								Print("Lineup: %s at (%.1f, %.1f, %.1f), %.2fm above the ground, up %.2f\n", object->GetName().c_str(), pos.x, pos.y, pos.z,
+									pos.y - groundHeight, object->GetTransform()->GetUp().y);
+								// Collider vs mesh (local, scaled), to catch colliders which don't fit
+								if (object->GetMesh() != nullptr && object->GetRigidBody() != nullptr && object->GetRigidBody()->GetRigidBodyInternal()->getCollisionShape() != nullptr)
+								{
+									const glm::vec3 scale = object->GetTransform()->GetWorldScale();
+									const glm::vec3 meshMin = object->GetMesh()->m_MinPoint * scale;
+									const glm::vec3 meshMax = object->GetMesh()->m_MaxPoint * scale;
+									btVector3 shapeMin, shapeMax;
+									object->GetRigidBody()->GetRigidBodyInternal()->getCollisionShape()->getAabb(btTransform::getIdentity(), shapeMin, shapeMax);
+									Print("Lineup: %s mesh (%.2f, %.2f, %.2f)..(%.2f, %.2f, %.2f) collider (%.2f, %.2f, %.2f)..(%.2f, %.2f, %.2f)\n", object->GetName().c_str(),
+										meshMin.x, meshMin.y, meshMin.z, meshMax.x, meshMax.y, meshMax.z,
+										shapeMin.getX(), shapeMin.getY(), shapeMin.getZ(), shapeMax.getX(), shapeMax.getY(), shapeMax.getZ());
+								}
+							}
+						}
+					}
+					if (Crossed(4.0f))
+					{
+						for (const GameObjectID& id : m_FarIDs)
+						{
+							if (GameObject* object = id.Get())
+							{
+								const glm::vec3 pos = object->GetTransform()->GetWorldPosition();
+								const real height = terrainGenerator->SampleHeight(glm::vec2(pos.x, pos.z));
+								Print("Lineup: far %s is %.2fm above the terrain\n", object->GetName().c_str(), pos.y - height);
+								if (pos.y < height - 1.0f)
+								{
+									PrintError("Lineup: %s fell through the terrain away from the player\n", object->GetName().c_str());
+								}
+							}
+						}
+					}
+					if (m_Time >= 4.0f && viewIndex < (i32)ARRAY_LENGTH(viewOffsets))
+					{
+						if (g_CameraManager->CurrentCamera()->GetName() != "debug")
+						{
+							g_CameraManager->SetCameraByName("debug", false);
+						}
+						BaseCamera* camera = g_CameraManager->CurrentCamera();
+						const glm::vec3 target = (viewIndex == 3) ? m_DriveStart + VEC3_RIGHT * 27.0f + VEC3_UP * 0.8f : center;
+						camera->position = target + viewOffsets[viewIndex];
+						const glm::vec3 dir = glm::normalize(target - camera->position);
+						camera->SetViewDirection(std::atan2(dir.z, dir.x), std::asin(dir.y));
+						g_EngineInstance->SetRenderImGui(false);
+						if (++m_LineupViewFrames == 30)
+						{
+							RequestScreenshot(("lineup_" + std::to_string(viewIndex)).c_str());
+						}
+						else if (m_LineupViewFrames > 31)
+						{
+							m_LineupViewFrames = 0;
+							++m_LineupShots;
+						}
+					}
+					if (m_LineupShots >= (i32)ARRAY_LENGTH(viewOffsets))
+					{
+						g_EngineInstance->SetRenderImGui(true);
+						g_CameraManager->SetCameraByName("first-person", false);
 						m_State = State::DONE;
 					}
 				} break;
@@ -1692,6 +1891,8 @@ namespace flex
 				BRAKE,
 				PITCH,
 				EXIT,
+				PLACE,
+				LINEUP,
 				DONE
 			};
 
@@ -1799,7 +2000,7 @@ namespace flex
 				{
 					return g_EngineInstance->SpawnVehicleInFrontOfCamera("vehicle");
 				}
-				const PrefabID carID = g_ResourceManager->GetPrefabID("vehicle");
+				const PrefabID carID = g_ResourceManager->GetPrefabID(m_bBuggy ? "dune buggy" : "vehicle");
 				glm::vec3 pos = m_DriveStart + VEC3_UP * 3.0f;
 				glm::vec3 hitPos, hitNormal;
 				if (terrainGenerator->Raycast(m_DriveStart + VEC3_UP * 30.0f, -VEC3_UP, 100.0f, hitPos, hitNormal))
@@ -1813,6 +2014,52 @@ namespace flex
 					g_SceneManager->CurrentScene()->AddRootObject(car);
 				}
 				return car;
+			}
+
+			// Every vehicle & a battery in a row along +x (placed the way the inventory places items)
+			void SpawnLineup(TerrainGenerator* terrainGenerator)
+			{
+				const char* prefabNames[] = { "vehicle", "dune buggy", "row boat", "battery", "axe", "pickaxe", "shovel" };
+				for (i32 i = 0; i < (i32)ARRAY_LENGTH(prefabNames); ++i)
+				{
+					const PrefabID prefabID = g_ResourceManager->GetPrefabID(prefabNames[i]);
+					if (!prefabID.IsValid())
+					{
+						PrintError("Lineup: no %s prefab\n", prefabNames[i]);
+						continue;
+					}
+					GameObject* templateObject = g_ResourceManager->GetPrefabTemplate(prefabID);
+					Print("Lineup: %s template has %s\n", prefabNames[i], (templateObject != nullptr && templateObject->GetMesh() != nullptr) ? "a mesh" : "no mesh");
+					const glm::vec3 start = m_DriveStart + VEC3_RIGHT * (real)i * 6.0f;
+					glm::vec3 pos = start + VEC3_UP * 2.0f;
+					glm::vec3 hitPos, hitNormal;
+					if (terrainGenerator->Raycast(start + VEC3_UP * 30.0f, -VEC3_UP, 100.0f, hitPos, hitNormal))
+					{
+						pos = hitPos + VEC3_UP * 1.5f;
+					}
+					GameObject* object = GameObject::Deitemize(prefabID, pos, QUAT_IDENTITY, GameObjectStack::UserData{});
+					if (object != nullptr)
+					{
+						g_SceneManager->CurrentScene()->AddRootObject(object);
+						m_LineupIDs.push_back(object->ID);
+					}
+				}
+
+				// A battery & a boat far from the player, where the terrain has no collision yet: they must wait for it
+				// rather than fall through the world
+				const char* farNames[] = { "row boat", "battery" }; // (another car would exceed the spot light limit)
+				for (i32 i = 0; i < 2; ++i)
+				{
+					const glm::vec3 farPos = m_DriveStart + glm::vec3(900.0f, 0.0f, 10.0f * (real)i);
+					const real height = terrainGenerator->SampleHeight(glm::vec2(farPos.x, farPos.z));
+					GameObject* object = GameObject::Deitemize(g_ResourceManager->GetPrefabID(farNames[i]), glm::vec3(farPos.x, height + 3.0f, farPos.z),
+						QUAT_IDENTITY, GameObjectStack::UserData{});
+					if (object != nullptr)
+					{
+						g_SceneManager->CurrentScene()->AddRootObject(object);
+						m_FarIDs.push_back(object->ID);
+					}
+				}
 			}
 
 			// The nearest open water (a few meters deep, away from the shore), with a boat placed on it
@@ -1835,6 +2082,8 @@ namespace flex
 							const real x = center.x + (real)ix * spacing;
 							const real z = center.z + (real)iz * spacing;
 							const terrain::ColumnSample column = terrainGenerator->SampleColumn(x, z);
+							m_LakeSamples += column.lakeID != 0 ? 1 : 0;
+							m_DeepSamples += (column.lakeID != 0 && column.lakeT < 1.0f && column.waterLevel - column.height > 0.0f) ? 1 : 0;
 							if (column.lakeID == 0 || column.lakeT > 0.6f || column.waterLevel - column.height < 2.0f)
 							{
 								continue;
@@ -1859,6 +2108,7 @@ namespace flex
 								return nullptr;
 							}
 							const glm::vec3 pos(x, column.waterLevel + 0.3f, z);
+							m_WaterPos = pos;
 							Print("Boat test: water %.0fm away at (%.1f, %.1f, %.1f), depth %.1fm\n", glm::distance(center, pos), pos.x, pos.y, pos.z, column.waterLevel - column.height);
 							GameObject* boat = GameObject::Deitemize(boatID, pos, QUAT_IDENTITY, GameObjectStack::UserData{});
 							if (boat != nullptr)
@@ -1869,11 +2119,23 @@ namespace flex
 						}
 					}
 				}
-				PrintError("Boat test: no water within %.0fm\n", spacing * maxRing);
+				PrintError("Boat test: no water within %.0fm (%u samples near a lake, %u under water)\n", spacing * maxRing, m_LakeSamples, m_DeepSamples);
 				return nullptr;
 			}
 
 			bool m_bBoat;
+			bool m_bBuggy;
+			bool m_bLineup;
+			real m_MaxPitch = -PI;
+			real m_MinPitch = PI;
+			real m_MinUp = 1.0f;
+			real m_MaxSpeed = 0.0f;
+			std::vector<GameObjectID> m_LineupIDs;
+			std::vector<GameObjectID> m_FarIDs;
+			i32 m_LineupShots = 0;
+			i32 m_LineupViewFrames = 0;
+			u32 m_LakeSamples = 0;
+			u32 m_DeepSamples = 0;
 			State m_State = State::WAIT_FOR_GROUND;
 			sec m_Time = 0.0f;
 			GameObjectID m_VehicleID = InvalidGameObjectID;
@@ -1881,6 +2143,8 @@ namespace flex
 			bool m_bMovedToFlatGround = false;
 			glm::vec3 m_DriveStart = VEC3_ZERO;
 			glm::vec3 m_SearchCenter = VEC3_ZERO;
+			glm::vec3 m_WaterPos = VEC3_ZERO;
+			std::set<GameObjectID> m_ExistingBoatIDs;
 		};
 
 		VehicleTestScript* s_VehicleTest = nullptr;
@@ -1990,6 +2254,68 @@ namespace flex
 					g_SceneManager->CurrentScene()->AddRootObject(obj);
 				}
 			}
+			// FLEX_TEST_TORCHES=<count>[,<x>,<z>]: builds a village of open huts (three walls & a floor) around x,z (default: the
+			// camera), each with a torch inside & one in front, plus lone torches, for testing many point lights & their shadows
+			if (const char* torchesStr = getenv("FLEX_TEST_TORCHES"))
+			{
+				static bool s_bTorchesBuilt = false;
+				if (!s_bTorchesBuilt)
+				{
+					s_bTorchesBuilt = true;
+					i32 torchCount = 0;
+					real cx = g_CameraManager->CurrentCamera()->position.x;
+					real cz = g_CameraManager->CurrentCamera()->position.z;
+					sscanf(torchesStr, "%d,%f,%f", &torchCount, &cx, &cz);
+					BaseScene* scene = g_SceneManager->CurrentScene();
+					TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+					auto GroundHeight = [terrainGenerator](real x, real z)
+					{
+						return terrainGenerator != nullptr ? terrainGenerator->SampleHeight(glm::vec2(x, z)) : 0.0f;
+					};
+					auto AddPiece = [scene](BuildPieceType type, const glm::vec3& pos, const glm::quat& rot)
+					{
+						BuildPiece* piece = new BuildPiece(scene->GetUniqueObjectName(std::string(BuildPieceTypeName(type)) + "_", 3));
+						piece->Setup(type, BuildMaterial::WOOD, 0.0f);
+						piece->SetSerializable(false);
+						piece->GetTransform()->SetWorldPosition(pos);
+						piece->GetTransform()->SetWorldRotation(rot);
+						scene->AddRootObject(piece);
+					};
+					const i32 hutCount = torchCount / 3;
+					const i32 gridWidth = glm::max((i32)glm::ceil(glm::sqrt((real)hutCount)), 1);
+					const real spacing = 11.0f;
+					i32 placed = 0;
+					for (i32 h = 0; h < hutCount; ++h)
+					{
+						const real x = cx + ((real)(h % gridWidth) - (gridWidth - 1) * 0.5f) * spacing;
+						const real z = cz + ((real)(h / gridWidth) - (gridWidth - 1) * 0.5f) * spacing;
+						// Open towards a different side each time
+						const glm::quat facing = glm::angleAxis(glm::radians(90.0f * (real)(h % 4)), VEC3_UP);
+						const real y = GroundHeight(x, z) - 0.15f;
+						const glm::vec3 center(x, y, z);
+						AddPiece(BuildPieceType::FLOOR, center, facing);
+						for (i32 w = 0; w < 3; ++w)
+						{
+							AddPiece(BuildPieceType::WALL, center + VEC3_UP * 0.2f, facing * glm::angleAxis(glm::radians(90.0f * (real)w), VEC3_UP));
+						}
+						// One inside, one outside in front of the open side (-x of the hut's rotated frame)
+						AddPiece(BuildPieceType::TORCH, center + VEC3_UP * 0.2f + facing * glm::vec3(0.6f, 0.0f, 0.6f), QUAT_IDENTITY);
+						const glm::vec3 outside = center + facing * glm::vec3(-3.6f, 0.0f, -1.0f);
+						AddPiece(BuildPieceType::TORCH, glm::vec3(outside.x, GroundHeight(outside.x, outside.z) - 0.1f, outside.z), QUAT_IDENTITY);
+						placed += 2;
+					}
+					// The rest stand alone, in a ring
+					for (i32 i = placed; i < torchCount; ++i)
+					{
+						const real angle = TWO_PI * (real)i / (real)glm::max(torchCount - placed, 1);
+						const real radius = (gridWidth * 0.5f + 0.8f) * spacing;
+						const real x = cx + glm::cos(angle) * radius;
+						const real z = cz + glm::sin(angle) * radius;
+						AddPiece(BuildPieceType::TORCH, glm::vec3(x, GroundHeight(x, z) - 0.1f, z), QUAT_IDENTITY);
+					}
+					Print("Built %d torches in %d huts around (%.1f, %.1f)\n", torchCount, hutCount, cx, cz);
+				}
+			}
 			// FLEX_TEST_SHOW_INVENTORY=<any>: opens the player inventory in a test scene
 			if (getenv("FLEX_TEST_SHOW_INVENTORY") != nullptr)
 			{
@@ -2052,8 +2378,19 @@ namespace flex
 					*TerrainGenerator::GetShowWorldMapPtr() = false;
 					g_EngineInstance->SetRenderImGui(false);
 					camera->SetViewDirection(v[3], v[4]);
-					g_SceneManager->CurrentScene()->SetTimeOfDay(v[5]);
+					// For checking shadow shimmer as the sun moves: FLEX_TEST_VIEW_TIME_STEP=<time of day per frame> advances the
+					// time of day by that much every frame (e.g. 0.0000028 is a 6000s day at 60fps), & FLEX_TEST_VIEW_SEQUENCE=<n>
+					// also saves each view's last n frames (test_view_<i>_<frame>.png) to compare consecutive frames
+					static const real s_TimeStep = getenv("FLEX_TEST_VIEW_TIME_STEP") != nullptr ? (real)atof(getenv("FLEX_TEST_VIEW_TIME_STEP")) : 0.0f;
+					static const u32 s_SequenceLength = getenv("FLEX_TEST_VIEW_SEQUENCE") != nullptr ? (u32)glm::max(atoi(getenv("FLEX_TEST_VIEW_SEQUENCE")), 0) : 0u;
+					g_SceneManager->CurrentScene()->SetTimeOfDay(glm::fract(v[5] + s_TimeStep * (real)(frame % viewFrames)));
 					g_SceneManager->CurrentScene()->SetTimeOfDayPaused(true);
+					if (s_SequenceLength > 0 && frame % viewFrames >= viewFrames - 1 - glm::min(s_SequenceLength, viewFrames - 1) && frame % viewFrames < viewFrames - 1)
+					{
+						const std::string directory = RelativePathToAbsolute(SCREENSHOT_DIRECTORY);
+						Platform::CreateDirectoryRecursive(directory);
+						g_Renderer->RequestScreenshot(directory + "test_view_" + IntToString((i32)viewIndex) + "_" + IntToString((i32)(frame % viewFrames)) + ".png");
+					}
 					if (frame % viewFrames == viewFrames - 1)
 					{
 						const std::string directory = RelativePathToAbsolute(SCREENSHOT_DIRECTORY);
@@ -2133,8 +2470,26 @@ namespace flex
 			m_bPrevShowTerrainMap = *bShowMap;
 			*bShowMap = !m_bProfile;
 
-			// Spawn the player deep underground, they should end up standing on the surface
 			BaseScene* scene = g_SceneManager->CurrentScene();
+			// FLEX_TEST_WORLD_POS=<x>,<z>: moves the test (camera & player) there first, e.g. far from the world origin to
+			// check physics & gameplay precision (the traversal & vehicle tests then run there)
+			if (const char* worldPos = getenv("FLEX_TEST_WORLD_POS"))
+			{
+				real x, z;
+				if (sscanf(worldPos, "%f,%f", &x, &z) == 2)
+				{
+					BaseCamera* camera = g_CameraManager->CurrentCamera();
+					const terrain::ColumnSample column = terrainGenerator->SampleColumn(x, z);
+					camera->position = glm::vec3(x, glm::max(column.height, column.waterLevel) + 20.0f, z);
+					if (Player* player = scene->GetPlayer(0))
+					{
+						player->TeleportOnTerrain(glm::vec3(x, glm::max(column.height, column.waterLevel) + 2.0f, z));
+					}
+					Print("Test moved to (%.1f, %.1f, %.1f)\n", camera->position.x, camera->position.y, camera->position.z);
+				}
+			}
+
+			// Spawn the player deep underground, they should end up standing on the surface
 			if (scene->GetPlayer(0) == nullptr)
 			{
 				BaseCamera* camera = g_CameraManager->CurrentCamera();
@@ -2172,7 +2527,7 @@ namespace flex
 				}
 				else if (const char* vehicleTest = getenv("FLEX_VEHICLE_TEST"))
 				{
-					s_VehicleTest = new VehicleTestScript(strcmp(vehicleTest, "boat") == 0);
+					s_VehicleTest = new VehicleTestScript(vehicleTest);
 				}
 				else
 				{

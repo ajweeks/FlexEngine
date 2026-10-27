@@ -22,6 +22,9 @@ namespace flex
 		// To be called at the start of each frame, returns false once all scenes have been tested
 		bool Update();
 
+		// Whether scenes are being tested (--test-scenes)
+		static bool IsRunning() { return s_Instance != nullptr; }
+
 		// Returns the number of scenes which failed (plus one if startup failed)
 		i32 GetFailureCount() const;
 		// Prints per-scene results followed by a list of every warning/error, one per line

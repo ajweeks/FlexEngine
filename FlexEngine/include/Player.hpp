@@ -63,14 +63,22 @@ namespace flex
 		real GetRadius() const { return m_Radius; }
 		// Where the first person camera sits (a little below the top of the capsule)
 		glm::vec3 GetEyePosition() const;
+		// Crawling (slower & lower, & ledges can't be walked off). Set each fixed update by the controller.
+		bool IsCrawling() const { return m_bCrawling; }
 
 		// Contacts with surfaces flatter than this (normal y) can be walked on, steeper ones are walls
 		static constexpr real WALKABLE_NORMAL_Y = 0.6f;
+		// How far the eye lowers when crawling (meters)
+		static constexpr real CRAWL_EYE_DROP = 0.9f;
+		// Crawling speed, as a fraction of walking speed
+		static constexpr real CRAWL_SPEED_FACTOR = 0.4f;
 		PlayerController* GetController();
 
 		real GetDistAlongTrack() const;
 
 		void UpdateIsPossessed();
+		// Draws overlays projected with the camera's final view for this frame (called after cameras update)
+		void LateUpdateHints();
 
 		void ClampPitch();
 		void UpdateIsGrounded();
@@ -197,6 +205,9 @@ namespace flex
 		// Cuts to black, holds until the player is placed on the ground (collision loaded & grounded or settled),
 		// then quickly fades back in. Gives up after a timeout so a failed load can't leave the screen black.
 		void StartTeleportFade();
+		// Fades out, skips to the given time of day & fades back in
+		void StartSleeping(real wakeTimeOfDay);
+		bool IsSleeping() const { return m_SleepTimer > 0.0f; }
 		// 0: clear, 1: black
 		real GetTeleportFadeAlpha() const { return m_TeleportFadeAlpha; }
 		// Whether the player is being held in place until terrain collision loads below them
@@ -348,6 +359,15 @@ namespace flex
 		TrackBuildingContext m_TrackBuildingContext;
 
 		bool m_bGrounded = false;
+		bool m_bCrawling = false;
+		// Test hooks (FLEX_TEST_CRAWL): forces crawling & replaces the walking input while non-zero
+		bool m_bTestForceCrawl = false;
+		glm::vec3 m_TestWalkDir = VEC3_ZERO;
+		sec m_SleepTimer = 0.0f; // Counts down from SLEEP_DURATION while sleeping
+		real m_SleepWakeTimeOfDay = 0.0f;
+		static constexpr sec SLEEP_DURATION = 3.0f;
+		// [0, 1], eases the eye down & up
+		real m_CrawlAmount = 0.0f;
 		// Result of the last ground probe (which reaches GROUND_PROBE_DISTANCE below the capsule)
 		bool m_bGroundHit = false;
 		real m_GroundGap = 0.0f;
@@ -465,6 +485,7 @@ namespace flex
 			FADING_IN
 		};
 		void UpdateTeleportFade();
+		void UpdateSleep();
 		void DrawTeleportFade() const;
 		TeleportFadeState m_TeleportFadeState = TeleportFadeState::NONE;
 		real m_TeleportFadeAlpha = 0.0f;

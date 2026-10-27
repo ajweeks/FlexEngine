@@ -30,7 +30,10 @@ namespace flex
 		// Pulls the camera in towards the pivot (the player) when something solid is between them, & eases it back
 		// out once it's clear. Always casts from the pivot (never from the previous camera position), so the camera
 		// can't get stuck inside geometry.
+		// When even that would bring it closer than m_MinObstructedDistance, it stays that far back & moves sideways instead
 		glm::vec3 ResolveCollision(const glm::vec3& pivot, const glm::vec3& desiredPos);
+		// How far a sphere (m_CollisionRadius) can move from 'from' towards 'to' before hitting something large & static
+		real ClearDistance(const glm::vec3& from, const glm::vec3& to) const;
 		void SetPosAndLookAt();
 		void SetLookAt();
 		void FindPlayer();
@@ -74,6 +77,15 @@ namespace flex
 		const real m_MinCollisionDistance = 0.8f;
 		// Rate (1/s) the camera eases back out once clear (pulling in is immediate)
 		const real m_CollisionReturnSpeed = 2.0f;
+		// Closest the camera comes when obstructed, if there's a clear view from the side at that distance
+		const real m_MinObstructedDistance = 2.5f;
+		// Current sideways offset (meters, along the camera's right) & the side last used
+		real m_SideOffset = 0.0f;
+		real m_SideTarget = 0.0f;
+		real m_SideSign = 1.0f;
+		bool m_bPushedAside = false;
+		// Rate (1/s) the sideways offset eases towards its target
+		const real m_SideOffsetSpeed = 5.0f;
 
 	};
 } // namespace flex

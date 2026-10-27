@@ -12,6 +12,7 @@ layout (location = 2) in mat3 ex_TBN;
 // Updated once per frame
 layout (binding = 0) uniform UBOConstant
 {
+	vec4 renderOrigin; // xyz: see Renderer::RenderOriginFor
 	mat4 view;
 	mat4 viewProjection;
 } uboConstant;

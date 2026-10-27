@@ -151,6 +151,9 @@ namespace flex
 		// contentSize - viewSize) is changed by dragging the thumb or clicking the track. Returns true while dragging.
 		bool Scrollbar(const char* id, const UIRect& rect, real contentSize, real viewSize, real* scroll);
 
+		// A small label next to the mouse (drawn over whatever's under it), for the thing being hovered
+		void Tooltip(const std::string& text);
+
 		void ClearFocus() { m_FocusedID = 0; }
 		// True on the frame the mouse is released after dragging the widget (e.g. a slider)
 		bool WasReleased(const char* id) const;

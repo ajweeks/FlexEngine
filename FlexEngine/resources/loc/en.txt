@@ -76,16 +76,20 @@ Common_Back = Back
 
 # Controls screen (the keys themselves come from the input bindings)
 Controls_Title = Controls
-Controls_Subtitle = What every key does
+Controls_Subtitle = What every key does (click one to change it)
 Controls_Movement = Movement
 Controls_Items = Items & tools
 Controls_Building = Building
 Controls_General = General
-Controls_Move = Move
+Controls_MoveForward = Move forward
+Controls_MoveLeft = Move left
+Controls_MoveBackward = Move backward
+Controls_MoveRight = Move right
 Controls_Look = Look around
 Controls_Jump = Jump (in the air: paraglider)
 Controls_Sprint = Sprint
 Controls_Climb = Climb (hold at a steep wall)
+Controls_Crawl = Crawl (hold, can't fall off edges)
 Controls_Crouch = Slide, ski & wingsuit (hold)
 Controls_GrapplingHook = Grappling hook
 Controls_UseItem = Use item (dig, chop)
@@ -107,6 +111,17 @@ Controls_Pause = Pause
 Controls_Screenshot = Screenshot
 Controls_KeyMouse = Mouse
 Controls_KeyScroll = Scroll
+Controls_LightCampfire = Light a campfire (hold)
+Controls_MapRecenter = Map: re-center on you
+Controls_Waypoint = Place or remove a waypoint (up to 9)
+Controls_MapWaypoint = On the map: place or remove a waypoint
+Controls_PressKey = Press a key...
+Controls_ResetDefaults = Reset to defaults
+Controls_RebindHint = Click a control, then press the new key or mouse button. Esc cancels.
+Controls_RebindWaiting = Press a key or mouse button for this control, or Esc to cancel
+Controls_RebindInvalid = That key can't be used for this control
+Controls_RebindSwapped = Swapped with "%s"
+Controls_RebindReset = All controls reset to their defaults
 
 # Loading
 Loading_Terrain = Generating terrain...
@@ -123,7 +138,7 @@ Pause_QuitGame = Save & quit game
 
 # Map
 Map_Title = Map
-Map_Controls = [Scroll] Zoom   [Middle drag] Pan   [C] Re-center   [Click] Teleport   [Esc / M] Close
+Map_Controls = [Scroll] Zoom   [Middle drag] Pan   [C] Re-center   [Click] Teleport   [Right click] Waypoint   [Esc / M] Close
 Map_Scale = %.1f km across
 Map_Mapping = Mapping the area...
 Map_Hover = %s   |   %.0fm high   |   %.1fkm away   |   Click to teleport
@@ -131,15 +146,24 @@ Map_Teleported = Teleported %.1fkm
 Map_LegendYou = You
 Map_LegendTreasure = Treasure
 Map_LegendOpened = Opened treasure
+Map_LegendWaypoint = Waypoint
+Map_TipChest = %s   |   %.1fkm away
+Map_TipWaypoint = Waypoint %d   |   %.1fkm away   |   Right click to remove
+Waypoint_Placed = Waypoint %d placed
+Waypoint_Removed = Waypoint %d removed
+Waypoint_Full = All 9 waypoints are placed. Remove one first
 
 # Interaction prompts
 Prompt_OpenChest = [E] Open chest
+Prompt_Sleep = [E] Sleep until morning
 Prompt_Drive = [E] Drive
 Prompt_Row = [E] Row
 Prompt_UseTerminal = [E] Use terminal
 
 # Notifications
 Notify_Treasure = Treasure! Found %s
+Notify_BedNotTired = You aren't tired, it's still day. Sleep at night.
+Notify_BedWake = You wake up rested as morning breaks
 Notify_TreasureEmpty = Treasure! Found nothing (it was empty)
 Notify_TreasureGlint = Something glints in the distance... treasure? (Chests are marked on the map [M])
 Notify_ItemCount = %dx %s
@@ -178,6 +202,10 @@ Build_Ladder = Ladder
 Build_Rope = Rope
 Build_Wood = Wood
 Build_Stone = Stone
+Build_Blocked_NoTarget = Nothing to build on within reach
+Build_Blocked_Piece = %s in the way
+Build_Blocked_Player = You're in the way
+Build_Blocked_Ceiling = Torches can't hang from ceilings
 
 # Track building
 Track_BuildingTitle = TRACK BUILDING - %d nodes placed
@@ -236,6 +264,7 @@ Item_Headlamp = Headlamp
 Item_SolarPanel = Solar panel
 Item_Battery = Battery
 Item_Lamp = Lamp
+Item_Bed = Bed
 Item_Quartz = Quartz
 Item_Aluminum = Aluminum
 Item_Tin = Tin

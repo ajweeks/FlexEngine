@@ -19,6 +19,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "GameSounds.hpp"
+#include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "InputManager.hpp"
@@ -36,6 +37,88 @@ IGNORE_WARNINGS_POP
 
 namespace flex
 {
+	bool TerrainCollisionHold::Update(btRigidBody* rb, real checkDistance)
+	{
+		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+		if (rb == nullptr || terrainGenerator == nullptr)
+		{
+			return false;
+		}
+
+		const btVector3 pos = rb->getCenterOfMassPosition();
+		bool bCollisionBelow = false;
+		{
+			// Cheap check first: any static collision just below
+			const btVector3 rayEnd = pos - btVector3(0.0f, checkDistance, 0.0f);
+			btCollisionWorld::ClosestRayResultCallback rayCallback(pos, rayEnd);
+			rayCallback.m_collisionFilterMask = (i32)CollisionType::STATIC;
+			g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->rayTest(pos, rayEnd, rayCallback);
+			bCollisionBelow = rayCallback.hasHit();
+		}
+
+		bool bHold = bHeld;
+		if (bCollisionBelow)
+		{
+			bHold = false;
+		}
+		else
+		{
+			// Otherwise ask the terrain (a density raycast, so not every step)
+			secUntilCheck -= g_FixedDeltaTime;
+			if (secUntilCheck <= 0.0f)
+			{
+				secUntilCheck = 0.25f;
+				bHold = !terrainGenerator->IsCollisionLoadedBelow(ToVec3(pos));
+
+				// Fell through the world (e.g. older saves have vehicles & batteries kilometers below the ground): put it
+				// back on the surface, & hold it there until the collision has loaded
+				glm::vec3 groundPos;
+				if (terrainGenerator->IsFallenThrough(ToVec3(pos)) && terrainGenerator->FindStandingPoint(ToVec3(pos), false, groundPos))
+				{
+					PrintWarn("Moved an object which had fallen through the terrain from (%.1f, %.1f, %.1f) to (%.1f, %.1f, %.1f)\n",
+						pos.getX(), pos.getY(), pos.getZ(), groundPos.x, groundPos.y + 2.0f, groundPos.z);
+					btTransform transform = rb->getCenterOfMassTransform();
+					transform.setOrigin(ToBtVec3(groundPos + glm::vec3(0.0f, 2.0f, 0.0f)));
+					rb->setCenterOfMassTransform(transform);
+					rb->setInterpolationWorldTransform(transform);
+					if (rb->getMotionState() != nullptr)
+					{
+						rb->getMotionState()->setWorldTransform(transform);
+					}
+					rb->activate(true);
+					bHold = true;
+				}
+			}
+		}
+
+		if (bHold && !bHeld)
+		{
+			bHeld = true;
+			gravity = rb->getGravity();
+			rb->setGravity(btVector3(0.0f, 0.0f, 0.0f));
+		}
+		else if (!bHold)
+		{
+			Release(rb);
+		}
+
+		if (bHeld)
+		{
+			rb->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+			rb->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
+		}
+		return bHeld;
+	}
+
+	void TerrainCollisionHold::Release(btRigidBody* rb)
+	{
+		if (bHeld && rb != nullptr)
+		{
+			rb->setGravity(gravity);
+		}
+		bHeld = false;
+	}
+
 	static const char* TireNames[] = { "FL", "FR", "RL", "RR", "None" };
 	static const char* BrakeLightNames[] = { "Left", "Right" };
 	static_assert((ARRAY_LENGTH(TireNames) - 1) == (i32)Vehicle::Tire::_NONE, "TireNames length does not match number of entires in Tire enum");
@@ -106,6 +189,8 @@ namespace flex
 		newGameObject->m_SuspensionRestLength = m_SuspensionRestLength;
 		newGameObject->m_WheelFriction = m_WheelFriction;
 		newGameObject->m_RollInfluence = m_RollInfluence;
+		newGameObject->m_AntiSquat = m_AntiSquat;
+		newGameObject->m_TopSpeed = m_TopSpeed;
 
 		return newGameObject;
 	}
@@ -154,6 +239,12 @@ namespace flex
 			m_ActiveReverseLightMatEmissive = glm::min(m_InitialReverseLightMatEmissive + glm::vec4(0.4f), VEC4_ONE);
 		}
 
+		for (i32 i = 0; i < m_TireCount; ++i)
+		{
+			GameObject* tire = scene->GetGameObject(m_TireIDs[i]);
+			m_TireRestPositions[i] = (tire != nullptr) ? tire->GetTransform()->GetLocalPosition() : VEC3_ZERO;
+		}
+
 		CreateRigidBody();
 	}
 
@@ -186,16 +277,52 @@ namespace flex
 			btVector3 wheelDirectionCS0(0, -1, 0);
 			btVector3 wheelAxleCS(-1, 0, 0);
 
-			btVector3 connecitonPoint = ToBtVec3(tireFL->GetTransform()->GetLocalPosition());
-			bool bIsFrontWheel = true;
-			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, m_WheelRadius, m_tuning, bIsFrontWheel);
-			connecitonPoint = ToBtVec3(tireFR->GetTransform()->GetLocalPosition());
-			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, m_WheelRadius, m_tuning, bIsFrontWheel);
-			bIsFrontWheel = false;
-			connecitonPoint = ToBtVec3(tireRL->GetTransform()->GetLocalPosition());
-			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, m_WheelRadius, m_tuning, bIsFrontWheel);
-			connecitonPoint = ToBtVec3(tireRR->GetTransform()->GetLocalPosition());
-			m_Vehicle->addWheel(connecitonPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, m_WheelRadius, m_tuning, bIsFrontWheel);
+			// The physics wheels must match the tire meshes: their radius, and where they sit at rest. The suspension's
+			// hard points go above the tires by the length the springs settle at under the vehicle's weight (each spring's
+			// force is stiffness * compression * chassis mass, so four of them hold up the weight at g / (4 * stiffness)).
+			GameObject* tires[m_TireCount] = { tireFL, tireFR, tireRL, tireRR };
+			if (tireFL != nullptr && tireFL->GetMesh() != nullptr)
+			{
+				const Mesh* tireMesh = tireFL->GetMesh();
+				const real meshRadius = (tireMesh->m_MaxPoint.y - tireMesh->m_MinPoint.y) * 0.5f;
+				if (meshRadius > 0.05f && meshRadius < 2.0f)
+				{
+					m_WheelRadius = meshRadius;
+				}
+			}
+			const real gravity = glm::abs(dynamicsWorld->getGravity().getY());
+			const real sag = gravity / (4.0f * glm::max(m_SuspensionStiffness, 1.0f));
+			real settledLength = glm::max(m_SuspensionRestLength - sag, m_SuspensionRestLength * 0.3f);
+			// The suspension rays must start inside the chassis' collider, or they hit it (& launch the vehicle). If the
+			// hard points would be above it, shorten the springs instead (keeping their stiffness).
+			real restLength = m_SuspensionRestLength;
+			if (chassisRB->getCollisionShape() != nullptr)
+			{
+				btVector3 aabbMin, aabbMax;
+				chassisRB->getCollisionShape()->getAabb(btTransform::getIdentity(), aabbMin, aabbMax);
+				const real maxHardPointY = (real)aabbMax.getY() - 0.05f;
+				real lowestTireY = FLT_MAX;
+				for (i32 i = 0; i < m_TireCount; ++i)
+				{
+					lowestTireY = glm::min(lowestTireY, m_TireRestPositions[i].y);
+				}
+				if (lowestTireY + settledLength > maxHardPointY)
+				{
+					settledLength = glm::max(maxHardPointY - lowestTireY, 0.05f);
+					restLength = settledLength + sag;
+				}
+			}
+			suspensionRestLength = restLength;
+			// Keep the wheels from passing through the hard points (the default allows 5m of travel)
+			m_tuning.m_maxSuspensionTravelCm = settledLength * 0.9f * 100.0f;
+
+			for (i32 i = 0; i < m_TireCount; ++i)
+			{
+				const bool bIsFrontWheel = (i == (i32)Tire::FL || i == (i32)Tire::FR);
+				const glm::vec3 restPos = (tires[i] != nullptr) ? m_TireRestPositions[i] : VEC3_ZERO;
+				const btVector3 connectionPoint = ToBtVec3(restPos + VEC3_UP * settledLength);
+				m_Vehicle->addWheel(connectionPoint, wheelDirectionCS0, wheelAxleCS, suspensionRestLength, m_WheelRadius, m_tuning, bIsFrontWheel);
+			}
 
 			for (i32 i = 0; i < m_Vehicle->getNumWheels(); ++i)
 			{
@@ -205,6 +332,8 @@ namespace flex
 				wheel.m_wheelsDampingCompression = m_SuspensionCompression;
 				wheel.m_frictionSlip = m_WheelFriction;
 				wheel.m_rollInfluence = m_RollInfluence;
+				// Start at rest rather than fully extended, so a newly placed vehicle doesn't bounce
+				wheel.m_raycastInfo.m_suspensionLength = settledLength;
 			}
 		}
 	}
@@ -421,12 +550,16 @@ namespace flex
 
 		for (i32 i = 0; i < m_TireCount; i++)
 		{
-			//synchronize the wheels with the (interpolated) chassis world transform
-			m_Vehicle->updateWheelTransform(i, true);
-
 			const btWheelInfo& wheelInfo = m_Vehicle->getWheelInfo(i);
-			glm::quat newWheelRotation = ToQuaternion(wheelInfo.m_worldTransform.getRotation());
-			scene->GetGameObject(m_TireIDs[i])->GetTransform()->SetWorldRotation(newWheelRotation);
+			// Tires are children of the chassis, so they're placed in its space: below their hard point by the
+			// suspension's current length, steered & spun (this follows the chassis' interpolated transform)
+			GameObject* tire = scene->GetGameObject(m_TireIDs[i]);
+			if (tire != nullptr)
+			{
+				Transform* tireTransform = tire->GetTransform();
+				tireTransform->SetLocalPosition(ToVec3(wheelInfo.m_chassisConnectionPointCS) - VEC3_UP * wheelInfo.m_raycastInfo.m_suspensionLength, false);
+				tireTransform->SetLocalRotation(glm::angleAxis(wheelInfo.m_steering, VEC3_UP) * glm::angleAxis(wheelInfo.m_rotation, VEC3_RIGHT));
+			}
 
 			maxWheelSlip = glm::min(maxWheelSlip, wheelInfo.m_skidInfo);
 		}
@@ -434,11 +567,16 @@ namespace flex
 		m_WheelSlipHisto.AddValue(maxWheelSlip);
 
 		{
+			// Less drive the closer we get to top speed (in the direction we're driving)
+			const real speedInDriveDir = (m_EngineForce >= 0.0f) ? forwardVel : -forwardVel;
+			const real speedFraction = glm::clamp(speedInDriveDir / glm::max(m_TopSpeed, 1.0f), 0.0f, 1.0f);
+			const real driveForce = m_EngineForce * (1.0f - speedFraction * speedFraction);
+
 			i32 wheelIndex = 2;
-			m_Vehicle->applyEngineForce(m_EngineForce, wheelIndex);
+			m_Vehicle->applyEngineForce(driveForce, wheelIndex);
 			m_Vehicle->setBrake(m_BrakeForce, wheelIndex);
 			wheelIndex = 3;
-			m_Vehicle->applyEngineForce(m_EngineForce, wheelIndex);
+			m_Vehicle->applyEngineForce(driveForce, wheelIndex);
 			m_Vehicle->setBrake(m_BrakeForce, wheelIndex);
 
 			wheelIndex = 0;
@@ -491,6 +629,41 @@ namespace flex
 		m_pLinearVelocity = linearVel;
 	}
 
+	void Vehicle::FixedUpdate()
+	{
+		GameObject::FixedUpdate();
+
+		if (m_RigidBody != nullptr && m_TerrainHold.Update(m_RigidBody->GetRigidBodyInternal(), 4.0f))
+		{
+			return;
+		}
+
+		if (m_Vehicle == nullptr || m_RigidBody == nullptr || m_RigidBody->GetRigidBodyInternal() == nullptr || m_AntiSquat <= 0.0f)
+		{
+			return;
+		}
+
+		// The drive force acts at the rear tires' contact patches, well below the centre of mass, so it pitches the
+		// nose up. Cancel most of that moment (forces applied here are used by the next physics step).
+		btRigidBody* rb = m_RigidBody->GetRigidBodyInternal();
+		const btVector3 chassisUp = rb->getWorldTransform().getBasis().getColumn(1);
+		btVector3 counterTorque(0.0f, 0.0f, 0.0f);
+		for (i32 wheelIndex : { (i32)Tire::RL, (i32)Tire::RR })
+		{
+			const btWheelInfo& wheel = m_Vehicle->getWheelInfo(wheelIndex);
+			if (!wheel.m_raycastInfo.m_isInContact || wheel.m_engineForce == 0.0f)
+			{
+				continue;
+			}
+			const btVector3 relPos = wheel.m_raycastInfo.m_contactPointWS - rb->getCenterOfMassPosition();
+			const btVector3 relPosUp = chassisUp * chassisUp.dot(relPos);
+			const btVector3 forwardWS = m_Vehicle->getForwardVector();
+			const btVector3 driveForce = forwardWS * (wheel.m_engineForce * wheel.m_skidInfo);
+			counterTorque -= relPosUp.cross(driveForce) * m_AntiSquat;
+		}
+		rb->applyTorque(counterTorque);
+	}
+
 	void Vehicle::ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs)
 	{
 		FLEX_UNUSED(matIDs);
@@ -507,6 +680,8 @@ namespace flex
 			vehicleObj.TryGetFloat("suspension rest length", m_SuspensionRestLength);
 			vehicleObj.TryGetFloat("wheel friction", m_WheelFriction);
 			vehicleObj.TryGetFloat("roll influence", m_RollInfluence);
+			vehicleObj.TryGetFloat("anti squat", m_AntiSquat);
+			vehicleObj.TryGetFloat("top speed", m_TopSpeed);
 
 			// If this object was copied from a prefab, it will already have filled out IDs
 			if (!m_TireIDs[0].IsValid())
@@ -598,6 +773,8 @@ namespace flex
 		vehicleObj.fields.emplace_back("suspension rest length", JSONValue(m_SuspensionRestLength, 2));
 		vehicleObj.fields.emplace_back("wheel friction", JSONValue(m_WheelFriction, 2));
 		vehicleObj.fields.emplace_back("roll influence", JSONValue(m_RollInfluence, 2));
+		vehicleObj.fields.emplace_back("anti squat", JSONValue(m_AntiSquat, 2));
+		vehicleObj.fields.emplace_back("top speed", JSONValue(m_TopSpeed, 1));
 
 		std::vector<JSONField> soundEffectSIDs;
 		soundEffectSIDs.reserve(m_SoundEffectSIDs.size());
@@ -671,14 +848,7 @@ namespace flex
 			real lowestWheelSlip = 1.0f;
 			for (i32 i = 0; i < m_TireCount; i++)
 			{
-				// Assume this is called in update loop:
-				m_Vehicle->updateWheelTransform(i, true);
-
 				const btWheelInfo& wheelInfo = m_Vehicle->getWheelInfo(i);
-				glm::quat newWheelRotation = ToQuaternion(wheelInfo.m_worldTransform.getRotation());
-				GameObject* tireObject = scene->GetGameObject(m_TireIDs[i]);
-				Transform* tireTransform = tireObject->GetTransform();
-				tireTransform->SetWorldRotation(newWheelRotation);
 
 				real x = (real)(i % 2);
 				real y = (real)(i / 2);
@@ -699,6 +869,8 @@ namespace flex
 
 		ImGui::SliderFloat("Wheel friction", &m_WheelFriction, 0.0f, 10.0f);
 		ImGui::SliderFloat("Roll influence", &m_RollInfluence, 0.0f, 1.0f);
+		ImGui::SliderFloat("Anti squat", &m_AntiSquat, 0.0f, 1.0f);
+		ImGui::SliderFloat("Top speed", &m_TopSpeed, 1.0f, 80.0f);
 		ImGui::SliderFloat("Wheel radius", &m_WheelRadius, 0.0f, 2.0f);
 		ImGui::SliderFloat("Wheel width", &m_WheelWidth, 0.0f, 2.0f);
 
@@ -1204,6 +1376,54 @@ namespace flex
 		return false;
 	}
 
+	void RowBoat::GetHullBounds(glm::vec3& outMin, glm::vec3& outMax)
+	{
+		// Including the keel below the bottom, & the sheer & oarlocks above the gunwale
+		outMin = glm::vec3(-HULL_HALF_WIDTH, HULL_BOTTOM - 0.065f, -HULL_HALF_LENGTH);
+		outMax = glm::vec3(HULL_HALF_WIDTH, HULL_TOP + HULL_SHEER, HULL_HALF_LENGTH);
+	}
+
+	real RowBoat::GetFloatHeight()
+	{
+		// Buoyancy grows linearly with depth to BuoyancyScale times the weight when the hull is under water up to the
+		// gunwale, so an empty boat settles with its bottom 1 / scale of the hull's height under water
+		const real defaultBuoyancyScale = 3.0f;
+		return -HULL_BOTTOM - (HULL_TOP - HULL_BOTTOM) / defaultBuoyancyScale;
+	}
+
+	void RowBoat::DrawPlacementOutline(const glm::vec3& posWS, const glm::quat& rotWS, const glm::vec4& colour)
+	{
+		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
+		if (debugRenderer == nullptr)
+		{
+			return;
+		}
+
+		const btVector3 lineColour(colour.r, colour.g, colour.b);
+		const u32 segmentCount = 32;
+		// Gunwale, waterline & bottom rings, & a few ribs between them
+		const real ringTs[] = { 0.0f, 0.5f, 1.0f };
+		for (real t : ringTs)
+		{
+			for (u32 segment = 0; segment < segmentCount; ++segment)
+			{
+				const real theta0 = TWO_PI * (real)segment / (real)segmentCount;
+				const real theta1 = TWO_PI * (real)(segment + 1) / (real)segmentCount;
+				const glm::vec3 a = posWS + rotWS * HullPoint(t, theta0, 0.0f);
+				const glm::vec3 b = posWS + rotWS * HullPoint(t, theta1, 0.0f);
+				debugRenderer->drawLine(ToBtVec3(a), ToBtVec3(b), lineColour);
+			}
+		}
+		const u32 ribCount = 8;
+		for (u32 rib = 0; rib < ribCount; ++rib)
+		{
+			const real theta = TWO_PI * (real)rib / (real)ribCount;
+			const glm::vec3 a = posWS + rotWS * HullPoint(0.0f, theta, 0.0f);
+			const glm::vec3 b = posWS + rotWS * HullPoint(1.0f, theta, 0.0f);
+			debugRenderer->drawLine(ToBtVec3(a), ToBtVec3(b), lineColour);
+		}
+	}
+
 	void RowBoat::Update()
 	{
 		PROFILE_AUTO("RowBoat Update");
@@ -1263,6 +1483,15 @@ namespace flex
 		btRigidBody* rb = m_RigidBody->GetRigidBodyInternal();
 		const btTransform& transform = rb->getWorldTransform();
 		const glm::vec3 pos = ToVec3(transform.getOrigin());
+
+		// Afloat there's nothing below to collide with, the water holds the boat up
+		real holdWaterHeight;
+		if (!SampleWaterHeight(pos, holdWaterHeight) && m_TerrainHold.Update(rb, 3.0f))
+		{
+			m_SubmergedFraction = 0.0f;
+			return;
+		}
+		m_TerrainHold.Release(rb);
 		const glm::quat rot = ToQuaternion(transform.getRotation());
 		const glm::vec3 up = rot * VEC3_UP;
 		const glm::vec3 forward = rot * VEC3_FORWARD;

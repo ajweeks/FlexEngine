@@ -77,3 +77,55 @@ Steps for A:
    expected fraction. Also compare cave screenshots before and after.
 
 Rough sizes: steps 1-4 are about 2 days. B adds about 4-5 days on top, reusing A's volume for leak prevention.
+
+## Point light (torch) shadows
+
+Status: option 1 implemented (`VulkanRenderer::UpdatePointShadowSlots` / `RenderPointShadows`, settings under
+"Point light shadows" in the renderer window).
+
+Torches, campfires & placed point lights share the renderer's 16 point light slots (torches take the 12 nearest the
+camera). None of them cast shadows, so torch light goes straight through walls, which is the most visible problem in
+built interiors at night. The target is shadows for the lights near the camera at a **fixed per-frame cost**, however
+many torches the world holds.
+
+### Options
+1. **Cached cube shadow atlas with an update budget (chosen).** A pool of N slots (default 8). Each slot is 6 low-res
+   (256²) depth faces in one D16 2D array (8 x 6 x 256² x 2 B = 6 MB). Faces are rendered with the existing shadow
+   pipeline (the sun's caster vertex buffers, model matrices & depth-only pass), so no new caster path is needed.
+   - **Assignment**: the lights whose range intersects the view, ordered by distance, with hysteresis for lights that
+     already have a slot. A slot is keyed by the light's position, not its ID, because torches swap light IDs as the
+     camera moves. Lights that move a little (campfire flicker) keep their slot.
+   - **Caching**: every frame, one pass over the casters hashes, per face, the casters inside its frustum (render
+     object, mesh range & transform). A face is re-rendered only when its hash changes (something was built, a chunk
+     was swapped, the player walked past) or its light moved. Static scenes cost nothing after the first frames.
+   - **Budget**: at most B faces are rendered per frame (default 12, i.e. two full lights). New slots go first, then
+     the dirty faces that have waited longest. This bounds the GPU cost no matter how many lights change.
+   - **Fading**: a light's shadow fades in once all its faces exist and fades out before its slot is reused. It also
+     fades with distance from the camera, so lights beyond the budget are unshadowed without popping.
+   - **Lookup**: the face is picked by the major axis, then one hardware PCF fetch (4 at higher shader quality) from
+     the 2D array. Each face's FOV is slightly over 90° (2 texel guard band), so filter taps never cross faces.
+   - **Costs**: 6 extra views per new or changed light, with one draw per caster per face. Only casters within the
+     light's range are drawn into each face. The cube faces are also the visibility a later probe GI (option B
+     above) needs to light its probes with torches, so they can be reused there.
+2. **Dual-paraboloid maps.** Two maps per light instead of six, so it costs a third of the raster setup. The
+   paraboloid warp is done per vertex, though, and building pieces are 12-triangle boxes & terrain chunks have long
+   edges. Those would bend badly (shadows that curve and leak at the seam) unless everything was tessellated.
+   **Rejected.**
+3. **Ray-marching an occupancy / sky visibility volume (GI option A).** This would share one structure between GI and
+   torch shadows, with no per-light rendering at all. However:
+   - The planned 2 m cells are an order of magnitude too coarse for a 0.2 m wall a metre from a torch.
+   - The volume doesn't exist yet, and neither do the occupancy writes for props.
+   - A 10-20 tap march per pixel per light is costly in both the forward terrain pass and the deferred pass with 16
+     lights.
+
+   It's still the right tool for soft, large-scale occlusion: stopping probe light leaking through terrain and
+   occluding torch *bounce* light. It isn't the tool for direct torch shadows. **Deferred to the GI work.** Once the
+   volume exists, a single coarse march could replace the shadow map for distant lights beyond the slot budget,
+   instead of leaving them unshadowed.
+
+### Tie-in with the GI plan
+- The slots' depth faces are the visibility a DDGI-lite probe update (option B) needs to light probes with torches.
+  Shading a probe texel can call the same `PointLightShadow` lookup. Shading the faces (RSM style) would also give
+  torch bounce later.
+- The per-face caster hash gives probes a cheap "did anything change near here" signal for scheduling their
+  updates.

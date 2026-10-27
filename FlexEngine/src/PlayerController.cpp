@@ -388,14 +388,34 @@ namespace flex
 
 				GameObject* templateObject = g_ResourceManager->GetPrefabTemplate(gameObjectStack.prefabID);
 				Mesh* mesh = templateObject->GetMesh();
+				const bool bBoat = templateObject->GetTypeID() == RowBoatSID;
 
+				// Row boats build their mesh when spawned, so their templates have none
+				glm::vec3 boundsMin(0.0f), boundsMax(0.0f);
 				if (mesh != nullptr)
+				{
+					boundsMin = mesh->m_MinPoint;
+					boundsMax = mesh->m_MaxPoint;
+				}
+				else if (bBoat)
+				{
+					RowBoat::GetHullBounds(boundsMin, boundsMax);
+				}
+
+				if (mesh != nullptr || bBoat)
 				{
 					PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
 
+					// Sized for the item being placed (rebuilt when a different item is selected)
+					const btVector3 boxHalfExtents = ToBtVec3((boundsMax - boundsMin) * 0.5f);
+					if (m_ItemPlacementBoundingBoxShape != nullptr &&
+						(m_ItemPlacementBoundingBoxShape->getHalfExtentsWithoutMargin() + btVector3(m_ItemPlacementBoundingBoxShape->getMargin(), m_ItemPlacementBoundingBoxShape->getMargin(), m_ItemPlacementBoundingBoxShape->getMargin()) - boxHalfExtents).length2() > 1e-6f)
+					{
+						delete m_ItemPlacementBoundingBoxShape;
+						m_ItemPlacementBoundingBoxShape = nullptr;
+					}
 					if (m_ItemPlacementBoundingBoxShape == nullptr)
 					{
-						btVector3 boxHalfExtents = ToBtVec3((mesh->m_MaxPoint - mesh->m_MinPoint) * 0.5f);
 						m_ItemPlacementBoundingBoxShape = new btBoxShape(boxHalfExtents);
 					}
 
@@ -408,11 +428,21 @@ namespace flex
 
 						btTransform sweepEndTransform(floatingTargetTransform.getRotation(), ToBtVec3(targetItemPlacementPos + (-VEC3_UP) * maxDrop));
 						glm::vec3 groundPos, groundNormal;
-						if (physicsWorld->GetPointOnGround(m_ItemPlacementBoundingBoxShape, floatingTargetTransform, sweepEndTransform, groundPos, groundNormal))
+						const bool bGround = physicsWorld->GetPointOnGround(m_ItemPlacementBoundingBoxShape, floatingTargetTransform, sweepEndTransform, groundPos, groundNormal);
+						// Boats float on water (which has no collider), so they go on its surface wherever it's above the ground
+						real waterHeight = 0.0f;
+						const bool bOnWater = bBoat && RowBoat::SampleWaterHeight(targetItemPlacementPos, waterHeight) &&
+							(!bGround || waterHeight > groundPos.y - boundsMin.y - RowBoat::GetFloatHeight());
+						if (bOnWater)
+						{
+							m_ItemPlacementGroundedPos = glm::vec3(targetItemPlacementPos.x, waterHeight + RowBoat::GetFloatHeight(), targetItemPlacementPos.z);
+							m_TargetItemPlacementPos = m_ItemPlacementGroundedPos;
+						}
+						else if (bGround)
 						{
 							m_ItemPlacementGroundedPos.x = targetItemPlacementPos.x;
 							m_ItemPlacementGroundedPos.y = groundPos.y +
-								((mesh->m_MaxPoint.y - mesh->m_MinPoint.y) * 0.5f);
+								((boundsMax.y - boundsMin.y) * 0.5f);
 							m_ItemPlacementGroundedPos.z = targetItemPlacementPos.z;
 
 							m_TargetItemPlacementPos = m_ItemPlacementGroundedPos;
@@ -456,12 +486,19 @@ namespace flex
 		// Flying, climbing, skiing etc. take over movement entirely
 		if (m_Player->m_TrackRidingID == InvalidTrackID && m_Player->m_Traversal->FixedUpdate())
 		{
+			m_Player->m_bCrawling = false;
 			m_bWasGrounded = false;
 			return;
 		}
 
-		const bool bSprinting = g_InputManager->GetKeyDown(GameKeys::SPRINT) != 0;
-		const real maxMoveSpeed = bSprinting ? m_SprintSpeed : m_MaxMoveSpeed;
+		// Crawling: slower, lower, & ledges can't be walked off
+		const bool bCrawling = m_Player->m_bPossessed && m_Player->m_bGrounded && m_Player->m_TrackRidingID == InvalidTrackID &&
+			!m_Player->m_RidingVehicleID.IsValid() && m_Player->m_Traversal->GetMode() == Traversal::Mode::NONE &&
+			!m_Player->m_Traversal->IsHookAttached() && (m_Player->m_bTestForceCrawl || g_InputManager->GetKeyDown(GameKeys::CRAWL) != 0);
+		m_Player->m_bCrawling = bCrawling;
+
+		const bool bSprinting = !bCrawling && g_InputManager->GetKeyDown(GameKeys::SPRINT) != 0;
+		const real maxMoveSpeed = bCrawling ? m_MaxMoveSpeed * Player::CRAWL_SPEED_FACTOR : (bSprinting ? m_SprintSpeed : m_MaxMoveSpeed);
 
 		btVector3 vel = rb->getLinearVelocity();
 		btVector3 xzVel(vel.getX(), 0, vel.getZ());
@@ -539,6 +576,10 @@ namespace flex
 						moveDir /= moveDirLen;
 					}
 				}
+				if (glm::length(m_Player->m_TestWalkDir) > 0.0f)
+				{
+					moveDir = m_Player->m_TestWalkDir;
+				}
 				bMoving = glm::length(moveDir) > 0.01f;
 
 				const bool bGrounded = m_Player->m_bGrounded;
@@ -596,6 +637,11 @@ namespace flex
 					velocity = VEC3_ZERO;
 				}
 
+				if (bCrawling)
+				{
+					m_Player->m_Traversal->BlockLedges(velocity);
+				}
+
 				rb->setLinearVelocity(ToBtVec3(velocity));
 				if (bMoving)
 				{
@@ -634,6 +680,12 @@ namespace flex
 		// Positive y looks down. In third person it tilts the overhead camera instead of the player
 		lookInput.y += m_MouseLookAccum.y * m_MouseRotateVSpeed * (m_bInvertMouseV ? -1.0f : 1.0f) * m_RotateVSpeed * g_FixedDeltaTime;
 		lookInput.y += (-g_InputManager->GetActionAxisValue(Action::LOOK_UP) + g_InputManager->GetActionAxisValue(Action::LOOK_DOWN)) * m_RotateVSpeed * g_DeltaTime;
+		// FLEX_LOOK_TEST=<degrees per second>[,<camera name>]: turns at a constant rate (see BaseCamera::UpdateSmoothnessStats)
+		static const char* lookTest = getenv("FLEX_LOOK_TEST");
+		if (lookTest != nullptr)
+		{
+			lookInput.x += glm::radians((real)atof(lookTest)) * g_DeltaTime;
+		}
 		m_MouseLookAccum = VEC2_ZERO;
 
 		m_PendingLook += lookInput;
@@ -1059,17 +1111,24 @@ namespace flex
 				else
 				{
 					Mesh* mesh = templateObject->GetMesh();
+					static const glm::vec4 validColour(2.0f, 4.0f, 2.5f, 0.4f);
+					static const glm::vec4 invalidColour(4.0f, 2.0f, 2.0f, 0.4f);
 					if (mesh != nullptr)
 					{
 						UpdateItemPlacementTransform();
 
-						static const glm::vec4 validColour(2.0f, 4.0f, 2.5f, 0.4f);
-						static const glm::vec4 invalidColour(4.0f, 2.0f, 2.0f, 0.4f);
 						g_Renderer->QueueHologramMesh(gameObjectStack.prefabID,
 							m_TargetItemPlacementPosSmoothed,
 							m_TargetItemPlacementRotSmoothed,
 							VEC3_ONE,
 							m_bItemPlacementValid ? validColour : invalidColour);
+					}
+					else if (templateObject->GetTypeID() == RowBoatSID)
+					{
+						// Row boats' meshes are built at runtime (there's no mesh file for a hologram), so outline the hull
+						UpdateItemPlacementTransform();
+						RowBoat::DrawPlacementOutline(m_TargetItemPlacementPosSmoothed, m_TargetItemPlacementRotSmoothed,
+							m_bItemPlacementValid ? glm::vec4(0.3f, 1.0f, 0.4f, 1.0f) : glm::vec4(1.0f, 0.3f, 0.3f, 1.0f));
 					}
 				}
 			}
@@ -1297,6 +1356,13 @@ namespace flex
 					m_bAttemptInteractRightHand = false;
 					bInteracted = true;
 				}
+			} break;
+			case BedSID:
+			{
+				((Bed*)nearbyInteractable)->Sleep(m_Player);
+				m_bAttemptInteractLeftHand = false;
+				m_bAttemptInteractRightHand = false;
+				bInteracted = true;
 			} break;
 			case TreasureChestSID:
 			{

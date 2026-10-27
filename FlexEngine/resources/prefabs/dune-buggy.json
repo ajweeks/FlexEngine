@@ -50,6 +50,7 @@
 			"suspension rest length" : 0.85,
 			"wheel friction" : 70.0,
 			"roll influence" : 0.12,
+			"top speed" : 30.0,
 			"sound effect sids" : 
 			[
 				18446744073709551615,

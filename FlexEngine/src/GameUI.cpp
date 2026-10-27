@@ -267,6 +267,30 @@ namespace flex
 		FillRect(UIRect(rect.x + radius, rect.y, rect.w - radius * 2.0f, 1.0f * m_Scale), UITheme::WithAlpha(UITheme::TEXT_PRIMARY, 0.08f));
 	}
 
+	void GameUI::Tooltip(const std::string& text)
+	{
+		const real textSize = UITheme::TEXT_SMALL * m_Scale;
+		const real padding = UITheme::SPACE_M * m_Scale;
+		const real width = MeasureText(text, textSize) + padding * 2.0f;
+		const real height = textSize + padding * 1.6f;
+		real x = m_MousePos.x + 18.0f * m_Scale;
+		real y = m_MousePos.y + 22.0f * m_Scale;
+		// (Flipped to the other side of the mouse at the edges of the screen)
+		if (x + width > m_Width - 4.0f * m_Scale)
+		{
+			x = m_MousePos.x - 12.0f * m_Scale - width;
+		}
+		if (y + height > m_Height - 4.0f * m_Scale)
+		{
+			y = m_MousePos.y - 12.0f * m_Scale - height;
+		}
+		const UIRect rect(x, y, width, height);
+		Shadow(rect, 10.0f * m_Scale, UITheme::RADIUS_S * m_Scale, 0.5f);
+		FillRect(rect, UITheme::Hex(0x1A1D23, 0.97f), UITheme::RADIUS_S * m_Scale);
+		FillRect(UIRect(rect.x, rect.y, rect.w, 1.0f * m_Scale), UITheme::OUTLINE, UITheme::RADIUS_S * m_Scale);
+		Text(text, rect.x + padding, rect.y + rect.h * 0.5f, textSize, UITheme::TEXT_PRIMARY);
+	}
+
 	void GameUI::Circle(const glm::vec2& center, real radius, const glm::vec4& colour)
 	{
 		FillRect(UIRect(center.x - radius, center.y - radius, radius * 2.0f, radius * 2.0f), colour, radius);

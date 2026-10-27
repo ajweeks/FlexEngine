@@ -33,6 +33,17 @@ namespace flex
 
 	void DebugRenderer::UpdateDebugMode()
 	{
+		// FLEX_PHYSICS_WIREFRAME=<any>: starts with the collision wireframe (toggled with P) showing, e.g. to check it's drawn in the game
+		static bool s_bAppliedWireframeHook = false;
+		if (!s_bAppliedWireframeHook)
+		{
+			s_bAppliedWireframeHook = true;
+			if (getenv("FLEX_PHYSICS_WIREFRAME") != nullptr)
+			{
+				g_Renderer->GetPhysicsDebuggingSettings().bDrawWireframe = true;
+			}
+		}
+
 		const PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
 
 		m_DebugMode =

@@ -24,6 +24,7 @@ namespace flex
 	{
 		bIsFirstPerson = true;
 		bPossessPlayer = true;
+		zNear = MAX_NEAR_PLANE;
 		ResetOrientation();
 		RecalculateViewProjection();
 	}
@@ -85,6 +86,9 @@ namespace flex
 		//position = ToVec3(t.getOrigin());
 
 		position = m_Player->GetEyePosition();
+
+		// (Scenes can set a larger near plane for the camera they start with)
+		zNear = glm::min(zNear, MAX_NEAR_PLANE);
 
 		CalculateYawAndPitchFromForward();
 

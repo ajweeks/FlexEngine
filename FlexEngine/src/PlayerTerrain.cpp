@@ -158,6 +158,7 @@ namespace flex
 
 		if (m_TerrainTestStep == -2)
 		{
+			// FLEX_TEST_TERRAIN_TOOL=4: stands on a steep slope & screenshots the terrain brush gizmo from four sides
 			const char* testMode = getenv("FLEX_TEST_TERRAIN_TOOL");
 			m_TerrainTestMode = testMode != nullptr ? atoi(testMode) : 0;
 			m_TerrainTestStep = m_TerrainTestMode > 0 ? 0 : -1;
@@ -241,7 +242,9 @@ namespace flex
 			// (lifted a little, so it isn't hidden by the surface it lies on)
 			s_LastBrushCenter = center;
 			s_LastBrushNormal = normal;
-			m_TerrainBrushPreview.Show(BRUSH_PREVIEW_KEY, BuildBrushGeometry, center + normal * 0.03f, RotationFromUp(normal), glm::vec3(radius), colour);
+			// Lifted off the surface so it isn't buried by slopes & bumps, & drawn without a depth test (dashed where hidden)
+			m_TerrainBrushPreview.SetXRay(true);
+			m_TerrainBrushPreview.Show(BRUSH_PREVIEW_KEY, BuildBrushGeometry, center + normal * (0.08f + radius * 0.05f), RotationFromUp(normal), glm::vec3(radius), colour);
 		};
 		// The plane a stroke is moving the surface to, progress [0, 1] of the way through it
 		auto StrokeLevel = [&](real progress)
@@ -901,7 +904,9 @@ namespace flex
 							minHeight = glm::min(minHeight, h);
 							maxHeight = glm::max(maxHeight, h);
 						}
-						if (bDry && maxHeight - minHeight < 1.0f)
+						// (mode 4: a slope, to check the brush gizmo against buried parts)
+						const bool bSlope = m_TerrainTestMode == 4;
+						if (bDry && (bSlope ? (maxHeight - minHeight > 5.0f && maxHeight - minHeight < 14.0f) : maxHeight - minHeight < 1.0f))
 						{
 							TeleportOnTerrain(glm::vec3(x, column.height + 2.0f, z));
 							bFound = true;
@@ -927,6 +932,25 @@ namespace flex
 			}
 		} break;
 		case 1:
+			if (m_TerrainTestMode == 4)
+			{
+				// Looks at the slope from four sides (the brush is partly hidden by the terrain from some)
+				const i32 view = (i32)(t / 2.0f);
+				SetYaw(glm::radians(90.0f * (real)view));
+				SetPitch(glm::radians(view % 2 == 0 ? 8.0f : 30.0f));
+				if (At(1.5f + 2.0f * (real)view) || (view > 0 && At(2.0f * (real)view + 1.0f)))
+				{
+					char name[32];
+					snprintf(name, sizeof(name), "slope_view%d", view);
+					Screenshot(name);
+				}
+				if (t > 8.5f)
+				{
+					g_EngineInstance->Stop();
+					m_TerrainTestStep = -1;
+				}
+				break;
+			}
 			// The brush, before using it
 			if (At(1.5f))
 			{

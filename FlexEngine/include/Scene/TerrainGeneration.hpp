@@ -30,10 +30,12 @@ namespace flex
 {
 	namespace terrain
 	{
-		static const u32 MAX_BIOME_COUNT = 16;
+		static const u32 MAX_BIOME_COUNT = 24;
 
-		// Bump whenever generation output changes to invalidate cached chunks
-		static const u32 GENERATOR_VERSION = 16;
+		// Bump whenever generation output changes to invalidate cached chunks. Worlds record the version they were
+		// created with ("terrain version" in world.bin's META section, 0: before it was recorded), so generation
+		// changes can later be made conditional on it to keep old worlds intact.
+		static const u32 GENERATOR_VERSION = 17;
 
 		enum class Material : u8
 		{
@@ -115,6 +117,9 @@ namespace flex
 			SAVANNA, // Scattered flat topped acacias & dry scrub
 			DESERT, // Cacti & dry scrub
 			VOLCANIC, // No living trees: the odd charred snag or stump (chopped for charcoal) & sparse dark scrub
+			JUNGLE, // Very dense, tall rainforest trees & palms over lush undergrowth
+			MUSHROOM, // Giant mushrooms over clusters of small glowing ones
+			CRYSTAL, // No trees: clusters of crystals growing out of the ground
 
 			_COUNT
 		};
@@ -135,6 +140,15 @@ namespace flex
 			real ridgedness = 0.0f; // [0, 1], 0: rolling fbm, 1: sharp ridges
 			real terraceStrength = 0.0f; // [0, 1], creates mesas & stepped cliffs
 			real terraceHeight = 40.0f;
+			real roughness = 0.47f; // fbm gain [0.2, 0.65]: lower gives smoother, rolling ground
+			real duneStrength = 0.0f; // [0, 1] wind shaped sand dunes (heightAmplitude: dune height, wavelength: spacing)
+			real canyonStrength = 0.0f; // [0, 1] branching canyons cut into the ground
+			real canyonDepth = 250.0f;
+			real fjordStrength = 0.0f; // [0, 1] steep sided sea inlets, cut down below sea level
+			real spireStrength = 0.0f; // [0, 1] sheer pillars of rock (karst towers, hoodoos)
+			real spireHeight = 160.0f;
+			real coastal = 0.0f; // [0, 1] how strongly this biome prefers to appear along coastlines
+			real sandyShores = 1.0f; // [0, 1] 1: sand beaches, 0: muddy (or stony) shores
 
 			// Volumetric features
 			real overhangAmplitude = 0.0f; // Meters, strength of 3D noise displacement (creates overhangs & cliffs)
@@ -163,8 +177,8 @@ namespace flex
 			real lodDistanceFactor = 2.0f; // Larger = higher detail further away (min 1.8 to ensure neighbors differ by at most one level)
 			real viewDistance = 40000.0f;
 
-			real biomeCellSize = 12000.0f;
-			real biomeBlendDistance = 3000.0f;
+			real biomeCellSize = 9000.0f;
+			real biomeBlendDistance = 2500.0f;
 
 			real continentWavelength = 14000.0f;
 			real continentAmplitude = 200.0f;
@@ -185,16 +199,16 @@ namespace flex
 
 			// Lakes (flat water surfaces in carved basins)
 			real lakeCellSize = 3000.0f; // At most one lake per cell
-			real lakeChance = 0.55f;
+			real lakeChance = 0.85f;
 			real lakeMinRadius = 150.0f;
 			real lakeMaxRadius = 750.0f;
 			real lakeMaxRelief = 90.0f; // Lakes are only placed where the surrounding terrain is flat enough
 
 			// Rare, very large mountain ranges
 			real massifCellSize = 32000.0f; // At most one massif per cell
-			real massifChance = 0.35f;
+			real massifChance = 0.45f;
 			real massifMinHeight = 2000.0f;
-			real massifMaxHeight = 4200.0f;
+			real massifMaxHeight = 5000.0f;
 
 			// Climate (temperature) varies over this distance, so similar biomes are found near each other
 			real climateWavelength = 80000.0f;
@@ -225,6 +239,11 @@ namespace flex
 			real cavernStrength; // [0, 1], caverns only occur in some regions (where this is > 0)
 			real caveEntrance; // [0, 1], where tunnels may reach the surface
 			real lakeStrength;
+			real fjordStrength;
+			real spireStrength;
+			real sandyShores;
+			// Upper bound on the height of features (spires) within a cell or so, for culling empty chunks
+			real featureTop;
 			glm::vec3 groundColour;
 			glm::vec3 cliffColour;
 			glm::vec3 peakColour;
@@ -351,6 +370,12 @@ namespace flex
 			void ApplyLake(real x, real z, ColumnSample& column) const;
 			void ApplyArch(real x, real z, ColumnSample& column) const;
 			void ApplyOcean(real x, real z, ColumnSample& column) const;
+			// Sea inlets cut into fjord biomes (marked as ocean where they're below sea level)
+			void ApplyFjords(real x, real z, ColumnSample& column) const;
+			// Height added by rock spires at (x, z), & an upper bound on it within about a spire cell
+			real SpireLift(real x, real z, real strength, real height, real& outMaxLift) const;
+			// [0, 1] how close a biome cell's center is to the coast
+			real Coastalness(real x, real z) const;
 			// Low frequency noise defining where oceans are, (u, v) in units of the ocean wavelength
 			real OceanNoise(real u, real v) const;
 
@@ -363,6 +388,7 @@ namespace flex
 			std::vector<u32> m_BiomeOctaves;
 			u32 m_MassifOctaves;
 			real m_OceanThreshold; // Ocean noise values below this are ocean
+			bool m_bAnyCoastalBiomes;
 			std::unique_ptr<ColumnGridCache> m_ColumnCache;
 		};
 
@@ -444,6 +470,9 @@ namespace flex
 			ACACIA, // Deciduous: flat topped canopy on a leaning trunk
 			SAGUARO, // Cactus
 			CHARRED, // Snag: a blackened trunk with broken branch stubs (or just a stump)
+			KAPOK, // Deciduous: very tall rainforest emergent, buttressed trunk & wide layered canopy
+			PALM, // Deciduous: leaning, curved trunk & drooping fronds
+			GIANT_MUSHROOM, // Deciduous (chopped like a tree): pale stem under a wide, brightly coloured cap
 		};
 
 		struct PlantInfo

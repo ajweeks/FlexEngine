@@ -57,6 +57,10 @@ namespace flex
 
 		bool IsVisible() const { return m_bVisible; }
 
+		// X-ray previews are solid where they're in front of the scene & scrolling dashes where they're behind it (for
+		// gizmos which can end up inside the terrain). Drawn twice, with opposite depth tests. Call before the first Show.
+		void SetXRay(bool bXRay) { m_bXRay = bXRay; }
+
 		// Emissive colour (alpha: opacity) for things which can/can't be placed
 		static glm::vec4 ValidColour(bool bValid);
 		static const glm::vec4 VALID_COLOUR;
@@ -74,6 +78,7 @@ namespace flex
 		bool m_bMeshDirty = true;
 		bool m_bVisible = false;
 		bool m_bShown = false;
+		bool m_bXRay = false;
 	};
 
 	// Rotation taking local +Y to up (& keeping local +Z as close to forward as it can)

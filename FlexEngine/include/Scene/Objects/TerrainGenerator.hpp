@@ -72,7 +72,11 @@ namespace flex
 		// Removes a plant for good (saved with the terrain's edits), regenerating its chunks without it, & has it fall
 		// over (dropping wood). fallDirection: horizontal direction to topple towards (zero: away from the player).
 		void FellPlant(const terrain::PlantInfo& plant, const glm::vec3& fallDirection);
-		// A plant's (full detail, world space) mesh, as shown in the terrain
+		// Removes a plant for good (saved with the terrain's edits) without felling it (no falling tree or drops)
+		void RemovePlant(const terrain::PlantInfo& plant);
+		// Whether edits are loaded from & saved to disk (not in scene tests, unless in a world's directory)
+		bool PersistsEdits() const;
+// A plant's (full detail, world space) mesh, as shown in the terrain
 		void BuildPlantMesh(const terrain::PlantInfo& plant, terrain::ChunkMeshData& outMesh) const;
 		// Called whenever plants are felled (by FellPlant, or by digging out the ground below them)
 		static void (*s_OnPlantFelled)(const terrain::PlantInfo& plant, const glm::vec3& fallDirection);
@@ -99,6 +103,9 @@ namespace flex
 		// Whether physics collision has been created for the terrain directly below pos (collision is only created
 		// near the player, a little while after chunks load)
 		bool IsCollisionLoadedBelow(const glm::vec3& pos) const;
+		// Whether pos is deep inside solid ground, below anything the terrain could have generated there (e.g. something
+		// which fell through the world before its collision loaded)
+		bool IsFallenThrough(const glm::vec3& pos) const;
 
 		i32 GetSeed() const { return m_Params.seed; }
 
@@ -133,6 +140,19 @@ namespace flex
 
 		static bool* GetShowWorldMapPtr() { return &s_bShowWorldMap; }
 		static bool* GetShowMinimapPtr() { return &s_bShowMinimap; }
+
+		// Waypoints the player has placed (see Game, which places, removes & saves them). Slot i is shown on the maps with
+		// WaypointColour(i) & the number i + 1.
+		struct MapWaypoint
+		{
+			bool bUsed = false;
+			glm::vec2 pos = glm::vec2(0.0f); // World x & z
+		};
+		static const u32 MAX_MAP_WAYPOINTS = 9;
+		static MapWaypoint* GetMapWaypoints();
+		static glm::vec4 WaypointColour(u32 index);
+		// Draws a waypoint's marker (a coloured diamond with a dark outline) at a pixel position, over the UI
+		void DrawMapWaypoint(const glm::vec2& centerPx, u32 index, real sizePx, u32 zOrder);
 
 		// Information about the terrain at a world position (biome name, etc.)
 		std::string DescribeLocation(const glm::vec3& pos) const;

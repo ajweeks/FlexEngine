@@ -37,6 +37,13 @@ namespace flex
 		glm::mat4 GetView() const;
 		glm::mat4 GetProjection() const;
 
+		// Camera-relative rendering: the GPU works in "render space", which is world space translated by -GetRenderOrigin()
+		// (a point near the camera, see Renderer::RenderOriginFor), so positions keep their precision far from the world
+		// origin. These matrices transform render space positions; GetView & GetViewProjection transform world positions.
+		glm::vec3 GetRenderOrigin() const { return m_RenderOrigin; }
+		glm::mat4 GetViewRelative() const { return m_ViewRelative; }
+		glm::mat4 GetViewProjectionRelative() const { return m_ViewProjectionRelative; }
+
 		// speed: Lerp amount to new rotation
 		void LookAt(glm::vec3 point, real speed = 1.0f);
 
@@ -105,6 +112,8 @@ namespace flex
 
 		void JitterMatrix(glm::mat4& matrix);
 		void ClampPitch();
+		// For the FLEX_LOOK_TEST hook (see the .cpp)
+		void UpdateSmoothnessStats();
 
 		// Exposure calculations taken from Google's Filament rendering engine
 		// Computes the camera's EV100
@@ -123,5 +132,10 @@ namespace flex
 		glm::mat4 m_View;
 		glm::mat4 m_Proj;
 		glm::mat4 m_ViewProjection;
+
+		// See GetRenderOrigin
+		glm::vec3 m_RenderOrigin = VEC3_ZERO;
+		glm::mat4 m_ViewRelative = MAT4_IDENTITY;
+		glm::mat4 m_ViewProjectionRelative = MAT4_IDENTITY;
 	};
 } // namespace flex

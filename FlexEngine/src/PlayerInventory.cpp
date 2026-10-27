@@ -696,7 +696,7 @@ namespace flex
 
 	void Player::AddStarterKit()
 	{
-		for (const char* toolName : { "pickaxe", "axe", "shovel" })
+		for (const char* toolName : { "pickaxe", "axe", "shovel", "bed" })
 		{
 			const PrefabID toolID = g_ResourceManager->GetPrefabID(toolName);
 			if (toolID.IsValid())

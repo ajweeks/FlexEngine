@@ -24,6 +24,7 @@ struct OceanData
 layout (binding = 0) uniform UBOConstant
 {
 	vec4 camPos;
+	vec4 renderOrigin; // xyz: see Renderer::RenderOriginFor
 	mat4 view;
 	mat4 projection;
 	DirectionalLight dirLight;

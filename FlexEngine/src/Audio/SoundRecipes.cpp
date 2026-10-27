@@ -36,6 +36,7 @@ namespace flex
 				{ "loop_air_rush", 1, true, false },
 				{ "loop_crickets", 1, true, false },
 				{ "loop_campfire", 1, true, true },
+				{ "loop_treasure_hum", 1, true, true },
 			};
 			static_assert(sizeof(s_Descs) / sizeof(s_Descs[0]) == (u32)Sound::_COUNT, "s_Descs must match the Sound enum");
 
@@ -801,6 +802,28 @@ namespace flex
 				Normalize(out, LOOP_PEAK);
 				return out;
 			}
+
+			// A soft, slowly pulsing chord, so a treasure chest can be found by ear. Every frequency & modulation rate is a
+			// whole number of cycles over the loop, so it's seamless.
+			Buffer TreasureHumLoop()
+			{
+				const sec loopLength = 4.0f;
+				Buffer out(loopLength);
+				const real partials[][3] = { { 220.0f, 1.0f, 0.5f }, { 330.0f, 0.55f, 0.75f }, { 440.25f, 0.4f, 0.25f }, { 660.0f, 0.18f, 1.0f } }; // freq, gain, shimmer rate
+				for (u32 i = 0; i < out.Count(); ++i)
+				{
+					const real t = (real)i / (real)out.sampleRate;
+					real sample = 0.0f;
+					for (const auto& partial : partials)
+					{
+						const real shimmer = 0.65f + 0.35f * std::sin(SYNTH_TWO_PI * partial[2] * t);
+						sample += std::sin(SYNTH_TWO_PI * partial[0] * t) * partial[1] * shimmer;
+					}
+					out.samples[i] = sample;
+				}
+				Normalize(out, 0.5f);
+				return out;
+			}
 		} // namespace
 
 		const SoundDesc& GetSoundDesc(Sound sound)
@@ -836,6 +859,7 @@ namespace flex
 			case Sound::LOOP_AIR_RUSH: return AirRushLoop();
 			case Sound::LOOP_CRICKETS: return CricketsLoop();
 			case Sound::LOOP_CAMPFIRE: return CampfireLoop();
+			case Sound::LOOP_TREASURE_HUM: return TreasureHumLoop();
 			default: return Buffer(0.01f);
 			}
 		}

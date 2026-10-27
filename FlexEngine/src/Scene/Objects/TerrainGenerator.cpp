@@ -19,6 +19,7 @@ IGNORE_WARNINGS_PUSH
 IGNORE_WARNINGS_POP
 
 #include "Scene/Objects/TerrainGenerator.hpp"
+#include "SceneTestRunner.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
@@ -220,7 +221,7 @@ namespace flex
 
 			// Edits made in previous sessions
 			std::vector<terrain::Edit> edits;
-			if (terrain::ReadEdits(saveFilePathBase + ".edits", params.seed, edits))
+			if (PersistsEdits() && terrain::ReadEdits(saveFilePathBase + ".edits", params.seed, edits))
 			{
 				m_Streamer->SetEdits(edits);
 			}
@@ -291,7 +292,10 @@ namespace flex
 			SaveEdits();
 			m_LoadedEditsSeed = params.seed;
 			std::vector<terrain::Edit> edits;
-			terrain::ReadEdits(GetSaveFilePathBase() + ".edits", params.seed, edits);
+			if (PersistsEdits())
+			{
+				terrain::ReadEdits(GetSaveFilePathBase() + ".edits", params.seed, edits);
+			}
 			m_Streamer->SetEdits(edits);
 		}
 		m_LoadedEditsSeed = params.seed;
@@ -433,7 +437,7 @@ namespace flex
 			FindPlants(center - glm::vec3(extent, 400.0f, extent), center + glm::vec3(extent, 400.0f, extent), plants);
 			if (outSummary != nullptr)
 			{
-				static const char* speciesNames[] = { "none", "spruce", "pine", "birch", "oak", "willow", "acacia", "saguaro", "charred" };
+				static const char* speciesNames[] = { "none", "spruce", "pine", "birch", "oak", "willow", "acacia", "saguaro", "charred", "kapok", "palm", "giant mushroom" };
 				u32 counts[ARRAY_LENGTH(speciesNames)] = {};
 				for (const terrain::PlantInfo& plant : plants)
 				{
@@ -902,11 +906,16 @@ namespace flex
 		m_MaxApplyTime = glm::max(m_MaxApplyTime, m_LastApplyTime);
 	}
 
-	// Collision built in a background job, from a copy of the chunk's triangles (the chunk may be unloaded meanwhile)
+	// Collision built from a copy of the chunk's triangles (in a background job, the chunk may be unloaded meanwhile).
+	// The triangles are relative to the chunk's origin (the body is placed there): with world space vertices, Bullet's
+	// narrowphase & ray tests ran on coordinates in the hundreds of km far from the world origin, where floats are only
+	// precise to centimeters, & e.g. rays fell through the cracks between triangles.
 	struct ChunkCollisionBuild
 	{
 		u32 id = 0;
 		u64 handle = 0;
+		// (A whole number of meters, so subtracting it from the vertices is exact)
+		glm::vec3 origin = VEC3_ZERO;
 		std::vector<glm::vec3> positions;
 		std::vector<u32> indices;
 		u32 collisionIndexCount = 0;
@@ -915,6 +924,25 @@ namespace flex
 		btTriangleIndexVertexArray* foliageTriangleIndexVertexArray = nullptr;
 		btBvhTriangleMeshShape* foliageCollisionShape = nullptr;
 		std::atomic<bool> bDone{ false };
+
+		void CopyTriangles(const glm::vec3& chunkBoundsMin, MeshComponent* submesh, u32 chunkCollisionIndexCount)
+		{
+			VertexBufferData* vertexBufferData = submesh->GetVertexBufferData();
+			const u32 indexCount = submesh->GetIndexCount();
+			collisionIndexCount = glm::min(chunkCollisionIndexCount, indexCount);
+			origin = glm::floor(chunkBoundsMin);
+			// Positions are at the start of each vertex
+			positions.resize(vertexBufferData->UsedVertexCount);
+			const u8* src = (const u8*)vertexBufferData->vertexData;
+			for (u32 v = 0; v < vertexBufferData->UsedVertexCount; ++v)
+			{
+				glm::vec3 position;
+				memcpy(&position, src + (size_t)v * vertexBufferData->VertexStride, sizeof(glm::vec3));
+				positions[v] = position - origin;
+			}
+			const u32* indices = submesh->GetIndexBufferDataPtr();
+			this->indices.assign(indices, indices + indexCount);
+		}
 
 		void Build()
 		{
@@ -1081,23 +1109,10 @@ namespace flex
 				}
 
 				Chunk& chunk = *entry.second.second;
-				MeshComponent* submesh = chunk.meshComponent;
-				VertexBufferData* vertexBufferData = submesh->GetVertexBufferData();
-				const u32 indexCount = submesh->GetIndexCount();
-
 				std::shared_ptr<ChunkCollisionBuild> build = std::make_shared<ChunkCollisionBuild>();
 				build->id = m_NextCollisionBuildID++;
 				build->handle = entry.second.first;
-				build->collisionIndexCount = glm::min(chunk.collisionIndexCount, indexCount);
-				// Positions are at the start of each vertex
-				build->positions.resize(vertexBufferData->UsedVertexCount);
-				const u8* src = (const u8*)vertexBufferData->vertexData;
-				for (u32 v = 0; v < vertexBufferData->UsedVertexCount; ++v)
-				{
-					memcpy(&build->positions[v], src + (size_t)v * vertexBufferData->VertexStride, sizeof(glm::vec3));
-				}
-				const u32* indices = submesh->GetIndexBufferDataPtr();
-				build->indices.assign(indices, indices + indexCount);
+				build->CopyTriangles(chunk.boundsMin, chunk.meshComponent, chunk.collisionIndexCount);
 
 				chunk.collisionBuildID = build->id;
 				m_CollisionBuilds.push_back(build);
@@ -1208,6 +1223,21 @@ namespace flex
 		if (s_OnPlantFelled != nullptr)
 		{
 			s_OnPlantFelled(plant, fallDirection);
+		}
+	}
+
+	bool TerrainGenerator::PersistsEdits() const
+	{
+		// Scene tests (which dig, fill & build cliffs) start from the generated terrain each run, rather than piling
+		// up the previous runs' edits. Worlds (with their own save directory) always keep theirs.
+		return !m_SaveDirectory.empty() || !SceneTestRunner::IsRunning();
+	}
+
+	void TerrainGenerator::RemovePlant(const terrain::PlantInfo& plant)
+	{
+		if (m_Streamer != nullptr)
+		{
+			ApplyEdit(terrain::MakeRemovePlantEdit(plant));
 		}
 	}
 
@@ -1665,7 +1695,30 @@ namespace flex
 			}
 		}
 
+		// No dry land nearby (e.g. far out in an ocean): the bottom of the water, rather than failing (which left the
+		// player falling without waiting for collision to load, through the sea floor & on forever)
+		const terrain::ColumnSample column = density.SampleColumn(pos.x, pos.z);
+		const glm::vec3 top(pos.x, glm::max(column.height + density.MaxExtentAbove(), pos.y) + 10.0f, pos.z);
+		const real rayLength = top.y - column.height + density.MaxExtentBelow() + 20.0f;
+		if (Raycast(top, down, rayLength, hitPos, hitNormal))
+		{
+			outPos = hitPos;
+			return true;
+		}
+
 		return false;
+	}
+
+	bool TerrainGenerator::IsFallenThrough(const glm::vec3& pos) const
+	{
+		if (m_Streamer == nullptr)
+		{
+			return false;
+		}
+		// (Holes dug deeper than the generated features are open air, so the density check keeps those)
+		const terrain::TerrainDensity& density = *m_Streamer->Density();
+		const terrain::ColumnSample column = density.SampleColumn(pos.x, pos.z);
+		return pos.y < column.height - density.MaxExtentBelow() - 50.0f && m_Streamer->SampleDensity(pos) < 0.0f;
 	}
 
 	bool TerrainGenerator::IsCollisionLoadedBelow(const glm::vec3& pos) const
@@ -1714,7 +1767,7 @@ namespace flex
 		}
 
 		m_bEditsDirty = false;
-		if (m_bEnableDiskCache)
+		if (m_bEnableDiskCache && PersistsEdits())
 		{
 			// (the seed the edits were made in, which may differ from the current one while switching)
 			std::string filePath;
@@ -1842,6 +1895,22 @@ namespace flex
 		bChanged = ImGui::SliderFloat("Ridgedness", &biome.ridgedness, 0.0f, 1.0f) || bChanged;
 		bChanged = ImGui::SliderFloat("Terrace strength", &biome.terraceStrength, 0.0f, 1.0f) || bChanged;
 		bChanged = ImGui::DragFloat("Terrace height", &biome.terraceHeight, 0.5f, 1.0f, 500.0f) || bChanged;
+		bChanged = ImGui::SliderFloat("Roughness", &biome.roughness, 0.2f, 0.65f) || bChanged;
+		bChanged = ImGui::SliderFloat("Dune strength", &biome.duneStrength, 0.0f, 1.0f) || bChanged;
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("Sand dunes: height amplitude sets their height, wavelength their spacing");
+		}
+		bChanged = ImGui::SliderFloat("Canyon strength", &biome.canyonStrength, 0.0f, 1.0f) || bChanged;
+		bChanged = ImGui::DragFloat("Canyon depth", &biome.canyonDepth, 1.0f, 0.0f, 1000.0f) || bChanged;
+		bChanged = ImGui::SliderFloat("Fjord strength", &biome.fjordStrength, 0.0f, 1.0f) || bChanged;
+		bChanged = ImGui::SliderFloat("Spire strength", &biome.spireStrength, 0.0f, 1.0f) || bChanged;
+		bChanged = ImGui::DragFloat("Spire height", &biome.spireHeight, 1.0f, 0.0f, 600.0f) || bChanged;
+		bChanged = ImGui::SliderFloat("Coastal", &biome.coastal, 0.0f, 1.0f) || bChanged;
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("How strongly this biome prefers coastlines");
+		}
 
 		ImGui::Text("Features");
 		bChanged = ImGui::DragFloat("Overhang amplitude", &biome.overhangAmplitude, 0.5f, 0.0f, 200.0f) || bChanged;
@@ -1852,7 +1921,8 @@ namespace flex
 		ImGui::Text("Surface");
 		bChanged = ImGui::ColorEdit3("Ground", &biome.groundColour.x) || bChanged;
 		bChanged = ImGui::SliderFloat("Grassiness", &biome.grassiness, 0.0f, 1.0f) || bChanged;
-		bChanged = ImGui::ColorEdit3("Cliff", &biome.cliffColour.x) || bChanged;
+		bChanged = ImGui::SliderFloat("Sandy shores", &biome.sandyShores, 0.0f, 1.0f) || bChanged;
+bChanged = ImGui::ColorEdit3("Cliff", &biome.cliffColour.x) || bChanged;
 		bChanged = ImGui::ColorEdit3("Peak", &biome.peakColour.x) || bChanged;
 		bChanged = ImGui::DragFloat("Peak height", &biome.peakHeight, 5.0f, -1000.0f, 100000.0f) || bChanged;
 
@@ -2340,6 +2410,42 @@ namespace flex
 			"Map player arrow", resolution, resolution, 4, g_Renderer->GetSamplerLinearClampToEdge(), VK_FILTER_LINEAR);
 	}
 
+	TerrainGenerator::MapWaypoint* TerrainGenerator::GetMapWaypoints()
+	{
+		static MapWaypoint waypoints[MAX_MAP_WAYPOINTS];
+		return waypoints;
+	}
+
+	glm::vec4 TerrainGenerator::WaypointColour(u32 index)
+	{
+		// Nine colours that are easy to tell apart (& from the gold treasure markers)
+		static const u32 colours[MAX_MAP_WAYPOINTS] = { 0xE0614F, 0x6CB6D9, 0x86C07A, 0xD96CC8, 0xFF8A3D, 0x9A7BE8, 0x4FD6C9, 0xFFA8C0, 0xC8E04F };
+		return UITheme::Hex(colours[index % MAX_MAP_WAYPOINTS]);
+	}
+
+	void TerrainGenerator::DrawMapWaypoint(const glm::vec2& centerPx, u32 index, real sizePx, u32 zOrder)
+	{
+		const glm::vec2i windowSize = g_Window->GetSize();
+		const glm::vec2 screenSize((real)glm::max(windowSize.x, 1), (real)glm::max(windowSize.y, 1));
+		const real aspectRatio = screenSize.x / screenSize.y;
+		// (A square turned 45 degrees: dark outline, then the colour)
+		for (u32 layer = 0; layer < 2; ++layer)
+		{
+			SpriteQuadDrawInfo drawInfo = {};
+			drawInfo.anchor = AnchorPoint::CENTER;
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.bEnableAlbedoSampler = false;
+			drawInfo.zOrder = zOrder + layer;
+			drawInfo.colour = layer == 0 ? UITheme::INK : WaypointColour(index);
+			drawInfo.pos = glm::vec3((centerPx.x / screenSize.x * 2.0f - 1.0f) * aspectRatio, 1.0f - centerPx.y / screenSize.y * 2.0f, 0.0f);
+			drawInfo.rotation = glm::angleAxis(PI * 0.25f, VEC3_FORWARD);
+			const real size = (layer == 0 ? sizePx : sizePx * 0.7f) / screenSize.y;
+			drawInfo.scale = glm::vec3(size, size, 1.0f);
+			g_Renderer->EnqueueSprite(drawInfo);
+		}
+	}
+
 	void TerrainGenerator::DrawMapPlayerArrow(const glm::vec2& centerPx, const glm::vec2& heading, real sizePx, u32 zOrder)
 	{
 		if (m_MapArrowTextureID == InvalidTextureID)
@@ -2448,6 +2554,23 @@ namespace flex
 		offset = glm::clamp(offset, glm::vec2(-0.95f), glm::vec2(0.95f));
 		const glm::vec2 markerPx = mapCenterPx + offset * mapSizePx * 0.5f;
 		const glm::vec3 look = player != nullptr ? player->GetLookDirection() : camera->forward;
+		// Waypoints (pinned to the edge of the map when they're further away)
+		const MapWaypoint* waypoints = GetMapWaypoints();
+		for (u32 i = 0; i < MAX_MAP_WAYPOINTS; ++i)
+		{
+			if (!waypoints[i].bUsed)
+			{
+				continue;
+			}
+			glm::vec2 waypointOffset = glm::vec2(waypoints[i].pos.x - m_Minimap.center.x, -(waypoints[i].pos.y - m_Minimap.center.z)) / m_Minimap.extent;
+			const real maxComponent = glm::max(glm::abs(waypointOffset.x), glm::abs(waypointOffset.y));
+			if (maxComponent > 0.92f)
+			{
+				waypointOffset *= 0.92f / maxComponent;
+			}
+			DrawMapWaypoint(mapCenterPx + waypointOffset * mapSizePx * 0.5f, i, 16.0f * scale, Z_ORDER_UI + 11);
+		}
+
 		DrawMapPlayerArrow(markerPx, glm::vec2(look.x, -look.z), 26.0f * scale, Z_ORDER_UI + 10);
 	}
 
@@ -2779,7 +2902,16 @@ namespace flex
 		biomeObj.TryGetFloat("ridgedness", biome.ridgedness);
 		biomeObj.TryGetFloat("terrace strength", biome.terraceStrength);
 		biomeObj.TryGetFloat("terrace height", biome.terraceHeight);
-		biomeObj.TryGetFloat("overhang amplitude", biome.overhangAmplitude);
+		biomeObj.TryGetFloat("roughness", biome.roughness);
+		biomeObj.TryGetFloat("dune strength", biome.duneStrength);
+		biomeObj.TryGetFloat("canyon strength", biome.canyonStrength);
+		biomeObj.TryGetFloat("canyon depth", biome.canyonDepth);
+		biomeObj.TryGetFloat("fjord strength", biome.fjordStrength);
+		biomeObj.TryGetFloat("spire strength", biome.spireStrength);
+		biomeObj.TryGetFloat("spire height", biome.spireHeight);
+		biomeObj.TryGetFloat("coastal", biome.coastal);
+		biomeObj.TryGetFloat("sandy shores", biome.sandyShores);
+biomeObj.TryGetFloat("overhang amplitude", biome.overhangAmplitude);
 		biomeObj.TryGetFloat("arch strength", biome.archStrength);
 		biomeObj.TryGetFloat("cave strength", biome.caveStrength);
 		biomeObj.TryGetFloat("lake strength", biome.lakeStrength);
@@ -2824,7 +2956,16 @@ namespace flex
 		biomeObj.fields.emplace_back("ridgedness", JSONValue(biome.ridgedness, 2));
 		biomeObj.fields.emplace_back("terrace strength", JSONValue(biome.terraceStrength, 2));
 		biomeObj.fields.emplace_back("terrace height", JSONValue(biome.terraceHeight, 1));
-		biomeObj.fields.emplace_back("overhang amplitude", JSONValue(biome.overhangAmplitude, 1));
+		biomeObj.fields.emplace_back("roughness", JSONValue(biome.roughness, 2));
+		biomeObj.fields.emplace_back("dune strength", JSONValue(biome.duneStrength, 2));
+		biomeObj.fields.emplace_back("canyon strength", JSONValue(biome.canyonStrength, 2));
+		biomeObj.fields.emplace_back("canyon depth", JSONValue(biome.canyonDepth, 1));
+		biomeObj.fields.emplace_back("fjord strength", JSONValue(biome.fjordStrength, 2));
+		biomeObj.fields.emplace_back("spire strength", JSONValue(biome.spireStrength, 2));
+		biomeObj.fields.emplace_back("spire height", JSONValue(biome.spireHeight, 1));
+		biomeObj.fields.emplace_back("coastal", JSONValue(biome.coastal, 2));
+		biomeObj.fields.emplace_back("sandy shores", JSONValue(biome.sandyShores, 2));
+biomeObj.fields.emplace_back("overhang amplitude", JSONValue(biome.overhangAmplitude, 1));
 		biomeObj.fields.emplace_back("arch strength", JSONValue(biome.archStrength, 2));
 		biomeObj.fields.emplace_back("cave strength", JSONValue(biome.caveStrength, 2));
 		biomeObj.fields.emplace_back("lake strength", JSONValue(biome.lakeStrength, 2));
@@ -2856,6 +2997,7 @@ namespace flex
 				chunkGenInfo.TryGetInt("manual seed", m_Params.seed);
 			}
 
+			// (Scenes using the default biomes don't save them, so they pick up changes to the defaults)
 			std::vector<JSONObject> biomesArr;
 			if (chunkGenInfo.TryGetObjectArray("biomes", biomesArr))
 			{
@@ -2887,13 +3029,19 @@ namespace flex
 
 		SerializeRegisteredProperties(chunkGenInfo, collection->childCollection, bSerializePrefabData);
 
-		std::vector<JSONObject> biomesArr;
-		biomesArr.reserve(m_Params.biomes.size());
-		for (const terrain::BiomeParams& biome : m_Params.biomes)
+		// Only custom biomes are saved, so scenes using the defaults pick up changes to them
+		terrain::WorldParams defaultBiomeParams = m_Params;
+		defaultBiomeParams.biomes = terrain::WorldParams::Default().biomes;
+		if (defaultBiomeParams.ContentHash() != m_Params.ContentHash())
 		{
-			biomesArr.emplace_back(SerializeBiome(biome));
+			std::vector<JSONObject> biomesArr;
+			biomesArr.reserve(m_Params.biomes.size());
+			for (const terrain::BiomeParams& biome : m_Params.biomes)
+			{
+				biomesArr.emplace_back(SerializeBiome(biome));
+			}
+			chunkGenInfo.fields.emplace_back("biomes", JSONValue(biomesArr));
 		}
-		chunkGenInfo.fields.emplace_back("biomes", JSONValue(biomesArr));
 
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
 	}
@@ -3124,24 +3272,20 @@ namespace flex
 			return;
 		}
 
-		// Foliage isn't collided with (it's after collisionIndexCount)
-		submesh->CreateCollisionMesh(&chunk.triangleIndexVertexArray, (btBvhTriangleMeshShape**)&chunk.collisionShape, chunk.collisionIndexCount);
-
-		const u32 indexCount = submesh->GetIndexCount();
-		if (chunk.collisionIndexCount < indexCount)
-		{
-			VertexBufferData* vertexBufferData = submesh->GetVertexBufferData();
-			btIndexedMesh part = {};
-			part.m_vertexBase = (const unsigned char*)vertexBufferData->vertexData;
-			part.m_vertexStride = vertexBufferData->VertexStride;
-			part.m_numVertices = vertexBufferData->UsedVertexCount;
-			part.m_triangleIndexBase = (const unsigned char*)(submesh->GetIndexBufferDataPtr() + chunk.collisionIndexCount);
-			part.m_triangleIndexStride = sizeof(u32) * 3;
-			part.m_numTriangles = (i32)((indexCount - chunk.collisionIndexCount) / 3);
-			chunk.foliageTriangleIndexVertexArray = new btTriangleIndexVertexArray();
-			chunk.foliageTriangleIndexVertexArray->addIndexedMesh(part, PHY_INTEGER);
-			chunk.foliageCollisionShape = new btBvhTriangleMeshShape(chunk.foliageTriangleIndexVertexArray, true);
-		}
+		// (Foliage, after collisionIndexCount, gets its own shape which only rays hit)
+		std::shared_ptr<ChunkCollisionBuild> build = std::make_shared<ChunkCollisionBuild>();
+		build->CopyTriangles(chunk.boundsMin, submesh, chunk.collisionIndexCount);
+		build->Build();
+		chunk.triangleIndexVertexArray = build->triangleIndexVertexArray;
+		chunk.collisionShape = build->collisionShape;
+		chunk.foliageTriangleIndexVertexArray = build->foliageTriangleIndexVertexArray;
+		chunk.foliageCollisionShape = build->foliageCollisionShape;
+		// Owned by the chunk now
+		build->triangleIndexVertexArray = nullptr;
+		build->collisionShape = nullptr;
+		build->foliageTriangleIndexVertexArray = nullptr;
+		build->foliageCollisionShape = nullptr;
+		chunk.collisionData = build;
 	}
 
 	void TerrainGenerator::CreateChunkRigidBody(Chunk& chunk)
@@ -3160,9 +3304,21 @@ namespace flex
 		// (Usually already built, in parallel)
 		BuildChunkCollisionShapes(chunk);
 
+		// The triangles are relative to this (see ChunkCollisionBuild)
+		const glm::vec3 origin = chunk.collisionData != nullptr ? chunk.collisionData->origin : VEC3_ZERO;
+		auto PlaceAtOrigin = [origin](RigidBody* body)
+		{
+			btRigidBody* rb = body->GetRigidBodyInternal();
+			const btTransform transform(btQuaternion::getIdentity(), ToBtVec3(origin));
+			rb->setWorldTransform(transform);
+			rb->setInterpolationWorldTransform(transform);
+			g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->updateSingleAabb(rb);
+		};
+
 		RigidBody* rigidBody = new RigidBody((u32)CollisionType::STATIC, (u32)CollisionType::DEFAULT & ~(u32)CollisionType::STATIC);
 		rigidBody->SetStatic(true);
 		rigidBody->Initialize(chunk.collisionShape, &m_Transform);
+		PlaceAtOrigin(rigidBody);
 		chunk.rigidBody = rigidBody;
 		chunk.rigidBody->GetRigidBodyInternal()->setActivationState(WANTS_DEACTIVATION);
 
@@ -3173,6 +3329,7 @@ namespace flex
 			RigidBody* foliageRigidBody = new RigidBody((u32)CollisionType::RAYCAST_ONLY, (u32)CollisionType::RAYCAST_ONLY);
 			foliageRigidBody->SetStatic(true);
 			foliageRigidBody->Initialize(chunk.foliageCollisionShape, &m_Transform);
+			PlaceAtOrigin(foliageRigidBody);
 			btRigidBody* rb = foliageRigidBody->GetRigidBodyInternal();
 			rb->setCollisionFlags(rb->getCollisionFlags() | btCollisionObject::CF_NO_CONTACT_RESPONSE);
 			rb->setActivationState(WANTS_DEACTIVATION);

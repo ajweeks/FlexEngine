@@ -40,6 +40,12 @@ namespace flex
 		const real THERMAL_CELL_SIZE = 380.0f;
 		// Thermals drift downwind this many meters per meter of height
 		const real THERMAL_DRIFT = 0.12f;
+		// The columns of rising air only show once airborne this long, so a simple jump doesn't flash them
+		const sec THERMAL_MOTES_DELAY = 1.5f;
+		// How far above the player's center the end of a rope or ladder can be & still be grabbed
+		const real CLIMB_GRAB_REACH_ABOVE = 2.5f;
+		// ...& while jumping (the apex of a jump is about 3m up)
+		const real CLIMB_GRAB_REACH_ABOVE_AIRBORNE = 5.0f;
 
 		// Closest hit, ignoring one object (the player's own capsule)
 		struct IgnoreObjectRayCallback final : public btCollisionWorld::ClosestRayResultCallback
@@ -438,6 +444,51 @@ namespace flex
 
 		// Flying & climbing integrate their own forces
 		SetGravityEnabled(mode != Mode::GLIDING && mode != Mode::WINGSUIT && mode != Mode::CLIMBING);
+	}
+
+	bool Traversal::BlockLedges(glm::vec3& velocity) const
+	{
+		const glm::vec2 horizontal(velocity.x, velocity.z);
+		if (glm::length(horizontal) < 0.01f)
+		{
+			return false;
+		}
+
+		const glm::vec3 pos = m_Player->GetTransform()->GetWorldPosition();
+		const real feetY = pos.y - m_Player->GetHeight() * 0.5f;
+		// Ground must be found within a step up or down of the feet, a little past the edge of the capsule
+		const real reach = m_Player->GetRadius() + 0.3f;
+		auto HasGroundToward = [&](const glm::vec2& dir)
+		{
+			const glm::vec2 d = glm::normalize(dir);
+			const glm::vec3 probe(pos.x + d.x * reach, feetY + 0.5f, pos.z + d.y * reach);
+			glm::vec3 hitPos, hitNormal;
+			return Raycast(probe, probe - VEC3_UP * 1.3f, hitPos, hitNormal);
+		};
+
+		bool bBlocked = false;
+		glm::vec2 allowed = horizontal;
+		if (!HasGroundToward(horizontal))
+		{
+			// Slide along the ledge if one axis is clear
+			bBlocked = true;
+			allowed = glm::vec2(0.0f);
+			if (glm::abs(horizontal.x) > 0.01f && HasGroundToward(glm::vec2(horizontal.x, 0.0f)))
+			{
+				allowed.x = horizontal.x;
+			}
+			if (glm::abs(horizontal.y) > 0.01f && HasGroundToward(glm::vec2(0.0f, horizontal.y)))
+			{
+				allowed.y = horizontal.y;
+			}
+			if (allowed.x != 0.0f && allowed.y != 0.0f)
+			{
+				allowed = glm::vec2(0.0f);
+			}
+		}
+		velocity.x = allowed.x;
+		velocity.z = allowed.y;
+		return bBlocked;
 	}
 
 	bool Traversal::Raycast(const glm::vec3& from, const glm::vec3& to, glm::vec3& outHitPos, glm::vec3& outHitNormal, u32 flags /* = 0 */) const
@@ -1605,7 +1656,9 @@ namespace flex
 	bool Traversal::TryStartClimbingObject(bool bClimbHeld)
 	{
 		const glm::vec3 pos = m_Player->GetTransform()->GetWorldPosition();
-		BuildPiece* climbable = BuildPiece::FindClimbable(pos, m_Player->GetRadius() + 0.6f);
+		// Ropes & ladders hanging above the player's head can be reached up to & grabbed (jumping, or just reaching)
+		BuildPiece* climbable = BuildPiece::FindClimbable(pos, m_Player->GetRadius() + 0.6f,
+			m_bGrounded ? CLIMB_GRAB_REACH_ABOVE : CLIMB_GRAB_REACH_ABOVE_AIRBORNE);
 		if (climbable == nullptr)
 		{
 			return false;
@@ -1710,6 +1763,14 @@ namespace flex
 			if (bRope)
 			{
 				// Nothing to climb onto, hang at the top
+				static sec s_LastStallPrint = -100.0f;
+				if (g_SecElapsedSinceProgramStart - s_LastStallPrint > 2.0f)
+				{
+					s_LastStallPrint = g_SecElapsedSinceProgramStart;
+					const glm::vec3 mantleDir = SafeNormalize(glm::vec3(-facing.x, 0.0f, -facing.z), GetHeadingXZ());
+					Print("Climb stalled at the top of a rope: no ledge to step onto. Player at (%.1f, %.1f, %.1f), rope top (%.1f, %.1f, %.1f), facing (%.2f, %.2f), mantle reach %.1fm along (%.2f, %.2f): FindLedge (wall normal %.2f, %.2f) found no flat standable spot (needs headroom above & ground within a step) & FindMantleTarget found none either\n",
+						pos.x, pos.y, pos.z, top.x, top.y, top.z, facing.x, facing.z, m_Settings.mantleReach + 1.0f, mantleDir.x, mantleDir.z, facing.x, facing.z);
+				}
 				velocity = VEC3_ZERO;
 				return true;
 			}
@@ -1722,7 +1783,8 @@ namespace flex
 			return false;
 		}
 		// Slid off the bottom of a rope
-		if (pos.y + halfHeight < bottom.y)
+		// (not when grabbed from below, reaching up to a rope end & climbing towards it)
+		if (forward <= 0.0f && pos.y + halfHeight < bottom.y)
 		{
 			SetMode(Mode::NONE);
 			return false;
@@ -2658,7 +2720,7 @@ namespace flex
 		DirectionalLight* sun = g_Renderer->GetDirectionalLight();
 		const real sunFactor = glm::smoothstep(0.05f, 0.45f, sun != nullptr ? sun->data.dir.y : 0.7f);
 		// Only shown while in the air (they'd just be clutter while walking around)
-		if (terrainGenerator == nullptr || sunFactor <= 0.0f || (m_bGrounded && m_Mode == Mode::NONE))
+		if (terrainGenerator == nullptr || sunFactor <= 0.0f || (m_bGrounded && m_Mode == Mode::NONE) || m_TimeSinceGrounded < THERMAL_MOTES_DELAY)
 		{
 			return;
 		}
