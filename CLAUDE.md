@@ -3,7 +3,7 @@
 General lessons for working in this repo (not task specifics).
 
 ## Building & testing
-- When several agents work at once, build & run only through `scripts/flexsvc` (queued cached builds, per-agent sandboxes, GPU slots, timeouts, message board, bench, screenshot diffs). See `docs/agents.md`.
+- When several agents work at once, build & run only through `scripts/flexsvc` (queued cached builds, per-agent sandboxes, GPU slots, timeouts, message board, bench, screenshot diffs). See `docs/agents.md`. To run a dispatch (split a request list across agents as their manager), use the `dispatch` skill (`.claude/skills/dispatch/SKILL.md`).
 - Windows Release is the build that matters for performance. Build with MSBuild (`build/Flex.sln`, `/p:Configuration=Release /p:Platform=x64`) and run `bin/Release_x64/FlexEngine/Flex.exe` from WSL via interop; it uses the real GPU. The Linux build (`build/debug64`, `ninja`) renders on llvmpipe, so only use it for compile checks.
 - MSVC and GCC disagree. Code that compiles on Linux can still fail on Windows, so always do a Windows build before handing off.
   - `include/ThirdParty/sse_mathfun.h` `#define`s `inline` on MSVC. Any standard header first included after it breaks. Add new std headers to `include/stdafx.hpp`, not to engine headers.

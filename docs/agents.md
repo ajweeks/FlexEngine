@@ -11,12 +11,13 @@ run & talk to the others. Always pass your name: `scripts/flexsvc -a <name> ...`
 - `flexsvc -a NAME run [--timeout S] [--env K=V] [--fresh] -- <Flex args>`: builds first & then runs that exact build
   in your own sandbox (it never runs a stale exe). Default timeout 300s. Up to 3 runs share the GPU; it prints the
   error/PASS/FAIL lines, the last lines & the log path. Each sandbox has its own `saved/` (logs, settings, worlds,
-  terrain caches, screenshots) but shares `saved/spv` & `saved/fonts`. `--fresh` wipes it first.
+  terrain caches, screenshots); its `saved/spv` is the build's own snapshot & `saved/fonts` is shared. `--fresh`
+  wipes it first.
 - `flexsvc -a NAME run --perf ...`: has the machine to itself (waits for builds & other runs, validation off). Only use
   it for timing.
 - `flexsvc -a NAME bench [--seconds 45] [--runs 3] [--baseline r-12]`: the `--play` benchmark (it walks, glides &
   dives in a new world from a fixed seed). Prints p50/p99/max, hitches & top scopes, and the delta against a baseline
-  build. Build ids are printed by `build`, and the last 30 are kept. A single run is noisy (p99 can move about 20%), so
+  build. Build ids are printed by `build`, and the last 40 are kept. A single run is noisy (p99 can move about 20%), so
   use `--runs 3` before you claim a win.
 - `flexsvc -a NAME shaders [name...]`: compiles changed shaders (or the named ones) into `saved/spv`, which Release
   needs. Then run something to check for validation errors.
@@ -69,37 +70,14 @@ run & talk to the others. Always pass your name: `scripts/flexsvc -a <name> ...`
 ## Final report (≤300 words, this format)
 ```
 STATUS: done | partial | blocked
-CHANGED: files, one line each with what changed
+CHANGED: one line for each change
 SHARED: new APIs / shared behaviour changes (also posted on the board)
 VERIFIED: what you ran (command, build id) & the result; numbers if perf
 NOT VERIFIED: what you couldn't check (e.g. visuals you didn't look at)
-FOLLOW-UP: at most 3 bullets
+FOLLOW-UP: what the user needs to know, important things only
 ```
 The report is your recap: don't write a commit message. The manager writes one for the whole dispatch.
 
-# Dispatching (for the manager)
-- Group requests by area (UI/menus, player & traversal, world gen & terrain, renderer, tools/debug, audio), with
-  5–6 agents at most at once (9 hit the usage limit). Run perf work last, on a settled tree, with `run --perf`/`bench`.
-- Pick the agent type by task (`.claude/agents/`):
-  - `flex-mechanic` (Haiku): mechanical edits with an exact recipe, e.g. moving strings into `en.txt`, adding a
-    Controls row, renames, adding table entries or a config value.
-  - `flex-dev` (Sonnet): a scoped feature or bug in one area.
-  - `flex-engineer` (Opus): cross-cutting work, e.g. renderer, perf, terrain/streaming, threading, save format, or bugs
-    that need investigating.
-- The brief needs: the agent's name, the tasks (verbatim from the request list), the files likely involved, what
-  "done" looks like & how to verify it (a scene, `FLEX_GAME_TOUR`, a bench). The agent definitions already contain
-  the rules above.
-- The `.claude/agents/flex-*` types are only offered as subagent types after a session restart that follows adding the
-  files; otherwise use a general-purpose agent with a model override and "read your definition file".
-- Directed board posts to an agent that has finished are lost: check `flexsvc read --undelivered` (posts to an agent
-  or a claimed file that the addressee hasn't read) and relay them. `post --to` warns when the addressee hasn't read
-  the board for 15 min.
-- Disk is tight: don't give each agent a git worktree (a full tree + build copies is GBs). Sandboxes share the repo's
-  `resources`/`config` through junctions and only copy exes (~tens of MB per build).
-- **Always finish the run with one commit message** for everything the dispatch changed (don't commit unless asked).
-  Only the manager writes it; agents just report. Build it from their reports & `flexsvc changes`, in the repo's
-  format: a ≤72 char subject in the present tense, imperative mood and no trailing period (e.g. "Add sky visibility
-  to terrain shading"), a blank line, then short bullets or a paragraph covering each change and why. Print it in a
-  fenced block at the end of the report.
-- Watch with `flexsvc status` (builds, runs & waits, claims) & `board.md` in `$FLEXSVC_HOME` (default `C:\Code\Flex\agents`).
-  Archive the board between dispatches (move `board.md` aside & delete `cursors/` & `claims.json`).
+# Dispatching
+The manager's playbook (planning, briefs, monitoring, wrap-up & the commit message) is the `dispatch` skill:
+`.claude/skills/dispatch/SKILL.md`.
