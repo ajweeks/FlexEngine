@@ -24,6 +24,7 @@ IGNORE_WARNINGS_POP
 #include "FlexEngine.hpp"
 #include "GameUI.hpp"
 #include "Graphics/Renderer.hpp"
+#include "GameControls.hpp"
 #include "InputManager.hpp"
 #include "Localization.hpp"
 #include "Inventory.hpp"
@@ -200,13 +201,15 @@ namespace flex
 	void Player::Update()
 	{
 		UpdateTerrainSafety();
+		UpdateTeleportFade();
+		DrawTeleportFade();
 
 		m_Controller->Update();
 		m_Traversal->Update();
 
 		// Build mode (toggled with B) takes over the mouse buttons & scroll wheel
 		if (m_bPossessed && AbleToInteract() && !IsAnyInventoryShowing() && m_TrackRidingID == InvalidTrackID &&
-			!g_EngineInstance->IsSimulationPaused() && g_InputManager->GetKeyPressed(KeyCode::KEY_B))
+			!g_EngineInstance->IsSimulationPaused() && g_InputManager->GetKeyPressed(GameKeys::BUILD_MODE))
 		{
 			m_BuildMode.SetActive(!m_BuildMode.IsActive());
 		}
@@ -224,6 +227,10 @@ namespace flex
 		if (TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive())
 		{
 			TreasureChest::UpdateNearby(terrainGenerator, m_Transform.GetWorldPosition());
+			if (m_bPossessed)
+			{
+				TreasureChest::UpdateHints(terrainGenerator, this);
+			}
 		}
 
 		for (i32 i = (i32)m_Notifications.size() - 1; i >= 0; --i)
@@ -285,11 +292,15 @@ namespace flex
 		}
 
 		std::vector<DroppedItem*> nearbyItems;
-		if (scene->GetDroppedItemsInRadius(m_Transform.GetWorldPosition(), m_ItemPickupRadius, nearbyItems))
+		// Items fly over to the player rather than vanishing from where they lie. Once one has set off it keeps
+		// following the player even if they move away.
+		const glm::vec3 playerPos = m_Transform.GetWorldPosition();
+		if (scene->GetDroppedItemsInRadius(playerPos, m_ItemPickupRadius * 3.0f, nearbyItems))
 		{
 			for (DroppedItem* item : nearbyItems)
 			{
-				if (item->CanBePickedUp())
+				const bool bInRange = item->flyTime > 0.0f || glm::distance2(item->GetTransform()->GetWorldPosition(), playerPos) < m_ItemPickupRadius * m_ItemPickupRadius;
+				if (bInRange && item->CanBePickedUp() && item->FlyTowards(playerPos))
 				{
 					AddToInventory(item);
 				}
@@ -432,11 +443,10 @@ namespace flex
 	void Player::Reset()
 	{
 		// Spawn points aren't meaningful in streamed terrain, so respawn on the surface nearby instead
-		m_bTerrainPlacementPending = true;
 		m_Traversal->Reset();
 
 		glm::vec3 spawnPoint = g_SceneManager->CurrentScene()->GetPlayerSpawnPoint();
-		m_Transform.SetWorldPosition(spawnPoint);
+		TeleportOnTerrain(spawnPoint);
 		m_Transform.SetWorldRotation(QUAT_IDENTITY);
 		btRigidBody* rigidBodyInternal = m_RigidBody->GetRigidBodyInternal();
 		rigidBodyInternal->clearForces();

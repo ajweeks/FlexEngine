@@ -6,6 +6,7 @@
 #include "Graphics/Renderer.hpp"
 #include "Graphics/VertexAttribute.hpp"
 #include "Helpers.hpp"
+#include "Systems/JobSystem.hpp"
 
 namespace flex
 {
@@ -159,7 +160,15 @@ namespace flex
 	{
 		if (vertexData != nullptr)
 		{
-			free(vertexData);
+			// Large blocks are slow to free (e.g. when many terrain chunks are unloaded in one frame)
+			if (VertexBufferSize >= 4096)
+			{
+				JobSystem::FreeInBackground(vertexData);
+			}
+			else
+			{
+				free(vertexData);
+			}
 			vertexData = nullptr;
 		}
 		VertexCount = 0;

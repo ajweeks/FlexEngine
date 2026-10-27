@@ -15,6 +15,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
+#include "GameControls.hpp"
 #include "InputManager.hpp"
 #include "Platform/Platform.hpp"
 #include "Player.hpp"
@@ -148,6 +149,7 @@ namespace flex
 		{
 			m_bHasTarget = false;
 			m_bPlacingCampfire = m_bPlacingCampfire && bCanAct;
+			m_CampfirePreview.Hide();
 			m_NearbyCampfireID = InvalidGameObjectID;
 			m_LightingProgress = 0.0f;
 			return;
@@ -230,7 +232,8 @@ namespace flex
 
 	i32 WoodcraftController::HitsToFell(const terrain::PlantInfo& plant) const
 	{
-		const i32 hits = plant.kind == terrain::PlantKind::CACTUS ? 2 : 3 + (i32)(plant.size01 * 2.99f);
+		// (Burnt trees are brittle)
+		const i32 hits = plant.kind == terrain::PlantKind::CACTUS || plant.kind == terrain::PlantKind::SNAG ? 2 : 3 + (i32)(plant.size01 * 2.99f);
 		// Much quicker with a tool, & quickest with an axe
 		if (m_Player->IsWieldingAxe())
 		{
@@ -284,7 +287,8 @@ namespace flex
 		++m_ChopHits;
 		m_Player->SwingTool(m_ChopCooldown * 0.9f);
 
-		const glm::vec3 chipColour = m_Target.kind == terrain::PlantKind::CACTUS ? glm::vec3(0.4f, 0.55f, 0.3f) : glm::vec3(0.7f, 0.55f, 0.35f);
+		const glm::vec3 chipColour = m_Target.kind == terrain::PlantKind::CACTUS ? glm::vec3(0.4f, 0.55f, 0.3f) :
+			m_Target.kind == terrain::PlantKind::SNAG ? glm::vec3(0.09f, 0.08f, 0.075f) : glm::vec3(0.7f, 0.55f, 0.35f);
 		if (WoodcraftEffects* effects = WoodcraftEffects::Get())
 		{
 			effects->SpawnChips(m_TargetHitPos, m_TargetHitNormal, 8, chipColour);
@@ -306,6 +310,9 @@ namespace flex
 
 	void WoodcraftController::UpdateCampfirePlacement(bool bCanAct)
 	{
+		// (hidden unless it's shown below)
+		PlacementPreview::Frame previewFrame(m_CampfirePreview);
+
 		const PrefabID woodID = woodcraft::GetWoodPrefabID();
 		const i32 wood = woodID.IsValid() ? CountItems(woodID) : 0;
 
@@ -315,7 +322,7 @@ namespace flex
 			m_Player->ShowNotification(LOC(Notify_CampfireReady));
 		}
 
-		if (g_InputManager->GetKeyPressed(KeyCode::KEY_H))
+		if (g_InputManager->GetKeyPressed(GameKeys::CAMPFIRE))
 		{
 			if (m_bPlacingCampfire)
 			{
@@ -351,21 +358,15 @@ namespace flex
 			const terrain::ColumnSample column = terrainGenerator->SampleColumn(hitPos.x, hitPos.z);
 			const bool bUnderWater = column.lakeID != 0 && column.lakeT < 1.0f && hitPos.y < column.waterLevel + 0.2f;
 			const Campfire* nearest = Campfire::FindNearest(hitPos, 2.2f);
-			m_bPlacementValid = hitNormal.y > 0.75f && !bUnderWater && nearest == nullptr;
+			// (averaged over the campfire's footprint, so small bumps don't make it wobble)
+			const glm::vec3 groundNormal = terrainGenerator->SampleSmoothNormal(hitPos, 0.8f);
+			m_bPlacementValid = hitNormal.y > 0.75f && groundNormal.y > 0.75f && !bUnderWater && nearest == nullptr;
 
-			// Preview: a ring where the stones will go
-			const btVector3 colour = m_bPlacementValid ? btVector3(0.35f, 1.0f, 0.4f) : btVector3(1.0f, 0.3f, 0.25f);
-			DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
-			const u32 segments = 24;
-			for (u32 i = 0; i < segments; ++i)
-			{
-				const real a0 = TWO_PI * (real)i / (real)segments;
-				const real a1 = TWO_PI * (real)(i + 1) / (real)segments;
-				const glm::vec3 p0 = hitPos + glm::vec3(std::cos(a0), 0.08f, std::sin(a0)) * glm::vec3(0.85f, 1.0f, 0.85f);
-				const glm::vec3 p1 = hitPos + glm::vec3(std::cos(a1), 0.08f, std::sin(a1)) * glm::vec3(0.85f, 1.0f, 0.85f);
-				debugRenderer->drawLine(ToBtVec3(p0), ToBtVec3(p1), colour);
-			}
-			debugRenderer->drawLine(ToBtVec3(hitPos), ToBtVec3(hitPos + VEC3_UP * 0.9f), colour);
+			// Hologram of the campfire, lying on the ground
+			const real yaw = std::atan2(camera->forward.x, camera->forward.z);
+			const glm::vec3 forward(std::sin(yaw), 0.0f, std::cos(yaw));
+			m_CampfirePreview.Show(SID("campfire"), Campfire::BuildPreviewGeometry, hitPos, RotationFromUp(groundNormal, forward), VEC3_ONE,
+				PlacementPreview::ValidColour(m_bPlacementValid));
 		}
 
 		if (m_bPlacementValid && g_InputManager->IsMouseButtonPressed(MouseButton::LEFT))
@@ -404,7 +405,7 @@ namespace flex
 			return;
 		}
 
-		if (g_InputManager->GetKeyDown(KeyCode::KEY_E))
+		if (g_InputManager->GetKeyDown(GameKeys::LIGHT_CAMPFIRE))
 		{
 			m_LightingProgress += g_DeltaTime;
 			if (m_LightingProgress >= Campfire::LIGHT_HOLD_DURATION)
@@ -437,7 +438,8 @@ namespace flex
 		{
 			const i32 hitsNeeded = HitsToFell(m_Target);
 			const i32 hits = m_Target.hash == m_ChopPlantHash ? m_ChopHits : 0;
-			std::string prompt = m_Target.kind == terrain::PlantKind::CACTUS ? LOC(Woodcraft_ChopCactus) : LOC(Woodcraft_ChopTree);
+			std::string prompt = m_Target.kind == terrain::PlantKind::CACTUS ? LOC(Woodcraft_ChopCactus) :
+				m_Target.kind == terrain::PlantKind::SNAG ? LOC(Woodcraft_ChopBurntTree) : LOC(Woodcraft_ChopTree);
 			if (!m_Player->IsWieldingAxe())
 			{
 				prompt += LOC(Woodcraft_QuickerWithAxe);
@@ -580,6 +582,23 @@ namespace flex
 			g_Renderer->RequestScreenshot(directory + "woodcraft_" + name + ".png");
 		};
 		auto Next = [this]() { ++m_TestStep; m_TestTime = 0.0f; };
+
+		// How long after the tree falls the first wood lands in the inventory (the player stands beside the tree)
+		if (m_TestSinceFelled >= 0.0f)
+		{
+			m_TestSinceFelled += g_UnpausedDeltaTime;
+			const PrefabID woodPrefabID = woodcraft::GetWoodPrefabID();
+			if (CountItems(woodPrefabID) > m_TestWoodBeforeFelling)
+			{
+				Print("Woodcraft test: first wood picked up %.2fs after felling\n", m_TestSinceFelled);
+				m_TestSinceFelled = -1.0f;
+			}
+			else if (m_TestSinceFelled > 15.0f)
+			{
+				Print("Woodcraft test: no wood picked up within 15s of felling\n");
+				m_TestSinceFelled = -1.0f;
+			}
+		}
 		auto Aim = [this](const glm::vec3& target)
 		{
 			const glm::vec3 delta = target - m_Player->GetEyePosition();
@@ -681,6 +700,8 @@ namespace flex
 			if (!PlantExists(m_TestPlant))
 			{
 				Print("Woodcraft test: felled the tree after %.1fs\n", m_TestTime);
+				m_TestSinceFelled = 0.0f;
+				m_TestWoodBeforeFelling = CountItems(woodID);
 				Next();
 			}
 			else if (m_TestTime > 20.0f)

@@ -4,7 +4,8 @@
 
 #include <set>
 
-// Treasure chests, placed rarely near mountain tops (deterministically from the world's seed), holding special items
+// Treasure chests, placed rarely on mountain tops & prominent hilltops (deterministically from the world's seed), holding
+// special items. Players find them by the glint they give off in the distance, a chime when close & the map.
 namespace flex
 {
 	class Player;
@@ -27,6 +28,9 @@ namespace flex
 
 		// Spawns chests near the player & removes far away ones (called every frame in terrain scenes)
 		static void UpdateNearby(TerrainGenerator* terrainGenerator, const glm::vec3& playerPos);
+		// Helps players find unopened chests: a twinkling glint drawn over chests in sight (up to GLINT_RANGE away), a
+		// notification the first time one is spotted & a faint chime when close by (call every frame after UpdateNearby)
+		static void UpdateHints(TerrainGenerator* terrainGenerator, Player* player);
 		static void DestroyAll();
 
 		// Chests which have been looted (saved with the world)
@@ -40,7 +44,15 @@ namespace flex
 			bool bValid = false;
 			glm::vec3 pos;
 			GameObjectID chestID;
+
+			// Hints
+			bool bInSight = false;
+			bool bSpotted = false; // The player has been told about it
+			bool bChimed = false; // Re-armed once the player moves away
+			real nextSightCheckTime = 0.0f;
 		};
+
+		static bool IsInSight(TerrainGenerator* terrainGenerator, const glm::vec3& eye, const glm::vec3& target);
 
 		static Site ComputeSite(TerrainGenerator* terrainGenerator, i32 cellX, i32 cellZ);
 		void CreateMeshes();

@@ -84,6 +84,10 @@ namespace flex
 			std::atomic<u32> nextQueue{ 0 };
 			// Jobs queued but not yet started, so sleeping workers know when to wake
 			std::atomic<u32> pendingJobCount{ 0 };
+			// See ExecuteBackground
+			JobQueue backgroundQueue;
+			std::atomic<u32> pendingBackgroundJobCount{ 0 };
+			std::atomic<u32> runningBackgroundJobCount{ 0 };
 			std::vector<std::thread> threads;
 
 		};
@@ -126,6 +130,38 @@ namespace flex
 			}
 		}
 
+		static u32 MaxRunningBackgroundJobs()
+		{
+			return std::max(1u, s_InternalState.numThreads / 2);
+		}
+
+		// Runs one background job if there's one to run (& not too many are running already)
+		static bool RunBackgroundJob()
+		{
+			if (s_InternalState.pendingBackgroundJobCount.load() == 0)
+			{
+				return false;
+			}
+			if (s_InternalState.runningBackgroundJobCount.fetch_add(1) >= MaxRunningBackgroundJobs())
+			{
+				s_InternalState.runningBackgroundJobCount.fetch_sub(1);
+				return false;
+			}
+
+			bool bRan = false;
+			Job job;
+			if (s_InternalState.backgroundQueue.pop_front(job))
+			{
+				s_InternalState.pendingBackgroundJobCount.fetch_sub(1);
+				JobArgs args = {};
+				job.task(args);
+				job.ctx->counter.fetch_sub(1);
+				bRan = true;
+			}
+			s_InternalState.runningBackgroundJobCount.fetch_sub(1);
+			return bRan;
+		}
+
 		static void WakeWorkers()
 		{
 			// Taking the mutex ensures workers aren't between checking for work & going to sleep (which would miss this)
@@ -161,11 +197,18 @@ namespace flex
 					{
 						RunJobs(threadID);
 
-						// Finished with jobs, sleep until more are queued
+						if (RunBackgroundJob())
+						{
+							continue;
+						}
+
+						// Finished with jobs, sleep until more are queued (background jobs which can't start yet because
+						// enough are running are picked up when one of those finishes, since its thread loops around)
 						std::unique_lock<std::mutex> lock(s_InternalState.wakeMutex);
 						s_InternalState.wakeCondition.wait(lock, []
 						{
-							return s_InternalState.pendingJobCount.load() > 0 || !s_InternalState.alive.load();
+							return s_InternalState.pendingJobCount.load() > 0 || !s_InternalState.alive.load() ||
+								(s_InternalState.pendingBackgroundJobCount.load() > 0 && s_InternalState.runningBackgroundJobCount.load() < MaxRunningBackgroundJobs());
 						});
 					}
 				});
@@ -204,6 +247,17 @@ namespace flex
 			s_InternalState.numThreads = 0;
 			s_InternalState.numCores = 0;
 			s_InternalState.nextQueue.store(0);
+
+			// Finish background work which hadn't started (e.g. memory waiting to be freed) on this thread
+			FlushBackgroundFrees();
+			Job job;
+			while (s_InternalState.backgroundQueue.pop_front(job))
+			{
+				s_InternalState.pendingBackgroundJobCount.fetch_sub(1);
+				JobArgs args = {};
+				job.task(args);
+				job.ctx->counter.fetch_sub(1);
+			}
 		}
 
 		u32 GetThreadCount()
@@ -254,6 +308,82 @@ namespace flex
 			s_InternalState.pendingJobCount.fetch_add(1);
 			s_InternalState.jobQueuePerThread[s_InternalState.nextQueue.fetch_add(1) % s_InternalState.numThreads].push_back(job);
 			WakeWorkers();
+		}
+
+		void ExecuteBackground(Context& ctx, const std::function<void()>& task)
+		{
+			if (s_InternalState.numThreads == 0)
+			{
+				task();
+				return;
+			}
+
+			ctx.counter.fetch_add(1);
+
+			Job job;
+			job.ctx = &ctx;
+			job.task = [task](JobArgs) { task(); };
+			job.groupID = 0;
+			job.groupJobOffset = 0;
+			job.groupJobEnd = 1;
+			job.sharedMemorySize = 0;
+			job.payload = 0;
+
+			s_InternalState.pendingBackgroundJobCount.fetch_add(1);
+			s_InternalState.backgroundQueue.push_back(job);
+			WakeWorkers();
+		}
+
+		struct Garbage
+		{
+			void* ptr;
+			void (*deleter)(void*);
+		};
+		static std::mutex s_PendingGarbageMutex;
+		static std::vector<Garbage> s_PendingGarbage;
+
+		void DestroyInBackground(void* ptr, void (*deleter)(void*))
+		{
+			if (ptr == nullptr)
+			{
+				return;
+			}
+			if (s_InternalState.numThreads == 0)
+			{
+				deleter(ptr);
+				return;
+			}
+			std::lock_guard<std::mutex> lock(s_PendingGarbageMutex);
+			s_PendingGarbage.push_back({ ptr, deleter });
+		}
+
+		void FreeInBackground(void* ptr)
+		{
+			DestroyInBackground(ptr, [](void* p) { free(p); });
+		}
+
+		void FlushBackgroundFrees()
+		{
+			std::vector<Garbage>* garbage = nullptr;
+			{
+				std::lock_guard<std::mutex> lock(s_PendingGarbageMutex);
+				if (s_PendingGarbage.empty())
+				{
+					return;
+				}
+				garbage = new std::vector<Garbage>(std::move(s_PendingGarbage));
+				s_PendingGarbage.clear();
+			}
+			// One job per frame (queuing a job wakes the workers, which adds up when many things are freed)
+			static Context s_GarbageContext;
+			ExecuteBackground(s_GarbageContext, [garbage]()
+			{
+				for (const Garbage& item : *garbage)
+				{
+					item.deleter(item.ptr);
+				}
+				delete garbage;
+			});
 		}
 
 		bool IsBusy(const Context& ctx)

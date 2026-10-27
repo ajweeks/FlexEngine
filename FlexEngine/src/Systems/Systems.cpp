@@ -110,7 +110,7 @@ namespace flex
 		{
 			BaseScene* scene = g_SceneManager->CurrentScene();
 
-			btVector3 wireColOn(sin(g_SecElapsedSinceProgramStart * 3.5f) * 0.4f + 0.6f, 0.2f, 0.2f);
+			btVector3 wireColOn(sin(AnimationTime() * 3.5f) * 0.4f + 0.6f, 0.2f, 0.2f);
 			static const btVector3 wireColPluggedIn(0.05f, 0.6f, 0.1f);
 			static const btVector3 wireColOff(0.9f, 0.9f, 0.9f);
 

@@ -27,6 +27,10 @@ namespace flex
 
 	private:
 		glm::vec3 GetOffsetPosition(const glm::vec3& pos, const glm::vec3& playerForward);
+		// Pulls the camera in towards the pivot (the player) when something solid is between them, & eases it back
+		// out once it's clear. Always casts from the pivot (never from the previous camera position), so the camera
+		// can't get stuck inside geometry.
+		glm::vec3 ResolveCollision(const glm::vec3& pivot, const glm::vec3& desiredPos);
 		void SetPosAndLookAt();
 		void SetLookAt();
 		void FindPlayer();
@@ -60,6 +64,16 @@ namespace flex
 		// Where we point at on the ground
 		glm::vec3 m_TargetLookAtPos;
 		glm::vec3 m_Vel;
+
+		// Fraction of the desired distance from the player the camera is at (< 1 while pulled in by collision)
+		real m_CollisionFraction = 1.0f;
+		bool m_bCollisionHit = false;
+		// Radius of the sphere swept from the player towards the camera
+		const real m_CollisionRadius = 0.3f;
+		// Closest the camera is pulled in to the player
+		const real m_MinCollisionDistance = 0.8f;
+		// Rate (1/s) the camera eases back out once clear (pulling in is immediate)
+		const real m_CollisionReturnSpeed = 2.0f;
 
 	};
 } // namespace flex

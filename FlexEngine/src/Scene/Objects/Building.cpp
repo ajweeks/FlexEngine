@@ -17,6 +17,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
+#include "GameControls.hpp"
 #include "GameSounds.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/DebugRenderer.hpp"
@@ -242,14 +243,14 @@ namespace flex
 
 	const char* BuildPieceDisplayName(BuildPieceType type)
 	{
-		static const LocID ids[] = { LocID::Build_Floor, LocID::Build_Wall, LocID::Build_Roof, LocID::Build_Stairs, LocID::Build_Torch, LocID::Build_Ladder, LocID::Build_Rope };
+		static const LocID ids[] = { LOC_ID(Build_Floor), LOC_ID(Build_Wall), LOC_ID(Build_Roof), LOC_ID(Build_Stairs), LOC_ID(Build_Torch), LOC_ID(Build_Ladder), LOC_ID(Build_Rope) };
 		static_assert(ARRAY_LENGTH(ids) == (u32)BuildPieceType::_COUNT, "ids must match BuildPieceType");
 		return (u32)type < (u32)BuildPieceType::_COUNT ? Loc::Get(ids[(u32)type]) : "";
 	}
 
 	const char* BuildMaterialDisplayName(BuildMaterial material)
 	{
-		static const LocID ids[] = { LocID::Build_Wood, LocID::Build_Stone };
+		static const LocID ids[] = { LOC_ID(Build_Wood), LOC_ID(Build_Stone) };
 		static_assert(ARRAY_LENGTH(ids) == (u32)BuildMaterial::_COUNT, "ids must match BuildMaterial");
 		return (u32)material < (u32)BuildMaterial::_COUNT ? Loc::Get(ids[(u32)material]) : "";
 	}
@@ -472,7 +473,7 @@ namespace flex
 			GameSounds::ReportFire(torches[0].second->m_Transform.GetWorldPosition(), 0.3f);
 		}
 
-		const real time = g_SecElapsedSinceProgramStart;
+		const real time = AnimationTime();
 		for (u32 i = 0; i < MAX_TORCH_LIGHTS; ++i)
 		{
 			TorchLight& light = s_TorchLights[i];
@@ -963,11 +964,11 @@ namespace flex
 				m_SelectedType = (BuildPieceType)i;
 			}
 		}
-		if (g_InputManager->GetKeyPressed(KeyCode::KEY_R))
+		if (g_InputManager->GetKeyPressed(GameKeys::BUILD_ROTATE))
 		{
 			m_Rotation = (m_Rotation + 1) % 4;
 		}
-		if (g_InputManager->GetKeyPressed(KeyCode::KEY_N))
+		if (g_InputManager->GetKeyPressed(GameKeys::BUILD_MATERIAL))
 		{
 			m_SelectedMaterial = (BuildMaterial)(((i32)m_SelectedMaterial + 1) % (i32)BuildMaterial::_COUNT);
 		}

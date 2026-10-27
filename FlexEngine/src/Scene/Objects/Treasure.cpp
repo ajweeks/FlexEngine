@@ -10,6 +10,9 @@ IGNORE_WARNINGS_PUSH
 IGNORE_WARNINGS_POP
 
 #include "Audio/AudioManager.hpp"
+#include "Cameras/BaseCamera.hpp"
+#include "Cameras/CameraManager.hpp"
+#include "Game.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
@@ -20,6 +23,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/Objects/Building.hpp"
 #include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Window/Window.hpp"
 
 namespace flex
 {
@@ -31,8 +35,18 @@ namespace flex
 	{
 		const real SPAWN_DISTANCE = 350.0f;
 		const real DESPAWN_DISTANCE = 500.0f;
-		const real MIN_SITE_HEIGHT = 450.0f; // Only mountains (relative to sea level)
+		const real MIN_SITE_HEIGHT = 450.0f; // Mountains (relative to sea level)
+		// Lower hills also get chests if they stand out this much from the rest of their cell
+		const real MIN_SITE_PROMINENCE = 120.0f;
+		const real MIN_HILL_SITE_HEIGHT = 30.0f;
 		const glm::vec3 CHEST_HALF_EXTENTS(0.55f, 0.35f, 0.38f);
+		// Unopened chests in sight glint (a twinkling star drawn over them) within this distance
+		const real GLINT_RANGE = 1400.0f;
+		// Closer than this the chest itself is plain to see
+		const real GLINT_MIN_DISTANCE = 12.0f;
+		// A faint chime plays when the player first comes this close to an unopened chest (& again after leaving)
+		const real CHIME_DISTANCE = 60.0f;
+		const real CHIME_REARM_DISTANCE = 150.0f;
 
 		u32 HashU32(u32 x)
 		{
@@ -256,6 +270,7 @@ namespace flex
 		const real extent = SITE_CELL_SIZE - margin * 2.0f;
 		glm::vec2 best(0.0f);
 		real bestHeight = -FLT_MAX;
+		real lowestHeight = FLT_MAX;
 		const u32 coarse = 12;
 		for (u32 i = 0; i < coarse; ++i)
 		{
@@ -263,6 +278,7 @@ namespace flex
 			{
 				const glm::vec2 p = cellMin + glm::vec2(((real)i + 0.5f) / (real)coarse, ((real)j + 0.5f) / (real)coarse) * extent;
 				const terrain::ColumnSample column = terrainGenerator->SampleColumn(p.x, p.y);
+				lowestHeight = glm::min(lowestHeight, column.height);
 				if (column.height > bestHeight)
 				{
 					bestHeight = column.height;
@@ -287,7 +303,9 @@ namespace flex
 		}
 
 		const terrain::ColumnSample column = terrainGenerator->SampleColumn(best.x, best.y);
-		if (bestHeight < MIN_SITE_HEIGHT || column.oceanWeight > 0.5f)
+		const bool bMountain = bestHeight >= MIN_SITE_HEIGHT;
+		const bool bHill = bestHeight >= MIN_HILL_SITE_HEIGHT && bestHeight - lowestHeight >= MIN_SITE_PROMINENCE;
+		if ((!bMountain && !bHill) || column.oceanWeight > 0.5f)
 		{
 			return site;
 		}
@@ -362,6 +380,167 @@ namespace flex
 					}
 				}
 			}
+		}
+	}
+
+	bool TreasureChest::IsInSight(TerrainGenerator* terrainGenerator, const glm::vec3& eye, const glm::vec3& target)
+	{
+		// Checked against the heightfield at a few points along the way (cheap, & good enough for a distant glint:
+		// it ignores caves & overhangs)
+		const real distance = glm::distance(eye, target);
+		const u32 sampleCount = glm::clamp((u32)(distance / 40.0f), 4u, 40u);
+		for (u32 i = 1; i < sampleCount; ++i)
+		{
+			const real t = (real)i / (real)sampleCount;
+			const glm::vec3 p = glm::mix(eye, target, t);
+			if (terrainGenerator->SampleColumn(p.x, p.z).height > p.y + 1.0f)
+			{
+				return false;
+			}
+		}
+		return true;
+	}
+
+	void TreasureChest::UpdateHints(TerrainGenerator* terrainGenerator, Player* player)
+	{
+		BaseCamera* camera = g_CameraManager->CurrentCamera();
+		if (camera == nullptr || player == nullptr || s_SitesSeed != terrainGenerator->GetSeed() || (g_Game != nullptr && g_Game->IsMenuOpen()))
+		{
+			return;
+		}
+
+		const glm::vec3 playerPos = player->GetTransform()->GetWorldPosition();
+		const glm::vec3 eye = camera->position;
+		const real now = (real)g_SecElapsedSinceProgramStart;
+		const glm::vec2 windowSize = (glm::vec2)g_Window->GetSize();
+		if (windowSize.x <= 0.0f || windowSize.y <= 0.0f)
+		{
+			return;
+		}
+		const real aspectRatio = windowSize.x / windowSize.y;
+		const real tanHalfFov = std::tan(glm::clamp(camera->FOV + camera->fovOffset, glm::radians(5.0f), glm::radians(150.0f)) * 0.5f);
+		const glm::vec3 forward = glm::normalize(camera->forward);
+		const glm::vec3 screenRight = glm::normalize(glm::cross(forward, camera->up));
+		const glm::vec3 screenUp = glm::cross(screenRight, forward);
+		// Sprite space: y in [-1, 1] spans the window's height
+		const real pixel = 2.0f / windowSize.y;
+		const real uiScale = glm::max(windowSize.y / 1080.0f, 0.5f);
+
+		u32 sightChecks = 0;
+		for (auto& pair : s_Sites)
+		{
+			Site& site = pair.second;
+			if (!site.bValid || s_OpenedChests.find(pair.first) != s_OpenedChests.end())
+			{
+				continue;
+			}
+
+			// The chime
+			const real playerDistance = glm::distance(playerPos, site.pos);
+			if (!site.bChimed && playerDistance < CHIME_DISTANCE)
+			{
+				site.bChimed = true;
+				AudioManager::PlaySourceWithGain(g_ResourceManager->GetOrLoadAudioSourceID(SID("jingle-single-01.wav"), true), 0.3f);
+			}
+			else if (site.bChimed && playerDistance > CHIME_REARM_DISTANCE)
+			{
+				site.bChimed = false;
+			}
+
+			// The glint (above the chest's lid)
+			const glm::vec3 target = site.pos + glm::vec3(0.0f, CHEST_HALF_EXTENTS.y * 2.0f + 0.4f, 0.0f);
+			const real distance = glm::distance(eye, target);
+			if (distance > GLINT_RANGE || distance < GLINT_MIN_DISTANCE)
+			{
+				site.bInSight = false;
+				continue;
+			}
+			// (A couple of sight checks per frame at most, each site rechecked a few times a second)
+			if (now >= site.nextSightCheckTime && sightChecks < 2)
+			{
+				++sightChecks;
+				site.nextSightCheckTime = now + 0.3f;
+				site.bInSight = IsInSight(terrainGenerator, eye, target);
+				if (site.bInSight && !site.bSpotted)
+				{
+					site.bSpotted = true;
+					player->ShowNotification(LOC(Notify_TreasureGlint));
+					Print("Treasure glint spotted %.0fm away at (%.0f, %.0f, %.0f)\n", distance, site.pos.x, site.pos.y, site.pos.z);
+					// For testing (e.g. with FLEX_PLAY_SCREENSHOT): FLEX_TREASURE_LOOK=1 turns to face the first glint seen
+					static bool s_bLooked = false;
+					if (!s_bLooked && getenv("FLEX_TREASURE_LOOK") != nullptr)
+					{
+						s_bLooked = true;
+						const glm::vec3 toTarget = target - player->GetEyePosition();
+						player->GetTransform()->SetWorldRotation(glm::angleAxis(std::atan2(toTarget.x, toTarget.z), VEC3_UP));
+						player->SetPitch(-std::atan2(toTarget.y, glm::length(glm::vec2(toTarget.x, toTarget.z))));
+					}
+				}
+			}
+			if (!site.bInSight)
+			{
+				continue;
+			}
+
+			const glm::vec3 delta = target - eye;
+			const real depth = glm::dot(delta, forward);
+			if (depth <= 0.1f)
+			{
+				continue;
+			}
+			const real sx = glm::dot(delta, screenRight) / (depth * tanHalfFov);
+			const real sy = glm::dot(delta, screenUp) / (depth * tanHalfFov);
+			if (glm::abs(sx) > aspectRatio * 1.1f || glm::abs(sy) > 1.1f)
+			{
+				continue;
+			}
+
+			// Twinkles: a steady faint star which flares every few seconds (out of step between chests)
+			const real phase = HashToUnit(HashU32((u32)pair.first ^ (u32)(pair.first >> 32))) * TWO_PI;
+			const real flare = std::pow(glm::max(std::sin(now * 1.6f + phase), 0.0f), 8.0f);
+			const real fade = 1.0f - glm::smoothstep(GLINT_RANGE * 0.7f, GLINT_RANGE, distance);
+			const real alpha = (0.45f + 0.55f * flare) * fade;
+			const real armLength = (7.0f + 9.0f * flare) * uiScale * pixel;
+			const real armWidth = 1.2f * uiScale * pixel;
+
+			SpriteQuadDrawInfo drawInfo = {};
+			drawInfo.anchor = AnchorPoint::CENTER;
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.bEnableAlbedoSampler = false;
+			// With the UI (sprites drawn before it go through the scene's post processing, where overlapping ones come out
+			// black). Not drawn while menus are open (see above).
+			drawInfo.zOrder = Z_ORDER_UI;
+			drawInfo.pos = glm::vec3(sx, sy, 0.0f);
+			drawInfo.colour = glm::vec4(1.0f, 0.86f, 0.45f, alpha);
+			// A four pointed star: long horizontal & vertical rays, short diagonal ones & a bright core. The pieces don't
+			// overlap (overlapping translucent sprites come out black).
+			const glm::vec3 center = drawInfo.pos;
+			const real core = armWidth * 1.8f;
+			const real rayHalfLength = glm::max(armLength - core, armWidth) * 0.5f;
+			const real diagonalStart = core * 1.6f;
+			const real diagonalHalfLength = glm::max(armLength * 0.45f - diagonalStart, armWidth) * 0.5f;
+			for (u32 i = 0; i < 4; ++i)
+			{
+				const real angle = PI_DIV_TWO * (real)i;
+				const glm::vec3 dir(std::cos(angle), std::sin(angle), 0.0f);
+				drawInfo.rotation = glm::angleAxis(angle, glm::vec3(0.0f, 0.0f, 1.0f));
+				drawInfo.pos = center + dir * (core + rayHalfLength);
+				drawInfo.scale = glm::vec3(rayHalfLength, armWidth, 1.0f);
+				g_Renderer->EnqueueSprite(drawInfo);
+
+				const real diagonalAngle = angle + PI_DIV_FOUR;
+				const glm::vec3 diagonalDir(std::cos(diagonalAngle), std::sin(diagonalAngle), 0.0f);
+				drawInfo.rotation = glm::angleAxis(diagonalAngle, glm::vec3(0.0f, 0.0f, 1.0f));
+				drawInfo.pos = center + diagonalDir * (diagonalStart + diagonalHalfLength);
+				drawInfo.scale = glm::vec3(diagonalHalfLength, armWidth * 0.8f, 1.0f);
+				g_Renderer->EnqueueSprite(drawInfo);
+			}
+			drawInfo.rotation = QUAT_IDENTITY;
+			drawInfo.pos = center;
+			drawInfo.colour = glm::vec4(1.0f, 0.97f, 0.85f, glm::min(alpha * 1.4f, 1.0f));
+			drawInfo.scale = glm::vec3(core, core, 1.0f);
+			g_Renderer->EnqueueSprite(drawInfo);
 		}
 	}
 

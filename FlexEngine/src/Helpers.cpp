@@ -333,6 +333,31 @@ namespace flex
 		return WriteFile(filePath, vec, bBinaryFile);
 	}
 
+	bool WriteFileIfChanged(const std::string& filePath, const std::string& fileContents)
+	{
+		static std::mutex s_Mutex;
+		static std::unordered_map<std::string, size_t> s_LastWrittenHashes;
+
+		const size_t hash = std::hash<std::string>()(fileContents);
+		{
+			std::lock_guard<std::mutex> lock(s_Mutex);
+			auto iter = s_LastWrittenHashes.find(filePath);
+			if (iter != s_LastWrittenHashes.end() && iter->second == hash)
+			{
+				return true;
+			}
+		}
+
+		if (!WriteFile(filePath, fileContents, false))
+		{
+			return false;
+		}
+
+		std::lock_guard<std::mutex> lock(s_Mutex);
+		s_LastWrittenHashes[filePath] = hash;
+		return true;
+	}
+
 	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile)
 	{
 		PROFILE_AUTO("WriteFile");

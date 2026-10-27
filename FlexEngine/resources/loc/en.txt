@@ -1,0 +1,264 @@
+# English text for every string shown to the player. English is the source language: other languages
+# (<code>.txt files beside this one) fall back to it for any keys they leave out.
+#
+# Each line is Key = Text. Keys are Area_Name & are used in code as LOC(Area_Name), or LOCF(Area_Name, args...) when
+# the text has printf-style arguments (%s takes a const char*). Wrap the text in "quotes" to keep leading or trailing
+# spaces; \n is a new line. Lines starting with # are comments. Edits are reloaded while the game runs.
+
+Language_Name = English
+
+# Main menu
+MainMenu_Tagline = An endless world to explore, climb & build in
+MainMenu_Continue = Continue: %s
+MainMenu_NewWorld = New world
+MainMenu_Worlds = Worlds
+MainMenu_Settings = Settings
+MainMenu_Controls = Controls
+MainMenu_Editor = Engine test scenes
+MainMenu_Quit = Quit
+MainMenu_Version = %s v%s
+
+# Worlds
+Worlds_Title = Worlds
+Worlds_Subtitle = Every world is endless, & made from its seed
+Worlds_ListSubtitle = Seed %d   |   Played %s   |   Last played %s
+Worlds_Play = Play
+Worlds_New = New world
+Worlds_Delete = Delete
+Worlds_ConfirmDelete = Really delete?
+Worlds_DefaultName = World %d
+Worlds_FirstWorldName = My world
+
+# World stats (beside the world list)
+Stats_Created = Created
+Stats_LastPlayed = Last played
+Stats_TimeInWorld = Time in world
+Stats_AreaExplored = Area explored
+Stats_DistanceTravelled = Distance travelled
+Stats_RailLaid = Rail laid
+Stats_TorchesPlaced = Torches placed
+Stats_PiecesBuilt = Pieces built
+Stats_ChestsOpened = Chests opened
+Stats_Seed = Seed
+Stats_Unknown = Unknown
+Units_Km = %.2f km
+Units_SquareKm = %.2f sq km
+Units_Minutes = %d min
+Units_HoursMinutes = %d h %d min
+
+# New world
+NewWorld_Title = New world
+NewWorld_Subtitle = Name it & pick a seed (or keep the random one)
+NewWorld_Name = World name
+NewWorld_Seed = Seed
+NewWorld_SeedPlaceholder = Random
+NewWorld_Random = Random
+NewWorld_Create = Create & play
+
+# Settings
+Settings_Title = Settings
+Settings_Subtitle = Saved automatically
+Settings_Fov = Field of view
+Settings_FovValue = %.0f deg
+Settings_MouseSensitivity = Mouse sensitivity
+Settings_InvertMouse = Invert mouse
+Settings_Volume = Volume
+Settings_TerrainDetail = Terrain detail: %s
+Settings_QualityLow = Low
+Settings_QualityMedium = Medium
+Settings_QualityHigh = High
+Settings_QualityUltra = Ultra
+Settings_ShowMinimap = Show minimap
+Settings_Language = Language: %s
+
+# Common
+Common_Back = Back
+
+# Controls screen (the keys themselves come from the input bindings)
+Controls_Title = Controls
+Controls_Subtitle = What every key does
+Controls_Movement = Movement
+Controls_Items = Items & tools
+Controls_Building = Building
+Controls_General = General
+Controls_Move = Move
+Controls_Look = Look around
+Controls_Jump = Jump (in the air: paraglider)
+Controls_Sprint = Sprint
+Controls_Climb = Climb (hold at a steep wall)
+Controls_Crouch = Slide, ski & wingsuit (hold)
+Controls_GrapplingHook = Grappling hook
+Controls_UseItem = Use item (dig, chop)
+Controls_UseItemSecondary = Place terrain (shovel)
+Controls_FlattenTerrain = Flatten terrain (hold)
+Controls_SelectItem = Select item
+Controls_Inventory = Inventory
+Controls_Interact = Interact
+Controls_PickUp = Pick up
+Controls_Drop = Drop item
+Controls_BuildMode = Build mode
+Controls_BuildRotate = Rotate piece
+Controls_BuildMaterial = Change material
+Controls_Campfire = Build a campfire
+Controls_TerrainMaterial = Terrain material (shovel)
+Controls_TrackBuild = Lay rail track
+Controls_Map = Map
+Controls_Pause = Pause
+Controls_Screenshot = Screenshot
+Controls_KeyMouse = Mouse
+Controls_KeyScroll = Scroll
+
+# Loading
+Loading_Terrain = Generating terrain...
+
+# Pause menu
+Pause_Title = Paused
+Pause_Played = %s   |   %s played
+Pause_Resume = Resume
+Pause_Map = Map & teleport
+Pause_Settings = Settings
+Pause_Controls = Controls
+Pause_QuitToMenu = Save & quit to menu
+Pause_QuitGame = Save & quit game
+
+# Map
+Map_Title = Map
+Map_Controls = [Scroll] Zoom   [Middle drag] Pan   [C] Re-center   [Click] Teleport   [Esc / M] Close
+Map_Scale = %.1f km across
+Map_Mapping = Mapping the area...
+Map_Hover = %s   |   %.0fm high   |   %.1fkm away   |   Click to teleport
+Map_Teleported = Teleported %.1fkm
+Map_LegendYou = You
+Map_LegendTreasure = Treasure
+Map_LegendOpened = Opened treasure
+
+# Interaction prompts
+Prompt_OpenChest = [E] Open chest
+Prompt_Drive = [E] Drive
+Prompt_Row = [E] Row
+Prompt_UseTerminal = [E] Use terminal
+
+# Notifications
+Notify_Treasure = Treasure! Found %s
+Notify_TreasureEmpty = Treasure! Found nothing (it was empty)
+Notify_TreasureGlint = Something glints in the distance... treasure? (Chests are marked on the map [M])
+Notify_ItemCount = %dx %s
+Notify_CampfireReady = You have enough wood for a campfire: press [H] to build one
+Notify_CampfireNeedsWood = A campfire needs %d wood (you have %d). Chop down trees to get some.
+Notify_CampfireBuilt = Campfire built. Hold [E] next to it to light it.
+Notify_CampfireLit = The campfire is lit. It'll burn for %d minutes.
+
+# Woodcraft
+Woodcraft_BuildCampfire = [LMB] Build campfire (%d wood)   [RMB]/[H] Cancel
+Woodcraft_FindGround = Find flat, dry ground for the campfire   [RMB]/[H] Cancel
+Woodcraft_ChopTree = [LMB] Chop tree
+Woodcraft_ChopCactus = [LMB] Chop cactus
+Woodcraft_ChopBurntTree = [LMB] Chop burnt tree (for charcoal)
+Woodcraft_QuickerWithAxe = " (quicker with an axe)"
+Woodcraft_LightCampfire = [Hold E] Light campfire
+Woodcraft_CampfireBurning = Campfire burning (%d:%02d left)
+
+# Digging & placing terrain (pickaxe & shovel)
+TerrainTool_DigLoose = [Hold LMB] Dig (quick in soil, sand & gravel)
+TerrainTool_DigRock = [Hold LMB] Dig (quick in rock)
+TerrainTool_Place = [Hold RMB] Place %s
+TerrainTool_Flatten = [Hold MMB] Flatten to the level first aimed at
+TerrainTool_ChangeMaterial = [R] / [Shift+R] Change material
+
+# Build mode
+Build_Title = BUILDING: %s
+Build_TitleMaterial = BUILDING: %s (%s)
+Build_Controls = [LMB] Place   [RMB] Remove   [Scroll/1-7] Piece   [R] Rotate   [N] Material   [B] Exit
+Build_Floor = Floor
+Build_Wall = Wall
+Build_Roof = Roof
+Build_Stairs = Stairs
+Build_Torch = Torch
+Build_Ladder = Ladder
+Build_Rope = Rope
+Build_Wood = Wood
+Build_Stone = Stone
+
+# Track building
+Track_BuildingTitle = TRACK BUILDING - %d nodes placed
+Track_PlaceNode = [%s] Place node
+Track_UndoNode = [%s] Undo last node
+Track_Finish = [%s] Finish track
+Track_FinishExit = [%s] Finish & exit
+Track_AimAtGround = Aim at the ground to place nodes
+Track_SnappedLoop = Snapped - placing here closes the loop & finishes the track
+Track_SnappedBranch = Snapped - new track will branch from this node
+Track_SnappedJoin = Snapped - placing here joins & finishes the track
+Track_EditingTitle = TRACK EDITING
+Track_GrabPoint = [%s] Grab point
+Track_ReleasePoint = [%s] Release point
+Track_DeleteNode = [%s] Delete hovered node
+Track_DeleteTrack = [%s] Delete highlighted track
+Track_Exit = [%s] Exit
+Track_ForkLeft = FORK AHEAD - going left
+Track_ForkRight = FORK AHEAD - going right
+Track_ForkStraight = FORK AHEAD - going straight
+Track_ChooseFork = [%s] / [%s] Choose left / right
+Track_PrimaryBinding = LMB / %s
+Track_PieceTitle = TRACK BUILDING - %s (%d/%d)
+Track_PieceChoose = [Scroll / 1-9, 0 / R] Change piece (%s / %s)
+Track_PlacePiece = [%s] Place piece
+Track_UndoPiece = [%s] Undo last piece
+Track_PieceAimAtGround = Aim at the ground or near the end of a track
+Track_PieceSnapped = Continuing on from the end of a track
+Track_PieceNewTrack = Starting a new track (aim near a track's end to continue it)
+Track_PieceTooSteep = Too steep - track can't get any steeper
+Track_PieceCutTooDeep = The ground is too high here to dig through
+Track_PieceFillTooDeep = The ground is too far below to build up to
+Track_PieceBlocked = Blocked by another track
+Track_PieceInfo = Grade %d%%  -  cuts %.1fm, fills %.1fm
+Track_Piece_Straight = Straight
+Track_Piece_StraightLong = Long straight
+Track_Piece_CurveLeft = Curve left
+Track_Piece_CurveRight = Curve right
+Track_Piece_RampUp = Ramp up
+Track_Piece_RampDown = Ramp down
+Track_Piece_SBendLeft = S-bend left
+Track_Piece_SBendRight = S-bend right
+Track_Piece_FollowGround = Follow the ground
+Track_Piece_Freeform = Freeform
+Input_Unbound = Unbound
+
+# Item names (see Loc::ItemName)
+Item_Pickaxe = Pickaxe
+Item_Axe = Axe
+Item_Shovel = Shovel
+Item_Wood = Wood
+Item_Charcoal = Charcoal
+Item_DuneBuggy = Dune buggy
+Item_RowBoat = Row boat
+Item_Headlamp = Headlamp
+Item_SolarPanel = Solar panel
+Item_Battery = Battery
+Item_Lamp = Lamp
+Item_Quartz = Quartz
+Item_Aluminum = Aluminum
+Item_Tin = Tin
+Item_Olivine = Olivine
+Item_Iron = Iron
+Item_Silicon = Silicon
+Item_Stone = Stone
+
+# Traversal HUD (paraglider, wingsuit, climbing, skiing, grappling hook)
+Traversal_GliderTitle = PARAGLIDER
+Traversal_GliderStats = Height %.0fm   Speed %.0fkm/h   Vario %+.1fm/s
+Traversal_RisingAir = Rising air! Circle to stay in it
+Traversal_FindRisingAir = Find rising air: sunny slopes, ridges facing the wind
+Traversal_GliderControls = [W/S] Speed   [Ctrl] Wingsuit   [Space] Stow
+Traversal_WingsuitTitle = WINGSUIT
+Traversal_FlightStats = Height %.0fm   Speed %.0fkm/h
+Traversal_WingsuitHint = Look down to dive, pull up to trade speed for height
+Traversal_WingsuitControls = [Release Ctrl] Open glider
+Traversal_ClimbingTitle = CLIMBING
+Traversal_ClimbingControls = [WASD] Climb   [Space] Leap   [Release Shift] Let go
+Traversal_SkiingTitle = SKIING
+Traversal_SlidingTitle = SLIDING
+Traversal_SpeedStats = Speed %.0fkm/h
+Traversal_SkiingControls = Look to carve   [S] Brake   [Space] Jump   [Release Ctrl] Stand
+Traversal_HookTitle = GRAPPLING HOOK
+Traversal_HookControls = [Space] Reel in   [Ctrl] Let out   [WASD] Swing   [F] Release

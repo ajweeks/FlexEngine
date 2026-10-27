@@ -177,6 +177,8 @@ namespace flex
 			VulkanBuffer* vertexBuffer = nullptr;
 			VulkanBuffer* indexBuffer = nullptr;
 			bool bUseStagingBuffer = true; // Set to false for vertex buffers that need to be updated very frequently (e.g. ImGui vertex buffer)
+			// Device local buffers are written through the renderer's upload staging buffer (see QueueBufferUpload)
+			bool bDeviceLocal = false;
 		};
 
 		struct VulkanTexture final : public Texture

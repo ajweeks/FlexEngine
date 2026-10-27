@@ -523,7 +523,7 @@ void main()
 		ApplyFog(linDepth, uboConstant.skyboxData.colourFog.xyz, /* inout */ colour);
 	}
 
-	colour = LinearToDisplay(colour);
+	colour = LinearToDisplay(colour, uboConstant.skyboxData.sun.w);
 
 	vec3 viewVec = posWS - uboConstant.camPos.xyz;
 	ApplyDistanceFog(length(viewVec), viewVec / max(length(viewVec), 0.0001), uboConstant.skyboxData, /* inout */ colour);

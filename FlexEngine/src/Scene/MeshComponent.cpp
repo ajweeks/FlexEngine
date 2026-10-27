@@ -24,6 +24,7 @@ IGNORE_WARNINGS_POP
 #include "Graphics/Renderer.hpp"
 #include "Helpers.hpp"
 #include "Scene/GameObject.hpp"
+#include "Systems/JobSystem.hpp"
 #include "Transform.hpp"
 
 namespace flex
@@ -99,12 +100,19 @@ namespace flex
 	{
 		if (renderID != InvalidRenderID)
 		{
+			PROFILE_AUTO("DestroyRenderObject");
 			if (!g_Renderer->DestroyRenderObject(renderID))
 			{
 				PrintError("Failed to destroy render object of mesh component\n");
 			}
 		}
 		m_VertexBufferData.Destroy();
+		if (m_Indices.capacity() * sizeof(u32) >= 4096)
+		{
+			// Large blocks are slow to free (see FreeInBackground)
+			JobSystem::DeleteInBackground(new std::vector<u32>(std::move(m_Indices)));
+			m_Indices = {};
+		}
 		m_OwningMesh = nullptr;
 		m_bInitialized = false;
 	}
@@ -197,7 +205,9 @@ namespace flex
 
 		(*outTriangleIndexVertexArray)->addIndexedMesh(part, PHY_INTEGER);
 
-		bool useQuantizedAabbCompression = false;
+		// Quantized nodes are a quarter of the size, so the tree is faster to build, query & free (bounds are rounded
+		// outwards, so nothing is missed)
+		bool useQuantizedAabbCompression = true;
 		*outbvhTriangleMeshShape = new btBvhTriangleMeshShape(*outTriangleIndexVertexArray, useQuantizedAabbCompression);
 	}
 

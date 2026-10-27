@@ -1252,7 +1252,7 @@ namespace flex
 			stringBuilder.Append("Compiling ");
 			stringBuilder.Append(IntToString(shadersRemaining));
 			stringBuilder.Append(shadersRemaining == 1 ? " shader" : " shaders");
-			i32 numDots = glm::clamp((i32)(fmod(g_SecElapsedSinceProgramStart, 1.0f) * 3), 0, 3);
+			i32 numDots = glm::clamp((i32)(fmod(g_SecElapsedSinceProgramStart, 1.0) * 3), 0, 3);
 			stringBuilder.Append(dots.substr(0, numDots));
 			stringBuilder.Append(spaces.substr(0, 3 - numDots));
 			AddNotificationMessage(stringBuilder.ToString());
@@ -2183,7 +2183,7 @@ namespace flex
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
 		m_Shaders[shaderID]->bTranslucent = true;
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 16384 * 16; // (1835008) TODO: FIXME:
-		m_Shaders[shaderID]->maxObjectCount = 64;
+		m_Shaders[shaderID]->maxObjectCount = 256; // One per UI mesh draw (GameUI rect), so menus with many widgets need plenty
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION2 |
 			(u32)VertexAttribute::UV |
@@ -2575,6 +2575,7 @@ namespace flex
 		// Streamed terrain chunks (& the plants generated with them) are sub-allocated from the dynamic buffer, which
 		// grows as needed. Growing stalls for a while, so it starts out large enough for a typical view.
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 320 * 1024 * 1024;
+		m_Shaders[shaderID]->bDeviceLocalDynamicBuffers = true;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::NORMAL |
@@ -2603,6 +2604,7 @@ namespace flex
 		m_Shaders[shaderID]->maxObjectCount = 1024; // Grows on demand
 		// Water surfaces are only a few polygons per chunk
 		m_Shaders[shaderID]->dynamicVertexBufferSize = 8 * 1024 * 1024;
+		m_Shaders[shaderID]->bDeviceLocalDynamicBuffers = true;
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION |
 			(u32)VertexAttribute::NORMAL |
@@ -2791,7 +2793,7 @@ namespace flex
 		{
 			Shader* shader = m_Shaders[shaderID];
 
-			shader->dynamicVertexIndexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(shader->vertexAttributes));
+			shader->dynamicVertexIndexBufferIndex = GetDynamicVertexIndexBufferIndex(CalculateVertexStride(shader->vertexAttributes), shader->bDeviceLocalDynamicBuffers);
 
 			// Sanity checks
 			{
@@ -3009,7 +3011,7 @@ namespace flex
 	{
 #if 0
 		SetFont(SID("editor-02-ws"));
-		real s = g_SecElapsedSinceProgramStart * 3.5f;
+		real s = AnimationTime() * 3.5f;
 		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(1.0f), 1.0f), glm::vec3(2.0f, 5.0f, 0.0f), QUAT_IDENTITY, 0.0f, 100.0f);
 		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.95f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 1) * 0.05f, 5.0f + sin(s + 0.3f * 1) * 0.05f, -0.075f * 1), QUAT_IDENTITY, 0.0f, 100.0f);
 		DrawStringWS("THREE DIMENSIONAL TEXT!", glm::vec4(glm::vec3(0.90f), 1.0f), glm::vec3(2.0f + cos(s * 0.3f + 0.3f * 2) * 0.07f, 5.0f + sin(s + 0.3f * 2) * 0.07f, -0.075f * 2), QUAT_IDENTITY, 0.0f, 100.0f);
@@ -3385,6 +3387,65 @@ namespace flex
 		m_bSpecializationConstantsDirty = true;
 	}
 
+	void Renderer::DrawImGuiDebugObjects()
+	{
+		PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
+
+		ImGui::TextDisabled("Physics debug drawing (Bullet)");
+
+		bool bDrawAnyPhysics = !physicsDebuggingSettings.bDisableAll;
+		if (ImGui::Checkbox("Enable physics debug drawing", &bDrawAnyPhysics))
+		{
+			physicsDebuggingSettings.bDisableAll = !bDrawAnyPhysics;
+		}
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("Master switch for everything below");
+		}
+
+		if (physicsDebuggingSettings.bDisableAll)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
+		}
+
+		ImGui::Indent();
+		ImGui::Checkbox("Collision wireframe (P)", &physicsDebuggingSettings.bDrawWireframe);
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::SetTooltip("Draws every collision shape near the camera as a wireframe. Toggle with P");
+		}
+		ImGui::Checkbox("AABBs", &physicsDebuggingSettings.bDrawAabb);
+		ImGui::Checkbox("Contact points", &physicsDebuggingSettings.bDrawContactPoints);
+		ImGui::Checkbox("Constraints", &physicsDebuggingSettings.bDrawConstraints);
+
+		ImGui::PushItemWidth(150.0f);
+		ImGui::SliderFloat("Draw radius", &physicsDebuggingSettings.drawRadius, 5.0f, 1000.0f, "%.0fm", 2.0f);
+		ImGui::PopItemWidth();
+		ImGui::Unindent();
+
+		if (physicsDebuggingSettings.bDisableAll)
+		{
+			ImGui::PopStyleColor();
+		}
+
+		ImGui::Spacing();
+		ImGui::TextDisabled("Render debug drawing");
+
+		ImGui::Checkbox("Mesh wireframe overlay", &m_bEnableWireframeOverlay);
+
+		bool bDisplayBoundingVolumes = g_Renderer->IsDisplayBoundingVolumesEnabled();
+		if (ImGui::Checkbox("Bounding volumes", &bDisplayBoundingVolumes))
+		{
+			g_Renderer->SetDisplayBoundingVolumesEnabled(bDisplayBoundingVolumes);
+		}
+
+		bool bRenderEditorObjs = g_EngineInstance->IsRenderingEditorObjects();
+		if (ImGui::Checkbox("Editor objects", &bRenderEditorObjs))
+		{
+			g_EngineInstance->SetRenderingEditorObjects(bRenderEditorObjs);
+		}
+	}
+
 	void Renderer::DrawImGuiSettings()
 	{
 		if (ImGui::TreeNode("Renderer settings"))
@@ -3555,55 +3616,6 @@ namespace flex
 			{
 				enableFogConstant.value = bFogEnabled ? 1 : 0;
 				RecreateEverything();
-			}
-
-			if (ImGui::TreeNode("Debug objects"))
-			{
-				PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
-
-				ImGui::Checkbox("Wireframe overlay", &m_bEnableWireframeOverlay);
-
-				bool bRenderEditorObjs = g_EngineInstance->IsRenderingEditorObjects();
-				if (ImGui::Checkbox("Editor objects", &bRenderEditorObjs))
-				{
-					g_EngineInstance->SetRenderingEditorObjects(bRenderEditorObjs);
-				}
-
-				ImGui::Spacing();
-				ImGui::Spacing();
-				ImGui::Spacing();
-
-				ImGui::Checkbox("Disable All", &physicsDebuggingSettings.bDisableAll);
-
-				if (physicsDebuggingSettings.bDisableAll)
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_TextDisabled]);
-				}
-
-				bool bDisplayBoundingVolumes = g_Renderer->IsDisplayBoundingVolumesEnabled();
-				if (ImGui::Checkbox("Bounding volumes", &bDisplayBoundingVolumes))
-				{
-					g_Renderer->SetDisplayBoundingVolumesEnabled(bDisplayBoundingVolumes);
-				}
-
-				ImGui::Checkbox("Wireframe (P)", &physicsDebuggingSettings.bDrawWireframe);
-
-				ImGui::Checkbox("AABB", &physicsDebuggingSettings.bDrawAabb);
-
-				ImGui::Checkbox("Contact points", &physicsDebuggingSettings.bDrawContactPoints);
-
-				ImGui::Checkbox("Constraints", &physicsDebuggingSettings.bDrawConstraints);
-
-				ImGui::PushItemWidth(150.0f);
-				ImGui::SliderFloat("Draw radius", &physicsDebuggingSettings.drawRadius, 5.0f, 1000.0f, "%.0fm", 2.0f);
-				ImGui::PopItemWidth();
-
-				if (physicsDebuggingSettings.bDisableAll)
-				{
-					ImGui::PopStyleColor();
-				}
-
-				ImGui::TreePop();
 			}
 
 			ImGui::TreePop();
@@ -4002,7 +4014,7 @@ namespace flex
 		static const glm::vec4 colour0 = { 0.95f, 0.95f, 0.95f, 0.4f };
 		static const glm::vec4 colour1 = { 0.85f, 0.15f, 0.85f, 0.4f };
 		static const real pulseSpeed = 8.0f;
-		return Lerp(colour0, colour1, sin(g_SecElapsedSinceProgramStart * pulseSpeed) * 0.5f + 0.5f);
+		return Lerp(colour0, colour1, sin(AnimationTime() * pulseSpeed) * 0.5f + 0.5f);
 	}
 
 	glm::mat4 Renderer::GetPostProcessingMatrix() const

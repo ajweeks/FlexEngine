@@ -17,8 +17,13 @@ namespace flex
 		// Records a value measured elsewhere (e.g. GPU timings), averaged per frame in the report
 		void AddSample(const char* name, ms duration);
 
-		// Prints scopes sorted by average time per frame (or total time, when bTotals is set)
+		// Prints scopes sorted by average time per frame (or total time, when bTotals is set), followed by the frame time
+		// distribution
 		void PrintReport(bool bTotals = false);
+
+		// When enabled (and the profiler is), any frame taking over twice the recent median is logged with the scopes
+		// (self time) & GPU passes which took longest in it. Also turned on by FLEX_HITCH_LOG=1.
+		void SetHitchLogging(bool bEnabled);
 		void Reset();
 
 		struct Scope

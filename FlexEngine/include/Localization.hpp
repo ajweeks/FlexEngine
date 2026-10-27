@@ -1,27 +1,20 @@
 #pragma once
 
-#include "LocStrings.hpp"
-
-// Localized text. Strings are identified by a LocID (generated from LocStrings.hpp) & looked up by index in the
-// current language's table, so there's no hashing or searching at runtime:
+// Localized text. Every string shown to the player lives in resources/loc/<language>.txt (en.txt is the source
+// language) as "Key = Text" lines, & code refers to it by key:
 //     m_UI.Button("play", rect, LOC(Worlds_Play));
 //     player->ShowNotification(LOCF(Notify_CampfireLit, minutes));
-// See LocStrings.hpp for adding strings, & Localization.cpp for adding languages.
+// To add a string, add a line to en.txt & use LOC(Key) in code (there's no list of keys in the source).
+//
+// Each LOC() call site resolves its key to a LocID once (the first time it runs, in a static local), after which
+// it's an array index, so LOC() is free to use every frame. Keys missing from the text files show up as the key
+// itself & are logged once. The files are reloaded when they change while the game runs.
 namespace flex
 {
+	// An index into the string table (see Loc::Intern), stable for the lifetime of the program
 	enum class LocID : u32
 	{
-#define FLEX_LOC_ENUM(id, english) id,
-		FLEX_LOC_STRINGS(FLEX_LOC_ENUM)
-#undef FLEX_LOC_ENUM
-		_COUNT
-	};
-
-	// A translation, in a language's table (see Localization.cpp)
-	struct LocEntry
-	{
-		LocID id;
-		const char* text;
+		INVALID = 0xFFFFFFFF
 	};
 
 	namespace Loc
@@ -33,12 +26,21 @@ namespace flex
 		// printf-style formatting of a localized string
 		std::string Format(LocID id, ...);
 
-		// Languages are identified by their code ("en", ...). Returns false (& keeps the current one) if unknown.
+		// Returns the ID for a key, adding it to the table if it's new. Takes a lock & looks the key up, so use the
+		// LOC_ID macro (which does it once per call site) rather than calling this every frame.
+		LocID Intern(const char* key);
+		// The key an ID was interned with
+		const char* GetKey(LocID id);
+
+		// Reloads the language files if they've been edited (cheap when they haven't). Call once a frame.
+		void Update();
+
+		// Languages are identified by their file name ("en", ...). Returns false (& keeps the current one) if unknown.
 		bool SetLanguage(const std::string& code);
 		const std::string& GetLanguage();
 		u32 GetLanguageCount();
 		const char* GetLanguageCode(u32 index);
-		// In the language itself (e.g. "English", "Français")
+		// In the language itself (e.g. "English", "Français"), from its Language_Name key
 		const char* GetLanguageName(u32 index);
 
 		// The display name of an item from its prefab name (e.g. "mineral deposit tin" -> "Tin"), or the prefab name
@@ -47,5 +49,7 @@ namespace flex
 	} // namespace Loc
 } // namespace flex
 
-#define LOC(id) ::flex::Loc::Get(::flex::LocID::id)
-#define LOCF(id, ...) ::flex::Loc::Format(::flex::LocID::id, __VA_ARGS__)
+// The LocID of a key, resolved the first time this line runs
+#define LOC_ID(key) ([]() -> ::flex::LocID { static const ::flex::LocID s_LocID = ::flex::Loc::Intern(#key); return s_LocID; }())
+#define LOC(key) ::flex::Loc::Get(LOC_ID(key))
+#define LOCF(key, ...) ::flex::Loc::Format(LOC_ID(key), __VA_ARGS__)

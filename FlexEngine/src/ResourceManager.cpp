@@ -22,6 +22,7 @@ IGNORE_WARNINGS_POP
 #include "FlexEngine.hpp"
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
+#include "Localization.hpp"
 #include "Platform/Platform.hpp"
 #include "Particles.hpp"
 #include "Player.hpp"
@@ -165,6 +166,8 @@ namespace flex
 		{
 			DiscoverTextures();
 		}
+
+		Loc::Update();
 
 		bool bTexturesCreated = false;
 
@@ -2268,41 +2271,6 @@ namespace flex
 			}
 		}
 		ImGui::EndChild();
-	}
-
-	void ResourceManager::DrawImGuiMenuItemizableItems()
-	{
-		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-		for (PrefabTemplateInfo& pair : prefabTemplates)
-		{
-			if (pair.templateObject->IsItemizable())
-			{
-				ImGui::PushID(pair.templateObject->m_Name.c_str());
-
-				ImGui::Text("%s", pair.templateObject->m_Name.c_str());
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("x1"))
-				{
-					player->AddToInventory(pair.prefabID, 1);
-				}
-
-				ImGui::SameLine();
-
-				u32 maxStackSize = g_ResourceManager->GetMaxStackSize(pair.prefabID);
-
-				char maxStackSizeBuff[6];
-				snprintf(maxStackSizeBuff, ARRAY_LENGTH(maxStackSizeBuff), "x%u", maxStackSize);
-
-				if (ImGui::Button(maxStackSizeBuff))
-				{
-					player->AddToInventory(pair.prefabID, maxStackSize);
-				}
-
-				ImGui::PopID();
-			}
-		}
 	}
 
 	bool ResourceManager::DrawAudioSourceIDImGui(const char* label, StringID& audioSourceSID)

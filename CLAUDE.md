@@ -37,6 +37,8 @@ General lessons for working in this repo (not task specifics).
 - World saves (`world.bin`) & terrain edits use the tagged binary container in `SaveFile.hpp` (sections, crc, zlib, atomic writes with a `.bak`). Fields added to the world's JSON object in `Game::SaveWorld` are saved automatically (small ones in the `META` section that world listing reads). Old `world.json` saves are still read & migrated on the next save. `--test` runs its round-trip & corruption tests (`FLEX_SAVE_BENCHMARK=1` adds timings).
 - Per-frame parallel work uses `JobSystem::Dispatch` + `Wait`. Long running background work (terrain generation) has its own pool at background priority. Don't spawn threads directly.
 - Player movement abilities are in `Traversal` (owned by `Player`). When it controls the player's velocity, `PlayerController` skips walking.
+- Player-facing text lives in `resources/loc/en.txt` (`Key = Text`), not in source. To add a string, add a line there & use `LOC(Key)` (or `LOCF(Key, args...)` for printf-style text); keys aren't declared anywhere in code. Each call site resolves its key once, so it's cheap every frame. Missing keys show as the key & are logged once. The files hot-reload while the game runs.
+- Keys the game reads directly (not through an `Action` binding) are named in `GameControls.hpp` (`GameKeys::`). Use those so the Controls screen (`Game::DrawControls`) stays right, & add new controls to it.
 
 ## Design pitfalls
 - Async/batched systems: watch for livelock. Restarting in-flight work when inputs change can mean nothing ever completes, so prefer finishing a batch and predicting ahead instead.

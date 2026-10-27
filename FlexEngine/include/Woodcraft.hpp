@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PlacementPreview.hpp"
 #include "Scene/TerrainGeneration.hpp" // For PlantInfo
 
 // The player's woodcraft (owned by Player): chopping down trees & cacti (left mouse button while aiming at a trunk),
@@ -31,6 +32,9 @@ namespace flex
 		// Test hooks (FLEX_TEST_WOODCRAFT): fell the nearest plant within maxDistance, & build a campfire at pos
 		bool FellNearestPlant(real maxDistance, glm::vec3* outPlantPos = nullptr);
 		Campfire* BuildCampfire(const glm::vec3& pos, real yaw);
+		// (as if [H] were pressed)
+		void SetPlacingCampfire(bool bPlacing) { m_bPlacingCampfire = bPlacing; }
+		bool IsCampfirePlacementValid() const { return m_bPlacementValid; }
 
 		static constexpr real CHOP_REACH = 3.6f;
 
@@ -70,6 +74,7 @@ namespace flex
 		bool m_bPlacingCampfire = false;
 		bool m_bPlacementValid = false;
 		glm::vec3 m_PlacementPos = VEC3_ZERO;
+		PlacementPreview m_CampfirePreview;
 
 		// Campfire near enough to light, & how long [E] has been held
 		GameObjectID m_NearbyCampfireID = InvalidGameObjectID;
@@ -83,5 +88,7 @@ namespace flex
 		GameObjectID m_TestCampfireID = InvalidGameObjectID;
 		glm::vec3 m_TestCampfirePos = VEC3_ZERO;
 		i32 m_TestEditCount = 0; // (+1, 0: not counting)
+		sec m_TestSinceFelled = -1.0f; // Until the first wood is picked up (-1: not timing)
+		i32 m_TestWoodBeforeFelling = 0;
 	};
 } // namespace flex

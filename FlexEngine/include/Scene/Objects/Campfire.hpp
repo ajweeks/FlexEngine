@@ -1,5 +1,6 @@
 #pragma once
 
+#include "PlacementPreview.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/TerrainGeneration.hpp" // For PlantInfo
 
@@ -172,6 +173,9 @@ namespace flex
 		sec GetBurnTimeRemaining() const { return m_BurnTimeRemaining; }
 		// (for testing)
 		void SetBurnTimeRemaining(sec burnTimeRemaining) { m_BurnTimeRemaining = burnTimeRemaining; }
+
+		// A fresh campfire's shape (local space, on flat ground) for placement previews
+		static void BuildPreviewGeometry(PlacementPreview::Geometry& geometry);
 
 		// Nearest campfire within maxDistance of pos (in any state)
 		static Campfire* FindNearest(const glm::vec3& pos, real maxDistance);

@@ -57,6 +57,7 @@ IGNORE_WARNINGS_POP
 
 #if COMPILE_VULKAN
 #include "Graphics/Vulkan/VulkanRenderer.hpp"
+#include "Scene/Objects/Industry.hpp"
 #include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/Objects/Vehicle.hpp"
 #endif
@@ -902,7 +903,9 @@ namespace flex
 				m_bRenderImGui = !m_bRenderImGui;
 			}
 
+			PROFILE_BEGIN("PollEvents");
 			g_Window->PollEvents();
+			PROFILE_END("PollEvents");
 
 			double frameEndTime = now;
 
@@ -917,7 +920,7 @@ namespace flex
 			frameStartTime = frameEndTime;
 
 			g_UnpausedDeltaTime = glm::clamp(secondsElapsed, m_MinDT, m_MaxDT);
-			g_SecElapsedSinceProgramStart = (sec)frameEndTime;
+			g_SecElapsedSinceProgramStart = frameEndTime;
 
 			// TODO: Pause audio when editor is paused
 			if (m_bSimulationPaused && !m_bSimulateNextFrame)
@@ -1069,6 +1072,9 @@ namespace flex
 			}
 
 			g_Renderer->Draw();
+
+			// Memory freed this frame (e.g. by unloaded terrain chunks)
+			JobSystem::FlushBackgroundFrees();
 
 #if COMPILE_RENDERDOC_API
 			if (m_RenderDocAPI != nullptr && m_bRenderDocCapturingFrame)
@@ -1228,6 +1234,784 @@ namespace flex
 		return vehicle;
 	}
 
+	namespace
+	{
+		// Whether moving the player to the debug camera (F8) switches back to the player's camera afterwards
+		bool s_bPossessPlayerAfterTeleport = true;
+		// The camera to return to when moving the player to the debug camera (the last one which possessed the player)
+		std::string s_LastPlayerCameraName = "first-person";
+
+		bool ImGuiWarningButton(const char* label)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Button, g_WarningButtonColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered, g_WarningButtonHoveredColour);
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive, g_WarningButtonActiveColour);
+			const bool bPressed = ImGui::Button(label);
+			ImGui::PopStyleColor(3);
+			return bPressed;
+		}
+
+		void ImGuiTooltip(const char* text)
+		{
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("%s", text);
+			}
+		}
+
+		void ImGuiSectionLabel(const char* text)
+		{
+			ImGui::Spacing();
+			ImGui::TextDisabled("%s", text);
+		}
+
+		// Lists every prefab (grouped by kind, from the loaded prefab templates) with buttons to add it to the player's inventory
+		void DrawImGuiGiveItems(Player* player)
+		{
+			static char filter[64] = {};
+			static i32 giveCount = 1;
+
+			if (ImGuiWarningButton("Clear inventory"))
+			{
+				player->ResetInventory();
+			}
+			ImGuiTooltip("Empties every inventory slot (unequipping anything worn)");
+			ImGui::SameLine();
+			if (ImGui::Button("Give starter kit"))
+			{
+				player->AddStarterKit();
+			}
+			ImGuiTooltip("The tools a new world starts with (pickaxe, axe & shovel)");
+
+			ImGui::PushItemWidth(100.0f);
+			if (ImGui::InputInt("Quantity", &giveCount))
+			{
+				giveCount = glm::clamp(giveCount, 1, 9999);
+			}
+			ImGui::PopItemWidth();
+			ImGui::SameLine();
+			ImGui::PushItemWidth(-1.0f);
+			ImGui::InputText("##item filter", filter, ARRAY_LENGTH(filter));
+			ImGui::PopItemWidth();
+			ImGuiTooltip("Filter by name");
+
+			std::string filterLower(filter);
+			ToLower(filterLower);
+
+			enum Category
+			{
+				TOOLS,
+				WEARABLES,
+				VEHICLES,
+				PLACEABLES,
+				OTHER,
+				_COUNT
+			};
+			static const char* categoryNames[] = { "Tools", "Wearables", "Vehicles & boats", "Placeables & machines", "Resources & other prefabs" };
+			static_assert(ARRAY_LENGTH(categoryNames) == (u32)Category::_COUNT, "categoryNames must match Category");
+
+			std::vector<ResourceManager::PrefabTemplateInfo*> categoryPrefabs[Category::_COUNT];
+			for (ResourceManager::PrefabTemplateInfo& prefabInfo : g_ResourceManager->prefabTemplates)
+			{
+				GameObject* templateObject = prefabInfo.templateObject;
+				if (templateObject == nullptr || !prefabInfo.prefabID.IsValid())
+				{
+					continue;
+				}
+
+				if (!filterLower.empty())
+				{
+					std::string nameLower = templateObject->GetName();
+					ToLower(nameLower);
+					if (nameLower.find(filterLower) == std::string::npos)
+					{
+						continue;
+					}
+				}
+
+				const StringID typeID = templateObject->GetTypeID();
+				Category category;
+				if (IsHandToolType(typeID))
+				{
+					category = TOOLS;
+				}
+				else if (templateObject->IsWearable())
+				{
+					category = WEARABLES;
+				}
+				else if (typeID == VehicleSID || typeID == RowBoatSID)
+				{
+					category = VEHICLES;
+				}
+				else if (templateObject->IsItemizable())
+				{
+					category = PLACEABLES;
+				}
+				else
+				{
+					category = OTHER;
+				}
+				categoryPrefabs[category].push_back(&prefabInfo);
+			}
+
+			real widestName = 0.0f;
+			for (const std::vector<ResourceManager::PrefabTemplateInfo*>& prefabs : categoryPrefabs)
+			{
+				for (ResourceManager::PrefabTemplateInfo* prefabInfo : prefabs)
+				{
+					widestName = glm::max(widestName, ImGui::CalcTextSize(prefabInfo->templateObject->GetName().c_str()).x);
+				}
+			}
+			const real buttonColumnX = ImGui::GetCursorPosX() + ImGui::GetTreeNodeToLabelSpacing() + widestName + 12.0f;
+			for (i32 c = 0; c < (i32)Category::_COUNT; ++c)
+			{
+				std::vector<ResourceManager::PrefabTemplateInfo*>& prefabs = categoryPrefabs[c];
+				if (prefabs.empty())
+				{
+					continue;
+				}
+
+				std::sort(prefabs.begin(), prefabs.end(), [](ResourceManager::PrefabTemplateInfo* a, ResourceManager::PrefabTemplateInfo* b)
+				{
+					return a->templateObject->GetName() < b->templateObject->GetName();
+				});
+
+				if (ImGui::TreeNodeEx(categoryNames[c], ImGuiTreeNodeFlags_DefaultOpen, "%s (%u)", categoryNames[c], (u32)prefabs.size()))
+				{
+					if (c == OTHER)
+					{
+						ImGuiTooltip("Prefabs which aren't flagged as items. They can still be carried & placed");
+					}
+
+					for (ResourceManager::PrefabTemplateInfo* prefabInfo : prefabs)
+					{
+						ImGui::PushID(prefabInfo);
+
+						ImGui::AlignTextToFramePadding();
+						ImGui::Text("%s", prefabInfo->templateObject->GetName().c_str());
+						ImGui::SameLine(buttonColumnX);
+
+						char giveLabel[32];
+						snprintf(giveLabel, ARRAY_LENGTH(giveLabel), "+%d", giveCount);
+						if (ImGui::Button(giveLabel))
+						{
+							player->AddToInventory(prefabInfo->prefabID, giveCount);
+						}
+
+						ImGui::SameLine();
+						const u32 maxStackSize = g_ResourceManager->GetMaxStackSize(prefabInfo->prefabID);
+						char stackLabel[32];
+						snprintf(stackLabel, ARRAY_LENGTH(stackLabel), "+%u (stack)", maxStackSize);
+						if (ImGui::Button(stackLabel))
+						{
+							player->AddToInventory(prefabInfo->prefabID, (i32)maxStackSize);
+						}
+
+						ImGui::PopID();
+					}
+
+					ImGui::TreePop();
+				}
+			}
+
+			ImGui::TextDisabled("Items which don't fit in the inventory are discarded");
+		}
+	} // namespace
+
+	void FlexEngine::MoveDebugCameraToPlayer()
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		BaseCamera* debugCamera = g_CameraManager->GetCameraByName("debug");
+		if (player == nullptr || debugCamera == nullptr)
+		{
+			PrintWarn("Moving the debug camera to the player needs a player & a debug camera\n");
+			return;
+		}
+
+		BaseCamera* currentCamera = g_CameraManager->CurrentCamera();
+		if (currentCamera->bPossessPlayer)
+		{
+			s_LastPlayerCameraName = currentCamera->GetName();
+		}
+
+		debugCamera->position = player->GetEyePosition();
+		debugCamera->forward = player->GetLookDirection();
+		debugCamera->CalculateYawAndPitchFromForward();
+		debugCamera->CalculateAxisVectorsFromPitchAndYaw();
+
+		if (currentCamera != debugCamera)
+		{
+			g_CameraManager->SetCamera(debugCamera, false);
+		}
+	}
+
+	void FlexEngine::MovePlayerToDebugCamera(bool bExact, bool bPossessPlayer)
+	{
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		BaseCamera* debugCamera = g_CameraManager->GetCameraByName("debug");
+		if (player == nullptr || debugCamera == nullptr)
+		{
+			PrintWarn("Moving the player to the debug camera needs a player & a debug camera\n");
+			return;
+		}
+
+		if (player->GetRidingVehicleID().IsValid())
+		{
+			player->SetRidingVehicle(nullptr);
+		}
+
+		// Face the way the camera faces
+		const glm::vec3 camForward = glm::normalize(debugCamera->forward);
+		glm::vec2 forward2D(camForward.x, camForward.z);
+		if (glm::length(forward2D) > 1e-4f)
+		{
+			forward2D = glm::normalize(forward2D);
+			player->GetTransform()->SetWorldRotation(glm::angleAxis(atan2(forward2D.x, forward2D.y), VEC3_UP));
+		}
+		const real pitch = asin(glm::clamp(camForward.y, -1.0f, 1.0f));
+		player->SetPitch(pitch);
+		if ((player->GetLookDirection().y > 0.0f) != (camForward.y > 0.0f))
+		{
+			player->SetPitch(-pitch);
+		}
+
+		// With the player's eyes at the camera
+		const glm::vec3 eyeOffset = player->GetEyePosition() - player->GetTransform()->GetWorldPosition();
+		const glm::vec3 bodyPos = debugCamera->position - eyeOffset;
+		if (TerrainGenerator::GetActive() != nullptr)
+		{
+			// The shared teleport path (fades from black until landed). Exact keeps the position if it's clear & standing
+			// on something, otherwise (& when not exact) the player is put on the ground below (or the nearest dry land)
+			player->TeleportOnTerrain(bodyPos, bExact);
+		}
+		else
+		{
+			player->GetRigidBody()->SetWorldPosition(bodyPos);
+			player->GetTransform()->SetWorldPosition(bodyPos);
+			player->GetRigidBody()->GetRigidBodyInternal()->setLinearVelocity(btVector3(0, 0, 0));
+		}
+
+		if (bPossessPlayer && !g_CameraManager->CurrentCamera()->bPossessPlayer)
+		{
+			if (g_CameraManager->GetCameraByName(s_LastPlayerCameraName) == nullptr)
+			{
+				s_LastPlayerCameraName = "first-person";
+			}
+			g_CameraManager->SetCameraByName(s_LastPlayerCameraName, false);
+		}
+	}
+
+	void FlexEngine::DrawImGuiMainToolbar()
+	{
+		// Simulation
+		const ImVec2 buttonSize(84.0f, 0.0f);
+		if (m_bSimulationPaused)
+		{
+			ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.75f, 0.3f, 0.05f, 1.0f));
+			if (ImGui::Button("Resume", buttonSize))
+			{
+				m_bSimulationPaused = false;
+				m_bSimulateNextFrame = true;
+			}
+			ImGui::PopStyleColor();
+			ImGuiTooltip("Simulation is paused (F5 resumes)");
+		}
+		else if (ImGui::Button("Pause", buttonSize))
+		{
+			m_bSimulationPaused = true;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Step"))
+		{
+			StepSimulationFrame();
+		}
+		ImGuiTooltip("Simulate one frame, then pause (F10)");
+		ImGui::SameLine();
+		ImGui::PushItemWidth(-1.0f);
+		ImGui::SliderFloat("##simulation speed", &m_SimulationSpeed, 0.0001f, 10.0f, "Speed %.2fx", 3.0f);
+		ImGui::PopItemWidth();
+		if (ImGui::IsItemClicked(1))
+		{
+			m_SimulationSpeed = 1.0f;
+		}
+		ImGuiTooltip("Simulation speed (right click to reset)");
+
+		// Most used debug toggles
+		PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
+		bool bPhysicsWireframe = physicsDebuggingSettings.bDrawWireframe && !physicsDebuggingSettings.bDisableAll;
+		if (ImGui::Checkbox("Physics wireframe (P)", &bPhysicsWireframe))
+		{
+			physicsDebuggingSettings.bDrawWireframe = bPhysicsWireframe;
+			if (bPhysicsWireframe)
+			{
+				physicsDebuggingSettings.bDisableAll = false;
+			}
+		}
+		ImGuiTooltip("Draws collision shapes near the camera (more options in the Physics tab)");
+		ImGui::SameLine();
+		bool bRenderEditorObjs = IsRenderingEditorObjects();
+		if (ImGui::Checkbox("Editor objects", &bRenderEditorObjs))
+		{
+			SetRenderingEditorObjects(bRenderEditorObjs);
+		}
+
+		// Cameras & teleports
+		BaseCamera* currentCamera = g_CameraManager->CurrentCamera();
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Camera: %s", currentCamera->GetName().c_str());
+		ImGui::SameLine();
+		if (ImGui::Button("Next"))
+		{
+			g_CameraManager->CycleCamera(1, false);
+		}
+		ImGuiTooltip("Cycle cameras");
+
+		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+		if (player != nullptr)
+		{
+			if (ImGui::Button("Camera to player (F6)"))
+			{
+				MoveDebugCameraToPlayer();
+			}
+			ImGuiTooltip("Move the debug camera to the player & switch to it (F6)");
+			ImGui::SameLine();
+			if (ImGui::Button("Player to camera (F8)"))
+			{
+				MovePlayerToDebugCamera(false, s_bPossessPlayerAfterTeleport);
+			}
+			ImGuiTooltip("Move the player onto the ground below the debug camera (F8, Shift + F8 to place exactly)");
+		}
+		else
+		{
+			ImGui::SameLine();
+			if (ImGui::Button("Spawn player"))
+			{
+				g_SceneManager->CurrentScene()->SpawnPlayer(currentCamera->position, currentCamera->forward);
+			}
+			ImGuiTooltip("Spawn a player at the camera");
+		}
+
+		// Frame time
+		static ms frameTimeMean = 0.0f;
+		static u32 framesSinceUpdate = 0;
+		if ((framesSinceUpdate++ % 20) == 0)
+		{
+			frameTimeMean = m_FrameTimes.ComputeMean(20);
+		}
+		ImGui::TextDisabled("%.2f ms (%u FPS)  |  %s", frameTimeMean, frameTimeMean > 0.0f ? (u32)(1000.0f / frameTimeMean) : 0u,
+			g_SceneManager->CurrentScene()->GetName().c_str());
+	}
+
+	void FlexEngine::DrawImGuiSceneTab()
+	{
+		BaseScene* currentScene = g_SceneManager->CurrentScene();
+
+		if (ImGui::Button("Save scene"))
+		{
+			currentScene->SerializeToFile(false);
+		}
+		ImGuiTooltip("Ctrl + S");
+		ImGui::SameLine();
+		if (ImGui::Button("Reload scene"))
+		{
+			g_SceneManager->ReloadCurrentScene();
+		}
+		ImGuiTooltip("R");
+
+		g_SceneManager->DrawImGuiObjects();
+
+		ImGuiSectionLabel("Transform gizmo");
+		if (ImGui::RadioButton("Translate", g_Editor->GetTransformState() == TransformState::TRANSLATE))
+		{
+			g_Editor->SetTransformState(TransformState::TRANSLATE);
+		}
+		ImGui::SameLine();
+		if (ImGui::RadioButton("Rotate", g_Editor->GetTransformState() == TransformState::ROTATE))
+		{
+			g_Editor->SetTransformState(TransformState::ROTATE);
+		}
+		ImGui::SameLine();
+		if (ImGui::RadioButton("Scale", g_Editor->GetTransformState() == TransformState::SCALE))
+		{
+			g_Editor->SetTransformState(TransformState::SCALE);
+		}
+
+		ImGuiSectionLabel("Selected object & hierarchy");
+		currentScene->DrawImGuiForSelectedObjectsAndSceneHierarchy();
+	}
+
+	void FlexEngine::DrawImGuiRenderTab()
+	{
+		if (ImGui::Button("Reload shaders"))
+		{
+			g_Renderer->RecompileShaders(false);
+		}
+		ImGuiTooltip("Ctrl + R");
+		ImGui::SameLine();
+		if (ImGui::Button("Recapture reflection probe"))
+		{
+			g_Renderer->RecaptureReflectionProbe();
+		}
+
+		bool bPreviewShadows = g_Renderer->GetDisplayShadowCascadePreview();
+		if (ImGui::Checkbox("Shadow cascade preview", &bPreviewShadows))
+		{
+			g_Renderer->SetDisplayShadowCascadePreview(bPreviewShadows);
+		}
+
+		g_Renderer->DrawImGuiSettings();
+		g_Window->DrawImGuiObjects();
+		g_CameraManager->DrawImGuiObjects();
+
+		ImGuiSectionLabel("Asset windows");
+		ImGui::Checkbox("Materials", GetUIWindowOpen(SID_PAIR("materials")));
+		ImGui::SameLine();
+		ImGui::Checkbox("Shaders", GetUIWindowOpen(SID_PAIR("shaders")));
+		ImGui::SameLine();
+		ImGui::Checkbox("Textures", GetUIWindowOpen(SID_PAIR("textures")));
+		ImGui::SameLine();
+		ImGui::Checkbox("Meshes", GetUIWindowOpen(SID_PAIR("meshes")));
+	}
+
+	void FlexEngine::DrawImGuiPhysicsTab()
+	{
+		ImGui::TextWrapped("The collision wireframe draws every Bullet collision shape near the camera. Toggle it with P.");
+		ImGui::Spacing();
+
+		g_Renderer->DrawImGuiDebugObjects();
+
+		ImGuiSectionLabel("Simulation");
+		ImGui::Checkbox("Paused", &m_bSimulationPaused);
+		ImGui::SameLine();
+		if (ImGui::Button("Step (F10)"))
+		{
+			StepSimulationFrame();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Continue (F5)"))
+		{
+			m_bSimulationPaused = false;
+			m_bSimulateNextFrame = true;
+		}
+		ImGui::SliderFloat("Speed", &m_SimulationSpeed, 0.0001f, 10.0f);
+		if (ImGui::IsItemClicked(1))
+		{
+			m_SimulationSpeed = 1.0f;
+		}
+		ImGuiTooltip("Right click to reset");
+	}
+
+	void FlexEngine::DrawImGuiPlayerTab()
+	{
+		BaseScene* currentScene = g_SceneManager->CurrentScene();
+		Player* player = currentScene->GetPlayer(0);
+		if (player == nullptr)
+		{
+			ImGui::TextWrapped("This scene has no player.");
+			if (ImGui::Button("Spawn player at camera"))
+			{
+				BaseCamera* camera = g_CameraManager->CurrentCamera();
+				currentScene->SpawnPlayer(camera->position, camera->forward);
+			}
+			return;
+		}
+
+		if (ImGui::CollapsingHeader("Teleport", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			if (ImGui::Button("Debug camera to player (F6)"))
+			{
+				MoveDebugCameraToPlayer();
+			}
+			ImGuiTooltip("Move the debug camera to the player's eyes & switch to it");
+
+			if (ImGui::Button("Player to camera: ground below (F8)"))
+			{
+				MovePlayerToDebugCamera(false, s_bPossessPlayerAfterTeleport);
+			}
+			ImGuiTooltip("Onto the ground below the debug camera (or the nearest dry land)");
+
+			if (ImGui::Button("Player to camera: exact (Shift+F8)"))
+			{
+				MovePlayerToDebugCamera(true, s_bPossessPlayerAfterTeleport);
+			}
+			ImGuiTooltip("Keeps the camera's position if the player fits there & is standing on something, otherwise drops to the ground below");
+
+			ImGui::Checkbox("Then switch to the player's camera", &s_bPossessPlayerAfterTeleport);
+
+			if (ImGui::Button("Reset player position"))
+			{
+				player->GetController()->ResetTransformAndVelocities();
+			}
+
+			const glm::vec3 playerPos = player->GetTransform()->GetWorldPosition();
+			ImGui::TextDisabled("Position: %.1f, %.1f, %.1f", playerPos.x, playerPos.y, playerPos.z);
+		}
+
+		if (ImGui::CollapsingHeader("Give items", ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			DrawImGuiGiveItems(player);
+		}
+
+		if (ImGui::CollapsingHeader("Inventory file"))
+		{
+			if (ImGui::Button("Load from file"))
+			{
+				player->ParseInventoryFile();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Save to file"))
+			{
+				player->SerializeInventoryToFile();
+			}
+		}
+
+		if (ImGui::CollapsingHeader("Spawn in front of camera"))
+		{
+			if (ImGui::Button("Vehicle"))
+			{
+				SpawnVehicleInFrontOfCamera();
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("Row boat"))
+			{
+				SpawnVehicleInFrontOfCamera("row boat");
+			}
+		}
+
+		if (ImGui::CollapsingHeader("Player object"))
+		{
+			player->DrawImGuiObjects(false);
+		}
+	}
+
+	void FlexEngine::DrawImGuiWorldTab()
+	{
+		BaseScene* currentScene = g_SceneManager->CurrentScene();
+
+		ImGuiSectionLabel("Time of day");
+		bool bTimeOfDayPaused = currentScene->GetTimeOfDayPaused();
+		if (ImGui::Checkbox("Pause time of day", &bTimeOfDayPaused))
+		{
+			currentScene->SetTimeOfDayPaused(bTimeOfDayPaused);
+		}
+		real timeOfDay = currentScene->GetTimeOfDay();
+		if (ImGui::SliderFloat("Time of day", &timeOfDay, 0.0f, 0.999f))
+		{
+			currentScene->SetTimeOfDay(glm::clamp(timeOfDay, 0.0f, 0.999f));
+		}
+		ImGuiTooltip("0 = noon, 0.25 = sunset, 0.5 = midnight, 0.75 = sunrise");
+		struct TimePreset { const char* name; real time; };
+		static const TimePreset timePresets[] = { { "Noon", 0.0f }, { "Sunset", 0.25f }, { "Midnight", 0.5f }, { "Sunrise", 0.75f } };
+		for (i32 i = 0; i < (i32)ARRAY_LENGTH(timePresets); ++i)
+		{
+			if (i > 0)
+			{
+				ImGui::SameLine();
+			}
+			if (ImGui::Button(timePresets[i].name))
+			{
+				currentScene->SetTimeOfDay(timePresets[i].time);
+			}
+		}
+		real secondsPerDay = currentScene->GetSecondsPerDay();
+		if (ImGui::SliderFloat("Seconds per day", &secondsPerDay, 1.0f, 6000.0f, "%.0f", 3.0f))
+		{
+			currentScene->SetSecondsPerDay(secondsPerDay);
+		}
+
+		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+		ImGuiSectionLabel("Terrain");
+		if (terrainGenerator != nullptr)
+		{
+			ImGui::Checkbox("World map", TerrainGenerator::GetShowWorldMapPtr());
+			ImGui::SameLine();
+			ImGui::Checkbox("Minimap", TerrainGenerator::GetShowMinimapPtr());
+			if (ImGui::Button("Select terrain object"))
+			{
+				g_Editor->SetSelectedObject(terrainGenerator->ID);
+			}
+			ImGuiTooltip("Its settings (generation, editing brush, streaming) show in the Scene tab");
+		}
+		else
+		{
+			ImGui::TextDisabled("This scene has no terrain");
+		}
+
+		ImGuiSectionLabel("Systems");
+		for (System* system : g_Systems)
+		{
+			system->DrawImGui();
+		}
+	}
+
+	void FlexEngine::DrawImGuiAudioTab()
+	{
+		AudioManager::DrawImGuiObjects();
+
+		ImGuiSectionLabel("Test sounds");
+		struct TestSound { const char* name; SoundEffect effect; };
+		static const TestSound testSounds[] = {
+			{ "Blip", SoundEffect::blip },
+			{ "Drmapan", SoundEffect::drmapan },
+			{ "Dud dud", SoundEffect::dud_dud_dud_dud },
+			{ "Melody (O)", SoundEffect::melody_0 },
+			{ "Melody fast", SoundEffect::melody_0_fast },
+		};
+		for (i32 i = 0; i < (i32)ARRAY_LENGTH(testSounds); ++i)
+		{
+			if (i > 0)
+			{
+				ImGui::SameLine();
+			}
+			if (ImGui::Button(testSounds[i].name))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)testSounds[i].effect]);
+			}
+		}
+
+		ImGui::TextDisabled("Tones (these used to be on the number keys)");
+		const i32 toneCount = (i32)SoundEffect::synthesized_14 - (i32)SoundEffect::synthesized_00 + 1;
+		for (i32 i = 0; i < toneCount; ++i)
+		{
+			if (i % 8 != 0)
+			{
+				ImGui::SameLine();
+			}
+			char label[8];
+			snprintf(label, ARRAY_LENGTH(label), "%d", i);
+			if (ImGui::Button(label, ImVec2(24.0f, 0.0f)))
+			{
+				AudioManager::PlaySource(s_AudioSourceIDs[(i32)SoundEffect::synthesized_00 + i]);
+			}
+		}
+		ImGui::Text("Audio effects loaded: %u", (u32)s_AudioSourceIDs.size());
+	}
+
+	void FlexEngine::DrawImGuiStatsTab()
+	{
+		static const std::string titleString = (std::string("Flex Engine v") + EngineVersionString());
+		ImGui::Text("%s", titleString.c_str());
+
+		ImGui::Text("Current renderer: %s", m_RendererName.c_str());
+		static ms frameTimeMean = 0.0f;
+		static ms frameTimeVariance = 0.0f;
+		static u32 framesSinceUpdate = 0;
+		const u32 updateFrequency = 20;
+		const u32 framesToAverage = 20;
+		// Update variables only periodically to avoid being unreadable
+		if ((framesSinceUpdate++ % updateFrequency) == 0)
+		{
+			frameTimeMean = m_FrameTimes.ComputeMean(framesToAverage);
+			frameTimeVariance = m_FrameTimes.ComputeVariance(framesToAverage, frameTimeMean);
+		}
+
+		ImVec2 p = ImGui::GetCursorScreenPos();
+		real width = 300.0f;
+		real height = 100.0f;
+		real minMS = 0.0f;
+		real maxMS = 100.0f;
+		ImGui::PlotLines("", m_FrameTimes.GetData(), m_FrameTimes.GetNumSamples(), m_FrameTimes.currentIndex, 0, minMS, maxMS, ImVec2(width, height));
+		real targetFrameRate = 60.0f;
+		p.y += (1.0f - (1000.0f / targetFrameRate) / (maxMS - minMS)) * height;
+		ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x + width, p.y), IM_COL32(128, 0, 0, 255), 1.0f);
+
+		ImGui::Text("Frame time: %.1fms (variance: %.2f)", frameTimeMean, frameTimeVariance);
+		ImGui::Text("FPS: %u", frameTimeMean > 0.0f ? (u32)((1.0f / frameTimeMean) * 1000) : 0u);
+		ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
+		ImGui::Text("Unpaused elapsed time: %.2fs", g_SecElapsedSinceProgramStart);
+
+		ImGuiSectionLabel("CPU profiler");
+		bool bProfilerEnabled = Profiler::IsEnabled();
+		if (ImGui::Checkbox("Enabled", &bProfilerEnabled))
+		{
+			Profiler::SetEnabled(bProfilerEnabled);
+		}
+		ImGui::SameLine();
+		static bool bHitchLogging = false;
+		if (ImGui::Checkbox("Log hitches", &bHitchLogging))
+		{
+			Profiler::SetHitchLogging(bHitchLogging);
+		}
+		ImGuiTooltip("Logs frames taking over twice the recent median, with their slowest scopes");
+		if (ImGui::Button("Print report"))
+		{
+			Profiler::PrintReport();
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Reset"))
+		{
+			Profiler::Reset();
+		}
+
+		ImGuiSectionLabel("Windows");
+		ImGui::Checkbox("GPU timings", GetUIWindowOpen(SID_PAIR("gpu timings")));
+		ImGui::SameLine();
+		ImGui::Checkbox("CPU stats", GetUIWindowOpen(SID_PAIR("cpu stats")));
+		ImGui::SameLine();
+		ImGui::Checkbox("Memory", GetUIWindowOpen(SID_PAIR("memory stats")));
+		ImGui::Checkbox("Uniform buffers", GetUIWindowOpen(SID_PAIR("uniform buffers")));
+		ImGui::SameLine();
+		ImGui::Checkbox("Jitter detector", GetUIWindowOpen(SID_PAIR("jitter detector")));
+
+		g_Editor->DrawImGuiObjects();
+
+		ImGuiSectionLabel("Renderer");
+		g_Renderer->DrawImGuiRendererInfo();
+
+		ImGuiSectionLabel("Misc");
+		ImGui::Checkbox("Log to console", &g_bEnableLogToConsole);
+	}
+
+	void FlexEngine::DrawImGuiHelpPopup(bool* bShowHelpWindow)
+	{
+		if (*bShowHelpWindow)
+		{
+			ImGui::OpenPopup("Help");
+		}
+
+		if (ImGui::BeginPopupModal("Help", bShowHelpWindow))
+		{
+			ImVec4 headerTextColor(0.7f, 0.7f, 0.7f, 1.0f);
+			ImGui::Text("Show hide debug UI: Shift + 1 (after closing this window)");
+			ImGui::Text("Pause/regain mouse control: ESC");
+			ImGui::NewLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
+			ImGui::Text("Cameras");
+			ImGui::PopStyleColor();
+			ImGui::Text("\tCycle active camera: -/+");
+			ImGui::Text("\tCycle active scene: [/]");
+			ImGui::Text("\tMove debug camera to player: F6");
+			ImGui::Text("\tMove player to debug camera: F8 (onto the ground), Shift + F8 (exactly)");
+			ImGui::NewLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
+			ImGui::Text("Editor");
+			ImGui::PopStyleColor();
+			ImGui::Text("\tMove camera (debug camera): WASD + QE");
+			ImGui::Text("\tMove camera (first person): arrow keys/mouse");
+			ImGui::Text("\tOpen debug console: ` (backtick/tilde)");
+			ImGui::Text("\tTranslate/rotate/scale gizmo: 1/2/3 (debug camera)");
+			ImGui::NewLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
+			ImGui::Text("Debugging");
+			ImGui::PopStyleColor();
+			ImGui::Text("\tPhysics (collision) wireframe: P");
+			ImGui::Text("\tPause/continue simulation: F5, step one frame: F10");
+			ImGui::Text("\tFullscreen: F11 or Alt + Enter");
+			ImGui::NewLine();
+			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
+			ImGui::Text("Player controls (first/third person camera)");
+			ImGui::PopStyleColor();
+			ImGui::Text("\tSelect quick access slot: 1-9 & 0, or scroll wheel");
+			ImGui::Text("\tInteract: E");
+			ImGui::Text("\tView inventory: Tab");
+			ImGui::Text("\tRun: Shift");
+			ImGui::Text("\tPickup item: Click and hold");
+			ImGui::Text("\tPlace item: Space");
+
+			ImGui::EndPopup();
+		}
+	}
+
 	void FlexEngine::DrawImGuiObjects()
 	{
 		PROFILE_AUTO("FlexEngine DrawImGuiObjects");
@@ -1359,65 +2143,6 @@ namespace flex
 				}
 #endif
 
-				ImGui::Separator();
-
-				BaseScene* scene = g_SceneManager->CurrentScene();
-				Player* player = scene->GetPlayer(0);
-
-				if (ImGui::MenuItem("Spawn vehicle"))
-				{
-					SpawnVehicleInFrontOfCamera();
-				}
-
-				if (ImGui::MenuItem("Spawn row boat"))
-				{
-					SpawnVehicleInFrontOfCamera("row boat");
-				}
-
-				if (player == nullptr && ImGui::MenuItem("Spawn player at camera"))
-				{
-					BaseCamera* camera = g_CameraManager->CurrentCamera();
-					player = scene->SpawnPlayer(camera->position, camera->forward);
-				}
-
-				if (player != nullptr)
-				{
-					if (ImGui::BeginMenu("Player inventory"))
-					{
-						if (ImGui::BeginMenu("Add to inventory"))
-						{
-							g_ResourceManager->DrawImGuiMenuItemizableItems();
-
-							ImGui::EndMenu();
-						}
-
-						ImGui::Separator();
-
-						if (ImGui::MenuItem("Parse from file"))
-						{
-							player->ParseInventoryFile();
-						}
-
-						if (ImGui::MenuItem("Save to file"))
-						{
-							player->SerializeInventoryToFile();
-						}
-
-						ImGui::Separator();
-
-						ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
-
-						if (ImGui::MenuItem("Clear"))
-						{
-							player->ClearInventory();
-						}
-
-						ImGui::PopStyleColor();
-
-						ImGui::EndMenu();
-					}
-				}
-
 				ImGui::EndMenu();
 			}
 
@@ -1529,46 +2254,164 @@ namespace flex
 			}
 #endif
 
+			if (ImGui::BeginMenu("Player"))
+			{
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				Player* player = scene->GetPlayer(0);
+
+				if (player == nullptr && ImGui::MenuItem("Spawn player at camera"))
+				{
+					BaseCamera* camera = g_CameraManager->CurrentCamera();
+					player = scene->SpawnPlayer(camera->position, camera->forward);
+				}
+
+				if (ImGui::MenuItem("Move debug camera to player", "F6", false, player != nullptr))
+				{
+					MoveDebugCameraToPlayer();
+				}
+				if (ImGui::MenuItem("Move player to debug camera (ground)", "F8", false, player != nullptr))
+				{
+					MovePlayerToDebugCamera(false, s_bPossessPlayerAfterTeleport);
+				}
+				if (ImGui::MenuItem("Move player to debug camera (exact)", "Shift+F8", false, player != nullptr))
+				{
+					MovePlayerToDebugCamera(true, s_bPossessPlayerAfterTeleport);
+				}
+				if (ImGui::MenuItem("Reset player position", nullptr, false, player != nullptr))
+				{
+					player->GetController()->ResetTransformAndVelocities();
+					Player* player1 = scene->GetPlayer(1);
+					if (player1 != nullptr)
+					{
+						player1->GetController()->ResetTransformAndVelocities();
+					}
+				}
+
+				ImGui::Separator();
+
+				ImGui::MenuItem("Give items window", nullptr, GetUIWindowOpen(SID_PAIR("give items")), player != nullptr);
+
+				if (player != nullptr && ImGui::BeginMenu("Inventory"))
+				{
+					if (ImGui::MenuItem("Give starter kit"))
+					{
+						player->AddStarterKit();
+					}
+
+					if (ImGui::MenuItem("Parse from file"))
+					{
+						player->ParseInventoryFile();
+					}
+
+					if (ImGui::MenuItem("Save to file"))
+					{
+						player->SerializeInventoryToFile();
+					}
+
+					ImGui::Separator();
+
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
+					if (ImGui::MenuItem("Clear"))
+					{
+						player->ResetInventory();
+					}
+					ImGui::PopStyleColor();
+
+					ImGui::EndMenu();
+				}
+
+				ImGui::Separator();
+
+				if (ImGui::MenuItem("Spawn vehicle in front of camera"))
+				{
+					SpawnVehicleInFrontOfCamera();
+				}
+
+				if (ImGui::MenuItem("Spawn row boat in front of camera"))
+				{
+					SpawnVehicleInFrontOfCamera("row boat");
+				}
+
+				ImGui::EndMenu();
+			}
+
 			if (ImGui::BeginMenu("Window"))
 			{
-				ImGui::MenuItem("Main Window", nullptr, &m_UIWindows[SID("main")].bOpen);
-				ImGui::MenuItem("GPU Timings", nullptr, &m_UIWindows[SID("gpu timings")].bOpen);
-				ImGui::MenuItem("Memory Stats", nullptr, &m_UIWindows[SID("memory stats")].bOpen);
-				ImGui::MenuItem("CPU Stats", nullptr, &m_UIWindows[SID("cpu stats")].bOpen);
-				ImGui::MenuItem("Uniform Buffers", nullptr, &m_UIWindows[SID("uniform buffers")].bOpen);
-				ImGui::MenuItem("UI Editor", nullptr, &m_UIWindows[SID("ui editor")].bOpen);
-				ImGui::MenuItem("Jitter Detector", nullptr, &m_UIWindows[SID("jitter detector")].bOpen);
-				ImGui::MenuItem("Particle manager", nullptr, &m_UIWindows[SID("particle manager")].bOpen);
+				ImGui::MenuItem("Main Window", nullptr, GetUIWindowOpen(SID_PAIR("main")));
+				ImGui::MenuItem("Give Items", nullptr, GetUIWindowOpen(SID_PAIR("give items")));
 				ImGui::Separator();
-				ImGui::MenuItem("Materials", nullptr, &m_UIWindows[SID("materials")].bOpen);
-				ImGui::MenuItem("Shaders", nullptr, &m_UIWindows[SID("shaders")].bOpen);
-				ImGui::MenuItem("Textures", nullptr, &m_UIWindows[SID("textures")].bOpen);
-				ImGui::MenuItem("Meshes", nullptr, &m_UIWindows[SID("meshes")].bOpen);
-				ImGui::MenuItem("Prefabs", nullptr, &m_UIWindows[SID("prefabs")].bOpen);
-				ImGui::MenuItem("Sounds", nullptr, &m_UIWindows[SID("audio")].bOpen);
+				ImGui::TextDisabled("Profiling");
+				ImGui::MenuItem("GPU Timings", nullptr, GetUIWindowOpen(SID_PAIR("gpu timings")));
+				ImGui::MenuItem("CPU Stats", nullptr, GetUIWindowOpen(SID_PAIR("cpu stats")));
+				ImGui::MenuItem("Memory Stats", nullptr, GetUIWindowOpen(SID_PAIR("memory stats")));
+				ImGui::MenuItem("Uniform Buffers", nullptr, GetUIWindowOpen(SID_PAIR("uniform buffers")));
+				ImGui::MenuItem("Jitter Detector", nullptr, GetUIWindowOpen(SID_PAIR("jitter detector")));
 				ImGui::Separator();
-				ImGui::MenuItem("Input Bindings", nullptr, &m_UIWindows[SID("input bindings")].bOpen);
-				ImGui::MenuItem("Font Editor", nullptr, &m_UIWindows[SID("fonts")].bOpen);
+				ImGui::TextDisabled("Assets");
+				ImGui::MenuItem("Materials", nullptr, GetUIWindowOpen(SID_PAIR("materials")));
+				ImGui::MenuItem("Shaders", nullptr, GetUIWindowOpen(SID_PAIR("shaders")));
+				ImGui::MenuItem("Textures", nullptr, GetUIWindowOpen(SID_PAIR("textures")));
+				ImGui::MenuItem("Meshes", nullptr, GetUIWindowOpen(SID_PAIR("meshes")));
+				ImGui::MenuItem("Prefabs", nullptr, GetUIWindowOpen(SID_PAIR("prefabs")));
+				ImGui::MenuItem("Sounds", nullptr, GetUIWindowOpen(SID_PAIR("audio")));
+				ImGui::MenuItem("Font Editor", nullptr, GetUIWindowOpen(SID_PAIR("fonts")));
+				ImGui::Separator();
+				ImGui::TextDisabled("Tools");
+				ImGui::MenuItem("UI Editor", nullptr, GetUIWindowOpen(SID_PAIR("ui editor")));
+				ImGui::MenuItem("Particle manager", nullptr, GetUIWindowOpen(SID_PAIR("particle manager")));
+				ImGui::MenuItem("Input Bindings", nullptr, GetUIWindowOpen(SID_PAIR("input bindings")));
 #if COMPILE_RENDERDOC_API
-				ImGui::MenuItem("Render Doc Captures", nullptr, &m_UIWindows[SID("render doc")].bOpen);
+				ImGui::MenuItem("Render Doc Captures", nullptr, GetUIWindowOpen(SID_PAIR("render doc")));
 #endif
-				ImGui::Separator();
-				ImGui::MenuItem("ImGui Demo Window", nullptr, &m_UIWindows[SID("imgui demo")].bOpen);
+				ImGui::MenuItem("ImGui Demo Window", nullptr, GetUIWindowOpen(SID_PAIR("imgui demo")));
 
 				ImGui::EndMenu();
 			}
 
 			if (ImGui::BeginMenu("View"))
 			{
+				PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
+				bool bPhysicsWireframe = physicsDebuggingSettings.bDrawWireframe && !physicsDebuggingSettings.bDisableAll;
+				if (ImGui::MenuItem("Physics wireframe", "P", &bPhysicsWireframe))
+				{
+					physicsDebuggingSettings.bDrawWireframe = bPhysicsWireframe;
+					if (bPhysicsWireframe)
+					{
+						physicsDebuggingSettings.bDisableAll = false;
+					}
+				}
+
+				bool bDisplayBoundingVolumes = g_Renderer->IsDisplayBoundingVolumesEnabled();
+				if (ImGui::MenuItem("Bounding volumes", nullptr, &bDisplayBoundingVolumes))
+				{
+					g_Renderer->SetDisplayBoundingVolumesEnabled(bDisplayBoundingVolumes);
+				}
+
+				bool bRenderEditorObjs = IsRenderingEditorObjects();
+				if (ImGui::MenuItem("Editor objects", nullptr, &bRenderEditorObjs))
+				{
+					SetRenderingEditorObjects(bRenderEditorObjs);
+				}
+
+				bool bShowGrid = g_Editor->IsShowingGrid();
+				if (ImGui::MenuItem("Grid", nullptr, &bShowGrid))
+				{
+					g_Editor->SetShowGrid(bShowGrid);
+				}
+
 				bool bPreviewShadows = g_Renderer->GetDisplayShadowCascadePreview();
 				if (ImGui::MenuItem("Shadow cascades", nullptr, &bPreviewShadows))
 				{
 					g_Renderer->SetDisplayShadowCascadePreview(bPreviewShadows);
 				}
 
+				ImGui::Separator();
+
 				const bool bHasTerrain = TerrainGenerator::GetActive() != nullptr;
 				ImGui::MenuItem("Terrain map", nullptr, TerrainGenerator::GetShowWorldMapPtr(), bHasTerrain);
 				ImGui::MenuItem("Terrain minimap", nullptr, TerrainGenerator::GetShowMinimapPtr(), bHasTerrain);
+
+				ImGui::Separator();
 
 				if (ImGui::MenuItem("Help (?)", nullptr, &bShowHelpWindow))
 				{
@@ -1578,46 +2421,15 @@ namespace flex
 				ImGui::EndMenu();
 			}
 
+			if (m_bSimulationPaused)
+			{
+				ImGui::TextColored(ImVec4(1.0f, 0.55f, 0.2f, 1.0f), "  PAUSED (F5)");
+			}
+
 			ImGui::EndMainMenuBar();
 		}
 
-		if (bShowHelpWindow)
-		{
-			ImGui::OpenPopup("Help");
-		}
-
-		if (ImGui::BeginPopupModal("Help", &bShowHelpWindow))
-		{
-			ImVec4 headerTextColor(0.7f, 0.7f, 0.7f, 1.0f);
-			ImGui::Text("Show hide debug UI: Shift + 1 (after closing this window)");
-			ImGui::Text("Pause/regain mouse control: ESC");
-			ImGui::NewLine();
-			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
-			ImGui::Text("Cameras");
-			ImGui::PopStyleColor();
-			ImGui::Text("\tCycle active camera: -/+");
-			ImGui::Text("\tCycle active scene: [/]");
-			ImGui::NewLine();
-			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
-			ImGui::Text("Editor");
-			ImGui::PopStyleColor();
-			ImGui::Text("\tMove camera (debug camera): WASD + QE");
-			ImGui::Text("\tMove camera (first person): arrow keys/mouse");
-			ImGui::Text("\tOpen debug console: ` (backtick/tilde)");
-			ImGui::NewLine();
-			ImGui::PushStyleColor(ImGuiCol_Text, headerTextColor);
-			ImGui::Text("Player controls (first/third person camera)");
-			ImGui::PopStyleColor();
-			ImGui::Text("\tCycle inventory: scroll wheel");
-			ImGui::Text("\tInteract: E");
-			ImGui::Text("\tView inventory: Tab");
-			ImGui::Text("\tRun: Shift");
-			ImGui::Text("\tPickup item: Click and hold");
-			ImGui::Text("\tPlace item: Space");
-
-
-			ImGui::EndPopup();
-		}
+		DrawImGuiHelpPopup(&bShowHelpWindow);
 
 		static auto windowSizeCallbackLambda = [](ImGuiSizeCallbackData* data)
 		{
@@ -1650,115 +2462,63 @@ namespace flex
 			{
 				bIsMainWindowCollapsed = ImGui::IsWindowCollapsed();
 
-				if (ImGui::TreeNode("Simulation"))
-				{
-					ImGui::Checkbox("Paused", &m_bSimulationPaused);
-
-					if (ImGui::Button("Step (F10)"))
-					{
-						StepSimulationFrame();
-					}
-
-					if (ImGui::Button("Continue (F5)"))
-					{
-						m_bSimulationPaused = false;
-						m_bSimulateNextFrame = true;
-					}
-
-					ImGui::SliderFloat("Speed", &m_SimulationSpeed, 0.0001f, 10.0f);
-
-					if (ImGui::IsItemClicked(1))
-					{
-						m_SimulationSpeed = 1.0f;
-					}
-
-					ImGui::TreePop();
-				}
-
-				if (ImGui::TreeNode("Stats"))
-				{
-					ImGui::Text("%s", titleString.c_str());
-
-					ImGui::Text("Current renderer: %s", m_RendererName.c_str());
-					static ms frameTimeMean = 0.0f;
-					static ms frameTimeVariance = 0.0f;
-					static u32 framesSinceUpdate = 0;
-					const u32 updateFrequency = 20;
-					const u32 framesToAverage = 20;
-					// Update variables only periodically to avoid being unreadable
-					if ((framesSinceUpdate++ % updateFrequency) == 0)
-					{
-						frameTimeMean = m_FrameTimes.ComputeMean(framesToAverage);
-						frameTimeVariance = m_FrameTimes.ComputeVariance(framesToAverage, frameTimeMean);
-					}
-
-					ImVec2 p = ImGui::GetCursorScreenPos();
-					real width = 300.0f;
-					real height = 100.0f;
-					real minMS = 0.0f;
-					real maxMS = 100.0f;
-					ImGui::PlotLines("", m_FrameTimes.GetData(), m_FrameTimes.GetNumSamples(), m_FrameTimes.currentIndex, 0, minMS, maxMS, ImVec2(width, height));
-					real targetFrameRate = 60.0f;
-					p.y += (1.0f - (1000.0f / targetFrameRate) / (maxMS - minMS)) * height;
-					ImGui::GetWindowDrawList()->AddLine(p, ImVec2(p.x + width, p.y), IM_COL32(128, 0, 0, 255), 1.0f);
-
-					ImGui::Text("Frame time: %.1fms (variance: %.2f)", frameTimeMean, frameTimeVariance);
-					ImGui::Text("FPS: %u", (u32)((1.0f / frameTimeMean) * 1000));
-					ImGui::Text("Frames rendered: %d", g_Renderer->GetFramesRenderedCount());
-					ImGui::Text("Unpaused elapsed time: %.2fs", g_SecElapsedSinceProgramStart);
-
-					ImGui::NewLine();
-
-					g_Renderer->DrawImGuiRendererInfo();
-
-					ImGui::NewLine();
-
-					ImGui::Text("Audio effects loaded: %u", (u32)s_AudioSourceIDs.size());
-
-					ImGui::TreePop();
-				}
-
-				if (ImGui::TreeNode("Misc settings"))
-				{
-					ImGui::Checkbox("Log to console", &g_bEnableLogToConsole);
-					ImGui::TreePop();
-				}
-
-				g_Renderer->DrawImGuiSettings();
-				g_Window->DrawImGuiObjects();
-				g_CameraManager->DrawImGuiObjects();
-				g_SceneManager->DrawImGuiObjects();
-				AudioManager::DrawImGuiObjects();
-				g_Editor->DrawImGuiObjects();
-
-				if (ImGui::RadioButton("Translate", g_Editor->GetTransformState() == TransformState::TRANSLATE))
-				{
-					g_Editor->SetTransformState(TransformState::TRANSLATE);
-				}
-				ImGui::SameLine();
-				if (ImGui::RadioButton("Rotate", g_Editor->GetTransformState() == TransformState::ROTATE))
-				{
-					g_Editor->SetTransformState(TransformState::ROTATE);
-				}
-				ImGui::SameLine();
-				if (ImGui::RadioButton("Scale", g_Editor->GetTransformState() == TransformState::SCALE))
-				{
-					g_Editor->SetTransformState(TransformState::SCALE);
-				}
-
-				BaseScene* currentScene = g_SceneManager->CurrentScene();
-
-				currentScene->DrawImGuiForSelectedObjectsAndSceneHierarchy();
+				DrawImGuiMainToolbar();
 
 				ImGui::Spacing();
-				ImGui::Spacing();
-				ImGui::Spacing();
 
-				ImGui::Text("Debugging");
-
-				for (System* system : g_Systems)
+				if (ImGui::BeginTabBar("main window tabs", ImGuiTabBarFlags_FittingPolicyScroll))
 				{
-					system->DrawImGui();
+					struct Tab
+					{
+						const char* name;
+						void (FlexEngine::*draw)();
+					};
+					static const Tab tabs[] = {
+						{ "Scene", &FlexEngine::DrawImGuiSceneTab },
+						{ "Render", &FlexEngine::DrawImGuiRenderTab },
+						{ "Physics", &FlexEngine::DrawImGuiPhysicsTab },
+						{ "Player", &FlexEngine::DrawImGuiPlayerTab },
+						{ "World", &FlexEngine::DrawImGuiWorldTab },
+						{ "Audio", &FlexEngine::DrawImGuiAudioTab },
+						{ "Stats", &FlexEngine::DrawImGuiStatsTab },
+					};
+					// FLEX_DEBUG_TAB=<name> opens a tab at startup (for screenshots)
+					static const char* startupTabName = getenv("FLEX_DEBUG_TAB");
+					for (const Tab& tab : tabs)
+					{
+						ImGuiTabItemFlags tabFlags = 0;
+						if (startupTabName != nullptr && strcmp(startupTabName, tab.name) == 0 && g_Renderer->GetFramesRenderedCount() < 60)
+						{
+							tabFlags |= ImGuiTabItemFlags_SetSelected;
+						}
+						if (ImGui::BeginTabItem(tab.name, nullptr, tabFlags))
+						{
+							ImGui::BeginChild(tab.name);
+							(this->*tab.draw)();
+							ImGui::EndChild();
+							ImGui::EndTabItem();
+						}
+					}
+					ImGui::EndTabBar();
+				}
+			}
+			ImGui::End();
+		}
+
+		bool* bShowGiveItemsWindow = GetUIWindowOpen(SID_PAIR("give items"));
+		if (*bShowGiveItemsWindow)
+		{
+			ImGui::SetNextWindowSize(ImVec2(420.0f, 520.0f), ImGuiCond_FirstUseEver);
+			if (ImGui::Begin("Give Items", bShowGiveItemsWindow))
+			{
+				Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
+				if (player != nullptr)
+				{
+					DrawImGuiGiveItems(player);
+				}
+				else
+				{
+					ImGui::TextDisabled("This scene has no player");
 				}
 			}
 			ImGui::End();
@@ -2391,7 +3151,7 @@ namespace flex
 
 		std::string fileContents = rootObject.ToString();
 
-		if (!WriteFile(m_CommonSettingsAbsFilePath, fileContents, false))
+		if (!WriteFileIfChanged(m_CommonSettingsAbsFilePath, fileContents))
 		{
 			PrintError("Failed to write common settings config file\n");
 		}
@@ -2503,7 +3263,7 @@ namespace flex
 		rootObject.fields.emplace_back("ui_windows_open", JSONValue(uiWindowsOpenObj));
 
 		std::string fileContents = rootObject.ToString();
-		if (!WriteFile(UI_WINDOW_CACHE_LOCATION, fileContents, false))
+		if (!WriteFileIfChanged(UI_WINDOW_CACHE_LOCATION, fileContents))
 		{
 			PrintError("Failed to serialize ui window cache to %s\n", UI_WINDOW_CACHE_LOCATION);
 		}
@@ -2648,6 +3408,24 @@ namespace flex
 			{
 				PhysicsDebuggingSettings& settings = g_Renderer->GetPhysicsDebuggingSettings();
 				settings.bDrawWireframe = !settings.bDrawWireframe;
+				if (settings.bDrawWireframe)
+				{
+					settings.bDisableAll = false;
+				}
+				return EventReply::CONSUMED;
+			}
+
+			// Debug teleports (only while the debug UI is showing in the game)
+			if ((keyCode == KeyCode::KEY_F6 || keyCode == KeyCode::KEY_F8) && (!m_bGameMode || m_bRenderImGui))
+			{
+				if (keyCode == KeyCode::KEY_F6)
+				{
+					MoveDebugCameraToPlayer();
+				}
+				else
+				{
+					MovePlayerToDebugCamera(bShiftDown, s_bPossessPlayerAfterTeleport);
+				}
 				return EventReply::CONSUMED;
 			}
 
@@ -2658,48 +3436,8 @@ namespace flex
 				return EventReply::CONSUMED;
 			}
 
-			if (keyCode == KeyCode::KEY_4)
-			{
-				i32 audioSourceIndex = (i32)SoundEffect::synthesized_00 + (bShiftDown ? 7 : 0);
-				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
-				return EventReply::CONSUMED;
-			}
-			if (keyCode == KeyCode::KEY_5)
-			{
-				i32 audioSourceIndex = (i32)SoundEffect::synthesized_01 + (bShiftDown ? 7 : 0);
-				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
-				return EventReply::CONSUMED;
-			}
-			if (keyCode == KeyCode::KEY_6)
-			{
-				i32 audioSourceIndex = (i32)SoundEffect::synthesized_02 + (bShiftDown ? 7 : 0);
-				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
-				return EventReply::CONSUMED;
-			}
-			if (keyCode == KeyCode::KEY_7)
-			{
-				i32 audioSourceIndex = (i32)SoundEffect::synthesized_03 + (bShiftDown ? 7 : 0);
-				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
-				return EventReply::CONSUMED;
-			}
-			if (keyCode == KeyCode::KEY_8)
-			{
-				i32 audioSourceIndex = (i32)SoundEffect::synthesized_04 + (bShiftDown ? 7 : 0);
-				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
-				return EventReply::CONSUMED;
-			}
-			if (keyCode == KeyCode::KEY_9)
-			{
-				i32 audioSourceIndex = (i32)SoundEffect::synthesized_05 + (bShiftDown ? 7 : 0);
-				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
-				return EventReply::CONSUMED;
-			}
-			if (keyCode == KeyCode::KEY_0)
-			{
-				i32 audioSourceIndex = (i32)SoundEffect::synthesized_06 + (bShiftDown ? 7 : 0);
-				AudioManager::PlaySource(s_AudioSourceIDs[audioSourceIndex]);
-				return EventReply::CONSUMED;
-			}
+			// (Number keys select the player's quick access slots, see PlayerController. The test tones they used to
+			// play are in the debug window's Audio tab)
 
 			if (keyCode == KeyCode::KEY_O)
 			{

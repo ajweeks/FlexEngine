@@ -45,30 +45,46 @@ namespace flex
 		ClearLogFile();
 	}
 
+	// How much of g_LogBuffer is in the log file (guarded by g_LogMutex)
+	static std::streamoff s_SavedLogLength = 0;
+
 	void ClearLogFile()
 	{
-		FILE* f = fopen(g_LogBufferFilePath, "w");
-
-		if (f != nullptr)
-		{
-			fprintf(f, "%c", '\0');
-			fclose(f);
-		}
-	}
-
-	void SaveLogBufferToFile()
-	{
-		// TODO: Only append new content rather than overwriting old content?
-
 		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
 
 		FILE* f = fopen(g_LogBufferFilePath, "w");
 
 		if (f != nullptr)
 		{
-			std::string fileContents(g_LogBuffer.str());
-			fprintf(f, "%s", fileContents.c_str());
 			fclose(f);
+		}
+		// The whole buffer is written on the next save
+		s_SavedLogLength = 0;
+	}
+
+	void SaveLogBufferToFile()
+	{
+		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
+
+		// Only what was logged since the last save is appended (rewriting the whole log every few seconds gets slow in
+		// long sessions)
+		const std::streamoff length = (std::streamoff)g_LogBuffer.tellp();
+		if (length <= s_SavedLogLength)
+		{
+			return;
+		}
+
+		FILE* f = fopen(g_LogBufferFilePath, s_SavedLogLength == 0 ? "w" : "a");
+
+		if (f != nullptr)
+		{
+			std::string newContents((size_t)(length - s_SavedLogLength), '\0');
+			g_LogBuffer.seekg(s_SavedLogLength);
+			g_LogBuffer.read(&newContents[0], (std::streamsize)newContents.size());
+			g_LogBuffer.clear();
+			fwrite(newContents.data(), 1, newContents.size(), f);
+			fclose(f);
+			s_SavedLogLength = length;
 		}
 	}
 

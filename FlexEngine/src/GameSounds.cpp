@@ -77,7 +77,7 @@ namespace flex
 			Loop s_Engine{ Sound::LOOP_ENGINE, 4.0f };
 			Loop s_Skid{ Sound::LOOP_SKID, 5.0f };
 			Loop s_Wind{ Sound::LOOP_WIND, 0.4f };
-			Loop s_AirRush{ Sound::LOOP_AIR_RUSH, 1.5f };
+			Loop s_AirRush{ Sound::LOOP_AIR_RUSH, 3.0f }; // Follows speed closely
 			Loop s_Crickets{ Sound::LOOP_CRICKETS, 0.3f };
 			Loop s_Fire{ Sound::LOOP_CAMPFIRE, 1.5f };
 			Loop* const s_Loops[] = { &s_Engine, &s_Skid, &s_Wind, &s_AirRush, &s_Crickets, &s_Fire };
@@ -416,9 +416,10 @@ namespace flex
 				s_Wind.target = s_AmbienceVolume * (0.1f + 0.3f * altitude + 0.12f * s_Ocean) * (0.55f + 0.45f * s_Gust) * open;
 				s_Wind.pitch = 0.85f + 0.25f * s_Gust + 0.1f * altitude;
 
-				const real rush = synth::SmoothStep(8.0f, 40.0f, s_PlayerAirSpeed);
-				s_AirRush.target = s_SfxVolume * 0.55f * rush;
-				s_AirRush.pitch = 0.8f + 0.6f * rush;
+				// Rushing air: audible from a fast fall, roaring in a steep wingsuit dive
+				const real rush = synth::SmoothStep(6.0f, 55.0f, s_PlayerAirSpeed);
+				s_AirRush.target = s_SfxVolume * glm::min(1.6f * rush, 1.0f);
+				s_AirRush.pitch = 0.75f + 0.75f * rush;
 
 				// Crickets at night, near the ground, away from the sea & out of caves
 				BaseScene* scene = g_SceneManager->CurrentScene();

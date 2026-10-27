@@ -48,6 +48,7 @@ namespace flex
 {
 	TerrainGenerator* TerrainGenerator::s_Active = nullptr;
 	void (*TerrainGenerator::s_OnPlantFelled)(const terrain::PlantInfo& plant, const glm::vec3& fallDirection) = nullptr;
+	void (*TerrainGenerator::s_OnTerrainDug)(const glm::vec3& center, real radius) = nullptr;
 	bool TerrainGenerator::s_bShowWorldMap = false;
 	bool TerrainGenerator::s_bShowMinimap = true;
 
@@ -364,6 +365,10 @@ namespace flex
 				if (stats.bSettled && stats.displayedChunkCount > 0 && m_ChunkCommands.empty() && m_StagedChunks.empty())
 				{
 					m_bLoadComplete = true;
+					// Make room for chunks streamed in during play now, while loading, since growing the buffers later
+					// would stall for a while. (The amount in use varies as different terrain streams in, & the
+					// buffers' free space gets fragmented.)
+					g_Renderer->ReserveDynamicVertexData(m_TerrainMatID, 1.75f);
 					u32 triangleCount = 0;
 					for (auto& pair : m_Chunks)
 					{
@@ -428,7 +433,7 @@ namespace flex
 			FindPlants(center - glm::vec3(extent, 400.0f, extent), center + glm::vec3(extent, 400.0f, extent), plants);
 			if (outSummary != nullptr)
 			{
-				static const char* speciesNames[] = { "none", "spruce", "pine", "birch", "oak", "willow", "acacia", "saguaro" };
+				static const char* speciesNames[] = { "none", "spruce", "pine", "birch", "oak", "willow", "acacia", "saguaro", "charred" };
 				u32 counts[ARRAY_LENGTH(speciesNames)] = {};
 				for (const terrain::PlantInfo& plant : plants)
 				{
@@ -561,7 +566,9 @@ namespace flex
 			break;
 		case 10:
 		{
-			// Fell the nearest cactus, & check what it drops
+			// Fell the nearest cactus (or burnt tree, with FLEX_VEGETATION_TOUR=snag), & check what it drops
+			const char* tourMode = getenv("FLEX_VEGETATION_TOUR");
+			const terrain::PlantKind fellKind = tourMode != nullptr && strcmp(tourMode, "snag") == 0 ? terrain::PlantKind::SNAG : terrain::PlantKind::CACTUS;
 			bool bFound = false;
 			const glm::vec3 origin = player->GetTransform()->GetWorldPosition();
 			for (const TourStop& stop : s_Stops)
@@ -570,7 +577,7 @@ namespace flex
 				FindPlants(stop.pos - glm::vec3(150.0f, 400.0f, 150.0f), stop.pos + glm::vec3(150.0f, 400.0f, 150.0f), plants);
 				for (const terrain::PlantInfo& plant : plants)
 				{
-					if (plant.kind == terrain::PlantKind::CACTUS)
+					if (plant.kind == fellKind)
 					{
 						s_Cactus = plant;
 						bFound = true;
@@ -585,7 +592,7 @@ namespace flex
 			FLEX_UNUSED(origin);
 			if (!bFound)
 			{
-				Print("Vegetation tour: no cactus found\n");
+				Print("Vegetation tour: no %s found\n", fellKind == terrain::PlantKind::SNAG ? "burnt tree" : "cactus");
 				s_Step = 100;
 				break;
 			}
@@ -597,7 +604,7 @@ namespace flex
 			Aim(s_Cactus.base + VEC3_UP * 1.0f);
 			if (s_Time > 3.0f && Settled())
 			{
-				Screenshot("cactus_1_before");
+				Screenshot(std::string(s_Cactus.kind == terrain::PlantKind::SNAG ? "snag_" : "cactus_") + "1_before");
 				FellPlant(s_Cactus, VEC3_ZERO);
 				s_Step = 12;
 				s_Time = 0.0f;
@@ -607,20 +614,20 @@ namespace flex
 			Aim(s_Cactus.base + VEC3_UP * 0.5f);
 			if (s_Time > 1.0f && s_Time - g_UnpausedDeltaTime <= 1.0f)
 			{
-				Screenshot("cactus_2_falling");
+				Screenshot(std::string(s_Cactus.kind == terrain::PlantKind::SNAG ? "snag_" : "cactus_") + "2_falling");
 			}
 			if (s_Time > 10.0f)
 			{
 				std::vector<DroppedItem*> items;
 				scene->GetDroppedItemsInRadius(s_Cactus.base, 20.0f, items);
-				Print("Vegetation tour: felled a cactus (height %.1f), %u dropped items nearby:\n", s_Cactus.height, (u32)items.size());
+				Print("Vegetation tour: felled a %s (height %.1f), %u dropped items nearby:\n", s_Cactus.kind == terrain::PlantKind::SNAG ? "burnt tree" : "cactus", s_Cactus.height, (u32)items.size());
 				for (DroppedItem* item : items)
 				{
 					GameObject* prefab = g_ResourceManager->GetPrefabTemplate(item->prefabID);
 					const glm::vec3 pos = item->GetTransform()->GetWorldPosition();
 					Print("  %s x%d at (%.1f, %.1f, %.1f)\n", prefab != nullptr ? prefab->GetName().c_str() : "?", item->stackSize, pos.x, pos.y, pos.z);
 				}
-				Screenshot("cactus_3_dropped");
+				Screenshot(std::string(s_Cactus.kind == terrain::PlantKind::SNAG ? "snag_" : "cactus_") + "3_dropped");
 				s_Step = 100;
 				s_Time = 0.0f;
 			}
@@ -638,8 +645,34 @@ namespace flex
 		}
 	}
 
+	namespace
+	{
+		// Chunk mesh arrays which are no longer needed. Freeing large blocks can take a while (see
+		// JobSystem::FreeInBackground), which adds up when many chunks are created or unloaded at once.
+		std::vector<terrain::ChunkMeshData>* s_ChunkMeshGarbage = nullptr;
+
+		void AddChunkMeshGarbage(terrain::ChunkMeshData&& mesh)
+		{
+			if (s_ChunkMeshGarbage == nullptr)
+			{
+				s_ChunkMeshGarbage = new std::vector<terrain::ChunkMeshData>();
+			}
+			s_ChunkMeshGarbage->push_back(std::move(mesh));
+		}
+
+		void FreeChunkMeshGarbage()
+		{
+			if (s_ChunkMeshGarbage != nullptr)
+			{
+				JobSystem::DeleteInBackground(s_ChunkMeshGarbage);
+				s_ChunkMeshGarbage = nullptr;
+			}
+		}
+	} // namespace
+
 	TerrainGenerator::Chunk TerrainGenerator::CreateChunk(terrain::ChunkCommand& command, bool bHidden)
 	{
+		PROFILE_AUTO("TerrainGenerator CreateChunk");
 		Material* terrainMat = g_Renderer->GetMaterial(m_TerrainMatID);
 		Shader* terrainShader = g_Renderer->GetShader(terrainMat->shaderID);
 
@@ -677,6 +710,14 @@ namespace flex
 			{
 				meshComponent->UpdateDynamicVertexData(vertexBufferCreateInfo, indices);
 			}
+
+			// The source arrays have been copied into the mesh, & are freed in the background (see FreeChunkMeshGarbage)
+			terrain::ChunkMeshData garbage;
+			garbage.positions = std::move(vertexBufferCreateInfo.positions_3D);
+			garbage.normals = std::move(vertexBufferCreateInfo.normals);
+			garbage.colours = std::move(vertexBufferCreateInfo.colours_R32G32B32A32);
+			garbage.weights = std::move(vertexBufferCreateInfo.extraVec4s);
+			AddChunkMeshGarbage(std::move(garbage));
 			return meshComponent;
 		};
 
@@ -850,10 +891,121 @@ namespace flex
 			}
 			head = groupEnd;
 		}
+		for (size_t i = 0; i < head; ++i)
+		{
+			AddChunkMeshGarbage(std::move(m_ChunkCommands[i].mesh));
+		}
 		m_ChunkCommands.erase(m_ChunkCommands.begin(), m_ChunkCommands.begin() + head);
+		FreeChunkMeshGarbage();
 
 		m_LastApplyTime = Time::MillisecondsSince(start);
 		m_MaxApplyTime = glm::max(m_MaxApplyTime, m_LastApplyTime);
+	}
+
+	// Collision built in a background job, from a copy of the chunk's triangles (the chunk may be unloaded meanwhile)
+	struct ChunkCollisionBuild
+	{
+		u32 id = 0;
+		u64 handle = 0;
+		std::vector<glm::vec3> positions;
+		std::vector<u32> indices;
+		u32 collisionIndexCount = 0;
+		btTriangleIndexVertexArray* triangleIndexVertexArray = nullptr;
+		btBvhTriangleMeshShape* collisionShape = nullptr;
+		btTriangleIndexVertexArray* foliageTriangleIndexVertexArray = nullptr;
+		btBvhTriangleMeshShape* foliageCollisionShape = nullptr;
+		std::atomic<bool> bDone{ false };
+
+		void Build()
+		{
+			auto MakeShape = [this](u32 firstIndex, u32 indexCount, btTriangleIndexVertexArray*& outArray, btBvhTriangleMeshShape*& outShape)
+			{
+				btIndexedMesh part = {};
+				part.m_vertexBase = (const unsigned char*)positions.data();
+				part.m_vertexStride = sizeof(glm::vec3);
+				part.m_numVertices = (i32)positions.size();
+				part.m_triangleIndexBase = (const unsigned char*)(indices.data() + firstIndex);
+				part.m_triangleIndexStride = sizeof(u32) * 3;
+				part.m_numTriangles = (i32)(indexCount / 3);
+				outArray = new btTriangleIndexVertexArray();
+				outArray->addIndexedMesh(part, PHY_INTEGER);
+				outShape = new btBvhTriangleMeshShape(outArray, true);
+			};
+
+			MakeShape(0, collisionIndexCount, triangleIndexVertexArray, collisionShape);
+			if (collisionIndexCount < (u32)indices.size())
+			{
+				MakeShape(collisionIndexCount, (u32)indices.size() - collisionIndexCount, foliageTriangleIndexVertexArray, foliageCollisionShape);
+			}
+			bDone = true;
+		}
+
+		void DeleteShapes()
+		{
+			delete collisionShape;
+			delete triangleIndexVertexArray;
+			delete foliageCollisionShape;
+			delete foliageTriangleIndexVertexArray;
+			collisionShape = nullptr;
+			triangleIndexVertexArray = nullptr;
+			foliageCollisionShape = nullptr;
+			foliageTriangleIndexVertexArray = nullptr;
+		}
+	};
+
+	void TerrainGenerator::FinishCollisionBuilds()
+	{
+		for (u32 i = 0; i < (u32)m_CollisionBuilds.size();)
+		{
+			std::shared_ptr<ChunkCollisionBuild> build = m_CollisionBuilds[i];
+			if (!build->bDone.load())
+			{
+				++i;
+				continue;
+			}
+			m_CollisionBuilds[i] = m_CollisionBuilds.back();
+			m_CollisionBuilds.pop_back();
+
+			auto iter = m_Chunks.find(build->handle);
+			if (iter != m_Chunks.end() && iter->second.collisionBuildID == build->id && iter->second.rigidBody == nullptr && iter->second.collisionShape == nullptr)
+			{
+				Chunk& chunk = iter->second;
+				chunk.collisionBuildID = 0;
+				chunk.triangleIndexVertexArray = build->triangleIndexVertexArray;
+				chunk.collisionShape = build->collisionShape;
+				chunk.foliageTriangleIndexVertexArray = build->foliageTriangleIndexVertexArray;
+				chunk.foliageCollisionShape = build->foliageCollisionShape;
+				// Owned by the chunk now
+				build->triangleIndexVertexArray = nullptr;
+				build->collisionShape = nullptr;
+				build->foliageTriangleIndexVertexArray = nullptr;
+				build->foliageCollisionShape = nullptr;
+				chunk.collisionData = build;
+				CreateChunkRigidBody(chunk);
+			}
+			else
+			{
+				// The chunk was unloaded (or moved out of range, or built immediately) in the meantime
+				build->DeleteShapes();
+			}
+		}
+	}
+
+	void TerrainGenerator::DiscardCollisionBuilds()
+	{
+		// (Background jobs only stop running once the job system shuts down)
+		while (JobSystem::IsBusy(m_CollisionBuildContext) && JobSystem::GetThreadCount() > 0)
+		{
+			std::this_thread::yield();
+		}
+		for (const std::shared_ptr<ChunkCollisionBuild>& build : m_CollisionBuilds)
+		{
+			if (build->bDone.load())
+			{
+				build->DeleteShapes();
+			}
+		}
+		m_CollisionBuilds.clear();
 	}
 
 	void TerrainGenerator::UpdateRigidBodies()
@@ -862,25 +1014,94 @@ namespace flex
 		const bool bHasPlayer = player != nullptr;
 		const glm::vec3 playerPos = bHasPlayer ? player->GetTransform()->GetWorldPosition() : VEC3_ZERO;
 
+		FinishCollisionBuilds();
+
+		// Building collision BVHs takes a few ms per chunk, so (unless they're close to the player) it's done in the
+		// background rather than stalling the frame whenever many chunks come into range
 		static std::vector<Chunk*> toCreate;
+		static std::vector<std::pair<real, std::pair<u64, Chunk*>>> toBuildInBackground;
 		toCreate.clear();
+		toBuildInBackground.clear();
 		for (auto& pair : m_Chunks)
 		{
 			Chunk& chunk = pair.second;
 			bool bShouldHaveRigidBody = false;
+			real distance = 0.0f;
 			if (bHasPlayer)
 			{
 				const glm::vec3 delta = glm::max(glm::max(chunk.boundsMin - playerPos, playerPos - chunk.boundsMax), VEC3_ZERO);
-				bShouldHaveRigidBody = glm::length(delta) < m_RigidBodyLoadRadius;
+				distance = glm::length(delta);
+				bShouldHaveRigidBody = distance < m_RigidBodyLoadRadius;
 			}
 
 			if (bShouldHaveRigidBody && chunk.rigidBody == nullptr)
 			{
-				toCreate.push_back(&chunk);
+				// Chunks without any collidable triangles (e.g. only foliage) never get a body
+				if (chunk.meshComponent == nullptr || chunk.meshComponent->GetIndexCount() == 0 || chunk.collisionIndexCount == 0)
+				{
+					continue;
+				}
+
+				if (distance < m_RigidBodyImmediateRadius)
+				{
+					// (Any build in flight is discarded once it finishes)
+					chunk.collisionBuildID = 0;
+					toCreate.push_back(&chunk);
+				}
+				else if (chunk.collisionBuildID == 0)
+				{
+					toBuildInBackground.push_back({ distance, { pair.first, &chunk } });
+				}
 			}
-			else if (!bShouldHaveRigidBody && chunk.rigidBody != nullptr)
+			else if (!bShouldHaveRigidBody)
 			{
-				DestroyChunkRigidBody(chunk);
+				chunk.collisionBuildID = 0;
+				if (chunk.rigidBody != nullptr)
+				{
+					DestroyChunkRigidBody(chunk);
+				}
+			}
+		}
+
+		if (!toBuildInBackground.empty() && (u32)m_CollisionBuilds.size() < glm::max(JobSystem::GetThreadCount(), 2u))
+		{
+			PROFILE_AUTO("TerrainGenerator start collision builds");
+			// Nearest first. Only a few are queued at a time so that chunks which come closer meanwhile aren't stuck
+			// behind far away ones.
+			std::sort(toBuildInBackground.begin(), toBuildInBackground.end(), [](const auto& a, const auto& b) { return a.first < b.first; });
+			const u32 maxInFlight = glm::max(JobSystem::GetThreadCount(), 2u);
+			// (Copying each chunk's triangles takes a moment, so only a few are started per frame)
+			const u32 maxStartsPerFrame = glm::max(JobSystem::GetThreadCount() / 2, 2u);
+			u32 startCount = 0;
+			for (const auto& entry : toBuildInBackground)
+			{
+				if ((u32)m_CollisionBuilds.size() >= maxInFlight || startCount++ >= maxStartsPerFrame)
+				{
+					break;
+				}
+
+				Chunk& chunk = *entry.second.second;
+				MeshComponent* submesh = chunk.meshComponent;
+				VertexBufferData* vertexBufferData = submesh->GetVertexBufferData();
+				const u32 indexCount = submesh->GetIndexCount();
+
+				std::shared_ptr<ChunkCollisionBuild> build = std::make_shared<ChunkCollisionBuild>();
+				build->id = m_NextCollisionBuildID++;
+				build->handle = entry.second.first;
+				build->collisionIndexCount = glm::min(chunk.collisionIndexCount, indexCount);
+				// Positions are at the start of each vertex
+				build->positions.resize(vertexBufferData->UsedVertexCount);
+				const u8* src = (const u8*)vertexBufferData->vertexData;
+				for (u32 v = 0; v < vertexBufferData->UsedVertexCount; ++v)
+				{
+					memcpy(&build->positions[v], src + (size_t)v * vertexBufferData->VertexStride, sizeof(glm::vec3));
+				}
+				const u32* indices = submesh->GetIndexBufferDataPtr();
+				build->indices.assign(indices, indices + indexCount);
+
+				chunk.collisionBuildID = build->id;
+				m_CollisionBuilds.push_back(build);
+				JobSystem::ExecuteBackground(m_CollisionBuildContext, [build]() { build->Build(); });
 			}
 		}
 
@@ -888,12 +1109,14 @@ namespace flex
 		{
 			// Building the collision BVHs is the expensive part (many chunks at once when a world loads), & is
 			// independent per chunk. Bodies are added to the physics world afterwards, on this thread.
+			PROFILE_AUTO("TerrainGenerator BuildChunkCollisionShapes");
 			JobSystem::Context context;
 			JobSystem::Dispatch(context, (u32)toCreate.size(), 1, [](JobSystem::JobArgs args) { BuildChunkCollisionShapes(*toCreate[args.jobIndex]); });
 			JobSystem::Wait(context);
 		}
 		for (Chunk* chunk : toCreate)
 		{
+			PROFILE_AUTO("TerrainGenerator CreateChunkRigidBody");
 			CreateChunkRigidBody(*chunk);
 		}
 	}
@@ -950,6 +1173,11 @@ namespace flex
 			{
 				s_OnPlantFelled(plant, glm::length(away) > 1e-3f ? glm::normalize(away) : VEC3_ZERO);
 			}
+		}
+
+		if (s_OnTerrainDug != nullptr)
+		{
+			s_OnTerrainDug(center, radius);
 		}
 	}
 
@@ -1132,6 +1360,181 @@ namespace flex
 		ApplyEdit(edit);
 	}
 
+	void TerrainGenerator::FlattenArea(const glm::vec3& center, const glm::vec3& normal, real radius, terrain::Material material /* = SOIL */, real height /* = 0.0f */)
+	{
+		ApplyPlaneEdits({ terrain::MakePlaneEdit(terrain::EditType::FLATTEN, center, normal, radius, height, material) });
+	}
+
+	void TerrainGenerator::LowerArea(const glm::vec3& center, const glm::vec3& normal, real radius, real height /* = 0.0f */)
+	{
+		ApplyPlaneEdits({ terrain::MakePlaneEdit(terrain::EditType::LOWER, center, normal, radius, height, terrain::Material::SOIL) });
+	}
+
+	void TerrainGenerator::RaiseArea(const glm::vec3& center, const glm::vec3& normal, real radius, terrain::Material material, real height /* = 0.0f */)
+	{
+		ApplyPlaneEdits({ terrain::MakePlaneEdit(terrain::EditType::RAISE, center, normal, radius, height, material) });
+	}
+
+	void TerrainGenerator::FlattenPath(const std::vector<glm::vec3>& points, real radius, terrain::Material material /* = GRAVEL */, real height /* = 0.0f */)
+	{
+		if (points.empty() || radius <= 0.0f)
+		{
+			return;
+		}
+
+		// Discs close enough together that their flat middles overlap
+		const real spacing = radius * 0.4f;
+		std::vector<terrain::Edit> edits;
+		auto AddDisc = [&](const glm::vec3& pos, const glm::vec3& tangent)
+		{
+			// Tilted along the path, level across it
+			glm::vec3 normal = VEC3_UP - tangent * glm::dot(VEC3_UP, tangent);
+			normal = glm::length(normal) > 1e-3f ? glm::normalize(normal) : VEC3_UP;
+			edits.push_back(terrain::MakePlaneEdit(terrain::EditType::FLATTEN, pos, normal, radius, height, material));
+		};
+
+		if (points.size() == 1)
+		{
+			AddDisc(points[0], VEC3_ZERO);
+		}
+		for (size_t i = 0; i + 1 < points.size(); ++i)
+		{
+			const glm::vec3 a = points[i];
+			const glm::vec3 b = points[i + 1];
+			const real length = glm::distance(a, b);
+			if (length < 1e-4f)
+			{
+				continue;
+			}
+			const glm::vec3 tangent = (b - a) / length;
+			const i32 steps = glm::max((i32)std::ceil(length / spacing), 1);
+			// (each segment's last disc is the next one's first)
+			const bool bLast = i + 2 == points.size();
+			for (i32 step = 0; step < steps + (bLast ? 1 : 0); ++step)
+			{
+				AddDisc(a + (b - a) * ((real)step / (real)steps), tangent);
+			}
+		}
+		ApplyPlaneEdits(edits);
+	}
+
+	void TerrainGenerator::ApplyPlaneEdits(const std::vector<terrain::Edit>& planeEdits)
+	{
+		if (m_Streamer == nullptr || planeEdits.empty())
+		{
+			return;
+		}
+
+		glm::vec3 boundsMin(1e30f);
+		glm::vec3 boundsMax(-1e30f);
+		for (const terrain::Edit& edit : planeEdits)
+		{
+			glm::vec3 editMin, editMax;
+			terrain::GetEditBounds(edit, editMin, editMax);
+			boundsMin = glm::min(boundsMin, editMin);
+			boundsMax = glm::max(boundsMax, editMax);
+		}
+
+		// Plants whose roots are cut away fall over, & ones buried are removed (found before the edit changes where the
+		// ground is)
+		std::vector<terrain::PlantInfo> plants;
+		m_Streamer->FindPlants(boundsMin - glm::vec3(1.5f, 6.0f, 1.5f), boundsMax + glm::vec3(1.5f, 6.0f, 1.5f), plants);
+		std::vector<terrain::Edit> edits = planeEdits;
+		std::vector<terrain::PlantInfo> undermined;
+		if (!plants.empty())
+		{
+			const terrain::TerrainDensity& density = *m_Streamer->Density();
+			std::vector<terrain::Edit> after;
+			m_Streamer->Edits().Gather(boundsMin - glm::vec3(8.0f), boundsMax + glm::vec3(8.0f), after);
+			after.insert(after.end(), planeEdits.begin(), planeEdits.end());
+			terrain::EditList afterList;
+			afterList.edits = after.data();
+			afterList.count = (u32)after.size();
+			for (const terrain::PlantInfo& plant : plants)
+			{
+				const glm::vec3 root = plant.base - glm::vec3(0.0f, 0.3f, 0.0f);
+				const bool bUndermined = density.Sample(root, afterList) > 0.0f;
+				const bool bBuried = !bUndermined && density.Sample(plant.base + glm::vec3(0.0f, 1.2f, 0.0f), afterList) < 0.0f;
+				if (bUndermined || bBuried)
+				{
+					edits.push_back(terrain::MakeRemovePlantEdit(plant));
+				}
+				if (bUndermined)
+				{
+					undermined.push_back(plant);
+				}
+			}
+		}
+
+		m_Streamer->ApplyEdits(edits.data(), (u32)edits.size());
+		MarkEditsDirty();
+
+		const glm::vec3 boundsCenter = (boundsMin + boundsMax) * 0.5f;
+		for (const terrain::PlantInfo& plant : undermined)
+		{
+			glm::vec3 away = plant.base - boundsCenter;
+			away.y = 0.0f;
+			if (s_OnPlantFelled != nullptr)
+			{
+				s_OnPlantFelled(plant, glm::length(away) > 1e-3f ? glm::normalize(away) : VEC3_ZERO);
+			}
+		}
+
+		// Lowering (or flattening) can cut away the ground below things too
+		if (s_OnTerrainDug != nullptr)
+		{
+			for (const terrain::Edit& edit : planeEdits)
+			{
+				if (edit.type != terrain::EditType::RAISE)
+				{
+					s_OnTerrainDug(edit.center, edit.radius);
+				}
+			}
+		}
+	}
+
+	void TerrainGenerator::RemoveFloatingFragments(const glm::vec3& center, real extent)
+	{
+		if (m_Streamer == nullptr)
+		{
+			return;
+		}
+		std::vector<terrain::Edit> edits;
+		FindFloatingFragments(center, extent, edits);
+		if (!edits.empty())
+		{
+			m_Streamer->ApplyEdits(edits.data(), (u32)edits.size());
+			MarkEditsDirty();
+		}
+	}
+
+	glm::vec3 TerrainGenerator::SampleSmoothNormal(const glm::vec3& pos, real radius) const
+	{
+		if (m_Streamer == nullptr)
+		{
+			return VEC3_UP;
+		}
+
+		// Density gradients over a couple of large steps: each difference spans the surface around pos, so small bumps
+		// cancel out
+		glm::vec3 sum = VEC3_ZERO;
+		for (real scale : { 0.5f, 1.0f })
+		{
+			const real e = glm::max(radius * scale, 0.1f);
+			glm::vec3 gradient(
+				SampleDensity(pos + glm::vec3(e, 0, 0)) - SampleDensity(pos - glm::vec3(e, 0, 0)),
+				SampleDensity(pos + glm::vec3(0, e, 0)) - SampleDensity(pos - glm::vec3(0, e, 0)),
+				SampleDensity(pos + glm::vec3(0, 0, e)) - SampleDensity(pos - glm::vec3(0, 0, e)));
+			const real length = glm::length(gradient);
+			if (length > 1e-6f)
+			{
+				sum += gradient / length;
+			}
+		}
+		const real length = glm::length(sum);
+		return length > 1e-6f ? sum / length : VEC3_UP;
+	}
+
 	bool TerrainGenerator::IsApplyingEdits() const
 	{
 		return m_Streamer != nullptr && m_Streamer->GetStats().editJobCount > 0;
@@ -1165,6 +1568,27 @@ namespace flex
 		// The latest edit containing the point wins (like TerrainDensity::ComputeSurface)
 		for (auto iter = edits.rbegin(); iter != edits.rend(); ++iter)
 		{
+			if (terrain::IsPlaneEdit(iter->type))
+			{
+				if (terrain::PlaneEditWeight(*iter, pos - iter->center) <= 0.0f)
+				{
+					continue;
+				}
+				// Placed where there was air before the edit
+				terrain::EditList before;
+				before.edits = edits.data();
+				before.count = (u32)(edits.rend() - iter) - 1;
+				if (iter->type != terrain::EditType::LOWER && m_Streamer->Density()->Sample(pos, before) > tolerance)
+				{
+					outMaterial = iter->material;
+					return true;
+				}
+				if (iter->type == terrain::EditType::RAISE)
+				{
+					continue;
+				}
+				return false;
+			}
 			if (iter->type == terrain::EditType::REMOVE_PLANT || glm::distance(pos, iter->center) > iter->radius + tolerance)
 			{
 				continue;
@@ -1384,6 +1808,7 @@ namespace flex
 		m_ChunkCommands.clear();
 		m_QueryDensity.reset();
 
+		DiscardCollisionBuilds();
 		DestroyAllChunks();
 
 		m_RoadSegments.clear();
@@ -1560,41 +1985,8 @@ namespace flex
 			}
 		}
 
-		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
-		if (player != nullptr)
-		{
-			if (!player->IsWieldingPickAxe() && ImGui::Button("Give player a pickaxe"))
-			{
-				const PrefabID pickaxeID = g_ResourceManager->GetPrefabID("pickaxe");
-				if (pickaxeID.IsValid())
-				{
-					player->AddToInventory(pickaxeID, 1);
-				}
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Give player a vehicle"))
-			{
-				const PrefabID vehicleID = g_ResourceManager->GetPrefabID("vehicle");
-				if (vehicleID.IsValid())
-				{
-					player->AddToInventory(vehicleID, 1);
-				}
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Give player a row boat"))
-			{
-				const PrefabID boatID = g_ResourceManager->GetPrefabID("row boat");
-				if (boatID.IsValid())
-				{
-					player->AddToInventory(boatID, 1);
-				}
-			}
-			if (ImGui::IsItemHovered())
-			{
-				ImGui::SetTooltip("Place it with the place item key, & pick it up again by holding the pickup key while looking at it");
-			}
-		}
-		else if (ImGui::Button("Spawn player at camera"))
+		// (Items, vehicles & boats are given to the player from the debug window's Player tab)
+		if (g_SceneManager->CurrentScene()->GetPlayer(0) == nullptr && ImGui::Button("Spawn player at camera"))
 		{
 			BaseCamera* camera = g_CameraManager->CurrentCamera();
 			g_SceneManager->CurrentScene()->SpawnPlayer(camera->position, camera->forward);
@@ -1892,6 +2284,86 @@ namespace flex
 			g_ResourceManager->RemoveLoadedTexture(m_LargeMapTextureID, true);
 			m_LargeMapTextureID = InvalidTextureID;
 		}
+		if (bAll && m_MapArrowTextureID != InvalidTextureID)
+		{
+			g_ResourceManager->RemoveLoadedTexture(m_MapArrowTextureID, true);
+			m_MapArrowTextureID = InvalidTextureID;
+		}
+	}
+
+	void TerrainGenerator::CreateMapArrowTexture()
+	{
+		// A navigation arrow (a dart with a notched tail), pointing up. Coordinates in [-1, 1], y up, matching the
+		// sprite's orientation (sprite textures are displayed with their first row at the bottom)
+		const glm::vec2 points[] = { glm::vec2(0.0f, 0.92f), glm::vec2(0.68f, -0.8f), glm::vec2(0.0f, -0.4f), glm::vec2(-0.68f, -0.8f) };
+		const u32 pointCount = ARRAY_LENGTH(points);
+		const u32 resolution = 64;
+		const real outlineWidth = 0.17f;
+		const real pixelSize = 2.0f / (real)resolution;
+		auto ToBytes = [](const glm::vec4& colour)
+		{
+			const glm::vec4 c = glm::clamp(colour, 0.0f, 1.0f) * 255.0f + 0.5f;
+			return (u32)c.r | ((u32)c.g << 8) | ((u32)c.b << 16) | ((u32)c.a << 24);
+		};
+
+		std::vector<u32> pixels(resolution * resolution);
+		for (u32 y = 0; y < resolution; ++y)
+		{
+			for (u32 x = 0; x < resolution; ++x)
+			{
+				const glm::vec2 p((x + 0.5f) * pixelSize - 1.0f, (y + 0.5f) * pixelSize - 1.0f);
+				// Signed distance to the polygon (negative inside)
+				real dist = FLT_MAX;
+				bool bInside = false;
+				for (u32 i = 0, j = pointCount - 1; i < pointCount; j = i++)
+				{
+					const glm::vec2 a = points[j];
+					const glm::vec2 b = points[i];
+					const glm::vec2 ab = b - a;
+					const real t = glm::clamp(glm::dot(p - a, ab) / glm::dot(ab, ab), 0.0f, 1.0f);
+					dist = glm::min(dist, glm::distance(p, a + ab * t));
+					if ((a.y > p.y) != (b.y > p.y) && p.x < a.x + (p.y - a.y) / (b.y - a.y) * (b.x - a.x))
+					{
+						bInside = !bInside;
+					}
+				}
+				const real signedDist = (bInside ? -dist : dist) / pixelSize;
+				const real coverage = glm::clamp(0.5f - signedDist, 0.0f, 1.0f);
+				const real fill = glm::clamp(0.5f - (signedDist + outlineWidth / pixelSize), 0.0f, 1.0f);
+				glm::vec4 colour = glm::mix(UITheme::INK, UITheme::TEXT_PRIMARY, fill);
+				colour.a = coverage;
+				pixels[y * resolution + x] = ToBytes(colour);
+			}
+		}
+
+		m_MapArrowTextureID = g_Renderer->InitializeTextureFromMemory(pixels.data(), (u32)(pixels.size() * sizeof(u32)), TextureFormat::R8G8B8A8_UNORM,
+			"Map player arrow", resolution, resolution, 4, g_Renderer->GetSamplerLinearClampToEdge(), VK_FILTER_LINEAR);
+	}
+
+	void TerrainGenerator::DrawMapPlayerArrow(const glm::vec2& centerPx, const glm::vec2& heading, real sizePx, u32 zOrder)
+	{
+		if (m_MapArrowTextureID == InvalidTextureID)
+		{
+			CreateMapArrowTexture();
+		}
+
+		const glm::vec2i windowSize = g_Window->GetSize();
+		const glm::vec2 screenSize((real)glm::max(windowSize.x, 1), (real)glm::max(windowSize.y, 1));
+		const real aspectRatio = screenSize.x / screenSize.y;
+		// Rotates the arrow's up (0, 1) to the heading (y up)
+		const glm::vec2 dir = glm::length(heading) > 1e-4f ? glm::normalize(heading) : glm::vec2(0.0f, -1.0f);
+		const real angle = std::atan2(-dir.x, -dir.y);
+
+		SpriteQuadDrawInfo drawInfo = {};
+		drawInfo.textureID = m_MapArrowTextureID;
+		drawInfo.anchor = AnchorPoint::CENTER;
+		drawInfo.bScreenSpace = true;
+		drawInfo.bReadDepth = false;
+		drawInfo.zOrder = zOrder;
+		drawInfo.pos = glm::vec3((centerPx.x / screenSize.x * 2.0f - 1.0f) * aspectRatio, 1.0f - centerPx.y / screenSize.y * 2.0f, 0.0f);
+		drawInfo.rotation = glm::angleAxis(angle, VEC3_FORWARD);
+		drawInfo.scale = glm::vec3(glm::vec2(sizePx / screenSize.y), 1.0f);
+		g_Renderer->EnqueueSprite(drawInfo);
 	}
 
 	void TerrainGenerator::UpdateMinimap()
@@ -1960,19 +2432,6 @@ namespace flex
 
 		const real aspectRatio = screenSize.x / screenSize.y;
 		auto PxToSprite = [&](const glm::vec2& px) { return glm::vec3((px.x / screenSize.x * 2.0f - 1.0f) * aspectRatio, 1.0f - px.y / screenSize.y * 2.0f, 0.0f); };
-		auto Quad = [&](const glm::vec2& px, real halfSizePx, const glm::vec4& colour)
-		{
-			SpriteQuadDrawInfo drawInfo = {};
-			drawInfo.anchor = AnchorPoint::CENTER;
-			drawInfo.bScreenSpace = true;
-			drawInfo.bReadDepth = false;
-			drawInfo.bEnableAlbedoSampler = false;
-			drawInfo.zOrder = Z_ORDER_UI + 10;
-			drawInfo.colour = colour;
-			drawInfo.pos = PxToSprite(px);
-			drawInfo.scale = glm::vec3(glm::vec2(halfSizePx * 2.0f / screenSize.y), 1.0f);
-			g_Renderer->EnqueueSprite(drawInfo);
-		};
 
 		SpriteQuadDrawInfo mapSprite = {};
 		mapSprite.textureID = m_MinimapTextureID;
@@ -1984,15 +2443,12 @@ namespace flex
 		mapSprite.scale = glm::vec3(glm::vec2(mapSizePx / screenSize.y), 1.0f);
 		g_Renderer->EnqueueSprite(mapSprite);
 
-		// Player marker & heading
+		// The player, as an arrow pointing the way they're facing
 		glm::vec2 offset = glm::vec2(pos.x - m_Minimap.center.x, -(pos.z - m_Minimap.center.z)) / m_Minimap.extent;
 		offset = glm::clamp(offset, glm::vec2(-0.95f), glm::vec2(0.95f));
 		const glm::vec2 markerPx = mapCenterPx + offset * mapSizePx * 0.5f;
-		glm::vec2 forward(camera->forward.x, -camera->forward.z);
-		forward = glm::length(forward) > 1e-4f ? glm::normalize(forward) : glm::vec2(0.0f, -1.0f);
-		Quad(markerPx, 6.0f * scale, UITheme::INK);
-		Quad(markerPx, 4.0f * scale, UITheme::TEXT_PRIMARY);
-		Quad(markerPx + forward * 12.0f * scale, 3.0f * scale, UITheme::EMBER);
+		const glm::vec3 look = player != nullptr ? player->GetLookDirection() : camera->forward;
+		DrawMapPlayerArrow(markerPx, glm::vec2(look.x, -look.z), 26.0f * scale, Z_ORDER_UI + 10);
 	}
 
 	// Draws a rectangle outline with dashes moving around it (used to show chunks being loaded)
@@ -2192,7 +2648,7 @@ namespace flex
 			{
 				return a.key.level > b.key.level;
 			});
-			const real dashOffset = (real)glm::mod(g_SecElapsedSinceProgramStart * 12.0f, 1000.0f);
+			const real dashOffset = (real)std::fmod(g_SecElapsedSinceProgramStart * 12.0, 1000.0);
 			for (const terrain::TerrainStreamer::DisplayedChunkInfo& chunk : chunks)
 			{
 				if (chunk.bEmpty)
@@ -2442,6 +2898,17 @@ namespace flex
 		parentObject.fields.emplace_back("chunk generator info", JSONValue(chunkGenInfo));
 	}
 
+	glm::vec3 TerrainGenerator::FindSpawnPoint() const
+	{
+		const u64 start = Time::NowTicks();
+		const terrain::TerrainDensity density(m_Params);
+		const terrain::SpawnSearchResult result = terrain::FindSpawnPoint(density);
+		Print("Spawn point for seed %d: (%.1f, %.1f, %.1f), %.0fm from the origin%s (%u samples, %.1f ms)\n", m_Params.seed,
+			result.pos.x, result.pos.y, result.pos.z, glm::length(glm::vec2(result.pos.x, result.pos.z)),
+			result.bIdeal ? "" : ", no ideal spot found", result.samples, Time::MillisecondsSince(start));
+		return result.pos;
+	}
+
 	void TerrainGenerator::SetWorld(i32 seed, const std::string& saveDirectory)
 	{
 		// The previous world's edits are saved to its own directory before switching
@@ -2600,6 +3067,7 @@ namespace flex
 
 	void TerrainGenerator::DestroyChunkRigidBody(Chunk& chunk)
 	{
+		PROFILE_AUTO("TerrainGenerator DestroyChunkRigidBody");
 		if (chunk.rigidBody != nullptr)
 		{
 			chunk.rigidBody->Destroy();
@@ -2607,22 +3075,44 @@ namespace flex
 			chunk.rigidBody = nullptr;
 		}
 
-		delete chunk.collisionShape;
-		chunk.collisionShape = nullptr;
-
-		delete chunk.triangleIndexVertexArray;
-		chunk.triangleIndexVertexArray = nullptr;
-
 		if (chunk.foliageRigidBody != nullptr)
 		{
 			chunk.foliageRigidBody->Destroy();
 			delete chunk.foliageRigidBody;
 			chunk.foliageRigidBody = nullptr;
 		}
-		delete chunk.foliageCollisionShape;
+
+		// Nothing references the shapes now that the bodies are out of the physics world. Freeing their trees takes a
+		// while, which adds up when many chunks are unloaded at once, so it's done in the background.
+		struct CollisionGarbage
+		{
+			~CollisionGarbage()
+			{
+				delete collisionShape;
+				delete triangleIndexVertexArray;
+				delete foliageCollisionShape;
+				delete foliageTriangleIndexVertexArray;
+				// (After the shapes referencing its triangles)
+				collisionData.reset();
+			}
+
+			btCollisionShape* collisionShape;
+			btTriangleIndexVertexArray* triangleIndexVertexArray;
+			btCollisionShape* foliageCollisionShape;
+			btTriangleIndexVertexArray* foliageTriangleIndexVertexArray;
+			std::shared_ptr<ChunkCollisionBuild> collisionData;
+		};
+		if (chunk.collisionShape != nullptr || chunk.triangleIndexVertexArray != nullptr || chunk.foliageCollisionShape != nullptr ||
+			chunk.foliageTriangleIndexVertexArray != nullptr || chunk.collisionData != nullptr)
+		{
+			JobSystem::DeleteInBackground(new CollisionGarbage{ chunk.collisionShape, chunk.triangleIndexVertexArray, chunk.foliageCollisionShape,
+				chunk.foliageTriangleIndexVertexArray, std::move(chunk.collisionData) });
+		}
+		chunk.collisionShape = nullptr;
+		chunk.triangleIndexVertexArray = nullptr;
 		chunk.foliageCollisionShape = nullptr;
-		delete chunk.foliageTriangleIndexVertexArray;
 		chunk.foliageTriangleIndexVertexArray = nullptr;
+		chunk.collisionData.reset();
 	}
 
 	void TerrainGenerator::BuildChunkCollisionShapes(Chunk& chunk)
@@ -2650,7 +3140,7 @@ namespace flex
 			part.m_numTriangles = (i32)((indexCount - chunk.collisionIndexCount) / 3);
 			chunk.foliageTriangleIndexVertexArray = new btTriangleIndexVertexArray();
 			chunk.foliageTriangleIndexVertexArray->addIndexedMesh(part, PHY_INTEGER);
-			chunk.foliageCollisionShape = new btBvhTriangleMeshShape(chunk.foliageTriangleIndexVertexArray, false);
+			chunk.foliageCollisionShape = new btBvhTriangleMeshShape(chunk.foliageTriangleIndexVertexArray, true);
 		}
 	}
 
@@ -2692,6 +3182,7 @@ namespace flex
 
 	void TerrainGenerator::DestroyChunk(Chunk& chunk)
 	{
+		PROFILE_AUTO("TerrainGenerator DestroyChunk");
 		DestroyChunkRigidBody(chunk);
 
 		auto DestroyMeshComponent = [this](MeshComponent*& meshComponent, i32& submeshIndex)

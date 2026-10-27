@@ -61,6 +61,10 @@ namespace flex
 			void Free(VkDeviceSize offset);
 			// TODO: Add tests
 			void Shrink(real minUnused = 0.0f);
+			// End of the last allocation
+			FLEX_NO_DISCARD VkDeviceSize GetUsedSize() const;
+			// Recreates the buffer with the given size, preserving its contents (& allocations)
+			VkResult Resize(VkDeviceSize newSize);
 			// TODO: Add defragment helper
 
 			// Returns size of allocation, or (VkDeviceSize)-1 if not found
@@ -80,8 +84,6 @@ namespace flex
 
 		private:
 			void UpdateAllocationSize(VkDeviceSize offset, VkDeviceSize newSize);
-			// Recreates the buffer with the given size, preserving existing contents of host visible buffers
-			VkResult Resize(VkDeviceSize newSize);
 
 		};
 	} // namespace vk

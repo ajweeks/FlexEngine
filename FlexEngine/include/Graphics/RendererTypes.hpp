@@ -1426,6 +1426,10 @@ namespace flex
 		u32 pushConstantBlockSize = 0;
 
 		u32 dynamicVertexBufferSize = 0; // TODO: Define through materials
+		// Dynamic vertex & index data is kept in device local memory & uploaded through a staging buffer. Much faster
+		// to draw (host visible memory is read over PCIe every frame) but slower to update, so for meshes which rarely
+		// change after being created (e.g. terrain chunks).
+		bool bDeviceLocalDynamicBuffers = false;
 
 		RenderPassType renderPassType = RenderPassType::_NONE;
 

@@ -10,12 +10,14 @@ IGNORE_WARNINGS_POP
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
+#include "GameControls.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
 #include "Localization.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Platform/Platform.hpp"
+#include "Profiler.hpp"
 #include "SaveFile.hpp"
 #include "Player.hpp"
 #include "PlayerController.hpp"
@@ -25,7 +27,9 @@ IGNORE_WARNINGS_POP
 #include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/Objects/Treasure.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Systems/TrackManager.hpp"
 #include "Time.hpp"
+#include "Traversal.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -92,6 +96,151 @@ namespace flex
 		{
 			return (i32)((Time::NowTicks() * 2654435761ull) >> 16 & 0x7FFFFFFF);
 		}
+
+		// For measuring frame times & hitches while terrain streams in: FLEX_PLAY_BENCHMARK=<seconds> (with --play) walks,
+		// then glides & dives in a wingsuit in a fixed direction using injected input, then prints the profile (including
+		// the frame time distribution & every hitch) and quits. FLEX_HITCH_LOG=1 only logs hitches during regular play.
+		class PlayBenchmark
+		{
+		public:
+			// Quits if the benchmark hasn't finished long after it should have (e.g. stuck on a screen other than
+			// gameplay), so scripted runs can't hang
+			void Watchdog()
+			{
+				const char* durationStr = getenv("FLEX_PLAY_BENCHMARK");
+				if (durationStr != nullptr && !m_bDone && g_SecElapsedSinceProgramStart > atof(durationStr) + 300.0)
+				{
+					m_bDone = true;
+					PrintError("Play benchmark didn't finish in time, quitting\n");
+					g_EngineInstance->Stop();
+				}
+			}
+
+			void Update(Player* player)
+			{
+				if (player == nullptr || m_bDone || (!m_bStarted && player->IsAwaitingTerrainCollision()))
+				{
+					return;
+				}
+
+				const char* durationStr = getenv("FLEX_PLAY_BENCHMARK");
+				if (!m_bStarted)
+				{
+					m_bStarted = true;
+					Profiler::Reset();
+					Profiler::SetEnabled(true);
+					Profiler::SetHitchLogging(true);
+					if (durationStr == nullptr)
+					{
+						// Hitch logging only
+						m_bDone = true;
+						return;
+					}
+					m_Duration = glm::max((real)atof(durationStr), 10.0f);
+					g_InputManager->SetIgnoreWindowFocus(true);
+					m_StartPos = player->GetTransform()->GetWorldPosition();
+					Print("Play benchmark: %.0fs from (%.1f, %.1f, %.1f)\n", m_Duration, m_StartPos.x, m_StartPos.y, m_StartPos.z);
+				}
+
+				// Real time, so a slow frame doesn't shorten the distance covered
+				m_Time += g_UnpausedDeltaTime;
+				const glm::vec3 dir = glm::normalize(glm::vec3(1.0f, 0.0f, 0.35f));
+				const glm::vec3 pos = player->GetTransform()->GetWorldPosition();
+				Traversal* traversal = player->GetTraversal();
+				TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+				const real groundHeight = terrainGenerator != nullptr ? terrainGenerator->SampleHeight(glm::vec2(pos.x, pos.z)) : pos.y;
+
+				if (m_Time < m_Duration * 0.25f)
+				{
+					// Sprint
+					if (!m_bWalking)
+					{
+						m_bWalking = true;
+						Look(player, dir, 0.0f);
+						Press(KeyCode::KEY_W);
+						Press(KeyCode::KEY_LEFT_SHIFT);
+					}
+				}
+				else if (m_Time < m_Duration)
+				{
+					if (m_bWalking)
+					{
+						m_bWalking = false;
+						Release(KeyCode::KEY_W);
+						Release(KeyCode::KEY_LEFT_SHIFT);
+					}
+					// Fly: start high up, glide for a while, then dive in the wingsuit (much faster), climbing back up whenever
+					// too close to the ground
+					m_FlightTime += g_UnpausedDeltaTime;
+					if (pos.y - groundHeight < 40.0f && m_FlightTime > 1.0f)
+					{
+						Release(KeyCode::KEY_LEFT_CONTROL);
+						player->GetTransform()->SetWorldPosition(glm::vec3(pos.x, glm::max(pos.y, groundHeight) + 180.0f, pos.z));
+						player->GetRigidBody()->GetRigidBodyInternal()->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+						Look(player, dir, 0.0f);
+						m_FlightTime = 0.0f;
+					}
+					if (m_FlightTime > 0.3f && traversal->GetMode() == Traversal::Mode::NONE && !player->IsGrounded())
+					{
+						// Opens the glider (released again next frame)
+						Press(KeyCode::KEY_SPACE);
+						m_bSpaceHeld = true;
+					}
+					else if (m_bSpaceHeld)
+					{
+						Release(KeyCode::KEY_SPACE);
+						m_bSpaceHeld = false;
+					}
+					if (m_FlightTime > 4.0f && traversal->GetMode() == Traversal::Mode::GLIDING)
+					{
+						Press(KeyCode::KEY_LEFT_CONTROL);
+						Look(player, dir, -20.0f);
+					}
+				}
+				else
+				{
+					m_bDone = true;
+					Release(KeyCode::KEY_LEFT_CONTROL);
+					Release(KeyCode::KEY_SPACE);
+					const glm::vec3 endPos = player->GetTransform()->GetWorldPosition();
+					Print("Play benchmark: travelled %.0fm horizontally\n", glm::length(glm::vec2(endPos.x - m_StartPos.x, endPos.z - m_StartPos.z)));
+					Profiler::PrintReport();
+					Profiler::SetEnabled(false);
+					g_EngineInstance->Stop();
+				}
+			}
+
+		private:
+			static void Press(KeyCode key)
+			{
+				g_InputManager->KeyCallback(key, KeyAction::KEY_PRESS, 0);
+			}
+
+			static void Release(KeyCode key)
+			{
+				g_InputManager->KeyCallback(key, KeyAction::KEY_RELEASE, 0);
+			}
+
+			// Points the player along a horizontal direction, pitched up (+) or down (-) by the given degrees
+			static void Look(Player* player, const glm::vec3& horizontalDir, real pitchDegrees)
+			{
+				const real yaw = std::atan2(glm::cross(VEC3_FORWARD, horizontalDir).y, glm::dot(VEC3_FORWARD, horizontalDir));
+				player->GetTransform()->SetWorldRotation(glm::angleAxis(yaw, VEC3_UP));
+				player->AddToPitch(-player->GetPitch() + 0.1f);
+				const real upSign = player->GetLookDirection().y > 0.0f ? 1.0f : -1.0f;
+				player->AddToPitch(-player->GetPitch() + upSign * glm::radians(pitchDegrees));
+			}
+
+			bool m_bStarted = false;
+			bool m_bDone = false;
+			bool m_bWalking = false;
+			bool m_bSpaceHeld = false;
+			real m_Duration = 0.0f;
+			sec m_Time = 0.0f;
+			sec m_FlightTime = 0.0f;
+			glm::vec3 m_StartPos;
+		};
+		PlayBenchmark s_PlayBenchmark;
 
 		// Untextured quad drawn after the UI (so it's on top of sprites like the map), centered on a pixel position
 		void EnqueueOverlayQuad(const glm::vec2& centerPx, const glm::vec2& halfSizePx, const glm::vec4& colour, const glm::vec2& screenSize, u32 zOrder = 90)
@@ -465,7 +614,29 @@ namespace flex
 			Next();
 		} break;
 		case 13: if (m_TourTime > 1.0f) { Screenshot("pause"); Next(); } break;
-		case 14: if (m_TourTime > 0.5f) { SetScreen(Screen::MAP); Next(); } break;
+		case 14:
+		{
+			// The controls screen (from the pause menu), then the map. A screenshot is of the frame drawn after this
+			// update, so the screen changes a moment after it's requested.
+			static bool s_bControlsCaptured = false;
+			if (!s_bControlsCaptured && m_Screen == Screen::PAUSED && m_TourTime > 0.5f)
+			{
+				m_ScreenBeforeSettings = Screen::PAUSED;
+				SetScreen(Screen::CONTROLS);
+				m_TourTime = 0.0f;
+			}
+			else if (!s_bControlsCaptured && m_Screen == Screen::CONTROLS && m_TourTime > 1.0f)
+			{
+				Screenshot("controls");
+				s_bControlsCaptured = true;
+				m_TourTime = 0.0f;
+			}
+			else if (s_bControlsCaptured && m_TourTime > 0.25f)
+			{
+				SetScreen(Screen::MAP);
+				Next();
+			}
+		} break;
 		case 15:
 		{
 			TextureID textureID;
@@ -566,7 +737,7 @@ namespace flex
 		} break;
 		case 18: if (m_TourTime > 3.0f) { Screenshot("cave"); Next(); } break;
 		case 19: if (m_TourTime > 0.5f) { LeaveWorld(); m_SelectedWorld = 0; SetScreen(Screen::WORLDS); Next(); } break;
-		case 20: if (m_TourTime > 1.5f) { Screenshot("worlds"); Next(); } break;
+		case 20: if (m_TourTime > 1.5f) { Screenshot("worlds"); Print("Tour: a new world would be named \"%s\"\n", NextWorldName().c_str()); Next(); } break;
 		case 21:
 		{
 			if (m_TourTime > 1.0f)
@@ -617,6 +788,8 @@ namespace flex
 			m_bMapPanning = false;
 			break;
 		case Screen::SETTINGS:
+		case Screen::CONTROLS:
+			// (Stays paused if opened from the pause menu)
 			g_Window->SetCursorMode(CursorMode::NORMAL);
 			break;
 		case Screen::NONE:
@@ -648,6 +821,7 @@ namespace flex
 			SetScreen(Screen::PLAYING);
 			break;
 		case Screen::SETTINGS:
+		case Screen::CONTROLS:
 			m_SettingsFile.Serialize();
 			SetScreen(m_ScreenBeforeSettings);
 			if (m_ScreenBeforeSettings == Screen::PAUSED)
@@ -712,6 +886,7 @@ namespace flex
 
 		m_UI.BeginFrame();
 		m_ScreenTime += g_UnpausedDeltaTime;
+		s_PlayBenchmark.Watchdog();
 		if (m_bTour)
 		{
 			UpdateTour();
@@ -746,6 +921,7 @@ namespace flex
 		case Screen::WORLDS: DrawWorlds(); break;
 		case Screen::NEW_WORLD: DrawNewWorld(); break;
 		case Screen::SETTINGS: DrawSettings(); break;
+		case Screen::CONTROLS: DrawControls(); break;
 		case Screen::LOADING: DrawLoading(); break;
 		case Screen::PAUSED: DrawPauseMenu(); break;
 		case Screen::MAP: DrawMap(); break;
@@ -784,7 +960,11 @@ namespace flex
 				}
 			}
 			Player* player = scene->GetPlayer(0);
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_M) && player != nullptr && !player->IsAnyInventoryShowing())
+			if (getenv("FLEX_PLAY_BENCHMARK") != nullptr || getenv("FLEX_HITCH_LOG") != nullptr)
+			{
+				s_PlayBenchmark.Update(player);
+			}
+			if (g_InputManager->GetKeyPressed(GameKeys::MAP) && player != nullptr && !player->IsAnyInventoryShowing())
 			{
 				SetScreen(Screen::MAP);
 			}
@@ -898,6 +1078,11 @@ namespace flex
 			m_ScreenBeforeSettings = Screen::MAIN_MENU;
 			SetScreen(Screen::SETTINGS);
 		}
+		if (m_UI.Button("controls", column.CutTop(buttonHeight, gap), LOC(MainMenu_Controls)))
+		{
+			m_ScreenBeforeSettings = Screen::MAIN_MENU;
+			SetScreen(Screen::CONTROLS);
+		}
 		if (m_UI.Button("editor", column.CutTop(buttonHeight, gap), LOC(MainMenu_Editor)))
 		{
 			EnterEditor();
@@ -976,7 +1161,7 @@ namespace flex
 		}
 		if (m_UI.Button("new", UIRect(buttons.x + (buttonWidth + 12.0f * s), buttons.y, buttonWidth, buttons.h), LOC(Worlds_New)))
 		{
-			m_NewWorldName = LOCF(Worlds_DefaultName, (i32)m_Worlds.size() + 1);
+			m_NewWorldName = NextWorldName();
 			m_NewWorldSeed = IntToString(RandomSeed());
 			SetScreen(Screen::NEW_WORLD);
 		}
@@ -1161,6 +1346,172 @@ namespace flex
 		}
 	}
 
+	void Game::DrawControls()
+	{
+		const real s = m_UI.Scale();
+		if (m_ScreenBeforeSettings == Screen::PAUSED)
+		{
+			m_UI.FillRect(UIRect(0.0f, 0.0f, m_UI.Width(), m_UI.Height()), UITheme::WithAlpha(UITheme::INK, 0.6f));
+		}
+		else
+		{
+			DrawBackground(1.0f);
+		}
+		DrawTitle(LOC(Controls_Title), LOC(Controls_Subtitle));
+
+		// Keys come from the input bindings (Actions) & GameKeys (keys the game checks directly), so this stays right
+		// when either changes
+		using Keys = std::vector<std::string>;
+		auto KeyName = [](KeyCode keyCode) { return std::string(KeyCodeStrings[(u32)keyCode]); };
+		auto MouseName = [](MouseButton button) { return std::string(MouseButtonStrings[(u32)button]); };
+		auto Bound = [&](std::initializer_list<Action> actions)
+		{
+			Keys keys;
+			for (Action action : actions)
+			{
+				const InputBinding& binding = g_InputManager->GetActionBinding(action);
+				if (binding.keyCode != KeyCode::_NONE)
+				{
+					keys.push_back(KeyName(binding.keyCode));
+				}
+				if (binding.mouseButton != MouseButton::_NONE)
+				{
+					keys.push_back(MouseName(binding.mouseButton));
+				}
+				if (binding.mouseAxis == MouseAxis::SCROLL_X || binding.mouseAxis == MouseAxis::SCROLL_Y)
+				{
+					keys.push_back(LOC(Controls_KeyScroll));
+				}
+			}
+			// (Pairs of actions, like scrolling forward & back, can share a binding)
+			keys.erase(std::unique(keys.begin(), keys.end()), keys.end());
+			if (keys.empty())
+			{
+				keys.push_back(LOC(Input_Unbound));
+			}
+			return keys;
+		};
+
+		// Quick access slots are selected with the number keys, from 1 (0 is the 10th)
+		const i32 slotKeyCount = glm::min((i32)Player::QUICK_ACCESS_ITEM_COUNT, 10);
+		const std::string slotKeys = KeyName(KeyCode::KEY_1) + "-" + KeyName(slotKeyCount == 10 ? KeyCode::KEY_0 : (KeyCode)((i32)KeyCode::KEY_1 + slotKeyCount - 1));
+		Keys selectItemKeys = Bound({ Action::CYCLE_SELECTED_ITEM_FORWARD, Action::CYCLE_SELECTED_ITEM_BACKWARD });
+		selectItemKeys.push_back(slotKeys);
+
+		struct Row
+		{
+			const char* label;
+			Keys keys;
+		};
+		struct Section
+		{
+			const char* title;
+			std::vector<Row> rows;
+		};
+		// One column each, except the last column which holds the last two sections
+		const Section sections[] =
+		{
+			{ LOC(Controls_Movement), {
+				{ LOC(Controls_Move), Bound({ Action::MOVE_FORWARD, Action::MOVE_LEFT, Action::MOVE_BACKWARD, Action::MOVE_RIGHT }) },
+				{ LOC(Controls_Look), { LOC(Controls_KeyMouse) } },
+				{ LOC(Controls_Jump), Bound({ Action::PLACE_ITEM }) },
+				{ LOC(Controls_Sprint), { KeyName(GameKeys::SPRINT) } },
+				{ LOC(Controls_Climb), { KeyName(GameKeys::CLIMB) } },
+				{ LOC(Controls_Crouch), { KeyName(GameKeys::CROUCH) } },
+				{ LOC(Controls_GrapplingHook), { KeyName(GameKeys::GRAPPLING_HOOK) } },
+			} },
+			{ LOC(Controls_Items), {
+				{ LOC(Controls_UseItem), { MouseName(GameKeys::USE_ITEM) } },
+				{ LOC(Controls_UseItemSecondary), { MouseName(GameKeys::USE_ITEM_SECONDARY) } },
+				{ LOC(Controls_FlattenTerrain), { MouseName(GameKeys::TERRAIN_FLATTEN) } },
+				{ LOC(Controls_SelectItem), selectItemKeys },
+				{ LOC(Controls_Inventory), Bound({ Action::SHOW_INVENTORY }) },
+				{ LOC(Controls_Interact), Bound({ Action::INTERACT_RIGHT_HAND }) },
+				{ LOC(Controls_PickUp), Bound({ Action::PICKUP_ITEM }) },
+				{ LOC(Controls_Drop), Bound({ Action::DROP_ITEM }) },
+			} },
+			{ LOC(Controls_Building), {
+				{ LOC(Controls_BuildMode), { KeyName(GameKeys::BUILD_MODE) } },
+				{ LOC(Controls_BuildRotate), { KeyName(GameKeys::BUILD_ROTATE) } },
+				{ LOC(Controls_BuildMaterial), { KeyName(GameKeys::BUILD_MATERIAL) } },
+				{ LOC(Controls_Campfire), { KeyName(GameKeys::CAMPFIRE) } },
+				{ LOC(Controls_TerrainMaterial), { KeyName(GameKeys::TERRAIN_MATERIAL) } },
+				{ LOC(Controls_TrackBuild), Bound({ Action::ENTER_TRACK_BUILD_MODE }) },
+			} },
+			{ LOC(Controls_General), {
+				{ LOC(Controls_Map), { KeyName(GameKeys::MAP) } },
+				{ LOC(Controls_Pause), Bound({ Action::PAUSE }) },
+				{ LOC(Controls_Screenshot), Bound({ Action::TAKE_SCREENSHOT }) },
+			} },
+		};
+
+		const real rowHeight = 38.0f * s;
+		const real headingHeight = 52.0f * s;
+		const real columnGap = UITheme::SPACE_XXL * s;
+		const real panelWidth = glm::min(1440.0f * s, m_UI.Width() - 2.0f * UITheme::SCREEN_MARGIN * s);
+		const real sectionGap = UITheme::SPACE_L * s;
+		real columnHeights[3] = {};
+		for (u32 sectionIndex = 0; sectionIndex < ARRAY_LENGTH(sections); ++sectionIndex)
+		{
+			real& height = columnHeights[glm::min(sectionIndex, 2u)];
+			height += (height > 0.0f ? sectionGap : 0.0f) + headingHeight + (real)sections[sectionIndex].rows.size() * rowHeight;
+		}
+		const real panelHeight = 2.0f * UITheme::SPACE_XL * s + glm::max(columnHeights[0], glm::max(columnHeights[1], columnHeights[2]));
+		const UIRect panel(UITheme::SCREEN_MARGIN * s, 400.0f * s, panelWidth, panelHeight);
+		m_UI.Panel(panel);
+		const UIRect content = panel.Inset(UITheme::SPACE_XL * s);
+		const real columnWidth = (content.w - 2.0f * columnGap) / 3.0f;
+
+		const real keyTextSize = UITheme::TEXT_CAPTION * s;
+		const real keyHeight = 28.0f * s;
+		const real keyPadding = 10.0f * s;
+		UIRect column;
+		for (u32 sectionIndex = 0; sectionIndex < ARRAY_LENGTH(sections); ++sectionIndex)
+		{
+			const u32 columnIndex = glm::min(sectionIndex, 2u);
+			if (sectionIndex == columnIndex)
+			{
+				column = UIRect(content.x + (columnWidth + columnGap) * (real)columnIndex, content.y, columnWidth, content.h);
+			}
+			else
+			{
+				column.CutTop(sectionGap);
+			}
+
+			const Section& section = sections[sectionIndex];
+			const UIRect heading = column.CutTop(headingHeight);
+			m_UI.Text(section.title, heading.x, heading.y + heading.h * 0.4f, UITheme::TEXT_BODY_LARGE * s, UITheme::EMBER, TextAlign::LEFT, true);
+			m_UI.FillRect(UIRect(heading.x, heading.y + heading.h - 10.0f * s, heading.w, 1.0f * s), UITheme::OUTLINE);
+
+			for (const Row& row : section.rows)
+			{
+				const UIRect rect = column.CutTop(rowHeight);
+				const real centerY = rect.y + rect.h * 0.5f;
+				m_UI.Text(row.label, rect.x, centerY, UITheme::TEXT_BODY * s, UITheme::TEXT_SECONDARY);
+				// Key caps, right aligned
+				real right = rect.x + rect.w;
+				for (auto iter = row.keys.rbegin(); iter != row.keys.rend(); ++iter)
+				{
+					const real width = glm::max(m_UI.MeasureText(*iter, keyTextSize) + keyPadding * 2.0f, keyHeight);
+					const UIRect cap(right - width, centerY - keyHeight * 0.5f, width, keyHeight);
+					m_UI.FillRectGradient(cap, UITheme::RAISED_HOVER, UITheme::RAISED, UITheme::RADIUS_S * s);
+					m_UI.Text(*iter, cap.x + cap.w * 0.5f, centerY, keyTextSize, UITheme::TEXT_PRIMARY, TextAlign::CENTER);
+					right -= width + UITheme::SPACE_XS * s * 1.5f;
+				}
+			}
+		}
+
+		const UIRect back(panel.x, panel.y + panel.h + UITheme::SPACE_XL * s, 440.0f * s, UITheme::BUTTON_HEIGHT * s);
+		if (m_UI.Button("back", back, LOC(Common_Back), true))
+		{
+			SetScreen(m_ScreenBeforeSettings);
+			if (m_ScreenBeforeSettings == Screen::PAUSED)
+			{
+				g_EngineInstance->SetSimulationPaused(true);
+			}
+		}
+	}
+
 	void Game::DrawLoading()
 	{
 		const real s = m_UI.Scale();
@@ -1249,8 +1600,8 @@ namespace flex
 		const real panelWidth = 460.0f * s;
 		const real buttonHeight = UITheme::BUTTON_HEIGHT * s;
 		const real gap = UITheme::SPACING * s;
-		// Sized to fit the title, five buttons & padding
-		const real panelHeight = 116.0f * s + 5.0f * (buttonHeight + gap) - gap + 56.0f * s;
+		// Sized to fit the title, six buttons & padding
+		const real panelHeight = 116.0f * s + 6.0f * (buttonHeight + gap) - gap + 56.0f * s;
 		const UIRect panel(m_UI.Width() * 0.5f - panelWidth * 0.5f, m_UI.Height() * 0.5f - panelHeight * 0.5f, panelWidth, panelHeight);
 		m_UI.Panel(panel);
 		UIRect content = panel.Inset(28.0f * s);
@@ -1273,6 +1624,12 @@ namespace flex
 			m_ScreenBeforeSettings = Screen::PAUSED;
 			SetScreen(Screen::SETTINGS);
 			g_EngineInstance->SetSimulationPaused(true);
+			return;
+		}
+		if (m_UI.Button("controls", content.CutTop(buttonHeight, gap), LOC(Pause_Controls)))
+		{
+			m_ScreenBeforeSettings = Screen::PAUSED;
+			SetScreen(Screen::CONTROLS);
 			return;
 		}
 		if (m_UI.Button("menu", content.CutTop(buttonHeight, gap), LOC(Pause_QuitToMenu)))
@@ -1336,7 +1693,7 @@ namespace flex
 				}
 			}
 		}
-		if (g_InputManager->GetKeyPressed(KeyCode::KEY_C))
+		if (g_InputManager->GetKeyPressed(GameKeys::MAP_RECENTER))
 		{
 			m_bMapFollowPlayer = true;
 			m_bMapPanning = false;
@@ -1428,6 +1785,30 @@ namespace flex
 			m_UI.Text(LOCF(Map_Scale, 2.0f * viewExtent / 1000.0f), frame.x, frame.y + frame.h + 30.0f * s, UITheme::TEXT_CAPTION * s, UITheme::TEXT_SECONDARY);
 		}
 
+		// Legend (left of the map, when there's room)
+		if (frame.x > 220.0f * s)
+		{
+			const real iconX = frame.x - 28.0f * s;
+			const real textX = iconX - 20.0f * s;
+			real y = frame.y + frame.h - 8.0f * s;
+			const real rowHeight = 30.0f * s;
+			// (Text is positioned by its baseline, icons by their centers)
+			auto Row = [&](const std::string& label)
+			{
+				m_UI.Text(label, textX, y, UITheme::TEXT_CAPTION * s, UITheme::TEXT_SECONDARY, TextAlign::RIGHT);
+				const glm::vec2 iconPx(iconX, y - 6.0f * s);
+				y -= rowHeight;
+				return iconPx;
+			};
+			const glm::vec2 openedPx = Row(LOC(Map_LegendOpened));
+			EnqueueOverlayQuad(openedPx, glm::vec2(7.0f * s), UITheme::INK, screenSize);
+			EnqueueOverlayQuad(openedPx, glm::vec2(5.0f * s), UITheme::Hex(0x8C8273), screenSize);
+			const glm::vec2 treasurePx = Row(LOC(Map_LegendTreasure));
+			EnqueueOverlayQuad(treasurePx, glm::vec2(7.0f * s), UITheme::INK, screenSize);
+			EnqueueOverlayQuad(treasurePx, glm::vec2(5.0f * s), UITheme::GOLD, screenSize);
+			terrainGenerator->DrawMapPlayerArrow(Row(LOC(Map_LegendYou)), glm::vec2(0.0f, -1.0f), 26.0f * s, 90);
+		}
+
 		if (!bHaveMap)
 		{
 			m_UI.Text(LOC(Map_Mapping), mapRect.x + mapRect.w * 0.5f, mapRect.y + mapRect.h * 0.5f, UITheme::TEXT_BODY_LARGE * s, UITheme::TEXT_SECONDARY, TextAlign::CENTER);
@@ -1457,12 +1838,7 @@ namespace flex
 			glm::vec2 heading(look.x, -look.z);
 			heading = glm::length(heading) > 1e-4f ? glm::normalize(heading) : glm::vec2(0.0f, -1.0f);
 			const real size = bInView ? 1.0f : 0.75f;
-			EnqueueOverlayQuad(px, glm::vec2(8.0f * s * size), UITheme::INK, screenSize);
-			EnqueueOverlayQuad(px, glm::vec2(6.0f * s * size), UITheme::TEXT_PRIMARY, screenSize);
-			if (bInView)
-			{
-				EnqueueOverlayQuad(px + heading * 16.0f * s, glm::vec2(4.0f * s), UITheme::EMBER, screenSize);
-			}
+			terrainGenerator->DrawMapPlayerArrow(px, heading, 30.0f * s * size, 90);
 		}
 
 		// Hovered point: what's there, & teleporting to it
@@ -1487,7 +1863,7 @@ namespace flex
 			}
 		}
 
-		if (g_InputManager->GetKeyPressed(KeyCode::KEY_M) && m_ScreenTime > 0.1f)
+		if (g_InputManager->GetKeyPressed(GameKeys::MAP) && m_ScreenTime > 0.1f)
 		{
 			SetScreen(Screen::PLAYING);
 		}
@@ -1555,13 +1931,32 @@ namespace flex
 		{
 			// Doesn't exist yet: create it
 			Print("No world named \"%s\", creating it\n", s_AutoPlayWorldName.c_str());
-			CreateWorld(s_AutoPlayWorldName, RandomSeed());
+			// FLEX_PLAY_SEED=<seed> makes runs comparable (e.g. benchmarks of a newly created world)
+			CreateWorld(s_AutoPlayWorldName, getenv("FLEX_PLAY_SEED") != nullptr ? atoi(getenv("FLEX_PLAY_SEED")) : RandomSeed());
 		}
 		else if (m_Worlds.empty())
 		{
 			Print("No worlds to play, creating one\n");
-			CreateWorld(LOCF(Worlds_DefaultName, 1), RandomSeed());
+			CreateWorld(NextWorldName(), RandomSeed());
 		}
+	}
+
+	std::string Game::NextWorldName() const
+	{
+		// Finds the highest n among worlds named like the default name (e.g. "World %d"). A first world with another
+		// name counts as 1, so the next is "World 2".
+		const std::string pattern = std::string(LOC(Worlds_DefaultName)) + "%n";
+		i32 highest = m_Worlds.empty() ? 0 : 1;
+		for (const WorldInfo& world : m_Worlds)
+		{
+			i32 n = 0;
+			i32 length = -1;
+			if (sscanf(world.name.c_str(), pattern.c_str(), &n, &length) == 1 && length == (i32)world.name.size())
+			{
+				highest = glm::max(highest, n);
+			}
+		}
+		return LOCF(Worlds_DefaultName, highest + 1);
 	}
 
 	void Game::RefreshWorlds()
@@ -1646,6 +2041,9 @@ namespace flex
 
 	void Game::ClearWorldObjects()
 	{
+		// (also removes the tracks' meshes from the scene)
+		GetSystem<TrackManager>(SystemType::TRACK_MANAGER)->ClearTracks();
+
 		BaseScene* scene = g_SceneManager->CurrentScene();
 		std::vector<GameObject*> toRemove;
 		for (GameObject* rootObject : scene->GetRootObjects())
@@ -1723,6 +2121,18 @@ namespace flex
 			}
 		}
 
+		// Tracks (before the objects, as carts refer to them)
+		TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+		JSONObject tracksObj;
+		if (worldObj.TryGetObject("tracks", tracksObj))
+		{
+			trackManager->InitializeFromJSON(tracksObj);
+		}
+		else
+		{
+			trackManager->ClearTracks();
+		}
+
 		// Everything built & placed in the world
 		std::vector<JSONObject> objects;
 		if (worldObj.TryGetObjectArray("objects", objects))
@@ -1745,9 +2155,10 @@ namespace flex
 		real pitch = 0.0f;
 		JSONObject playerObj;
 		const bool bHasPlayer = worldObj.TryGetObject("player", playerObj);
+		bool bHasPosition = false;
 		if (bHasPlayer)
 		{
-			playerObj.TryGetVec3("position", position);
+			bHasPosition = playerObj.TryGetVec3("position", position);
 			// Saved as a quaternion (x, y, z, w). JSONObject::GetQuat expects euler angles (as transforms are saved),
 			// so this is read directly.
 			for (const JSONField& field : playerObj.fields)
@@ -1765,9 +2176,11 @@ namespace flex
 			}
 			playerObj.TryGetFloat("pitch", pitch);
 		}
-		else if (terrainGenerator != nullptr)
+		if (!bHasPosition && terrainGenerator != nullptr)
 		{
-			position.y = 2000.0f;
+			// A new world (or one saved without a position): start on flat, low ground near the origin, found from
+			// the density alone. The player is held there until the terrain's collision below has loaded.
+			position = terrainGenerator->FindSpawnPoint() + VEC3_UP * 2.0f;
 		}
 
 		g_CameraManager->SetCameraByName("first-person", false);
@@ -1788,7 +2201,7 @@ namespace flex
 		m_LoadRotation = rotation;
 		m_LoadPitch = pitch;
 		// A saved position is kept exactly where it's clear of the terrain (it may be on top of something built)
-		player->TeleportOnTerrain(position, bHasPlayer);
+		player->TeleportOnTerrain(position, bHasPosition);
 		player->UpdateIsPossessed();
 
 		JSONObject inventoryObj;
@@ -1800,14 +2213,7 @@ namespace flex
 		{
 			// A fresh start: just the basic tools (in the first quick access slots)
 			player->ResetInventory();
-			for (const char* toolName : { "pickaxe", "axe", "shovel" })
-			{
-				const PrefabID toolID = g_ResourceManager->GetPrefabID(toolName);
-				if (toolID.IsValid())
-				{
-					player->AddToInventory(toolID, 1);
-				}
-			}
+			player->AddStarterKit();
 		}
 
 		ApplySettings();
@@ -1871,6 +2277,7 @@ namespace flex
 			objects.push_back(rootObject->Serialize(scene, true, false));
 		}
 		worldObj.fields.emplace_back("objects", JSONValue(objects));
+		worldObj.fields.emplace_back("tracks", JSONValue(GetSystem<TrackManager>(SystemType::TRACK_MANAGER)->Serialize()));
 
 		std::vector<JSONField> chestFields;
 		for (u64 chest : TreasureChest::GetOpenedChests())

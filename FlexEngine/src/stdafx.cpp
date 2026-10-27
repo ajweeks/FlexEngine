@@ -64,7 +64,12 @@ namespace flex
 	const bool g_bDebugBuild = false;
 #endif
 
-	sec g_SecElapsedSinceProgramStart = 0;
+	double g_SecElapsedSinceProgramStart = 0;
+
+	real AnimationTime()
+	{
+		return (real)std::fmod(g_SecElapsedSinceProgramStart, 400.0 * 3.14159265358979323846);
+	}
 	sec g_DeltaTime = 0;
 	const sec g_FixedDeltaTime = 1.0f / 60.0f;
 	sec g_UnpausedDeltaTime = 0;

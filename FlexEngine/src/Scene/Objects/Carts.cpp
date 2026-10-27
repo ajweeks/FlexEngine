@@ -80,6 +80,31 @@ namespace flex
 		GameObject::Initialize();
 	}
 
+	void BaseCart::Update()
+	{
+		if (m_bDerailed)
+		{
+			// Fall until landing on the ground
+			const glm::vec3 pos = m_Transform.GetWorldPosition();
+			m_FallSpeed = glm::min(m_FallSpeed + 9.81f * g_DeltaTime, 30.0f);
+			const real fallDist = m_FallSpeed * g_DeltaTime;
+			glm::vec3 groundPos;
+			TrackManager* trackManager = GetSystem<TrackManager>(SystemType::TRACK_MANAGER);
+			if (trackManager->FindGroundBelow(pos + VEC3_UP * 0.5f, fallDist + 0.5f, groundPos))
+			{
+				m_Transform.SetWorldPosition(groundPos);
+				m_bDerailed = false;
+				m_FallSpeed = 0.0f;
+			}
+			else if (pos.y > -10000.0f)
+			{
+				m_Transform.SetWorldPosition(pos - VEC3_UP * fallDist);
+			}
+		}
+
+		GameObject::Update();
+	}
+
 	void BaseCart::Destroy(bool bDetachFromParent)
 	{
 		GetSystem<CartManager>(SystemType::CART_MANAGER)->DeregisterCart(this);
@@ -136,6 +161,22 @@ namespace flex
 		distAlongTrack = -1.0f;
 	}
 
+	void BaseCart::Derail()
+	{
+		OnTrackDismount();
+		if (chainID != InvalidCartChainID)
+		{
+			CartChain* chain = GetSystem<CartManager>(SystemType::CART_MANAGER)->GetCartChain(chainID);
+			if (chain != nullptr)
+			{
+				chain->Remove(cartID);
+			}
+			chainID = InvalidCartChainID;
+		}
+		m_bDerailed = true;
+		m_FallSpeed = 0.0f;
+	}
+
 	void BaseCart::SetItemHolding(GameObject* obj)
 	{
 		FLEX_UNUSED(obj);
@@ -169,7 +210,21 @@ namespace flex
 				currentTrackID = newTrackID;
 				distAlongTrack = newDistAlongTrack;
 
-				velocityT = (distAlongTrack > 0.5f ? -1.0f : 1.0f);
+				// Keep going the same way: tracks can join end to end in either direction. FACING_BACKWARD faces towards
+				// increasing t (see TrackManager::GetPointOnTrack)
+				if (trackState != TrackState::_NONE)
+				{
+					velocityT = (trackState == TrackState::FACING_BACKWARD) ? 1.0f : -1.0f;
+				}
+				else
+				{
+					velocityT = (distAlongTrack > 0.5f ? -1.0f : 1.0f);
+				}
+			}
+			else if (newTrackID == currentTrackID)
+			{
+				// Stopped at the end of the line
+				distAlongTrack = newDistAlongTrack;
 			}
 
 			if (currentTrackID != InvalidTrackID)
@@ -403,27 +458,21 @@ namespace flex
 		powerRemaining -= powerDrainMultiplier * g_DeltaTime;
 		powerRemaining = glm::max(powerRemaining, 0.0f);
 
-		if (chainID == InvalidCartChainID)
+		const TrackID pTrackID = currentTrackID;
+		if (chainID == InvalidCartChainID && currentTrackID != InvalidTrackID)
 		{
+			// velocityT tracks which way along the track the cart is going, so it's kept when switching tracks
+			velocityT = moveDirection;
 			real dT = g_DeltaTime * GetDrivePower();
 			AdvanceAlongTrack(dT);
 		}
 
 		if (currentTrackID != InvalidTrackID && powerRemaining > 0.0f)
 		{
-			TrackID pTrackID = currentTrackID;
-
 			bool bSwitchedTracks = (currentTrackID != pTrackID);
 			if (bSwitchedTracks)
 			{
-				if (distAlongTrack > 0.5f)
-				{
-					moveDirection = -1.0f;
-				}
-				else
-				{
-					moveDirection = 1.0f;
-				}
+				moveDirection = velocityT;
 			}
 			else if (distAlongTrack == -1.0f ||
 				(distAlongTrack == 1.0f && moveDirection > 0.0f) ||
@@ -433,7 +482,7 @@ namespace flex
 			}
 		}
 
-		GameObject::Update();
+		BaseCart::Update();
 	}
 
 	void EngineCart::DrawImGuiObjects(bool bDrawingEditorObjects)

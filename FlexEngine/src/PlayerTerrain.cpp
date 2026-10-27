@@ -18,17 +18,21 @@ IGNORE_WARNINGS_POP
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
+#include "Game.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
+#include "GameControls.hpp"
 #include "InputManager.hpp"
 #include "Inventory.hpp"
 #include "Localization.hpp"
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
+#include "Platform/Platform.hpp"
 #include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/Objects/Campfire.hpp" // For the placement preview test
 #include "Scene/Objects/Industry.hpp"
 #include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/SceneManager.hpp"
@@ -72,20 +76,96 @@ namespace flex
 			}
 		}
 
-		// New holes/mounds start at this fraction of their full size (so there's immediate feedback)
-		const real STROKE_START_RADIUS = 0.35f;
-		// How much a hole/mound must grow by (meters) before it's applied again (each application re-meshes chunks)
-		const real STROKE_RADIUS_STEP = 0.1f;
+		// Dig & fill strokes move the surface by this much (meters, along the edit normal)
+		const real STROKE_DEPTH = 1.0f;
+		// Edit planes are snapped to multiples of this along their normal, so neighbouring holes, mounds & flattened
+		// areas line up, & repeated edits build flat surfaces. Each step a stroke moves is one edit.
+		const real LEVEL_STEP = 0.25f;
 		// At most this many edits are made per second, & only once the previous edit's chunks have been re-meshed
 		const real MAX_TERRAIN_EDIT_RATE = 15.0f;
 		// The aim moved this far (meters) off the hole/mound being worked on starts a new one
 		const real STROKE_AIM_SLACK = 0.6f;
+		// Each flatten "dab" takes this much longer than a fill stroke, & isn't repeated until the aim has moved this
+		// fraction of the brush's radius
+		const real FLATTEN_TIME_SCALE = 1.5f;
+		const real FLATTEN_SPACING = 0.3f;
+		// Edit planes within this angle (radians) of level are level
+		const real LEVEL_SNAP_ANGLE = 0.35f;
+
+		// Dig & fill strokes take this much longer than the tools' dig times (which were for a sphere of the brush's
+		// radius)
+		const real STROKE_TIME_SCALE = 2.0f;
+
+		const u64 BRUSH_PREVIEW_KEY = 1;
+		// Where the brush was last shown (for the test's log)
+		glm::vec3 s_LastBrushCenter = VEC3_ZERO;
+		glm::vec3 s_LastBrushNormal = VEC3_UP;
+		// Frames an edit waited because it would bury the player, or for re-meshing (for the test's log)
+		u32 s_BlockedFrames = 0;
+		u32 s_ApplyingFrames = 0;
+		const glm::vec4 BRUSH_IDLE_COLOUR(0.8f, 0.9f, 1.2f, 0.3f);
+		const glm::vec4 BRUSH_DIG_COLOUR(1.6f, 0.75f, 0.25f, 0.45f);
+		const glm::vec4 BRUSH_FILL_COLOUR(0.45f, 1.0f, 1.6f, 0.45f);
+		const glm::vec4 BRUSH_FLATTEN_COLOUR(0.6f, 1.6f, 0.5f, 0.45f);
+
+		// direction < 0: down to the step below, > 0: up to the step above, 0: nearest
+		real SnapLevel(real level, i32 direction)
+		{
+			const real steps = level / LEVEL_STEP;
+			return (direction < 0 ? std::floor(steps) : (direction > 0 ? std::ceil(steps) : std::round(steps))) * LEVEL_STEP;
+		}
+
+		// Snaps a direction to 15 degree steps of pitch (from up) & 22.5 degree steps of heading (& to up near it), so
+		// edits made from slightly different angles share a plane orientation
+		glm::vec3 QuantizeEditNormal(const glm::vec3& normal)
+		{
+			const real length = glm::length(normal);
+			if (length < 1e-6f)
+			{
+				return VEC3_UP;
+			}
+			const glm::vec3 n = normal / length;
+			const real pitchStep = PI / 12.0f;
+			const real yawStep = PI / 8.0f;
+			real pitch = std::acos(glm::clamp(n.y, -1.0f, 1.0f));
+			if (pitch < LEVEL_SNAP_ANGLE)
+			{
+				return VEC3_UP;
+			}
+			if (pitch > PI - LEVEL_SNAP_ANGLE)
+			{
+				return -VEC3_UP;
+			}
+			pitch = std::round(pitch / pitchStep) * pitchStep;
+			const real yaw = std::round(std::atan2(n.x, n.z) / yawStep) * yawStep;
+			return glm::vec3(std::sin(pitch) * std::sin(yaw), std::cos(pitch), std::sin(pitch) * std::cos(yaw));
+		}
+
+		// A ring at the brush's radius (where it stops having any effect) & a fainter one where it's at full strength
+		void BuildBrushGeometry(PlacementPreview::Geometry& geometry)
+		{
+			geometry.Ring(0.95f, 1.0f, 0.05f, 48);
+			geometry.Ring(0.43f, 0.46f, 0.03f, 32);
+		}
 	} // anonymous namespace
 
 	void Player::UpdateTerrainTool()
 	{
 		m_bTerrainToolActive = false;
 		m_TimeSinceTerrainEdit += g_DeltaTime;
+		// (hidden unless it's shown below)
+		PlacementPreview::Frame brushFrame(m_TerrainBrushPreview);
+
+		if (m_TerrainTestStep == -2)
+		{
+			const char* testMode = getenv("FLEX_TEST_TERRAIN_TOOL");
+			m_TerrainTestMode = testMode != nullptr ? atoi(testMode) : 0;
+			m_TerrainTestStep = m_TerrainTestMode > 0 ? 0 : -1;
+		}
+		if (m_TerrainTestStep >= 0)
+		{
+			UpdateTerrainToolTest();
+		}
 
 		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
 		const StringID toolTypeID = GetWieldedToolType();
@@ -103,11 +183,12 @@ namespace flex
 			(m_Woodcraft != nullptr && m_Woodcraft->BlocksTerrainTool()))
 		{
 			EndTerrainStroke();
+			m_bFlattenPlaneLocked = false;
 			return;
 		}
 
 		const i32 materialCount = (i32)ARRAY_LENGTH(terrain::FILL_MATERIALS);
-		if (g_InputManager->GetKeyPressed(KeyCode::KEY_R))
+		if (g_InputManager->GetKeyPressed(GameKeys::TERRAIN_MATERIAL))
 		{
 			const i32 step = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT) != 0 ? -1 : 1;
 			m_TerrainFillMaterialIndex = (m_TerrainFillMaterialIndex + step + materialCount) % materialCount;
@@ -115,12 +196,14 @@ namespace flex
 			EndTerrainStroke();
 		}
 		m_TerrainFillMaterialIndex = glm::clamp(m_TerrainFillMaterialIndex, 0, materialCount - 1);
+		const terrain::Material fillMaterial = terrain::FILL_MATERIALS[m_TerrainFillMaterialIndex];
 
 		BaseCamera* camera = g_CameraManager->CurrentCamera();
 		glm::vec3 hitPos, hitNormal;
 		// Digging into the same spot again looks through the hole just dug, at its far side (up to a dig radius
 		// further away). Surfaces a little past the reach are still dug into, with the brush held at the reach.
-		const real rayLength = m_TerrainToolReach + m_TerrainDigRadius * 0.9f;
+		const real radius = m_TerrainDigRadius;
+		const real rayLength = m_TerrainToolReach + radius * 0.9f;
 		if (!terrainGenerator->Raycast(camera->position, camera->forward, rayLength, hitPos, hitNormal))
 		{
 			EndTerrainStroke();
@@ -133,24 +216,62 @@ namespace flex
 		}
 		m_bTerrainToolActive = true;
 
-		const bool bDig = g_InputManager->IsMouseButtonDown(MouseButton::LEFT) || m_TestTerrainAction == 1;
-		const bool bFill = !bDig && (g_InputManager->IsMouseButtonDown(MouseButton::RIGHT) || m_TestTerrainAction == 2);
+		TerrainToolAction action = TerrainToolAction::NONE;
+		if (g_InputManager->IsMouseButtonDown(GameKeys::USE_ITEM) || m_TestTerrainAction == 1)
+		{
+			action = TerrainToolAction::DIG;
+		}
+		else if (g_InputManager->IsMouseButtonDown(GameKeys::USE_ITEM_SECONDARY) || m_TestTerrainAction == 2)
+		{
+			action = TerrainToolAction::FILL;
+		}
+		else if (g_InputManager->IsMouseButtonDown(GameKeys::TERRAIN_FLATTEN) || m_TestTerrainAction == 3)
+		{
+			action = TerrainToolAction::FLATTEN;
+		}
+		if (action != TerrainToolAction::FLATTEN)
+		{
+			// (a new plane is picked the next time the button is pressed)
+			m_bFlattenPlaneLocked = false;
+			m_LastFlattenCenter = glm::vec3(1e30f);
+		}
+
+		auto ShowBrush = [&](const glm::vec3& center, const glm::vec3& normal, const glm::vec4& colour)
+		{
+			// (lifted a little, so it isn't hidden by the surface it lies on)
+			s_LastBrushCenter = center;
+			s_LastBrushNormal = normal;
+			m_TerrainBrushPreview.Show(BRUSH_PREVIEW_KEY, BuildBrushGeometry, center + normal * 0.03f, RotationFromUp(normal), glm::vec3(radius), colour);
+		};
+		// The plane a stroke is moving the surface to, progress [0, 1] of the way through it
+		auto StrokeLevel = [&](real progress)
+		{
+			const TerrainStroke& stroke = m_TerrainStroke;
+			if (stroke.action == TerrainToolAction::FLATTEN)
+			{
+				return stroke.startLevel;
+			}
+			const real amount = STROKE_DEPTH * progress;
+			return stroke.action == TerrainToolAction::DIG ? SnapLevel(stroke.startLevel - amount, -1) : SnapLevel(stroke.startLevel + amount, 1);
+		};
 
 		if (m_TerrainStroke.bActive)
 		{
-			const bool bComplete = m_TerrainStroke.progress >= 1.0f && m_TerrainStroke.appliedRadius >= m_TerrainDigRadius - 1e-3f;
-			const real currentRadius = glm::max(m_TerrainStroke.appliedRadius, m_TerrainDigRadius * STROKE_START_RADIUS);
-			const bool bAimedAway = glm::distance(hitPos, GetTerrainStrokeCenter(currentRadius)) > currentRadius + STROKE_AIM_SLACK;
-			if ((!bDig && !bFill) || m_TerrainStroke.bFill != bFill || bComplete || bAimedAway)
+			const glm::vec3 offset = hitPos - m_TerrainStroke.anchor;
+			const real lateral = glm::length(offset - m_TerrainStroke.normal * glm::dot(offset, m_TerrainStroke.normal));
+			const bool bComplete = m_TerrainStroke.action != TerrainToolAction::FLATTEN && m_TerrainStroke.progress >= 1.0f &&
+				m_TerrainStroke.bApplied && m_TerrainStroke.appliedLevel == StrokeLevel(1.0f);
+			const bool bAimedAway = m_TerrainStroke.action != TerrainToolAction::FLATTEN && lateral > radius * 0.5f + STROKE_AIM_SLACK;
+			if (action != m_TerrainStroke.action || bComplete || bAimedAway)
 			{
 				EndTerrainStroke();
 			}
 		}
 
-		if (!bDig && !bFill)
+		if (action == TerrainToolAction::NONE)
 		{
-			// Where a hole would be dug
-			g_Renderer->GetDebugRenderer()->drawSphere(ToBtVec3(hitPos), m_TerrainDigRadius * 0.98f, btVector3(1.0f, 0.6f, 0.15f));
+			// Where the brush would start
+			ShowBrush(hitPos, ChooseTerrainEditNormal(toolTypeID, hitPos, hitNormal), BRUSH_IDLE_COLOUR);
 			return;
 		}
 
@@ -158,22 +279,103 @@ namespace flex
 		{
 			m_TerrainStroke = {};
 			m_TerrainStroke.bActive = true;
-			m_TerrainStroke.bFill = bFill;
+			m_TerrainStroke.action = action;
 			m_TerrainStroke.anchor = hitPos;
-			m_TerrainStroke.normal = hitNormal;
-			m_TerrainStroke.hardness = bFill ? 0.0f : SampleTerrainHardness(hitPos, hitNormal);
-			m_TerrainStroke.progress = STROKE_START_RADIUS * STROKE_START_RADIUS * STROKE_START_RADIUS;
+			if (action == TerrainToolAction::FLATTEN)
+			{
+				if (!m_bFlattenPlaneLocked)
+				{
+					// To the level first aimed at, kept until the button is released
+					m_bFlattenPlaneLocked = true;
+					m_FlattenNormal = ChooseTerrainEditNormal(toolTypeID, hitPos, hitNormal);
+					m_FlattenLevel = SnapLevel(glm::dot(hitPos, m_FlattenNormal), 0);
+				}
+				m_TerrainStroke.normal = m_FlattenNormal;
+				m_TerrainStroke.startLevel = m_FlattenLevel;
+			}
+			else
+			{
+				m_TerrainStroke.normal = ChooseTerrainEditNormal(toolTypeID, hitPos, hitNormal);
+				m_TerrainStroke.startLevel = glm::dot(hitPos, m_TerrainStroke.normal);
+
+				// Still working on the same spot: carry on from the last stroke, so holes deepen straight down with a flat
+				// bottom (rather than funnelling towards wherever the aim lands on their walls) & mounds rise as columns
+				const TerrainStroke& last = m_LastTerrainStroke;
+				if (last.bApplied && last.action == action && m_TimeSinceTerrainEdit < 1.0f)
+				{
+					const glm::vec3 offset = hitPos - last.anchor;
+					const real lateral = glm::length(offset - last.normal * glm::dot(offset, last.normal));
+					if (lateral < radius * 0.6f)
+					{
+						m_TerrainStroke.anchor = last.anchor;
+						m_TerrainStroke.normal = last.normal;
+						m_TerrainStroke.startLevel = last.appliedLevel;
+					}
+				}
+			}
+			m_TerrainStroke.hardness = action == TerrainToolAction::DIG ? SampleTerrainHardness(hitPos, hitNormal) : 0.0f;
+		}
+		if (action == TerrainToolAction::FLATTEN)
+		{
+			// The flattening brush follows the aim (on its plane)
+			m_TerrainStroke.anchor = hitPos;
 		}
 
-		// Volume grows at a constant rate (so the radius with its cube root)
-		const real strokeTime = bFill ? digTimes.fill : Lerp(digTimes.loose, digTimes.rock, m_TerrainStroke.hardness);
-		// (a long frame, e.g. a hitch, doesn't dig a whole hole at once)
+		real strokeTime = digTimes.fill * STROKE_TIME_SCALE;
+		if (action == TerrainToolAction::DIG)
+		{
+			strokeTime = Lerp(digTimes.loose, digTimes.rock, m_TerrainStroke.hardness) * STROKE_TIME_SCALE;
+		}
+		else if (action == TerrainToolAction::FLATTEN)
+		{
+			strokeTime = digTimes.fill * FLATTEN_TIME_SCALE;
+		}
+		// (a long frame, e.g. a hitch, doesn't make a whole stroke at once)
 		m_TerrainStroke.progress = glm::min(m_TerrainStroke.progress + glm::min(g_DeltaTime, 0.1f) / strokeTime, 1.0f);
-		const real radius = m_TerrainDigRadius * std::cbrt(m_TerrainStroke.progress);
-		const glm::vec3 center = GetTerrainStrokeCenter(radius);
 
-		g_Renderer->GetDebugRenderer()->drawSphere(ToBtVec3(center), radius * 0.98f,
-			bFill ? btVector3(0.3f, 0.8f, 1.0f) : btVector3(1.0f, 0.6f, 0.15f));
+		const real level = StrokeLevel(m_TerrainStroke.progress);
+		const glm::vec3 normal = m_TerrainStroke.normal;
+		const glm::vec3 center = GetTerrainStrokeCenter(level);
+
+		bool bWantsEdit;
+		if (action == TerrainToolAction::FLATTEN)
+		{
+			bWantsEdit = m_TerrainStroke.progress >= 1.0f;
+		}
+		else
+		{
+			// (the first step needs to move the surface noticeably)
+			bWantsEdit = m_TerrainStroke.bApplied ? level != m_TerrainStroke.appliedLevel : glm::abs(level - m_TerrainStroke.startLevel) > 0.02f;
+		}
+
+		// Don't bury ourselves: much of the capsule below the new surface, within the brush (the capsule's bottom sits
+		// a little below the surface anyway, since the collision mesh is coarser than the density)
+		bool bBlocked = false;
+		if (action != TerrainToolAction::DIG)
+		{
+			const glm::vec3 offset = m_Transform.GetWorldPosition() - center;
+			const real axial = glm::dot(offset, normal);
+			const real lateral = glm::length(offset - normal * axial);
+			const real lowest = axial - (glm::abs(normal.y) * glm::max(m_Height * 0.5f - m_Radius, 0.0f) + m_Radius);
+			bBlocked = lateral < radius * 0.8f + m_Radius && lowest < -0.6f && axial > -m_Height;
+		}
+
+		glm::vec4 brushColour = BRUSH_DIG_COLOUR;
+		if (bBlocked)
+		{
+			brushColour = PlacementPreview::INVALID_COLOUR;
+		}
+		else if (action == TerrainToolAction::FILL)
+		{
+			brushColour = BRUSH_FILL_COLOUR;
+		}
+		else if (action == TerrainToolAction::FLATTEN)
+		{
+			brushColour = BRUSH_FLATTEN_COLOUR;
+		}
+		// (on the surface made so far, rather than on the plane being moved towards, which may be buried)
+		const real shownLevel = action == TerrainToolAction::FLATTEN ? level : (m_TerrainStroke.bApplied ? m_TerrainStroke.appliedLevel : m_TerrainStroke.startLevel);
+		ShowBrush(GetTerrainStrokeCenter(shownLevel), normal, brushColour);
 
 		if (m_ToolSwingTimer <= 0.0f)
 		{
@@ -182,63 +384,92 @@ namespace flex
 
 		// Rate limited, & waiting for the previous edit's chunks (restarting their re-meshing each frame could mean
 		// they never finish)
-		const bool bGrown = radius - m_TerrainStroke.appliedRadius >= STROKE_RADIUS_STEP ||
-			(m_TerrainStroke.progress >= 1.0f && radius > m_TerrainStroke.appliedRadius);
-		if (!bGrown || m_TimeSinceTerrainEdit < 1.0f / MAX_TERRAIN_EDIT_RATE || terrainGenerator->IsApplyingEdits())
+		if (!bWantsEdit || bBlocked || m_TimeSinceTerrainEdit < 1.0f / MAX_TERRAIN_EDIT_RATE || terrainGenerator->IsApplyingEdits())
 		{
-			if (bGrown)
+			if (bWantsEdit)
 			{
 				m_TestTerrainWaitTime += g_DeltaTime;
+				s_BlockedFrames += bBlocked ? 1 : 0;
+				s_ApplyingFrames += terrainGenerator->IsApplyingEdits() ? 1 : 0;
 			}
 			return;
 		}
 
-		if (bFill)
+		if (action == TerrainToolAction::FLATTEN)
 		{
-			// Don't bury ourselves (distance to the capsule's axis)
-			const glm::vec3 playerPos = m_Transform.GetWorldPosition();
-			const real axisHalfLength = m_Height * 0.5f - m_Radius;
-			const glm::vec3 closestOnAxis = playerPos + VEC3_UP * glm::clamp(center.y - playerPos.y, -axisHalfLength, axisHalfLength);
-			if (glm::distance(center, closestOnAxis) <= radius + m_Radius + 0.2f)
+			// (not again & again on the same spot while the aim is held still)
+			if (glm::distance(center, m_LastFlattenCenter) > radius * FLATTEN_SPACING)
 			{
-				return;
+				terrainGenerator->FlattenArea(center, normal, radius, fillMaterial);
+				m_LastFlattenCenter = center;
+				m_TerrainStroke.bApplied = true;
+				m_TerrainStroke.appliedLevel = level;
+				m_TimeSinceTerrainEdit = 0.0f;
+				++m_TestTerrainEditCount;
 			}
-			terrainGenerator->Fill(center, radius, terrain::FILL_MATERIALS[m_TerrainFillMaterialIndex]);
+			// Each dab is its own stroke
+			EndTerrainStroke();
+			return;
+		}
+
+		// Reaching from the plane to past the surface the stroke started from (& any slope around it)
+		const real height = glm::abs(level - m_TerrainStroke.startLevel) + radius + 0.5f;
+		if (action == TerrainToolAction::FILL)
+		{
+			terrainGenerator->RaiseArea(center, normal, radius, fillMaterial, height);
 		}
 		else
 		{
-			// Small scraps left floating are removed once the hole is finished (see EndTerrainStroke)
-			terrainGenerator->Dig(center, radius, false);
+			terrainGenerator->LowerArea(center, normal, radius, height);
 		}
-		m_TerrainStroke.appliedRadius = radius;
+		m_TerrainStroke.bApplied = true;
+		m_TerrainStroke.appliedLevel = level;
 		m_TimeSinceTerrainEdit = 0.0f;
 		++m_TestTerrainEditCount;
 	}
 
 	void Player::EndTerrainStroke()
 	{
-		if (m_TerrainStroke.bActive && m_TerrainStroke.appliedRadius > 0.0f)
+		if (m_TerrainStroke.bActive && m_TerrainStroke.bApplied)
 		{
+			m_LastTerrainStroke = m_TerrainStroke;
 			++m_TestTerrainStrokeCount;
-		}
-		if (m_TerrainStroke.bActive && !m_TerrainStroke.bFill && m_TerrainStroke.appliedRadius > 0.0f)
-		{
-			// Re-applying the same dig (which replaces the previous edit) also removes any scraps of terrain it left
-			// floating
-			if (TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive())
+			if (m_TerrainStroke.action != TerrainToolAction::FILL)
 			{
-				terrainGenerator->Dig(m_TerrainStroke.anchor, m_TerrainStroke.appliedRadius, true);
-				m_TimeSinceTerrainEdit = 0.0f;
+				// Removes any scraps of terrain the stroke left floating
+				if (TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive())
+				{
+					terrainGenerator->RemoveFloatingFragments(GetTerrainStrokeCenter(m_TerrainStroke.appliedLevel), m_TerrainDigRadius + 1.0f);
+				}
 			}
 		}
 		m_TerrainStroke = {};
 	}
 
-	glm::vec3 Player::GetTerrainStrokeCenter(real radius) const
+	glm::vec3 Player::GetTerrainStrokeCenter(real level) const
 	{
-		// Placed material sits on top of the surface. Each mound contains the previous (smaller) one, so they replace
-		// each other as they grow (see terrain::EditStore::Add).
-		return m_TerrainStroke.bFill ? m_TerrainStroke.anchor + m_TerrainStroke.normal * radius * 0.6f : m_TerrainStroke.anchor;
+		// The anchor, moved along the normal onto the plane
+		return m_TerrainStroke.anchor + m_TerrainStroke.normal * (level - glm::dot(m_TerrainStroke.anchor, m_TerrainStroke.normal));
+	}
+
+	glm::vec3 Player::ChooseTerrainEditNormal(StringID toolTypeID, const glm::vec3& hitPos, const glm::vec3& hitNormal) const
+	{
+		glm::vec3 normal = hitNormal;
+		if (TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive())
+		{
+			const glm::vec3 smoothNormal = terrainGenerator->SampleSmoothNormal(hitPos, m_TerrainDigRadius * 0.6f);
+			// (unless the surface aimed at is something thin, which the average says little about)
+			if (glm::dot(smoothNormal, hitNormal) > 0.3f)
+			{
+				normal = smoothNormal;
+			}
+		}
+		if (toolTypeID == ShovelSID && normal.y > -0.3f)
+		{
+			// Shovels work the ground: level, or close to it
+			normal = glm::normalize(glm::mix(normal, VEC3_UP, 0.7f));
+		}
+		return QuantizeEditNormal(normal);
 	}
 
 	real Player::SampleTerrainHardness(const glm::vec3& pos, const glm::vec3& normal) const
@@ -280,12 +511,107 @@ namespace flex
 		return glm::max(surfaceHardness, depthHardness);
 	}
 
-	void Player::TeleportOnTerrain(const glm::vec3& pos, bool bKeepExactPosition /* = false */)
+	void Player::TeleportOnTerrain(const glm::vec3& pos, bool bKeepExactPosition /* = false */, bool bFade /* = true */)
 	{
 		m_Transform.SetWorldPosition(pos);
 		m_RigidBody->GetRigidBodyInternal()->setLinearVelocity(btVector3(0, 0, 0));
 		m_bTerrainPlacementPending = true;
 		m_bTerrainPlacementExact = bKeepExactPosition;
+		if (bFade)
+		{
+			StartTeleportFade();
+		}
+	}
+
+	void Player::StartTeleportFade()
+	{
+		m_TeleportFadeState = TeleportFadeState::HOLDING;
+		m_TeleportFadeAlpha = 1.0f;
+		m_TeleportFadeTime = 0.0f;
+		m_TeleportPlacedTime = 0.0f;
+	}
+
+	void Player::UpdateTeleportFade()
+	{
+		if (m_TeleportFadeState == TeleportFadeState::NONE)
+		{
+			return;
+		}
+
+		// (Unscaled, so slow motion can't stretch it out)
+		const sec dt = g_UnpausedDeltaTime;
+		const bool bInGame = g_Game == nullptr || g_Game->IsPlaying();
+		m_TeleportFadeTime += dt;
+
+		if (m_TeleportFadeState == TeleportFadeState::HOLDING)
+		{
+			// Placed once collision has loaded below the player (or there's no streamed terrain to wait for)
+			const bool bPlaced = !IsAwaitingTerrainCollision() || TerrainGenerator::GetActive() == nullptr;
+			m_TeleportPlacedTime = bPlaced ? m_TeleportPlacedTime + dt : 0.0f;
+
+			// Landed: standing on the ground, or settled for a moment (e.g. swimming, or held up by something else)
+			const real speed = glm::length(ToVec3(m_RigidBody->GetRigidBodyInternal()->getLinearVelocity()));
+			const bool bLanded = bPlaced &&
+				((m_bGrounded && m_TeleportPlacedTime > 0.05f) ||
+				 m_RidingVehicleID.IsValid() ||
+				 (speed < 1.0f && m_TeleportPlacedTime > 0.5f) ||
+				 m_TeleportPlacedTime > 2.0f);
+
+			// Never black for longer than this, even if the terrain failed to load
+			const sec TIMEOUT = 12.0f;
+			const sec MIN_HOLD = 0.1f;
+			if ((bLanded && m_TeleportFadeTime > MIN_HOLD) || m_TeleportFadeTime > TIMEOUT)
+			{
+				if (!bLanded)
+				{
+					PrintWarn("Teleport fade timed out waiting for the player to be placed\n");
+				}
+				// Over the loading screen, stay black until it's gone so the world fades in after it
+				if (bInGame)
+				{
+					m_TeleportFadeState = TeleportFadeState::FADING_IN;
+					Print("Teleport: player landed after %.2fs (placed for %.2fs, grounded: %d), fading in\n", m_TeleportFadeTime, m_TeleportPlacedTime, (i32)m_bGrounded);
+				}
+			}
+		}
+		else if (m_TeleportFadeState == TeleportFadeState::FADING_IN)
+		{
+			const sec FADE_IN_DURATION = 0.35f;
+			m_TeleportFadeAlpha -= dt / FADE_IN_DURATION;
+			if (m_TeleportFadeAlpha <= 0.0f)
+			{
+				m_TeleportFadeAlpha = 0.0f;
+				m_TeleportFadeState = TeleportFadeState::NONE;
+			}
+		}
+	}
+
+	void Player::DrawTeleportFade() const
+	{
+		if (m_TeleportFadeAlpha <= 0.0f)
+		{
+			return;
+		}
+		// Not over menus/the loading screen (which have their own backgrounds), or while flying the debug camera
+		BaseCamera* camera = g_CameraManager->CurrentCamera();
+		if ((g_Game != nullptr && !g_Game->IsPlaying()) || camera == nullptr || !camera->bPossessPlayer)
+		{
+			return;
+		}
+
+		const glm::vec2i windowSize = g_Window->GetSize();
+		const real aspectRatio = (real)glm::max(windowSize.x, 1) / (real)glm::max(windowSize.y, 1);
+		SpriteQuadDrawInfo drawInfo = {};
+		drawInfo.anchor = AnchorPoint::CENTER;
+		drawInfo.bScreenSpace = true;
+		drawInfo.bReadDepth = false;
+		drawInfo.bEnableAlbedoSampler = false;
+		// Above the HUD (& minimap)
+		drawInfo.zOrder = Z_ORDER_UI + 40;
+		drawInfo.colour = glm::vec4(0.0f, 0.0f, 0.0f, glm::smoothstep(0.0f, 1.0f, m_TeleportFadeAlpha));
+		drawInfo.pos = VEC3_ZERO;
+		drawInfo.scale = glm::vec3(aspectRatio * 1.05f, 1.05f, 1.0f);
+		g_Renderer->EnqueueSprite(drawInfo);
 	}
 
 	void Player::PlaceOnTerrain(bool bKeepHeight)
@@ -452,6 +778,7 @@ namespace flex
 		lines.push_back(ToUpper(title));
 		lines.push_back(toolTypeID == ShovelSID ? LOC(TerrainTool_DigLoose) : LOC(TerrainTool_DigRock));
 		lines.push_back(LOCF(TerrainTool_Place, material.c_str()));
+		lines.push_back(LOC(TerrainTool_Flatten));
 		lines.push_back(LOC(TerrainTool_ChangeMaterial));
 
 		BitmapFont* font = g_Renderer->SetFont(SID("editor-02"));
@@ -464,6 +791,295 @@ namespace flex
 		{
 			g_Renderer->DrawStringSS(lines[i], i == 0 ? titleColour : textColour, AnchorPoint::BOTTOM_LEFT, glm::vec2(0.03f, yOffset), 1.5f, 0.6f);
 			yOffset += lineHeight;
+		}
+	}
+
+	void Player::UpdateTerrainToolTest()
+	{
+		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+		if (!m_bPossessed || terrainGenerator == nullptr || IsAwaitingTerrainCollision() || !terrainGenerator->IsLoadComplete() ||
+			g_CameraManager->CurrentCamera() == nullptr)
+		{
+			m_TerrainTestTime = 0.0f;
+			return;
+		}
+		m_TerrainTestTime += g_UnpausedDeltaTime;
+		const sec t = m_TerrainTestTime;
+
+		auto Screenshot = [](const char* name)
+		{
+			const std::string directory = RelativePathToAbsolute(SCREENSHOT_DIRECTORY);
+			Platform::CreateDirectoryRecursive(directory);
+			g_Renderer->RequestScreenshot(directory + "terrain_" + name + ".png");
+			Print("Terrain tool test: screenshot %s (brush at (%.2f, %.2f, %.2f), normal (%.2f, %.2f, %.2f))\n", name,
+				s_LastBrushCenter.x, s_LastBrushCenter.y, s_LastBrushCenter.z, s_LastBrushNormal.x, s_LastBrushNormal.y, s_LastBrushNormal.z);
+		};
+		auto Next = [this]() { ++m_TerrainTestStep; m_TerrainTestTime = 0.0f; };
+		// Whether the test time just passed time
+		auto At = [t](sec time) { return t >= time && t - g_UnpausedDeltaTime < time; };
+		auto SetYaw = [this](real yaw) { m_Transform.SetWorldRotation(glm::angleAxis(yaw, VEC3_UP)); };
+		auto Hold = [this](const char* itemName)
+		{
+			const PrefabID itemID = g_ResourceManager->GetPrefabID(itemName);
+			for (i32 attempt = 0; attempt < 2; ++attempt)
+			{
+				for (i32 i = 0; i < (i32)QUICK_ACCESS_ITEM_COUNT; ++i)
+				{
+					if (m_QuickAccessInventory[i].prefabID == itemID && m_QuickAccessInventory[i].count > 0)
+					{
+						SetSelectedQuickAccessItemSlot(i);
+						return;
+					}
+				}
+				AddToInventory(itemID, 1);
+			}
+			PrintError("Terrain tool test: couldn't hold %s\n", itemName);
+		};
+		auto Stats = [this, terrainGenerator](const char* what)
+		{
+			Print("Terrain tool test: %s: %u strokes, %u edits applied, %.2fs waiting (%u frames blocked by the player, %u re-meshing), %u saved edits\n", what,
+				m_TestTerrainStrokeCount, m_TestTerrainEditCount, m_TestTerrainWaitTime, s_BlockedFrames, s_ApplyingFrames, terrainGenerator->GetEditCount());
+			s_BlockedFrames = 0;
+			s_ApplyingFrames = 0;
+			const glm::vec3 pos = m_Transform.GetWorldPosition();
+			Print("Terrain tool test:   player at (%.2f, %.2f, %.2f), flatten level %.2f\n", pos.x, pos.y, pos.z, m_FlattenLevel);
+			m_TestTerrainStrokeCount = 0;
+			m_TestTerrainEditCount = 0;
+			m_TestTerrainWaitTime = 0.0f;
+		};
+		const PrefabID woodID = woodcraft::GetWoodPrefabID();
+
+		if (m_TerrainTestMode == 2)
+		{
+			// Reloaded: the edits made by the first run should be there
+			if (t > 6.0f)
+			{
+				Print("Terrain tool test: reloaded with %u saved edits\n", terrainGenerator->GetEditCount());
+				SetPitch(glm::radians(25.0f));
+				Screenshot("reload");
+				m_TerrainTestMode = 3;
+				m_TerrainTestTime = 0.0f;
+			}
+			return;
+		}
+		if (m_TerrainTestMode == 3)
+		{
+			if (t > 1.0f)
+			{
+				g_EngineInstance->Stop();
+				m_TerrainTestStep = -1;
+			}
+			return;
+		}
+
+		switch (m_TerrainTestStep)
+		{
+		case 0:
+		{
+			m_TestTerrainAction = 0;
+			// First moves to flat, dry ground (searching outwards in rings)
+			static bool bMoved = false;
+			if (!bMoved && t > 1.0f)
+			{
+				bMoved = true;
+				const glm::vec3 start = m_Transform.GetWorldPosition();
+				for (real ringRadius = 0.0f; ringRadius < 400.0f; ringRadius += 20.0f)
+				{
+					bool bFound = false;
+					for (i32 i = 0; i < 12 && !bFound; ++i)
+					{
+						const real angle = TWO_PI * (real)i / 12.0f;
+						const real x = start.x + std::cos(angle) * ringRadius;
+						const real z = start.z + std::sin(angle) * ringRadius;
+						const terrain::ColumnSample column = terrainGenerator->SampleColumn(x, z);
+						const bool bDry = column.lakeID == 0 || column.lakeT > 1.5f;
+						real minHeight = column.height;
+						real maxHeight = column.height;
+						for (const glm::vec2& offset : { glm::vec2(8, 0), glm::vec2(-8, 0), glm::vec2(0, 8), glm::vec2(0, -8) })
+						{
+							const real h = terrainGenerator->SampleColumn(x + offset.x, z + offset.y).height;
+							minHeight = glm::min(minHeight, h);
+							maxHeight = glm::max(maxHeight, h);
+						}
+						if (bDry && maxHeight - minHeight < 1.0f)
+						{
+							TeleportOnTerrain(glm::vec3(x, column.height + 2.0f, z));
+							bFound = true;
+						}
+					}
+					if (bFound)
+					{
+						break;
+					}
+				}
+				m_TerrainTestTime = 0.0f;
+				break;
+			}
+			if (bMoved && t > 3.0f)
+			{
+				const glm::vec3 pos = m_Transform.GetWorldPosition();
+				Print("Terrain tool test: start at (%.1f, %.1f, %.1f) with %u saved edits\n", pos.x, pos.y, pos.z, terrainGenerator->GetEditCount());
+				m_TerrainTestYaw = 0.0f;
+				SetYaw(m_TerrainTestYaw);
+				Hold("shovel");
+				SetPitch(glm::radians(40.0f));
+				Next();
+			}
+		} break;
+		case 1:
+			// The brush, before using it
+			if (At(1.5f))
+			{
+				Screenshot("1_brush");
+			}
+			if (t > 1.6f)
+			{
+				Stats("before");
+				Next();
+			}
+			break;
+		case 2:
+		case 4:
+		case 6:
+		case 8:
+		{
+			// Dig, fill & flatten with the shovel, then dig with the pickaxe
+			const i32 index = (m_TerrainTestStep - 2) / 2;
+			const char* names[] = { "2_shovel_digging", "4_shovel_filling", "6_flattening", "8_pickaxe_digging" };
+			const i32 actions[] = { 1, 2, 3, 1 };
+			m_TestTerrainAction = actions[index];
+			if (index == 2)
+			{
+				// Sweeping across a strip
+				SetYaw(m_TerrainTestYaw + std::sin(t * 1.4f) * 0.5f);
+			}
+			if (At(1.2f))
+			{
+				Screenshot(names[index]);
+			}
+			if (t > (index == 2 ? 4.5f : 2.5f))
+			{
+				m_TestTerrainAction = 0;
+				Stats(names[index]);
+				Next();
+			}
+		} break;
+		case 3:
+		case 5:
+		case 7:
+		case 9:
+		{
+			const i32 index = (m_TerrainTestStep - 3) / 2;
+			const char* names[] = { "3_shovel_dug", "5_shovel_filled", "7_flattened", "9_pickaxe_dug" };
+			if (At(2.5f))
+			{
+				Screenshot(names[index]);
+			}
+			if (t > 2.6f)
+			{
+				// On to fresh ground
+				m_TerrainTestYaw += glm::radians(90.0f);
+				SetYaw(m_TerrainTestYaw);
+				// (filling further away, so the player isn't standing in the brush)
+				SetPitch(glm::radians(index == 0 ? 22.0f : 40.0f));
+				if (index == 2)
+				{
+					Hold("pickaxe");
+				}
+				Next();
+			}
+		} break;
+		case 10:
+			// Campfire placement preview (on fresh ground)
+			SetYaw(m_TerrainTestYaw + glm::radians(45.0f));
+			if (m_Woodcraft != nullptr && woodID.IsValid())
+			{
+				if (m_Woodcraft->CountItems(woodID) < Campfire::WOOD_COST)
+				{
+					AddToInventory(woodID, Campfire::WOOD_COST);
+				}
+				m_Woodcraft->SetPlacingCampfire(true);
+			}
+			// (far enough to be clear of the edits made so far)
+			SetPitch(glm::radians(20.0f));
+			if (At(1.5f))
+			{
+				Print("Terrain tool test: campfire placement valid: %d\n", m_Woodcraft != nullptr && m_Woodcraft->IsCampfirePlacementValid() ? 1 : 0);
+				BaseCamera* camera = g_CameraManager->CurrentCamera();
+				glm::vec3 hitPos, hitNormal;
+				if (terrainGenerator->Raycast(camera->position, camera->forward, 8.0f, hitPos, hitNormal))
+				{
+					const terrain::ColumnSample column = terrainGenerator->SampleColumn(hitPos.x, hitPos.z);
+					Print("Terrain tool test:   aiming at (%.2f, %.2f, %.2f), normal y %.2f, smooth normal y %.2f, lake %u (t %.2f, level %.2f)\n",
+						hitPos.x, hitPos.y, hitPos.z, hitNormal.y, terrainGenerator->SampleSmoothNormal(hitPos, 0.8f).y, column.lakeID, column.lakeT, column.waterLevel);
+				}
+				else
+				{
+					Print("Terrain tool test:   not aiming at terrain within 8 m\n");
+				}
+				Screenshot("10_campfire_valid");
+			}
+			if (t > 1.6f && m_Woodcraft != nullptr)
+			{
+				// Build one there, so the next preview (in the same spot) is blocked by it
+				BaseCamera* camera = g_CameraManager->CurrentCamera();
+				glm::vec3 hitPos, hitNormal;
+				if (terrainGenerator->Raycast(camera->position, camera->forward, 8.0f, hitPos, hitNormal))
+				{
+					m_Woodcraft->BuildCampfire(hitPos, m_TerrainTestYaw);
+				}
+				Next();
+			}
+			break;
+		case 11:
+			if (m_Woodcraft != nullptr)
+			{
+				m_Woodcraft->SetPlacingCampfire(true);
+			}
+			if (At(1.5f))
+			{
+				Print("Terrain tool test: campfire placement next to another valid: %d\n", m_Woodcraft != nullptr && m_Woodcraft->IsCampfirePlacementValid() ? 1 : 0);
+				Screenshot("11_campfire_invalid");
+			}
+			if (t > 1.6f)
+			{
+				if (m_Woodcraft != nullptr)
+				{
+					m_Woodcraft->SetPlacingCampfire(false);
+				}
+				Next();
+			}
+			break;
+		case 12:
+			if (t > 0.5f)
+			{
+				// The whole area
+				SetYaw(m_TerrainTestYaw + glm::radians(45.0f));
+				SetPitch(glm::radians(25.0f));
+				Next();
+			}
+			break;
+		case 13:
+			if (At(1.0f))
+			{
+				Screenshot("12_overview");
+			}
+			if (t > 1.2f)
+			{
+				Print("Terrain tool test: done, %u saved edits\n", terrainGenerator->GetEditCount());
+				g_Game->SaveWorld();
+				Next();
+			}
+			break;
+		case 14:
+			if (t > 1.0f)
+			{
+				g_EngineInstance->Stop();
+				m_TerrainTestStep = -1;
+			}
+			break;
+		default:
+			break;
 		}
 	}
 

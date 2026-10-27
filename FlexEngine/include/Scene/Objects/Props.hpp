@@ -31,6 +31,8 @@ namespace flex
 
 		bool CanBePickedUp() const;
 		void OnPickedUp();
+		// Moves the item towards pos (speeding up as it goes). Returns true once it's arrived.
+		bool FlyTowards(const glm::vec3& pos);
 
 		PrefabID prefabID = InvalidPrefabID;
 		i32 stackSize = 0;
@@ -38,6 +40,9 @@ namespace flex
 		real bobAmount = 0.0f;
 		real turnSpeed = 6.0f;
 		glm::vec3 initialVel = VEC3_ZERO;
+		// Seconds before the player can pick it up (so items they drop aren't picked straight back up)
+		real pickupDelay = MIN_TIME_BEFORE_PICKUP;
+		real flyTime = 0.0f;
 
 		static const real MIN_TIME_BEFORE_PICKUP;
 

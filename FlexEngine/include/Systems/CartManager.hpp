@@ -7,6 +7,7 @@
 namespace flex
 {
 	class BaseCart;
+	struct TrackCut;
 	class EngineCart;
 	class BaseScene;
 
@@ -53,6 +54,8 @@ namespace flex
 		real GetChainDrivePower(CartChainID cartChainID);
 		// Dismounts carts from the removed track and shifts the IDs of carts on following tracks
 		void OnTrackRemoved(TrackID removedTrackID);
+		// Moves carts onto the remaining parts of a cut track, derailing those on the removed section
+		void OnTrackCut(const TrackCut& cut);
 
 
 	private:

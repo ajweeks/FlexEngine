@@ -366,7 +366,7 @@ void main()
 		ApplyFog(linDepth, uboConstant.skyboxData.colourFog.xyz, /* inout */ fragmentColour.xyz);
 	}
 
-	fragmentColour.rgb = LinearToDisplay(fragmentColour.rgb);
+	fragmentColour.rgb = LinearToDisplay(fragmentColour.rgb, uboConstant.skyboxData.sun.w);
 
 	if (bWater)
 	{

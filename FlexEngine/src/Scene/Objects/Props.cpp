@@ -739,7 +739,7 @@ namespace flex
 		{
 			Transform* childTransform = child->GetTransform();
 
-			bobAmount = (sin(g_SecElapsedSinceProgramStart * 7.0f) * 0.5f + 0.5f) * 0.6f;
+			bobAmount = (sin(AnimationTime() * 7.0f) * 0.5f + 0.5f) * 0.6f;
 
 			glm::vec3 newPos(0.0f, bobAmount, 0.0f);
 
@@ -755,7 +755,23 @@ namespace flex
 
 	bool DroppedItem::CanBePickedUp() const
 	{
-		return secondsAlive > MIN_TIME_BEFORE_PICKUP;
+		return secondsAlive > pickupDelay;
+	}
+
+	bool DroppedItem::FlyTowards(const glm::vec3& pos)
+	{
+		flyTime += g_DeltaTime;
+		const glm::vec3 itemPos = m_Transform.GetWorldPosition();
+		const glm::vec3 toTarget = pos - itemPos;
+		const real dist = glm::length(toTarget);
+		// Starts gently & accelerates, so it's clearly seen leaving the ground but never takes long
+		const real step = (5.0f + 40.0f * flyTime) * g_DeltaTime;
+		if (dist <= glm::max(step, 0.5f) || flyTime > 0.75f)
+		{
+			return true;
+		}
+		m_Transform.SetWorldPosition(itemPos + toTarget * (step / dist));
+		return false;
 	}
 
 	void DroppedItem::OnPickedUp()

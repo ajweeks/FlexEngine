@@ -8,6 +8,7 @@
 #include "Track/BezierCurveList.hpp"
 #include "Systems/TrackManager.hpp" // For TrackPointRef
 #include "Scene/Objects/Building.hpp" // For BuildMode
+#include "PlacementPreview.hpp"
 
 namespace flex
 {
@@ -115,6 +116,8 @@ namespace flex
 		JSONObject SerializeInventoryToJSON();
 		// Empties every inventory (unequipping anything worn)
 		void ResetInventory();
+		// The basic hand tools a new world starts with (pickaxe, axe & shovel)
+		void AddStarterKit();
 
 		void SetInteractingWithTerminal(Terminal* terminal);
 		// Any rideable object (vehicle or boat, see Rideable), nullptr to get out
@@ -150,7 +153,16 @@ namespace flex
 		void TogglePlacingTrack();
 		void ToggleEditingTrack();
 		void OnTrackRemoved(TrackID removedTrackID);
+		// Moves the player onto the remaining part of a cut track (or off the track if they were on the removed part)
+		void OnTrackCut(const TrackCut& cut);
 		void DrawTrackBuildingHUD() const;
+		// Track pieces (see TrackPieceType). The index after the last piece type is freeform placement (through nodes)
+		void SelectTrackPiece(i32 index);
+		i32 GetSelectedTrackPiece() const { return m_TrackBuildingContext.m_SelectedPiece; }
+		bool IsPlacingTrackPieces() const { return m_TrackBuildingContext.m_bPlacingTrack && m_TrackBuildingContext.m_SelectedPiece < (i32)TrackPieceType::_COUNT; }
+		bool IsTrackPieceValid() const { return m_TrackBuildingContext.m_bPieceAvailable && m_TrackBuildingContext.m_PieceCheck == TrackPieceCheck::OK; }
+		// Places pieces where pos is instead of where the player is aiming (for tests), pass nullptr to stop
+		void SetTrackReticleOverride(const glm::vec3* pos);
 
 		// Digging & filling terrain with a pickaxe
 		void UpdateTerrainTool();
@@ -176,10 +188,17 @@ namespace flex
 		void DrawNotifications() const;
 		bool IsGrounded() const { return m_bGrounded; }
 		const glm::vec3& GetGroundNormal() const { return m_GroundNormal; }
+		// The one entry point for teleporting the player (respawning, loading worlds, map & debug teleports).
 		// Moves the player to the ground near pos (in streamed terrain), waiting there until collision has loaded.
 		// bKeepExactPosition (for restoring saved positions) stays at pos if it's clear of the terrain (e.g. when
-		// standing on something built) rather than dropping to the ground below.
-		void TeleportOnTerrain(const glm::vec3& pos, bool bKeepExactPosition = false);
+		// standing on something built) rather than dropping to the ground below. bFade cuts the screen to black
+		// until the player has landed (see StartTeleportFade).
+		void TeleportOnTerrain(const glm::vec3& pos, bool bKeepExactPosition = false, bool bFade = true);
+		// Cuts to black, holds until the player is placed on the ground (collision loaded & grounded or settled),
+		// then quickly fades back in. Gives up after a timeout so a failed load can't leave the screen black.
+		void StartTeleportFade();
+		// 0: clear, 1: black
+		real GetTeleportFadeAlpha() const { return m_TeleportFadeAlpha; }
 		// Whether the player is being held in place until terrain collision loads below them
 		bool IsAwaitingTerrainCollision() const { return m_bAwaitingTerrainCollision || m_bTerrainPlacementPending; }
 		// Called once the player's render pose (interpolated between physics steps) has been applied
@@ -260,13 +279,35 @@ namespace flex
 			// Tracks being reshaped by the drag, and the directions their junction ends are held at
 			std::vector<GrabbedTrackEndDirs> m_GrabbedTrackEndDirs;
 
+			// Pieces (see TrackPieceType), the index after the last type is freeform placement
+			i32 m_SelectedPiece = 0;
+			// The piece which would be placed now
+			bool m_bPieceAvailable = false;
+			BezierCurve3D m_Piece;
+			glm::vec3 m_PieceStartDir = VEC3_FORWARD;
+			TrackPieceCheck m_PieceCheck = TrackPieceCheck::OK;
+			real m_PieceMaxCut = 0.0f;
+			real m_PieceMaxFill = 0.0f;
+			// The end of an existing track the piece continues on from
+			bool m_bPieceSnapped = false;
+			TrackEnd m_PieceSnappedEnd;
+			// Placed this session, most recent last (for undo)
+			std::vector<BezierCurve3D> m_PlacedPieces;
+			sec m_PieceCooldown = 0.0f;
+			bool m_bReticleOverride = false;
+			glm::vec3 m_ReticleOverridePos = VEC3_ZERO;
+
 			// Config vars
 			real m_SnapThreshold = 1.0f;
 			real m_MaxReach = 30.0f;
+			real m_PieceSnapRange = 6.0f; // Pieces continue on from track ends within this distance of the reticle
 		};
 
 		void UpdateTrackBuildingReticle();
 		void ClearTrackBuildingState();
+		// Chooses, checks & previews the piece which would be placed
+		void UpdateTrackPiecePlacement();
+		void PlaceTrackPiece();
 
 		static const glm::vec3 HEADLAMP_MOUNT_POS;
 
@@ -321,7 +362,7 @@ namespace flex
 
 		real m_TrackAttachMinDist = 4.0f;
 
-		real m_ItemPickupRadius = 4.0f;
+		real m_ItemPickupRadius = 5.5f;
 		real m_ItemDropPosForwardOffset = 1.5f;
 		real m_ItemDropForwardVelocity = 25.0f;
 
@@ -346,33 +387,66 @@ namespace flex
 		bool m_bTerrainToolActive = false; // Whether the player is pointing a digging tool at terrain within reach
 		i32 m_TerrainFillMaterialIndex = 0;
 		real m_TerrainToolReach = 8.0f;
-		real m_TerrainDigRadius = 1.6f; // Full size of a hole/mound
+		real m_TerrainDigRadius = 2.0f; // Radius of the brush (see TerrainGenerator::FlattenArea)
 
-		// Digging & filling are continuous: while the button is held, the hole (or mound) being worked on grows at a
-		// rate depending on the tool & the ground, & a new one is started once it's full size or the player looks away
+		// Digging (LMB), filling (RMB) & flattening (MMB) are continuous. Dig & fill strokes move the surface under the
+		// brush down/up in steps (to planes snapped to a grid along the edit normal, so neighbouring edits line up) at a
+		// rate depending on the tool & the ground, & a new stroke is started once it's moved a full stroke's depth or
+		// the player looks away. Flattening moves the surface under the aim onto the plane picked when the button was
+		// pressed.
+		enum class TerrainToolAction : u8
+		{
+			NONE,
+			DIG,
+			FILL,
+			FLATTEN
+		};
 		struct TerrainStroke
 		{
 			bool bActive = false;
-			bool bFill = false;
-			glm::vec3 anchor = VEC3_ZERO; // Dig: the hole's center. Fill: the surface point the mound grows from.
-			glm::vec3 normal = VEC3_UP; // Fill: surface normal at the anchor
+			TerrainToolAction action = TerrainToolAction::NONE;
+			glm::vec3 anchor = VEC3_ZERO; // The surface point the stroke started at (flatten: the brush's center)
+			glm::vec3 normal = VEC3_UP; // Of the edit's plane
+			real startLevel = 0.0f; // Of the anchor along the normal
 			real hardness = 0.0f; // [0: loose ground, 1: rock]
-			real progress = 0.0f; // [0, 1] of a full sized hole/mound (by volume)
-			real appliedRadius = 0.0f; // Radius of the last edit made (0: none yet)
+			real progress = 0.0f; // [0, 1] of a full stroke
+			bool bApplied = false; // Whether an edit has been made yet
+			real appliedLevel = 0.0f; // Plane of the last edit made (along the normal)
 		};
 		TerrainStroke m_TerrainStroke;
+		// The last stroke which made an edit: holding the button on the same spot carries on from it (deepening the same
+		// hole, or raising the same mound) rather than starting a new one wherever the aim lands
+		TerrainStroke m_LastTerrainStroke;
+		// The plane being flattened to (kept while the button is held)
+		bool m_bFlattenPlaneLocked = false;
+		glm::vec3 m_FlattenNormal = VEC3_UP;
+		real m_FlattenLevel = 0.0f;
+		glm::vec3 m_LastFlattenCenter = glm::vec3(1e30f);
+		// Shows where the brush will act (a ring on the edit plane)
+		PlacementPreview m_TerrainBrushPreview;
 		sec m_TimeSinceTerrainEdit = 0.0f; // Edits (& so chunk re-meshing) are rate limited
 		void EndTerrainStroke();
-		glm::vec3 GetTerrainStrokeCenter(real radius) const;
+		// Center of the stroke's edit with its plane at level
+		glm::vec3 GetTerrainStrokeCenter(real level) const;
+		// A stable plane orientation for edits at a surface point: the surface's normal averaged over the brush, leaning
+		// towards up for shovels, & quantized so edits made from slightly different angles line up
+		glm::vec3 ChooseTerrainEditNormal(StringID toolTypeID, const glm::vec3& hitPos, const glm::vec3& hitNormal) const;
 		// [0: loose ground (soil, sand, gravel, snow...), 1: rock] at a surface point
 		real SampleTerrainHardness(const glm::vec3& pos, const glm::vec3& normal) const;
 
-		// Test hook (FLEX_TEST_WOODCRAFT): 1: dig, 2: fill, as if the mouse button were held
+		// Test hook (FLEX_TEST_WOODCRAFT, FLEX_TEST_TERRAIN_TOOL): 1: dig, 2: fill, 3: flatten, as if the mouse button were held
 		i32 m_TestTerrainAction = 0;
 		// Stats for the test: holes/mounds made, terrain edits applied & time spent waiting for re-meshing
 		u32 m_TestTerrainStrokeCount = 0;
 		u32 m_TestTerrainEditCount = 0;
 		sec m_TestTerrainWaitTime = 0.0f;
+		// Scripted test of the terrain tools & placement previews (FLEX_TEST_TERRAIN_TOOL=1, then =2 to check the edits
+		// reload), taking screenshots (saved/screenshots/terrain_*.png)
+		void UpdateTerrainToolTest();
+		i32 m_TerrainTestMode = 0;
+		i32 m_TerrainTestStep = -2; // -2: not checked yet, -1: not testing
+		sec m_TerrainTestTime = 0.0f;
+		real m_TerrainTestYaw = 0.0f;
 
 		sec m_ToolSwingTimer = 0.0f;
 		sec m_ToolSwingDuration = 1.0f;
@@ -383,6 +457,19 @@ namespace flex
 		glm::vec3 m_TerrainHoldPos = VEC3_ZERO;
 		sec m_AwaitingTerrainCollisionTime = 0.0f;
 		sec m_InsideTerrainTime = 0.0f;
+
+		enum class TeleportFadeState
+		{
+			NONE,
+			HOLDING, // Black until the player has landed
+			FADING_IN
+		};
+		void UpdateTeleportFade();
+		void DrawTeleportFade() const;
+		TeleportFadeState m_TeleportFadeState = TeleportFadeState::NONE;
+		real m_TeleportFadeAlpha = 0.0f;
+		sec m_TeleportFadeTime = 0.0f; // Since the teleport
+		sec m_TeleportPlacedTime = 0.0f; // Since the player was placed (collision loaded below them)
 		GameObject* m_ItemPickingUp = nullptr;
 		const real m_ItemPickingDuration = 0.5f;
 		real m_ItemPickingTimer = -1.0f;

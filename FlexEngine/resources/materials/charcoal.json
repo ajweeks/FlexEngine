@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "charcoal",
+		"shader" : "pbr",
+		"const albedo" : "0.030,0.028,0.026",
+		"const roughness" : 0.950000
+	}
+}

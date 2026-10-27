@@ -69,6 +69,7 @@ namespace flex
 			virtual void UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) override;
 			virtual void FreeDynamicVertexData(RenderID renderID) override;
 			virtual void ShrinkDynamicVertexData(RenderID renderID, real minUnused = 0.0f) override;
+			virtual void ReserveDynamicVertexData(MaterialID materialID, real usedFactor) override;
 			virtual u32 GetDynamicVertexBufferSize(RenderID renderID) override;
 			virtual u32 GetDynamicVertexBufferUsedSize(RenderID renderID) override;
 
@@ -213,7 +214,7 @@ namespace flex
 			virtual void RecreateShadowFrameBuffers() override;
 
 			virtual u32 GetStaticVertexIndexBufferIndex(u32 stride) override;
-			virtual u32 GetDynamicVertexIndexBufferIndex(u32 stride) override;
+			virtual u32 GetDynamicVertexIndexBufferIndex(u32 stride, bool bDeviceLocal = false) override;
 
 		private:
 			friend DebugRenderer;
@@ -314,8 +315,18 @@ namespace flex
 			void CreateStaticIndexBuffer();
 
 			void CreateAndUploadToStaticVertexBuffer(VulkanBuffer* vertexBuffer, void* vertexBufferData, u32 vertexBufferSize, const char* DEBUG_name = nullptr);
-			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, const char* DEBUG_name = nullptr);
-			void CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size, const char* DEBUG_name = nullptr);
+			void CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, const char* DEBUG_name = nullptr, bool bDeviceLocal = false);
+			void CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size, const char* DEBUG_name = nullptr, bool bDeviceLocal = false);
+
+			// Copies data into a device local buffer: the data is written into a staging buffer now & copied on the GPU
+			// before this frame's rendering is submitted (in submission order, so later uploads to the same range win)
+			void QueueBufferUpload(VulkanBuffer* dst, VkDeviceSize dstOffset, const void* data, VkDeviceSize size);
+			// Submits the copies queued so far (without waiting for them)
+			void FlushBufferUploads();
+			// Waits for submitted copies (only once the frame's work has completed, so this doesn't stall) & reuses
+			// their staging space
+			void RecycleBufferUploads();
+			void DestroyBufferUploads();
 
 			void CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices, const char* DEBUG_name = nullptr);
 
@@ -724,6 +735,23 @@ namespace flex
 			std::vector<std::pair<u32, VertexIndexBufferPair*>> m_DynamicVertexIndexBufferPairs;
 
 			VertexIndexBufferPair* m_DynamicUIVertexIndexBufferPair = nullptr;
+
+			struct PendingBufferUpload
+			{
+				VulkanBuffer* dst;
+				VkDeviceSize dstOffset;
+				VkDeviceSize stagingOffset;
+				VkDeviceSize size;
+			};
+			struct InFlightBufferUpload
+			{
+				VkCommandBuffer commandBuffer;
+				VkFence fence;
+			};
+			std::vector<PendingBufferUpload> m_PendingBufferUploads;
+			std::vector<InFlightBufferUpload> m_InFlightBufferUploads;
+			VulkanBuffer* m_UploadStagingBuffer = nullptr;
+			VkDeviceSize m_UploadStagingOffset = 0;
 
 			VDeleter<VkSemaphore> m_PresentCompleteSemaphore;
 			// One per swap chain image since presentation doesn't signal when it's done waiting on a semaphore,

@@ -688,6 +688,7 @@ namespace flex
 			SetTimeOfDay(glm::clamp(timeOfDay, 0.0f, 0.999f));
 		}
 		ImGui::Text("(%s)", m_TimeOfDay < 0.25f ? "afternoon" : m_TimeOfDay < 0.5f ? "evening" : m_TimeOfDay < 0.75f ? "night" : "morning");
+		ImGui::Text("Eye adaptation exposure: %.2f", m_Exposure);
 
 		DoSceneContextMenu();
 	}
@@ -1394,6 +1395,8 @@ namespace flex
 			dirLight->GetTransform()->SetWorldRotation(glm::rotation(-VEC3_FORWARD, lightDir));
 		}
 
+		UpdateExposure(dirLight, zenith);
+
 		if (!g_EngineInstance->IsSimulationPaused())
 		{
 			const real dt = g_DeltaTime * g_EngineInstance->GetSimulationSpeed();
@@ -1410,6 +1413,44 @@ namespace flex
 			cloudiness = 0.45f + 0.35f * std::sin(t / 1100.0f + 1.3f) + 0.2f * std::sin(t / 370.0f + 4.1f) + 0.1f * std::sin(t / 130.0f);
 		}
 		m_SkyboxData.weather = glm::vec4(glm::clamp(cloudiness, 0.0f, 1.0f), m_WeatherRegionalVariation, 0.0f, 0.0f);
+	}
+
+	void BaseScene::UpdateExposure(DirectionalLight* dirLight, const glm::vec3& zenithDisplay)
+	{
+		// Eye adaptation (see LinearToDisplay in vk_misc.glsl): estimates how brightly lit the scene is from the sun or
+		// moon & the sky, relative to daylight, & raises the exposure as it gets darker. It's exactly 1 whenever it's
+		// reasonably light out, so day scenes are unchanged, & only partially adapts so nights still look like night.
+		static const real EXPOSURE_KEY = 0.8f; // Scene light level (relative to a clear midday) below which exposure rises
+		static const real ADAPTATION_STRENGTH = 0.65f; // [0, 1], 1: fully compensates for the light level
+		static const real MAX_EXPOSURE = 3.5f;
+
+		const glm::vec3 luminanceWeights(0.2126f, 0.7152f, 0.0722f);
+		real targetExposure = 1.0f;
+		if (dirLight != nullptr && m_DirLightBaseBrightness > 0.0f)
+		{
+			// Direct light (lighting less of the scene the lower it is) & sky light (its colours are display values, like in the
+			// shaders, where 0.22 is about the luminance of a clear day's zenith)
+			const real directLuminance = glm::dot(dirLight->data.colour, luminanceWeights) * dirLight->data.brightness / m_DirLightBaseBrightness;
+			const real direct = dirLight->data.enabled != 0 ? directLuminance * (0.15f + 0.85f * glm::max(dirLight->data.dir.y, 0.0f)) : 0.0f;
+			const real sky = glm::dot(glm::pow(glm::max(zenithDisplay, VEC3_ZERO), glm::vec3(2.2f)), luminanceWeights) / 0.22f;
+			const real lightLevel = direct + 0.5f * sky;
+			targetExposure = glm::clamp(std::pow(glm::max(EXPOSURE_KEY / glm::max(lightLevel, 1e-4f), 1.0f), ADAPTATION_STRENGTH), 1.0f, MAX_EXPOSURE);
+		}
+
+		// (time of day jumps, e.g. sleeping, change it immediately)
+		const real timeOfDayStep = glm::abs(m_TimeOfDay - m_ExposureTimeOfDay);
+		m_ExposureTimeOfDay = m_TimeOfDay;
+		if (m_Exposure < 0.0f || glm::min(timeOfDayStep, 1.0f - timeOfDayStep) > 0.01f)
+		{
+			m_Exposure = targetExposure;
+		}
+		else
+		{
+			// Eyes adjust to the dark more slowly than to the light
+			const real timeConstant = targetExposure > m_Exposure ? 2.5f : 0.8f;
+			m_Exposure += (targetExposure - m_Exposure) * (1.0f - std::exp(-glm::clamp(g_DeltaTime, 0.0f, 0.25f) / timeConstant));
+		}
+		m_SkyboxData.sun.w = m_Exposure;
 	}
 
 	void BaseScene::DrawImGuiForSelectedObjectsAndSceneHierarchy()
@@ -2349,7 +2390,7 @@ namespace flex
 		return !items.empty();
 	}
 
-	void BaseScene::CreateDroppedItem(const PrefabID& prefabID, i32 stackSize, const glm::vec3& dropPosWS, const glm::vec3& initialVel)
+	DroppedItem* BaseScene::CreateDroppedItem(const PrefabID& prefabID, i32 stackSize, const glm::vec3& dropPosWS, const glm::vec3& initialVel)
 	{
 		DroppedItem* item = new DroppedItem(prefabID, stackSize);
 		item->initialVel = initialVel;
@@ -2360,6 +2401,8 @@ namespace flex
 		m_DroppedItems.push_back(item);
 
 		AddRootObject(item);
+
+		return item;
 	}
 
 	void BaseScene::OnDroppedItemDestroyed(DroppedItem* item)

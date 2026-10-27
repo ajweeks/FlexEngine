@@ -2481,6 +2481,10 @@ namespace flex
 					{
 						return false;
 					}
+					if (terrain::IsPlaneEdit(a[i].type) && (memcmp(&a[i].normal, &b[i].normal, sizeof(glm::vec3)) != 0 || a[i].height != b[i].height))
+					{
+						return false;
+					}
 				}
 				return true;
 			}
@@ -2500,6 +2504,20 @@ namespace flex
 				SAVE_CHECK(terrain::ReadEdits(filePath, 42, read) && EditsEqual(read, edits));
 				SAVE_CHECK(terrain::WriteEdits(filePath, 42, {}));
 				SAVE_CHECK(terrain::ReadEdits(filePath, 42, read) && read.empty());
+
+				// Plane edits (flatten/lower/raise brushes) keep their normal & height
+				{
+					std::vector<terrain::Edit> planeEdits = edits;
+					for (size_t i = 0; i < planeEdits.size(); i += 2)
+					{
+						const terrain::EditType type = (terrain::EditType)((u32)terrain::EditType::LOWER + (u32)random.Range(3));
+						const glm::vec3 normal(random.Float(-1.0f, 1.0f), random.Float(0.2f, 1.0f), random.Float(-1.0f, 1.0f));
+						planeEdits[i] = terrain::MakePlaneEdit(type, planeEdits[i].center, normal, random.Float(0.5f, 4.0f),
+							random.Range(2) == 0 ? 0.0f : random.Float(0.5f, 6.0f), (terrain::Material)random.Range((u32)terrain::Material::_COUNT));
+					}
+					SAVE_CHECK(terrain::WriteEdits(filePath, 42, planeEdits));
+					SAVE_CHECK(terrain::ReadEdits(filePath, 42, read) && EditsEqual(read, planeEdits));
+				}
 
 				// Damage falls back to the backup
 				SAVE_CHECK(terrain::WriteEdits(filePath, 42, edits));

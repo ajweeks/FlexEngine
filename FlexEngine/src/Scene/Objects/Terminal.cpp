@@ -107,7 +107,7 @@ namespace flex
 			glm::vec3 v3 = c - (forward * scale);
 			DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 			debugRenderer->drawTriangle(ToBtVec3(v1), ToBtVec3(v2), ToBtVec3(v3), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
-			glm::vec3 o(0.0f, sin(g_SecElapsedSinceProgramStart * 2.0f) + 1.0f, 0.0f);
+			glm::vec3 o(0.0f, sin(AnimationTime() * 2.0f) + 1.0f, 0.0f);
 			debugRenderer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);
 			o = glm::vec3(0.0f, 2.0f, 0.0f);
 			debugRenderer->drawTriangle(ToBtVec3(v1 + o), ToBtVec3(v2 + o), ToBtVec3(v3 + o), btVector3(0.9f, 0.3f, 0.2f), 1.0f);

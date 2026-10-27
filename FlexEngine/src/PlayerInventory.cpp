@@ -694,6 +694,18 @@ namespace flex
 		ClearInventory();
 	}
 
+	void Player::AddStarterKit()
+	{
+		for (const char* toolName : { "pickaxe", "axe", "shovel" })
+		{
+			const PrefabID toolID = g_ResourceManager->GetPrefabID(toolName);
+			if (toolID.IsValid())
+			{
+				AddToInventory(toolID, 1);
+			}
+		}
+	}
+
 	void Player::SerializeInventoryToFile()
 	{
 		JSONObject inventoryObj = SerializeInventoryToJSON();

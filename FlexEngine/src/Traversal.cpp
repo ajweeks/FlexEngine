@@ -15,6 +15,7 @@ IGNORE_WARNINGS_POP
 #include "GameSounds.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/Renderer.hpp"
+#include "GameControls.hpp"
 #include "InputManager.hpp"
 #include "Localization.hpp"
 #include "Physics/PhysicsWorld.hpp"
@@ -165,14 +166,14 @@ namespace flex
 			indices.clear();
 		}
 
-		u32 AddVertex(const glm::vec3& pos, const glm::vec3& normal, const glm::vec2& uv)
+		u32 AddVertex(const glm::vec3& pos, const glm::vec3& normal, const glm::vec2& uv, const glm::vec4& colour = VEC4_ONE)
 		{
 			const glm::vec3 tangent = SafeNormalize(glm::cross(normal, glm::abs(normal.y) < 0.9f ? VEC3_UP : VEC3_RIGHT), VEC3_RIGHT);
 			vertexBufferCreateInfo.positions_3D.push_back(pos);
 			vertexBufferCreateInfo.normals.push_back(normal);
 			vertexBufferCreateInfo.tangents.push_back(tangent);
 			vertexBufferCreateInfo.texCoords_UV.push_back(uv);
-			vertexBufferCreateInfo.colours_R32G32B32A32.push_back(VEC4_ONE);
+			vertexBufferCreateInfo.colours_R32G32B32A32.push_back(colour);
 			return (u32)vertexBufferCreateInfo.positions_3D.size() - 1;
 		}
 
@@ -264,6 +265,28 @@ namespace flex
 		m_CanopyTrimMesh->Create(player, "Glider canopy trim", m_CanopyTrimMaterialID, 2048);
 		m_GliderFrameMesh = new DynamicMesh();
 		m_GliderFrameMesh->Create(player, "Glider lines", m_GliderFrameMaterialID, 2048);
+		// A deep blue suit with yellow wing tips & tail edge (linear colours), contrasting with the terrain below
+		m_WingsuitMaterialID = GetOrCreateMaterial("Wingsuit", glm::vec4(0.02f, 0.09f, 0.42f, 1.0f), 0.6f);
+		m_WingsuitTrimMaterialID = GetOrCreateMaterial("Wingsuit trim", glm::vec4(0.9f, 0.55f, 0.02f, 1.0f), 0.6f);
+		m_WingsuitMesh = new DynamicMesh();
+		m_WingsuitMesh->Create(player, "Wingsuit", m_WingsuitMaterialID, 1024);
+		m_WingsuitTrimMesh = new DynamicMesh();
+		m_WingsuitTrimMesh->Create(player, "Wingsuit trim", m_WingsuitTrimMaterialID, 512);
+		// Unlit & translucent (vertex alpha)
+		m_AirStreakMaterialID = g_Renderer->GetMaterialID("Air streaks");
+		if (m_AirStreakMaterialID == InvalidMaterialID)
+		{
+			MaterialCreateInfo createInfo = {};
+			createInfo.name = "Air streaks";
+			createInfo.shaderName = "colour";
+			createInfo.colourMultiplier = VEC4_ONE;
+			createInfo.bDynamic = true;
+			createInfo.bSerializable = false;
+			m_AirStreakMaterialID = g_Renderer->InitializeMaterial(&createInfo);
+		}
+		m_AirStreakMesh = new DynamicMesh();
+		m_AirStreakMesh->Create(player, "Air streaks", m_AirStreakMaterialID, MAX_AIR_STREAKS * 6);
+		m_AirStreakMesh->object->SetCastsShadow(false);
 
 		// The player's visible body, which leans while flying (the capsule collider stays upright)
 		for (GameObject* child : player->GetChildren())
@@ -303,6 +326,12 @@ namespace flex
 		m_CanopyTrimMesh = nullptr;
 		delete m_GliderFrameMesh;
 		m_GliderFrameMesh = nullptr;
+		delete m_WingsuitMesh;
+		m_WingsuitMesh = nullptr;
+		delete m_WingsuitTrimMesh;
+		m_WingsuitTrimMesh = nullptr;
+		delete m_AirStreakMesh;
+		m_AirStreakMesh = nullptr;
 		m_BodyMeshObject = nullptr;
 		delete m_MotesMesh;
 		m_MotesMesh = nullptr;
@@ -607,7 +636,7 @@ namespace flex
 		// Wind slowly changes direction (seeded per world so it's consistent between sessions)
 		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
 		const real windBaseAngle = terrainGenerator != nullptr ? HashToUnit((u32)terrainGenerator->GetSeed() * 2654435761u) * TWO_PI : 0.7f;
-		m_WindAngle = windBaseAngle + 0.6f * std::sin(g_SecElapsedSinceProgramStart / 400.0f);
+		m_WindAngle = windBaseAngle + 0.6f * (real)std::sin(g_SecElapsedSinceProgramStart / 400.0);
 
 		UpdateSurroundings();
 		UpdateInput();
@@ -674,7 +703,7 @@ namespace flex
 		}
 
 		// Grapple: fire, or release if already out
-		if (g_InputManager->GetKeyPressed(KeyCode::KEY_F))
+		if (g_InputManager->GetKeyPressed(GameKeys::GRAPPLING_HOOK))
 		{
 			if (m_Hook.state == HookState::NONE)
 			{
@@ -686,8 +715,8 @@ namespace flex
 			}
 		}
 
-		const bool bCrouchHeld = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_CONTROL) != 0;
-		const bool bClimbHeld = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT) != 0;
+		const bool bCrouchHeld = g_InputManager->GetKeyDown(GameKeys::CROUCH) != 0;
+		const bool bClimbHeld = g_InputManager->GetKeyDown(GameKeys::CLIMB) != 0;
 
 		m_Hook.bReelingIn = m_Hook.state == HookState::ATTACHED && m_bJumpHeld;
 		m_Hook.bReelingOut = m_Hook.state == HookState::ATTACHED && bCrouchHeld;
@@ -1974,7 +2003,8 @@ namespace flex
 
 	void Traversal::UpdateVisuals()
 	{
-		if (m_RopeMesh == nullptr || m_CanopyMesh == nullptr || m_CanopyTrimMesh == nullptr || m_GliderFrameMesh == nullptr || m_MotesMesh == nullptr)
+		if (m_RopeMesh == nullptr || m_CanopyMesh == nullptr || m_CanopyTrimMesh == nullptr || m_GliderFrameMesh == nullptr || m_MotesMesh == nullptr ||
+			m_WingsuitMesh == nullptr || m_WingsuitTrimMesh == nullptr || m_AirStreakMesh == nullptr)
 		{
 			return;
 		}
@@ -2029,11 +2059,18 @@ namespace flex
 
 		UpdateBodyTilt();
 		BuildGlider();
+		BuildWingsuit();
 
 		m_RopeMesh->Upload();
 		m_CanopyMesh->Upload();
 		m_CanopyTrimMesh->Upload();
 		m_GliderFrameMesh->Upload();
+		m_WingsuitMesh->Upload();
+		m_WingsuitTrimMesh->Upload();
+
+		m_AirStreakMesh->Begin();
+		DrawAirStreaks();
+		m_AirStreakMesh->Upload();
 
 		m_MotesMesh->Begin();
 		DrawThermalMotes();
@@ -2069,7 +2106,11 @@ namespace flex
 			}
 			else
 			{
-				targetPitch = glm::clamp(flightPath, glm::radians(-80.0f), glm::radians(40.0f)) - PI_DIV_TWO;
+				// The body lies along the flight path, nose up towards where the player's looking (the angle of attack
+				// which produces the lift, belly into the oncoming air)
+				const real lookPitch = std::asin(glm::clamp(GetLookDirection().y, -1.0f, 1.0f));
+				const real angleOfAttack = glm::clamp(lookPitch - flightPath, glm::radians(-10.0f), glm::radians(35.0f)) * 0.8f;
+				targetPitch = glm::clamp(flightPath + angleOfAttack, glm::radians(-80.0f), glm::radians(40.0f)) - PI_DIV_TWO;
 			}
 		}
 		m_TiltLastVelocity = velocity;
@@ -2370,6 +2411,247 @@ namespace flex
 		}
 	}
 
+	void Traversal::BuildWingsuit()
+	{
+		// Spreads quickly when the arms go out, folds away faster
+		const sec dt = g_DeltaTime;
+		const real targetOpenness = m_Mode == Mode::WINGSUIT ? 1.0f : 0.0f;
+		m_WingsuitOpenness = glm::mix(m_WingsuitOpenness, targetOpenness, ExpDecay(targetOpenness > m_WingsuitOpenness ? 7.0f : 12.0f, dt));
+		if (targetOpenness == 0.0f && m_WingsuitOpenness < 0.02f)
+		{
+			m_WingsuitOpenness = 0.0f;
+		}
+
+		m_WingsuitMesh->Begin();
+		m_WingsuitTrimMesh->Begin();
+		// In first person the body stays upright around the camera, so the suit would only get in the way
+		BaseCamera* camera = g_CameraManager->CurrentCamera();
+		const bool bFirstPerson = camera != nullptr && camera->bIsFirstPerson && camera->bPossessPlayer;
+		if (m_WingsuitOpenness <= 0.0f || bFirstPerson)
+		{
+			return;
+		}
+
+		const real open = m_WingsuitOpenness;
+		// The body's frame (leaning with the dive): U runs from the feet to the head, F out of the belly (facing the
+		// oncoming air while diving), R across the shoulders
+		const glm::vec3 heading = GetHeadingXZ();
+		const glm::vec3 F = m_TiltRotation * heading;
+		const glm::vec3 U = m_TiltRotation * VEC3_UP;
+		const glm::vec3 R = m_TiltRotation * glm::cross(heading, VEC3_UP);
+		const glm::vec3 P = m_TiltPivot;
+		auto ToWorld = [&](real x, real y, real z) { return P + R * x + U * y + F * z; };
+
+		// The fabric billows out behind (away from the oncoming air) more the faster the player flies, & the trailing
+		// edges flutter
+		const real airSpeed = glm::length(m_LastVelocity);
+		const real pressure = glm::smoothstep(8.0f, 45.0f, airSpeed);
+		const real billow = 0.1f * (0.35f + 0.65f * pressure) * open;
+		const real flutter = 0.025f * pressure * open;
+		const real time = AnimationTime();
+
+		// Adds a two sided grid surface (points row major, cols across), cells with column >= trimCol (or row >= trimRow)
+		// going to the trim mesh
+		auto AddSurface = [&](const std::vector<glm::vec3>& points, u32 rows, u32 cols, u32 trimRow, u32 trimCol)
+		{
+			auto Normal = [&](u32 r, u32 c)
+			{
+				const glm::vec3 dr = points[glm::min(r + 1, rows - 1) * cols + c] - points[(r > 0 ? r - 1 : 0) * cols + c];
+				const glm::vec3 dc = points[r * cols + glm::min(c + 1, cols - 1)] - points[r * cols + (c > 0 ? c - 1 : 0)];
+				glm::vec3 n = SafeNormalize(glm::cross(dr, dc), F);
+				return glm::dot(n, F) < 0.0f ? -n : n;
+			};
+			for (u32 r = 0; r + 1 < rows; ++r)
+			{
+				for (u32 c = 0; c + 1 < cols; ++c)
+				{
+					DynamicMesh* mesh = (r >= trimRow || c >= trimCol) ? m_WingsuitTrimMesh : m_WingsuitMesh;
+					const u32 corners[4][2] = { { r, c }, { r, c + 1 }, { r + 1, c + 1 }, { r + 1, c } };
+					for (real side : { 1.0f, -1.0f })
+					{
+						u32 ids[4];
+						for (u32 k = 0; k < 4; ++k)
+						{
+							const u32 cr = corners[k][0];
+							const u32 cc = corners[k][1];
+							ids[k] = mesh->AddVertex(points[cr * cols + cc], Normal(cr, cc) * side, glm::vec2((real)cc / (real)(cols - 1), (real)cr / (real)(rows - 1)));
+						}
+						const std::vector<glm::vec3>& positions = mesh->vertexBufferCreateInfo.positions_3D;
+						AddTriangleFacing(mesh->indices, positions, ids[0], ids[1], ids[2], F * side);
+						AddTriangleFacing(mesh->indices, positions, ids[0], ids[2], ids[3], F * side);
+					}
+				}
+			}
+		};
+
+		// Arm wings: from the arm (the leading edge, shoulder to wrist) back to the hip, with a concave trailing edge
+		const real wristX = glm::mix(0.42f, 1.02f, open);
+		const real wristY = glm::mix(0.2f, 0.52f, open);
+		const u32 spanCount = 7;
+		const u32 chordCount = 5;
+		std::vector<glm::vec3> points(spanCount * chordCount);
+		for (real sideSign : { -1.0f, 1.0f })
+		{
+			for (u32 s = 0; s < spanCount; ++s)
+			{
+				const real t = (real)s / (real)(spanCount - 1);
+				const glm::vec2 lead(glm::mix(0.26f, wristX, t), glm::mix(0.58f, wristY, t));
+				const real chord = glm::mix(1.0f, 0.13f, std::pow(t, 0.75f)) * glm::mix(0.6f, 1.0f, open);
+				const glm::vec2 trail(glm::mix(0.3f, wristX * 0.93f, t), lead.y - chord);
+				for (u32 c = 0; c < chordCount; ++c)
+				{
+					const real v = (real)c / (real)(chordCount - 1);
+					const glm::vec2 p = glm::mix(lead, trail, v);
+					const real z = -billow * std::sin(PI * v) * std::sin(PI * glm::min(t * 1.15f, 1.0f)) -
+						flutter * v * v * std::sin(time * 31.0f + t * 9.0f + sideSign);
+					// Rows run root to tip, columns leading to trailing edge
+					points[s * chordCount + c] = ToWorld(sideSign * p.x, p.y, z);
+				}
+			}
+			// Contrasting wing tips
+			AddSurface(points, spanCount, chordCount, spanCount - 3, chordCount);
+
+			// Sleeves along the leading edge, & gloves
+			const glm::vec3 arm[] = { ToWorld(sideSign * 0.2f, 0.6f, 0.0f), ToWorld(sideSign * glm::mix(0.26f, wristX, 0.5f), glm::mix(0.6f, wristY, 0.5f), -0.01f), ToWorld(sideSign * wristX, wristY, 0.0f) };
+			m_WingsuitMesh->AddTube(arm, 3, 0.065f, 6);
+			const glm::vec3 hand[] = { ToWorld(sideSign * wristX, wristY, 0.0f), ToWorld(sideSign * (wristX + 0.14f * open + 0.04f), wristY - 0.02f, 0.01f) };
+			m_GliderFrameMesh->AddTube(hand, 2, 0.05f, 5);
+		}
+
+		// Tail wing between the legs, with a trailing edge curving in between the ankles
+		const real ankleX = glm::mix(0.13f, 0.33f, open);
+		const real ankleY = -1.08f;
+		const u32 acrossCount = 7;
+		const u32 alongCount = 5;
+		points.resize(alongCount * acrossCount);
+		for (u32 a = 0; a < alongCount; ++a)
+		{
+			const real v = (real)a / (real)(alongCount - 1);
+			const real legX = glm::mix(0.17f, ankleX, v);
+			for (u32 c = 0; c < acrossCount; ++c)
+			{
+				const real u = (real)c / (real)(acrossCount - 1) * 2.0f - 1.0f;
+				const real y = glm::mix(-0.3f, ankleY + 0.18f * (1.0f - u * u) * open, v);
+				const real z = -billow * 0.8f * (1.0f - u * u) * std::sin(PI * v) - flutter * v * v * std::sin(time * 27.0f + u * 5.0f);
+				points[a * acrossCount + c] = ToWorld(u * legX, y, z);
+			}
+		}
+		AddSurface(points, alongCount, acrossCount, alongCount - 2, acrossCount);
+
+		// Legs & boots
+		for (real sideSign : { -1.0f, 1.0f })
+		{
+			const glm::vec3 leg[] = { ToWorld(sideSign * 0.17f, -0.35f, 0.0f), ToWorld(sideSign * ankleX, ankleY, 0.0f) };
+			m_WingsuitMesh->AddTube(leg, 2, 0.085f, 6);
+			const glm::vec3 boot[] = { ToWorld(sideSign * ankleX, ankleY + 0.02f, 0.0f), ToWorld(sideSign * ankleX, ankleY - 0.1f, 0.12f) };
+			m_GliderFrameMesh->AddTube(boot, 2, 0.07f, 5);
+		}
+	}
+
+	void Traversal::DrawAirStreaks()
+	{
+		const sec dt = g_DeltaTime;
+		BaseCamera* camera = g_CameraManager->CurrentCamera();
+		m_AirStreakCount = 0;
+		if (camera == nullptr || m_AirStreakMesh == nullptr)
+		{
+			return;
+		}
+
+		// Relative to the air (wind is ignored, it's slow compared to the speeds where these show)
+		const glm::vec3 velocity = m_LastVelocity;
+		const real speed = glm::length(velocity);
+		const bool bAirborne = !(m_bGrounded && m_Mode == Mode::NONE) && m_Mode != Mode::CLIMBING;
+		const real targetIntensity = bAirborne ? glm::smoothstep(10.0f, 42.0f, speed) : 0.0f;
+		m_AirStreakIntensity = glm::mix(m_AirStreakIntensity, targetIntensity, ExpDecay(4.0f, dt));
+		if (m_AirStreakIntensity < 0.01f || speed < 1.0f)
+		{
+			for (AirStreak& streak : m_AirStreaks)
+			{
+				streak.bAlive = false;
+			}
+			return;
+		}
+
+		PROFILE_AUTO("Traversal DrawAirStreaks");
+
+		const glm::vec3 cameraPos = camera->position;
+		const glm::vec3 dir = velocity / speed;
+		const glm::vec3 side0 = SafeNormalize(glm::cross(dir, glm::abs(dir.y) < 0.95f ? VEC3_UP : VEC3_RIGHT), VEC3_RIGHT);
+		const glm::vec3 side1 = glm::cross(dir, side0);
+		// Spawned far enough ahead to fade in before they reach the camera
+		const real spawnAhead = glm::clamp(speed * 0.5f, 10.0f, 30.0f);
+		const u32 activeCount = (u32)glm::ceil(m_AirStreakIntensity * (real)MAX_AIR_STREAKS);
+		// Long enough to read as motion, short enough to look fast (roughly the distance covered in a few frames)
+		const real length = glm::clamp(speed * 0.07f, 0.8f, 4.5f);
+		const real halfWidth = 0.012f;
+
+		for (u32 i = 0; i < MAX_AIR_STREAKS; ++i)
+		{
+			AirStreak& streak = m_AirStreaks[i];
+			if (streak.bAlive)
+			{
+				const glm::vec3 rel = streak.pos - cameraPos;
+				const real along = glm::dot(rel, dir);
+				if (along < -length - 1.0f || glm::dot(rel, rel) > 50.0f * 50.0f)
+				{
+					streak.bAlive = false;
+				}
+			}
+			if (!streak.bAlive && i < activeCount)
+			{
+				// A random point on a disc ahead of the camera, around (not through) the view's center
+				const real angle = HashToUnit(++m_AirStreakSeed) * TWO_PI;
+				const real radius = 1.2f + 5.5f * HashToUnit(++m_AirStreakSeed);
+				const real ahead = spawnAhead * (0.6f + 0.4f * HashToUnit(++m_AirStreakSeed));
+				streak.pos = cameraPos + dir * ahead + (side0 * std::cos(angle) + side1 * std::sin(angle)) * radius;
+				streak.age = 0.0f;
+				streak.lengthScale = 0.6f + 0.8f * HashToUnit(++m_AirStreakSeed);
+				streak.bAlive = true;
+			}
+			if (!streak.bAlive)
+			{
+				continue;
+			}
+			streak.age += dt;
+
+			const glm::vec3 rel = streak.pos - cameraPos;
+			const real distance = glm::length(rel);
+			// Fade in once spawned, & out as they pass right by the camera (where they'd be big & blurry)
+			const real alpha = 0.35f * m_AirStreakIntensity * glm::smoothstep(0.0f, 0.25f, streak.age) * glm::smoothstep(0.6f, 2.5f, distance) *
+				(1.0f - glm::smoothstep(30.0f, 45.0f, distance));
+			if (alpha < 0.005f)
+			{
+				continue;
+			}
+
+			// A thin ribbon along the flight direction, facing the camera, fading out at both ends
+			const glm::vec3 head = streak.pos;
+			const glm::vec3 tail = streak.pos + dir * (length * streak.lengthScale);
+			const glm::vec3 mid = (head + tail) * 0.5f;
+			const glm::vec3 widthDir = SafeNormalize(glm::cross(dir, mid - cameraPos), side0) * (halfWidth * glm::max(distance * 0.12f, 1.0f));
+			const glm::vec3 normal = SafeNormalize(cameraPos - mid, -dir);
+			const glm::vec4 clear(1.0f, 1.0f, 1.0f, 0.0f);
+			const glm::vec4 colour(0.95f, 0.97f, 1.0f, alpha);
+			const u32 base = m_AirStreakMesh->AddVertex(head - widthDir, normal, VEC2_ZERO, clear);
+			m_AirStreakMesh->AddVertex(head + widthDir, normal, VEC2_ZERO, clear);
+			m_AirStreakMesh->AddVertex(mid - widthDir, normal, VEC2_ZERO, colour);
+			m_AirStreakMesh->AddVertex(mid + widthDir, normal, VEC2_ZERO, colour);
+			m_AirStreakMesh->AddVertex(tail - widthDir, normal, VEC2_ZERO, clear);
+			m_AirStreakMesh->AddVertex(tail + widthDir, normal, VEC2_ZERO, clear);
+			// Both windings, so they're visible regardless of the facing convention
+			for (u32 q = 0; q < 2; ++q)
+			{
+				const u32 a = base + q * 2;
+				m_AirStreakMesh->AddTriangle(a, a + 1, a + 3);
+				m_AirStreakMesh->AddTriangle(a, a + 3, a + 2);
+				m_AirStreakMesh->AddTriangle(a, a + 3, a + 1);
+				m_AirStreakMesh->AddTriangle(a, a + 2, a + 3);
+			}
+			++m_AirStreakCount;
+		}
+	}
+
 	void Traversal::DrawThermalMotes()
 	{
 		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
@@ -2389,7 +2671,7 @@ namespace flex
 		m_NearbyThermals.clear();
 		GetThermalsNear(glm::vec2(cameraPos.x, cameraPos.z), 600.0f, m_NearbyThermals);
 
-		const real time = g_SecElapsedSinceProgramStart;
+		const real time = AnimationTime();
 		const u32 motesPerThermal = 24;
 		const real columnHeight = 600.0f;
 

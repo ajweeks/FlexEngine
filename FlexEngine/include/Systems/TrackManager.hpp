@@ -39,6 +39,81 @@ namespace flex
 		real segmentLength = 0.4f; // Max length of each rail segment
 	};
 
+	// Discrete pieces of track which are placed one at a time, each continuing smoothly on from the end of the last
+	enum class TrackPieceType : u32
+	{
+		STRAIGHT,
+		STRAIGHT_LONG,
+		CURVE_LEFT,
+		CURVE_RIGHT,
+		RAMP_UP,
+		RAMP_DOWN,
+		S_BEND_LEFT,
+		S_BEND_RIGHT,
+		FOLLOW_GROUND, // A ramp up, down or level, whichever best follows the ground ahead
+
+		_COUNT
+	};
+
+	// Dimensions of track pieces, in metres. Grades are rise over run.
+	struct TrackPieceSettings
+	{
+		real straightLength = 4.0f;
+		real longStraightLength = 8.0f;
+		real curveRadius = 10.0f;
+		real curveAngle = PI / 4.0f; // Eight curves make a full circle
+		real rampRun = 6.0f; // Horizontal length of ramps
+		real gradeStep = 0.1f; // Change in grade over a ramp
+		real maxGrade = 0.3f; // Steeper track can't be placed
+		real sBendLength = 10.0f;
+		real sBendOffset = 3.0f; // Sideways shift (far enough for a parallel track)
+
+		// How far the terrain can be cut down or filled up to meet the track
+		real maxCutDepth = 4.0f;
+		real maxFillDepth = 4.0f;
+		// Half width of the strip of ground flattened under the track (the outer half blends into the terrain)
+		real earthworksRadius = 3.0f;
+	};
+
+	// Whether a piece can be placed, & why not
+	enum class TrackPieceCheck : u32
+	{
+		OK,
+		TOO_STEEP,
+		CUT_TOO_DEEP,
+		FILL_TOO_DEEP,
+		BLOCKED_BY_TRACK,
+
+		_COUNT
+	};
+
+	// An end of a track which no other track continues on from
+	struct TrackEnd
+	{
+		TrackPointRef ref;
+		glm::vec3 pos;
+		glm::vec3 dir; // Normalized, pointing away from the track
+	};
+
+	// Describes a track being cut in two (see TrackManager::CutTrack), so riders can be moved onto the remaining parts
+	struct TrackCut
+	{
+		// Moves a position on the cut track onto the part it's now on. Returns false if it was on the removed section.
+		// Positions on other tracks are left alone.
+		bool Remap(TrackID& inOutTrackID, real& inOutDistAlongTrack) const;
+
+		TrackID trackID = InvalidTrackID; // The track which was cut (now the part before the cut, or after if there's nothing before)
+		TrackID afterTrackID = InvalidTrackID; // The part after the cut (if there is one)
+		bool bKeptBefore = false;
+		bool bKeptAfter = false;
+		// The removed section runs from (beforeCurve, beforeT) to (afterCurve, afterT), in the original track's curves
+		i32 curveCount = 0;
+		i32 beforeCurve = 0;
+		real beforeT = 1.0f;
+		i32 afterCurve = 0;
+		real afterT = 0.0f;
+	};
+
 	struct Junction
 	{
 		// TODO: Update ToString if this value changes
@@ -75,6 +150,8 @@ namespace flex
 		BezierCurveList* GetTrack(TrackID trackID);
 		// Shifts the IDs of all following tracks down by one
 		void RemoveTrack(TrackID trackID);
+		// Removes every track (e.g. when leaving a world)
+		void ClearTracks();
 		// Must be called after changing a track's points
 		void OnTrackModified(TrackID trackID);
 
@@ -96,8 +173,9 @@ namespace flex
 		// Regenerates all curve handles so the track passes smoothly through its nodes
 		void SmoothTrack(TrackID trackID, const glm::vec3& startDir, const glm::vec3& endDir);
 
-		// Displays a track mesh which isn't part of the track network (pass nullptr to hide it)
-		void SetPreviewTrack(const BezierCurveList* track);
+		// Displays a translucent track which isn't part of the track network (pass nullptr to hide it), red when it
+		// can't be placed
+		void SetPreviewTrack(const BezierCurveList* track, bool bValid = true);
 		// Flashes the given track red (pass InvalidTrackID to clear)
 		void SetHighlightedTrack(TrackID trackID);
 		// Returns the track passing closest to pos, if any are within range
@@ -108,6 +186,33 @@ namespace flex
 		static void CreateLoopedTracks(const std::vector<glm::vec3>& nodes, glm::vec3 startDir, i32 loopNodeIndex, std::vector<BezierCurveList>& outTracks);
 
 		void OnSceneChanged();
+
+		// Track pieces
+		const TrackPieceSettings& GetPieceSettings() const { return m_PieceSettings; }
+		// Finds the free track end closest to pos within range
+		bool GetClosestFreeEnd(const glm::vec3& pos, real range, TrackEnd& outEnd) const;
+		// Builds a piece starting at startPos heading in startDir (whose slope is the starting grade). gradeChange is
+		// only used by FOLLOW_GROUND pieces (see ChooseFollowGroundGradeChange)
+		BezierCurve3D BuildPiece(TrackPieceType type, const glm::vec3& startPos, const glm::vec3& startDir, real gradeChange = 0.0f) const;
+		// The grade change (a multiple of the grade step) with which a ramp best follows the ground ahead
+		real ChooseFollowGroundGradeChange(const glm::vec3& startPos, const glm::vec3& startDir) const;
+		// Whether a piece can be placed: not too steep, the ground can be cut or filled to meet it & it doesn't run
+		// into other tracks. continuesFromTrackID is the track it continues on from (if any), which it may touch.
+		// outMaxCut & outMaxFill are how far the ground will be cut down & built up
+		TrackPieceCheck CheckPiece(const BezierCurve3D& piece, const glm::vec3& startDir, TrackID continuesFromTrackID,
+			real* outMaxCut = nullptr, real* outMaxFill = nullptr) const;
+		// Cuts & fills the terrain along the track so it sits flush on the ground (felling trees in the way)
+		void ConformTerrainToTrack(const BezierCurve3D& curve);
+		// The ground below pos (the terrain, or static collision when there's no terrain)
+		bool FindGroundBelow(const glm::vec3& pos, real maxDistance, glm::vec3& outGroundPos) const;
+		// Rise over run of a direction
+		static real GetGrade(const glm::vec3& dir);
+
+		// Removes the section of track between t0 & t1 (both in [0, 1]), leaving up to two tracks. Riders on the
+		// removed section derail. Returns false if the whole track was removed.
+		bool CutTrack(TrackID trackID, real t0, real t1);
+		// Breaks tracks whose support has been dug out of the ground below them
+		void OnTerrainDug(const glm::vec3& center, real radius);
 
 		void DrawDebug();
 
@@ -178,14 +283,25 @@ namespace flex
 		void UpdateTrackMesh(TrackMesh& trackMesh, const BezierCurveList& track, const char* objectName,
 			const char* railMaterialName, const char* sleeperMaterialName, real inflate);
 		void DestroyTrackMesh(TrackMesh& trackMesh);
+		// Previews are static meshes (the hologram shader has no dynamic vertex buffer), relative to m_PreviewOrigin so
+		// they only need rebuilding when their shape changes
+		void UpdatePreviewMesh(TrackMesh& trackMesh, bool bValid);
 
 		static const real JUNCTION_THRESHOLD_DIST;
 
 		// Parallel to tracks
 		std::vector<TrackMesh> m_TrackMeshes;
 		TrackMesh m_PreviewTrackMesh;
-		BezierCurveList m_PreviewTrack;
+		// Shown instead of m_PreviewTrackMesh when the preview can't be placed
+		TrackMesh m_BlockedPreviewTrackMesh;
+		BezierCurveList m_PreviewTrack; // Relative to m_PreviewOrigin
+		glm::vec3 m_PreviewOrigin = VEC3_ZERO;
 		bool m_bPreviewTrackVisible = false;
+		bool m_bPreviewTrackValid = true;
+
+		TrackPieceSettings m_PieceSettings;
+		// Set while making a track's own earthworks, which mustn't break tracks
+		bool m_bConformingTerrain = false;
 
 		// Drawn over the highlighted track to show it's about to be deleted
 		TrackMesh m_HighlightTrackMesh;
@@ -207,4 +323,10 @@ namespace flex
 		i32 m_DEBUG_highlightedJunctionIndex = -1;
 
 	};
+
+	// Scripted test of placing pieces on sloped terrain, riding them & digging under them (FLEX_TRACK_TEST=1 with
+	// --test-scenes on a terrain scene, run by SceneTestRunner). EndTrackTest returns false if it didn't finish.
+	void BeginTrackTest(bool bScreenshots);
+	void UpdateTrackTest();
+	bool EndTrackTest();
 } // namespace flex

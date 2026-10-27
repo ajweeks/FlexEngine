@@ -130,6 +130,8 @@ namespace flex
 		static void YieldProcessor();
 		// For long running background work (e.g. terrain generation), so it doesn't compete with per-frame work
 		static void SetCurrentThreadBackgroundPriority();
+		// CPU time the calling thread has spent running (not waiting or preempted), in nanoseconds
+		static u64 GetCurrentThreadCPUTimeNs();
 		static bool SetFlexThreadAffinityMask(void* threadHandle, u64 threadID);
 		static bool SetFlexThreadName(void* threadHandle, const char* threadName);
 

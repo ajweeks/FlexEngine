@@ -486,6 +486,31 @@ namespace flex
 		::YieldProcessor();
 	}
 
+	u64 Platform::GetCurrentThreadCPUTimeNs()
+	{
+		// Thread cycle counts are precise (unlike GetThreadTimes, which is only updated on clock interrupts), but are
+		// in TSC ticks, whose rate is measured once by spinning for a moment
+		static const double s_NsPerCycle = []()
+		{
+			LARGE_INTEGER frequency, start, now;
+			QueryPerformanceFrequency(&frequency);
+			ULONG64 startCycles, endCycles;
+			QueryPerformanceCounter(&start);
+			QueryThreadCycleTime(GetCurrentThread(), &startCycles);
+			do
+			{
+				QueryPerformanceCounter(&now);
+			} while ((now.QuadPart - start.QuadPart) * 1000 < frequency.QuadPart * 2);
+			QueryThreadCycleTime(GetCurrentThread(), &endCycles);
+			const double elapsedNs = (double)(now.QuadPart - start.QuadPart) * 1e9 / (double)frequency.QuadPart;
+			return endCycles > startCycles ? elapsedNs / (double)(endCycles - startCycles) : 0.0;
+		}();
+
+		ULONG64 cycles;
+		QueryThreadCycleTime(GetCurrentThread(), &cycles);
+		return (u64)((double)cycles * s_NsPerCycle);
+	}
+
 	void* Platform::InitCriticalSection()
 	{
 		CRITICAL_SECTION* criticalSection = new CRITICAL_SECTION();

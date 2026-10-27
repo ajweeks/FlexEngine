@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "F43499B9770B4B7CB33250FEB5F27C29",
+	"root" : 
+	{
+		"id" : "8781BAF04D974E3A884A78257D1B6527",
+		"name" : "charcoal",
+		"type" : "object",
+		"mesh" : "cylinder.glb",
+		"materials" : 
+		[
+			"charcoal"
+		]
+	}
+}

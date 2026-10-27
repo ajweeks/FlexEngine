@@ -33,7 +33,7 @@ namespace flex
 		static const u32 MAX_BIOME_COUNT = 16;
 
 		// Bump whenever generation output changes to invalidate cached chunks
-		static const u32 GENERATOR_VERSION = 15;
+		static const u32 GENERATOR_VERSION = 16;
 
 		enum class Material : u8
 		{
@@ -67,6 +67,14 @@ namespace flex
 			FILL,
 			// A plant (tree or cactus) which has been cut down: center is its base. Doesn't change the density.
 			REMOVE_PLANT,
+			// Plane brushes: a disc (center, normal, radius) which moves the surface onto the plane through center, within
+			// height of it (along the normal). The effect fades out smoothly towards the disc's rim (see PlaneEditWeight),
+			// so results have gentle, walkable slopes instead of the creases left by spheres.
+			LOWER, // Removes material above the plane (a flat bottomed hole, or a terrace cut into a slope)
+			RAISE, // Adds material below the plane (a flat topped mound, or a terrace built out from a slope)
+			FLATTEN, // Both
+
+			_COUNT
 		};
 
 		struct Edit
@@ -75,7 +83,23 @@ namespace flex
 			real radius;
 			EditType type;
 			Material material;
+			// Plane edits only
+			glm::vec3 normal = glm::vec3(0.0f, 1.0f, 0.0f);
+			real height = 0.0f;
 		};
+
+		inline bool IsPlaneEdit(EditType type)
+		{
+			return type == EditType::LOWER || type == EditType::RAISE || type == EditType::FLATTEN;
+		}
+
+		// World space box containing everything the edit affects (other than the density's edit band)
+		void GetEditBounds(const Edit& edit, glm::vec3& outMin, glm::vec3& outMax);
+		// [0, 1] strength of a plane edit at offset (from its center): 1 within the inner part of the disc, fading to 0
+		// at its rim & at height from the plane
+		real PlaneEditWeight(const Edit& edit, const glm::vec3& offset);
+		// A plane edit (see EditType). height <= 0 picks a default which reaches past the surface of most slopes.
+		Edit MakePlaneEdit(EditType type, const glm::vec3& center, const glm::vec3& normal, real radius, real height, Material material);
 
 		// The plant life a biome grows: a dominant tree species (with a little variety), its density & the bushes
 		// beneath. Chosen per biome so forests look uniform.
@@ -90,6 +114,7 @@ namespace flex
 			ALPINE, // Sparse pines, low shrubs
 			SAVANNA, // Scattered flat topped acacias & dry scrub
 			DESERT, // Cacti & dry scrub
+			VOLCANIC, // No living trees: the odd charred snag or stump (chopped for charcoal) & sparse dark scrub
 
 			_COUNT
 		};
@@ -138,8 +163,8 @@ namespace flex
 			real lodDistanceFactor = 2.0f; // Larger = higher detail further away (min 1.8 to ensure neighbors differ by at most one level)
 			real viewDistance = 40000.0f;
 
-			real biomeCellSize = 6000.0f;
-			real biomeBlendDistance = 1800.0f;
+			real biomeCellSize = 12000.0f;
+			real biomeBlendDistance = 3000.0f;
 
 			real continentWavelength = 14000.0f;
 			real continentAmplitude = 200.0f;
@@ -172,7 +197,7 @@ namespace flex
 			real massifMaxHeight = 4200.0f;
 
 			// Climate (temperature) varies over this distance, so similar biomes are found near each other
-			real climateWavelength = 40000.0f;
+			real climateWavelength = 80000.0f;
 
 			// Oceans: large regions of deep water at sea level
 			real seaLevel = 0.0f;
@@ -404,6 +429,7 @@ namespace flex
 			CONIFER,
 			DECIDUOUS,
 			CACTUS,
+			SNAG, // Dead & burnt: no foliage, yields charcoal
 		};
 
 		// Visual variants of the plant kinds
@@ -417,6 +443,7 @@ namespace flex
 			WILLOW, // Deciduous: drooping dark canopy
 			ACACIA, // Deciduous: flat topped canopy on a leaning trunk
 			SAGUARO, // Cactus
+			CHARRED, // Snag: a blackened trunk with broken branch stubs (or just a stump)
 		};
 
 		struct PlantInfo
@@ -440,6 +467,18 @@ namespace flex
 		void BuildPlantMesh(const TerrainDensity& density, const PlantInfo& plant, ChunkMeshData& outMesh);
 		// An edit removing the given plant (so chunks are generated without it)
 		Edit MakeRemovePlantEdit(const PlantInfo& plant);
+
+		struct SpawnSearchResult
+		{
+			glm::vec3 pos = glm::vec3(0.0f); // On the ground
+			bool bIdeal = false; // false: no flat, dry & low ground was found in range, pos is the best compromise
+			u32 samples = 0; // Columns evaluated
+		};
+
+		// Where to start a new world: dry, gently sloping land a little above sea level (not in a cave, lake or the
+		// sea) as close to the origin as possible. Searches outwards from the origin using the density alone (no
+		// chunks need to have been generated) & is deterministic per seed.
+		SpawnSearchResult FindSpawnPoint(const TerrainDensity& density, real maxRadius = 20000.0f);
 
 		class TerrainWorkerPool
 		{
@@ -603,6 +642,10 @@ namespace flex
 			// Displayed chunks, followed by chunks being generated
 			void GetDisplayedChunks(std::vector<DisplayedChunkInfo>& outChunks) const;
 
+			// For testing: checks that every displayed chunk's transition mask matches the levels of the displayed chunks
+			// around it (a mismatch leaves cracks). Returns the number of mismatched faces & edges.
+			u32 ValidateDisplayedMasks(std::string* outReport = nullptr) const;
+
 			// Exposed for testing
 			void ComputeDesiredChunks(const glm::vec3& cameraPos, std::unordered_map<ChunkKey, TransitionMask, ChunkKeyHash>& outDesired);
 			i32 LeafLevelAt(const glm::vec3& cameraPos, const glm::vec3& pos) const;
@@ -665,6 +708,8 @@ namespace flex
 			void StartBatch(DesiredChunks&& desired);
 			void BuildSwapGroups(const std::vector<ChunkKey>& retiring);
 			void ApplyReadySwapGroups(std::vector<ChunkCommand>& outCommands);
+			// Checks that the displayed chunks are exactly those of the last batch (see the definition)
+			void VerifyBatchResult();
 			// Job priority (lower = sooner), favoring chunks the camera is heading towards
 			real ChunkPriority(const ChunkKey& key) const;
 			void UpdateVelocity(const glm::vec3& cameraPos);
@@ -709,6 +754,9 @@ namespace flex
 			u32 m_SnapshotChunkCount = 0;
 
 			glm::vec3 m_BatchCameraPos;
+			// The chunks (& transition masks) the last batch selected
+			std::unordered_map<ChunkKey, TransitionMask, ChunkKeyHash> m_BatchDesired;
+			u32 m_BatchMismatchCount = 0;
 			bool m_bBatchInFlight = false;
 
 			// Smoothed camera velocity, used to prioritize chunks ahead of the camera

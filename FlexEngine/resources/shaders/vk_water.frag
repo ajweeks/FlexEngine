@@ -1,9 +1,6 @@
 #version 450
 
-#define NUM_POINT_LIGHTS 8
-
-#extension GL_ARB_separate_shader_objects : enable
-#extension GL_ARB_shading_language_420pack : enable
+#include "vk_misc.glsl"
 
 layout (location = 0) in vec3 ex_PositionWS;
 layout (location = 1) in vec2 ex_TexCoord;
@@ -11,18 +8,6 @@ layout (location = 2) in vec4 ex_Colour;
 layout (location = 3) in mat3 ex_TBN;
 
 layout (location = 0) out vec4 fragColour;
-
-// TODO: Move to common header
-struct DirectionalLight 
-{
-	vec3 direction;
-	int enabled;
-	vec3 colour;
-	float brightness;
-	int castShadows;
-	float shadowDarkness;
-	vec2 _dirLightPad;
-};
 
 struct OceanData
 {
@@ -35,56 +20,6 @@ struct OceanData
 	float fogFalloff;
 	float fogDensity;
 };
-
-// Must match SkyboxData in vk_misc.glsl (& on the CPU)
-struct SkyboxData
-{
-	vec4 colourTop;
-	vec4 colourMid;
-	vec4 colourBtm;
-	vec4 colourFog;
-	vec4 sun;
-	vec4 clouds;
-	vec4 moon;
-	vec4 sunColour;
-	vec4 weather;
-};
-
-// Volumes (e.g. the inside of a boat's hull) in which water surfaces aren't drawn. Each is a stack of ellipses in
-// its local space whose semi-axes grow linearly from the bottom to the top. Must match WaterClipData on the CPU.
-struct WaterClipVolume
-{
-	mat4 worldToLocal;
-	vec4 extents; // x: half width (top), y: half length (top), z: bottom y, w: top y
-	vec4 bottomScale; // x: width scale at the bottom, y: length scale at the bottom
-};
-
-struct WaterClipData
-{
-	WaterClipVolume volumes[4];
-	vec4 count; // x: number of volumes in use
-};
-
-bool IsInWaterClipVolume(WaterClipData data, vec3 posWS)
-{
-	int count = int(data.count.x);
-	for (int i = 0; i < count; ++i)
-	{
-		vec3 p = (data.volumes[i].worldToLocal * vec4(posWS, 1.0)).xyz;
-		vec4 e = data.volumes[i].extents;
-		float t = (p.y - e.z) / max(e.w - e.z, 0.0001);
-		if (t >= 0.0 && t <= 1.0)
-		{
-			vec2 scale = mix(data.volumes[i].bottomScale.xy, vec2(1.0), t);
-			vec2 q = p.xz / (e.xy * scale);
-			if (dot(q, q) < 1.0)
-			{
-				return true;
-			}
-		}
-	}
-	return false;
-}
 
 layout (binding = 0) uniform UBOConstant
 {
@@ -171,10 +106,20 @@ void main()
 	vec3 waterCol = oceanBtm;//mix(oceanBtm, mix(oceanMid, oceanTop, clamp((fresnel - 0.5) * 2.0, 0, 1)), clamp(fresnel * 2.0, 0, 1));
 	fragColour = vec4(waterCol+sky*uboConstant.oceanData.skyReflectionFactor*skyFac, 1);
 
-	// Fog
-	vec4 posCS = uboConstant.view * vec4(ex_PositionWS, 1);	
-	float depthFade = clamp(pow(pow(posCS.z, uboConstant.oceanData.fogFalloff)*0.0018, uboConstant.oceanData.fogDensity), 0, 1);
-	fragColour = vec4(mix(fragColour.xyz, skyHorizon, depthFade), 1);
+	// Fog: the same distance fog & cloud layer as the terrain (in display space, like the colour above)
+	vec3 viewVec = ex_PositionWS - uboConstant.camPos.xyz;
+	float dist = length(viewVec);
+	if (IsDistanceFogEnabled(uboConstant.skyboxData))
+	{
+		ApplyDistanceFog(dist, viewVec / max(dist, 0.0001), uboConstant.skyboxData, /* inout */ fragColour.rgb);
+	}
+	else
+	{
+		vec4 posCS = uboConstant.view * vec4(ex_PositionWS, 1);
+		float depthFade = clamp(pow(pow(max(posCS.z, 0.0), uboConstant.oceanData.fogFalloff)*0.0018, uboConstant.oceanData.fogDensity), 0, 1);
+		fragColour.rgb = mix(fragColour.rgb, skyHorizon, depthFade);
+	}
+	ApplyCloudLayer(ex_PositionWS, uboConstant.camPos.xyz, uboConstant.skyboxData, /* inout */ fragColour.rgb);
 
 	//fragColour = vec4(SampleSkybox(R), 1);
 	//fragColour = vec4(fresnel.xxx, 1);

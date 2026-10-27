@@ -155,6 +155,14 @@ namespace flex
 		// Spawns a vehicle (from the given prefab, e.g. "vehicle" or "row boat") on the ground (or water) in front of the camera
 		GameObject* SpawnVehicleInFrontOfCamera(const char* prefabName = "vehicle");
 
+		// Debug teleports between the player & the debug camera (F6 / F8, or the debug window's Player tab)
+		// Moves the debug camera to the player's eyes, looking where they look, & switches to it
+		void MoveDebugCameraToPlayer();
+		// Moves the player to the debug camera (via Player::TeleportOnTerrain): onto the ground below it, or exactly there if
+		// it's clear & standing on something
+		// bPossessPlayer switches back to the player's camera afterwards
+		void MovePlayerToDebugCamera(bool bExact, bool bPossessPlayer);
+
 	private:
 		EventReply OnMouseButtonEvent(MouseButton button, KeyAction action);
 		MouseButtonCallback<FlexEngine> m_MouseButtonCallback;
@@ -180,6 +188,16 @@ namespace flex
 		void DestroyWindowAndRenderer();
 		void SetupImGuiStyles();
 		void DrawImGuiObjects();
+		// Main debug window sections
+		void DrawImGuiMainToolbar();
+		void DrawImGuiSceneTab();
+		void DrawImGuiRenderTab();
+		void DrawImGuiPhysicsTab();
+		void DrawImGuiPlayerTab();
+		void DrawImGuiWorldTab();
+		void DrawImGuiAudioTab();
+		void DrawImGuiStatsTab();
+		void DrawImGuiHelpPopup(bool* bShowHelpWindow);
 
 		void PrintAllConsoleCommands();
 
@@ -217,7 +235,7 @@ namespace flex
 
 		real m_SimulationSpeed = 1.0f;
 
-		real m_ImGuiMainWindowWidth = 350.0f;
+		real m_ImGuiMainWindowWidth = 420.0f; // (wide enough for every tab)
 		real m_ImGuiMainWindowWidthMin = 200.0f;
 		real m_ImGuiMainWindowWidthMax = 0.0f;
 

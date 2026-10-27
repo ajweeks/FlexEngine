@@ -19,6 +19,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/MeshComponent.hpp"
 #include "Scene/Objects/Building.hpp" // For AppendBoxToVertexData
 #include "Scene/Objects/Lights.hpp" // For FireFlicker
+#include "Scene/Objects/Props.hpp" // For DroppedItem
 #include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/SceneManager.hpp"
 
@@ -147,6 +148,50 @@ namespace flex
 			std::vector<u32> indices;
 		};
 
+		using LayoutBoxFunc = std::function<void(const glm::vec3& center, const glm::vec3& halfExtents, const glm::quat& rotation)>;
+
+		// An unlit campfire's ring of stones & teepee of logs (local space), shared by its mesh & its placement preview.
+		// groundHeight: local height of the ground below a local xz position.
+		void BuildUnlitLayout(u32& h, const std::function<real(real, real)>& groundHeight, const LayoutBoxFunc& stone, const LayoutBoxFunc& log, const LayoutBoxFunc& logEnd)
+		{
+			const u32 stoneCount = 10;
+			for (u32 i = 0; i < stoneCount; ++i)
+			{
+				const real angle = TWO_PI * ((real)i + RandomRange(h, -0.2f, 0.2f)) / (real)stoneCount;
+				const real radius = RandomRange(h, 0.72f, 0.82f);
+				const glm::vec3 halfExtents(RandomRange(h, 0.14f, 0.2f), RandomRange(h, 0.09f, 0.14f), RandomRange(h, 0.11f, 0.16f));
+				const real x = std::cos(angle) * radius;
+				const real z = std::sin(angle) * radius;
+				const glm::quat rotation = glm::angleAxis(-angle + RandomRange(h, -0.3f, 0.3f), VEC3_UP) * glm::angleAxis(RandomRange(h, -0.2f, 0.2f), VEC3_RIGHT);
+				stone(glm::vec3(x, groundHeight(x, z) + halfExtents.y * 0.6f, z), halfExtents, rotation);
+			}
+
+			const u32 logCount = 5;
+			const real logHalfLength = 0.42f;
+			const real tilt = 0.62f; // Radians from vertical
+			for (u32 i = 0; i < logCount; ++i)
+			{
+				const real angle = TWO_PI * ((real)i + RandomRange(h, -0.15f, 0.15f)) / (real)logCount;
+				const glm::vec3 out(std::cos(angle), 0.0f, std::sin(angle));
+				const glm::vec3 axis = glm::normalize(glm::cross(VEC3_UP, out));
+				// Leaning in, with the bottom end on the ground
+				const glm::quat rotation = glm::angleAxis(-tilt, axis) * glm::angleAxis(RandomRange(h, 0.0f, TWO_PI), VEC3_UP);
+				const glm::vec3 logUp = rotation * VEC3_UP;
+				const real radius = RandomRange(h, 0.06f, 0.08f);
+				const glm::vec3 bottom = out * 0.42f + glm::vec3(0.0f, groundHeight(out.x * 0.42f, out.z * 0.42f) + 0.02f, 0.0f);
+				const glm::vec3 center = bottom + logUp * logHalfLength;
+				log(center, glm::vec3(radius, logHalfLength, radius), rotation);
+				// Lighter cut ends
+				logEnd(center + logUp * (logHalfLength + 0.005f), glm::vec3(radius * 0.92f, 0.01f, radius * 0.92f), rotation);
+			}
+			// Kindling in the middle
+			for (u32 i = 0; i < 4; ++i)
+			{
+				const glm::quat rotation = glm::angleAxis(RandomRange(h, 0.0f, TWO_PI), VEC3_UP);
+				log(glm::vec3(RandomRange(h, -0.1f, 0.1f), groundHeight(0.0f, 0.0f) + 0.05f, RandomRange(h, -0.1f, 0.1f)), glm::vec3(0.03f, 0.03f, 0.22f), rotation);
+			}
+		}
+
 		GameObject* CreateChildObject(GameObject* parent, const char* name)
 		{
 			GameObject* object = new GameObject(name, BaseObjectSID);
@@ -206,6 +251,8 @@ namespace flex
 			case terrain::PlantKind::CONIFER: return 3 + (i32)(plant.size01 * 2.99f);
 			case terrain::PlantKind::DECIDUOUS: return 3 + (i32)(plant.size01 * 2.99f);
 			case terrain::PlantKind::CACTUS: return 1 + (i32)(plant.size01 * 1.99f);
+			// (Charcoal: burnt remains have less left in them)
+			case terrain::PlantKind::SNAG: return 1 + (i32)(plant.size01 * 2.99f);
 			default: return 0;
 			}
 		}
@@ -610,12 +657,14 @@ namespace flex
 				++m_Bounces;
 				if (m_Bounces == 1)
 				{
+					// The wood can be picked up as soon as the trunk hits the ground
+					DropWood();
 					const glm::vec3 pivot = m_Plant.base;
 					const glm::quat rotation = glm::angleAxis(m_Angle, m_Axis);
 					WoodcraftEffects* effects = WoodcraftEffects::Get();
 					if (effects != nullptr)
 					{
-						if (m_Plant.kind != terrain::PlantKind::CACTUS)
+						if (m_Plant.kind != terrain::PlantKind::CACTUS && m_Plant.kind != terrain::PlantKind::SNAG)
 						{
 							effects->SpawnLeaves(pivot + rotation * glm::vec3(0.0f, m_Plant.height * 0.7f, 0.0f), m_Plant.height * 0.2f, 40);
 						}
@@ -659,8 +708,9 @@ namespace flex
 	{
 		m_bWoodDropped = true;
 
-		// Cacti drop pieces of cactus rather than wood
-		const PrefabID woodID = m_Plant.kind == terrain::PlantKind::CACTUS ? g_ResourceManager->GetPrefabID("cactus") : woodcraft::GetWoodPrefabID();
+		// Cacti drop pieces of cactus & burnt trees charcoal, rather than wood
+		const PrefabID woodID = m_Plant.kind == terrain::PlantKind::CACTUS ? g_ResourceManager->GetPrefabID("cactus") :
+			m_Plant.kind == terrain::PlantKind::SNAG ? g_ResourceManager->GetPrefabID("charcoal") : woodcraft::GetWoodPrefabID();
 		const i32 count = woodcraft::WoodYield(m_Plant);
 		if (!woodID.IsValid() || count <= 0)
 		{
@@ -682,7 +732,9 @@ namespace flex
 				pos = hitPos;
 			}
 			pos += VEC3_UP * 0.5f;
-			scene->CreateDroppedItem(woodID, 1, pos, VEC3_ZERO);
+			DroppedItem* item = scene->CreateDroppedItem(woodID, 1, pos, VEC3_ZERO);
+			// (it flies over to the player, so it doesn't need long to be seen first)
+			item->pickupDelay = 0.3f;
 			if (effects != nullptr)
 			{
 				effects->SpawnChips(pos, VEC3_UP, 4, VEC3_ZERO);
@@ -740,6 +792,17 @@ namespace flex
 		GameObject::Destroy(bDetachFromParent);
 	}
 
+	void Campfire::BuildPreviewGeometry(PlacementPreview::Geometry& geometry)
+	{
+		// (on flat ground, slightly inflated so it reads as a solid shape)
+		u32 h = HashU32(17u);
+		auto Box = [&](const glm::vec3& center, const glm::vec3& halfExtents, const glm::quat& rotation)
+		{
+			geometry.Box(center, halfExtents + glm::vec3(0.01f), rotation);
+		};
+		BuildUnlitLayout(h, [](real, real) { return 0.0f; }, Box, Box, [](const glm::vec3&, const glm::vec3&, const glm::quat&) {});
+	}
+
 	void Campfire::CreateMeshes()
 	{
 		using woodcraft::GetOrCreateMaterial;
@@ -769,52 +832,17 @@ namespace flex
 			return 0.0f;
 		};
 
-		// A ring of stones
-		{
-			StaticMeshBuilder stones(stoneMaterialID);
-			const u32 stoneCount = 10;
-			for (u32 i = 0; i < stoneCount; ++i)
-			{
-				const real angle = TWO_PI * ((real)i + RandomRange(h, -0.2f, 0.2f)) / (real)stoneCount;
-				const real radius = RandomRange(h, 0.72f, 0.82f);
-				const glm::vec3 halfExtents(RandomRange(h, 0.14f, 0.2f), RandomRange(h, 0.09f, 0.14f), RandomRange(h, 0.11f, 0.16f));
-				const real x = std::cos(angle) * radius;
-				const real z = std::sin(angle) * radius;
-				const glm::quat rotation = glm::angleAxis(-angle + RandomRange(h, -0.3f, 0.3f), VEC3_UP) * glm::angleAxis(RandomRange(h, -0.2f, 0.2f), VEC3_RIGHT);
-				stones.Box(glm::vec3(x, GroundHeight(x, z) + halfExtents.y * 0.6f, z), halfExtents, rotation);
-			}
-			stones.AddTo(this);
-		}
-
-		// A teepee of logs (before burning)
+		// A ring of stones, & a teepee of logs (before burning)
 		m_FreshLogs = CreateChildObject(this, "Campfire logs");
 		{
+			StaticMeshBuilder stones(stoneMaterialID);
 			StaticMeshBuilder logs(logMaterialID);
 			StaticMeshBuilder ends(logEndMaterialID);
-			const u32 logCount = 5;
-			const real logHalfLength = 0.42f;
-			const real tilt = 0.62f; // Radians from vertical
-			for (u32 i = 0; i < logCount; ++i)
-			{
-				const real angle = TWO_PI * ((real)i + RandomRange(h, -0.15f, 0.15f)) / (real)logCount;
-				const glm::vec3 out(std::cos(angle), 0.0f, std::sin(angle));
-				const glm::vec3 axis = glm::normalize(glm::cross(VEC3_UP, out));
-				// Leaning in, with the bottom end on the ground
-				const glm::quat rotation = glm::angleAxis(-tilt, axis) * glm::angleAxis(RandomRange(h, 0.0f, TWO_PI), VEC3_UP);
-				const glm::vec3 logUp = rotation * VEC3_UP;
-				const real radius = RandomRange(h, 0.06f, 0.08f);
-				const glm::vec3 bottom = out * 0.42f + glm::vec3(0.0f, GroundHeight(out.x * 0.42f, out.z * 0.42f) + 0.02f, 0.0f);
-				const glm::vec3 center = bottom + logUp * logHalfLength;
-				logs.Box(center, glm::vec3(radius, logHalfLength, radius), rotation);
-				// Lighter cut ends
-				ends.Box(center + logUp * (logHalfLength + 0.005f), glm::vec3(radius * 0.92f, 0.01f, radius * 0.92f), rotation);
-			}
-			// Kindling in the middle
-			for (u32 i = 0; i < 4; ++i)
-			{
-				const glm::quat rotation = glm::angleAxis(RandomRange(h, 0.0f, TWO_PI), VEC3_UP);
-				logs.Box(glm::vec3(RandomRange(h, -0.1f, 0.1f), GroundHeight(0.0f, 0.0f) + 0.05f, RandomRange(h, -0.1f, 0.1f)), glm::vec3(0.03f, 0.03f, 0.22f), rotation);
-			}
+			BuildUnlitLayout(h, GroundHeight,
+				[&](const glm::vec3& center, const glm::vec3& halfExtents, const glm::quat& rotation) { stones.Box(center, halfExtents, rotation); },
+				[&](const glm::vec3& center, const glm::vec3& halfExtents, const glm::quat& rotation) { logs.Box(center, halfExtents, rotation); },
+				[&](const glm::vec3& center, const glm::vec3& halfExtents, const glm::quat& rotation) { ends.Box(center, halfExtents, rotation); });
+			stones.AddTo(this);
 			logs.AddTo(m_FreshLogs);
 			ends.AddTo(m_FreshLogs);
 		}
@@ -958,7 +986,7 @@ namespace flex
 	void Campfire::UpdateFire(real intensity)
 	{
 		const real dt = glm::min(g_DeltaTime, 0.1f);
-		const real time = g_SecElapsedSinceProgramStart;
+		const real time = AnimationTime();
 		const glm::vec3 origin = m_Transform.GetWorldPosition() + VEC3_UP * 0.08f;
 
 		if (intensity > 0.0f)
@@ -1060,7 +1088,7 @@ namespace flex
 		}
 		std::sort(lit.begin(), lit.end(), [](const Pair<real, Campfire*>& a, const Pair<real, Campfire*>& b) { return a.first < b.first; });
 
-		const real time = g_SecElapsedSinceProgramStart;
+		const real time = AnimationTime();
 		for (u32 i = 0; i < MAX_CAMPFIRE_LIGHTS; ++i)
 		{
 			PointLightID& lightID = s_CampfireLights[i];

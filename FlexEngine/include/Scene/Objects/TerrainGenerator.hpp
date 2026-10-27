@@ -2,10 +2,12 @@
 
 #include "Scene/GameObject.hpp"
 #include "Scene/TerrainGeneration.hpp"
+#include "Systems/JobSystem.hpp"
 
 namespace flex
 {
 	class Road;
+	struct ChunkCollisionBuild;
 
 	// Streams an infinite volumetric terrain around the camera (see Scene/TerrainGeneration.hpp)
 	class TerrainGenerator final : public GameObject
@@ -30,12 +32,39 @@ namespace flex
 		// Returns the height of the terrain's (heightfield) surface at the given world position,
 		// not taking into account caves, overhangs, etc.
 		real SampleHeight(const glm::vec2& pos);
+		// (for tests)
+		terrain::TerrainStreamer* GetStreamer() { return m_Streamer; }
+
+		// Where a new world's player starts: flat, dry, low ground near the origin (see terrain::FindSpawnPoint).
+		// Uses the current params (& seed), so it works straight after SetWorld, before any chunks have loaded.
+		glm::vec3 FindSpawnPoint() const;
 
 		// Marches along the ray against the terrain (including edits). Returns true on hit.
 		bool Raycast(const glm::vec3& origin, const glm::vec3& dir, real maxDistance, glm::vec3& outHitPos, glm::vec3& outHitNormal) const;
 		// Removes small fragments left floating by the dig (unless bRemoveFragments is false)
 		void Dig(const glm::vec3& center, real radius, bool bRemoveFragments = true);
 		void Fill(const glm::vec3& center, real radius, terrain::Material material);
+
+		// Plane brushes (see terrain::EditType): move the surface within radius of center onto the plane through center
+		// (perpendicular to normal), fading out smoothly over the outer half of the radius so the result has gentle,
+		// walkable slopes. FlattenArea both cuts & fills, LowerArea only cuts, RaiseArea only fills (with material).
+		// height: how far from the plane terrain is changed (<= 0: a default reaching the surface of most slopes
+		// around the disc). Plants whose roots are cut away fall over, & ones which are buried are removed. Saved with
+		// the world's terrain edits like digs & fills. Each call re-meshes the chunks around it a few frames later.
+		void FlattenArea(const glm::vec3& center, const glm::vec3& normal, real radius, terrain::Material material = terrain::Material::SOIL, real height = 0.0f);
+		void LowerArea(const glm::vec3& center, const glm::vec3& normal, real radius, real height = 0.0f);
+		void RaiseArea(const glm::vec3& center, const glm::vec3& normal, real radius, terrain::Material material, real height = 0.0f);
+		// Flattens a strip of terrain (e.g. under a road or track) along a path through points, radius to either side.
+		// Each disc's plane is tilted to follow the path's slope (but not rolled sideways), so the strip is smooth along
+		// its length. All discs are applied at once.
+		void FlattenPath(const std::vector<glm::vec3>& points, real radius, terrain::Material material = terrain::Material::GRAVEL, real height = 0.0f);
+		// Applies a plane edit made with terrain::MakePlaneEdit (see FlattenArea)
+		void ApplyPlaneEdits(const std::vector<terrain::Edit>& planeEdits);
+		// Removes small pieces of terrain left floating near center (e.g. once a series of edits is finished)
+		void RemoveFloatingFragments(const glm::vec3& center, real extent);
+		// Average terrain normal around a point on its surface, over roughly radius (more stable than the normal at one
+		// point, so good for aligning things with the ground)
+		glm::vec3 SampleSmoothNormal(const glm::vec3& pos, real radius) const;
 
 		// Trees & cacti (generated as part of the terrain) whose bases lie within the box. Plants are found from the
 		// density, so they're available whether or not their chunk has loaded.
@@ -47,6 +76,8 @@ namespace flex
 		void BuildPlantMesh(const terrain::PlantInfo& plant, terrain::ChunkMeshData& outMesh) const;
 		// Called whenever plants are felled (by FellPlant, or by digging out the ground below them)
 		static void (*s_OnPlantFelled)(const terrain::PlantInfo& plant, const glm::vec3& fallDirection);
+		// Called after every Dig (e.g. so tracks whose support was dug out can break)
+		static void (*s_OnTerrainDug)(const glm::vec3& center, real radius);
 		// Number of edit jobs in flight (edits are applied a few frames after being made)
 		bool IsApplyingEdits() const;
 
@@ -106,6 +137,10 @@ namespace flex
 		// Information about the terrain at a world position (biome name, etc.)
 		std::string DescribeLocation(const glm::vec3& pos) const;
 
+		// Draws the player's marker on a map (a white arrow with a dark outline pointing along heading, which is in
+		// pixels, y down) as a screen space sprite centered on centerPx
+		void DrawMapPlayerArrow(const glm::vec2& centerPx, const glm::vec2& heading, real sizePx, u32 zOrder);
+
 	private:
 		friend Road;
 
@@ -127,10 +162,15 @@ namespace flex
 			btTriangleIndexVertexArray* foliageTriangleIndexVertexArray = nullptr;
 			RigidBody* foliageRigidBody = nullptr;
 			btCollisionShape* foliageCollisionShape = nullptr;
+			// Non-zero while collision is being built in the background (see UpdateRigidBodies)
+			u32 collisionBuildID = 0;
+			// Owns the triangles the collision shapes reference when they were built in the background (otherwise
+			// they reference the mesh's data)
+			std::shared_ptr<ChunkCollisionBuild> collisionData;
 		};
 
 		void UpdateRoadSegments();
-		// FLEX_VEGETATION_TOUR=1: visits each biome, screenshotting its vegetation, then fells a cactus (to check what it drops)
+		// FLEX_VEGETATION_TOUR=1: visits each biome, screenshotting its vegetation, then fells a cactus (to check what it drops). FLEX_VEGETATION_TOUR=snag fells a burnt tree instead.
 		void UpdateVegetationTour();
 
 		terrain::WorldParams GetEffectiveParams() const;
@@ -157,6 +197,7 @@ namespace flex
 		void DrawWorldMapWindow();
 		void UpdateMinimap();
 		void DestroyMinimapTextures(bool bAll);
+		void CreateMapArrowTexture();
 		void UpdateQuality();
 
 		bool DrawBiomeImGui(terrain::BiomeParams& biome);
@@ -191,6 +232,15 @@ namespace flex
 		glm::vec3 m_LastCenter = VEC3_ZERO; // Center chunks were last streamed around
 
 		real m_RigidBodyLoadRadius = 250.0f;
+		// Collision for chunks within this distance of the player is built immediately (e.g. after digging, or when an
+		// LOD change replaces the chunk below the player), further chunks' in background jobs
+		real m_RigidBodyImmediateRadius = 48.0f;
+		std::vector<std::shared_ptr<ChunkCollisionBuild>> m_CollisionBuilds;
+		JobSystem::Context m_CollisionBuildContext;
+		u32 m_NextCollisionBuildID = 1;
+		// Adds bodies for finished background builds (or discards them if they're no longer needed)
+		void FinishCollisionBuilds();
+		void DiscardCollisionBuilds();
 		u32 m_ThreadCount = 0; // 0 = automatic
 
 		ms m_LastApplyTime = 0.0f;
@@ -206,7 +256,7 @@ namespace flex
 		// Edits are saved shortly after being made, & chunks around the camera are cached on exit
 		bool m_bEditsDirty = false;
 		i32 m_LoadedEditsSeed = 0;
-		sec m_EditsDirtyTime = 0.0f;
+		double m_EditsDirtyTime = 0.0;
 		bool m_bEnableDiskCache = true;
 
 		// Sets the scene's fog to hide the end of the view distance
@@ -252,6 +302,7 @@ namespace flex
 		WorldMap m_Minimap;
 		std::future<WorldMap> m_MinimapFuture;
 		TextureID m_MinimapTextureID = InvalidTextureID;
+		TextureID m_MapArrowTextureID = InvalidTextureID;
 		// Replaced textures are destroyed once the GPU is no longer using them
 		std::vector<Pair<TextureID, u32>> m_RetiredMinimapTextures;
 		real m_MinimapExtent = 800.0f; // Half width (meters)

@@ -280,7 +280,7 @@ namespace flex
 		rootObject.fields.emplace_back("v-sync", JSONValue(m_bVSyncEnabled));
 		std::string fileContents = rootObject.ToString();
 
-		if (!WriteFile(WINDOW_CONFIG_LOCATION, fileContents, false))
+		if (!WriteFileIfChanged(WINDOW_CONFIG_LOCATION, fileContents))
 		{
 			PrintError("Failed to write window settings config file\n");
 		}

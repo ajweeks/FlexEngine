@@ -568,6 +568,13 @@ namespace flex
 		setpriority(PRIO_PROCESS, (id_t)syscall(SYS_gettid), 5);
 	}
 
+	u64 Platform::GetCurrentThreadCPUTimeNs()
+	{
+		timespec time;
+		clock_gettime(CLOCK_THREAD_CPUTIME_ID, &time);
+		return (u64)time.tv_sec * 1000000000ull + (u64)time.tv_nsec;
+	}
+
 	void Platform::YieldProcessor()
 	{
 		sched_yield();

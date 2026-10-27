@@ -304,6 +304,17 @@ namespace flex
 			}
 		}
 
+		VkDeviceSize VulkanBuffer::GetUsedSize() const
+		{
+			// (Allocations are sorted by offset, but a later allocation may be smaller than an earlier one)
+			VkDeviceSize usedSize = 0;
+			for (const Allocation& allocation : allocations)
+			{
+				usedSize = glm::max(usedSize, allocation.offset + allocation.size);
+			}
+			return usedSize;
+		}
+
 		VkDeviceSize VulkanBuffer::GetAllocationSize(VkDeviceSize offset) const
 		{
 			auto iter = std::lower_bound(allocations.begin(), allocations.end(), offset,

@@ -301,7 +301,12 @@ namespace flex
 
 	PropertyCollectionManager* GetPropertyCollectionManager();
 
-	extern sec g_SecElapsedSinceProgramStart;
+	// A double: as a float, the absolute time loses precision over long sessions (~4ms steps after 10 hours, ~16ms after
+	// two days), making anything animated with it stutter. Use AnimationTime() for float math (e.g. shader uniforms).
+	extern double g_SecElapsedSinceProgramStart;
+	// g_SecElapsedSinceProgramStart wrapped to [0, 400pi) seconds (~21 minutes) as a float with sub-millisecond precision.
+	// sin(AnimationTime() * f) stays continuous across the wrap when f * 200 is a whole number (e.g. 0.5, 1.3, 2.71, 8).
+	real AnimationTime();
 	extern sec g_DeltaTime;
 	extern const sec g_FixedDeltaTime;
 	extern sec g_UnpausedDeltaTime; // Unpaused and unscaled

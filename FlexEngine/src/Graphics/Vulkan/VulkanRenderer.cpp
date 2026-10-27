@@ -623,6 +623,8 @@ namespace flex
 
 			DestroyAllGraphicsPipelines();
 
+			DestroyBufferUploads();
+
 			for (auto& pair : m_DynamicVertexIndexBufferPairs)
 			{
 				pair.second->Destroy();
@@ -1936,7 +1938,7 @@ namespace flex
 
 			{
 				VulkanMaterial* wireframeMat = (VulkanMaterial*)m_Materials.at(m_WireframeMatID);
-				real f = glm::clamp(sin(g_SecElapsedSinceProgramStart * 4.0f) * 0.2f + 0.55f, 0.0f, 1.0f);
+				real f = glm::clamp(sin(AnimationTime() * 4.0f) * 0.2f + 0.55f, 0.0f, 1.0f);
 				wireframeMat->colourMultiplier = glm::vec4(f, f * 0.25f, f * 0.75f, 1.0f);
 			}
 
@@ -2017,6 +2019,9 @@ namespace flex
 				}
 				EnsureDynamicUBOCapacity(m_Materials.at(m_WireframeMatID)->shaderID, objectCount);
 			}
+
+			// Uploads to device local buffers must be copied before anything is drawn
+			FlushBufferUploads();
 
 			FillOutOffscreenCommandBuffer();
 
@@ -2462,12 +2467,20 @@ namespace flex
 			CHECK_LE((vertOffsetBytes + vertSubBufferSize), vertexBuffer->m_Size);
 			CHECK_LE((indexOffsetBytes + indexSubBufferSize), indexBuffer->m_Size);
 
-			VK_CHECK_RESULT(vertexBuffer->Map(vertOffsetBytes, vertSubBufferSize));
-			VK_CHECK_RESULT(indexBuffer->Map(indexOffsetBytes, indexSubBufferSize));
-			memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, vertexBufferData->UsedVertexBufferSize);
-			memcpy(indexBuffer->m_Mapped, indexData.data(), newIndexDataSize);
-			vertexBuffer->Unmap();
-			indexBuffer->Unmap();
+			if (vertexIndexBufferPair->bDeviceLocal)
+			{
+				QueueBufferUpload(vertexBuffer, vertOffsetBytes, vertexBufferData->vertexData, vertexBufferData->UsedVertexBufferSize);
+				QueueBufferUpload(indexBuffer, indexOffsetBytes, indexData.data(), newIndexDataSize);
+			}
+			else
+			{
+				VK_CHECK_RESULT(vertexBuffer->Map(vertOffsetBytes, vertSubBufferSize));
+				VK_CHECK_RESULT(indexBuffer->Map(indexOffsetBytes, indexSubBufferSize));
+				memcpy(vertexBuffer->m_Mapped, vertexBufferData->vertexData, vertexBufferData->UsedVertexBufferSize);
+				memcpy(indexBuffer->m_Mapped, indexData.data(), newIndexDataSize);
+				vertexBuffer->Unmap();
+				indexBuffer->Unmap();
+			}
 
 
 			renderObject->vertexOffset = (u32)(vertOffsetBytes / vertexBufferData->VertexStride);
@@ -2515,6 +2528,33 @@ namespace flex
 			if (renderObject->dynamicIndexBufferOffset != InvalidBufferID)
 			{
 				vertexIndexBufferPair->indexBuffer->Shrink(minUnused);
+			}
+		}
+
+		void VulkanRenderer::ReserveDynamicVertexData(MaterialID materialID, real usedFactor)
+		{
+			PROFILE_AUTO("ReserveDynamicVertexData");
+
+			auto matIter = m_Materials.find(materialID);
+			if (matIter == m_Materials.end())
+			{
+				return;
+			}
+			VulkanShader* shader = (VulkanShader*)GetShader(matIter->second->shaderID);
+			if (shader == nullptr || shader->dynamicVertexIndexBufferIndex >= (u32)m_DynamicVertexIndexBufferPairs.size())
+			{
+				return;
+			}
+
+			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[shader->dynamicVertexIndexBufferIndex].second;
+			for (VulkanBuffer* buffer : { vertexIndexBufferPair->vertexBuffer, vertexIndexBufferPair->indexBuffer })
+			{
+				const VkDeviceSize wantedSize = (VkDeviceSize)((real)buffer->GetUsedSize() * usedFactor);
+				if (buffer->m_Buffer != VK_NULL_HANDLE && buffer->m_Size < wantedSize)
+				{
+					Print("Growing \"%s\" from %.1fMB to %.1fMB ahead of time\n", buffer->m_DEBUG_Name.c_str(), buffer->m_Size / (1024.0 * 1024.0), wantedSize / (1024.0 * 1024.0));
+					VK_CHECK_RESULT(buffer->Resize(wantedSize));
+				}
 			}
 		}
 
@@ -4623,7 +4663,7 @@ namespace flex
 			return (u32)m_StaticVertexBuffers.size() - 1;
 		}
 
-		u32 VulkanRenderer::GetDynamicVertexIndexBufferIndex(u32 stride)
+		u32 VulkanRenderer::GetDynamicVertexIndexBufferIndex(u32 stride, bool bDeviceLocal /* = false */)
 		{
 			if (stride == 0)
 			{
@@ -4632,13 +4672,15 @@ namespace flex
 
 			for (u32 bufferIndex = 0; bufferIndex < m_DynamicVertexIndexBufferPairs.size(); ++bufferIndex)
 			{
-				if (m_DynamicVertexIndexBufferPairs[bufferIndex].first == stride)
+				if (m_DynamicVertexIndexBufferPairs[bufferIndex].first == stride && m_DynamicVertexIndexBufferPairs[bufferIndex].second->bDeviceLocal == bDeviceLocal)
 				{
 					return bufferIndex;
 				}
 			}
 
-			m_DynamicVertexIndexBufferPairs.emplace_back(stride, new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice)));
+			VertexIndexBufferPair* vertexIndexBufferPair = new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice));
+			vertexIndexBufferPair->bDeviceLocal = bDeviceLocal;
+			m_DynamicVertexIndexBufferPairs.emplace_back(stride, vertexIndexBufferPair);
 			return (u32)m_DynamicVertexIndexBufferPairs.size() - 1;
 		}
 
@@ -7787,7 +7829,7 @@ namespace flex
 					}
 					else
 					{
-						const u32 dynamicVertexBufferIndex = GetDynamicVertexIndexBufferIndex(stride);
+						const u32 dynamicVertexBufferIndex = GetDynamicVertexIndexBufferIndex(stride, shader->bDeviceLocalDynamicBuffers);
 						dynamicVertexBufferSizes[dynamicVertexBufferIndex].vertMemoryReq += shader->dynamicVertexBufferSize;
 						// (Stride is in bytes)
 						const u32 vertexCount = (u32)glm::ceil(shader->dynamicVertexBufferSize / (real)stride);
@@ -7815,15 +7857,16 @@ namespace flex
 					// (see VUID-vkCmdDrawIndexed-robustBufferAccess2-08798). Subsequent growth
 					// for additional render objects is handled lazily through Alloc/Realloc.
 					char buffer[256];
+					const bool bDeviceLocal = vertexIndexBufferPair.second->bDeviceLocal;
 					if (vertexIndexBufferPair.second->vertexBuffer->m_Buffer == VK_NULL_HANDLE)
 					{
-						sprintf(buffer, "Dynamic vertex buffer (stride: %u)", vertexIndexBufferPair.first);
-						CreateDynamicVertexBuffer(vertexIndexBufferPair.second->vertexBuffer, sizePair.vertMemoryReq, buffer);
+						sprintf(buffer, "Dynamic vertex buffer (stride: %u%s)", vertexIndexBufferPair.first, bDeviceLocal ? ", device local" : "");
+						CreateDynamicVertexBuffer(vertexIndexBufferPair.second->vertexBuffer, sizePair.vertMemoryReq, buffer, bDeviceLocal);
 					}
 					if (vertexIndexBufferPair.second->indexBuffer->m_Buffer == VK_NULL_HANDLE)
 					{
-						sprintf(buffer, "Dynamic index buffer (stride: %u)", vertexIndexBufferPair.first);
-						CreateDynamicIndexBuffer(vertexIndexBufferPair.second->indexBuffer, sizePair.indexMemoryReq, buffer);
+						sprintf(buffer, "Dynamic index buffer (stride: %u%s)", vertexIndexBufferPair.first, bDeviceLocal ? ", device local" : "");
+						CreateDynamicIndexBuffer(vertexIndexBufferPair.second->indexBuffer, sizePair.indexMemoryReq, buffer, bDeviceLocal);
 					}
 				}
 
@@ -7916,20 +7959,8 @@ namespace flex
 					continue;
 				}
 
-				bool bExists = false;
-				for (u32 bufferIndex = 0; bufferIndex < m_DynamicVertexIndexBufferPairs.size(); ++bufferIndex)
-				{
-					auto& pair = m_DynamicVertexIndexBufferPairs[bufferIndex];
-					if (pair.first == stride)
-					{
-						bExists = true;
-						break;
-					}
-				}
-				if (!bExists)
-				{
-					m_DynamicVertexIndexBufferPairs.emplace_back(stride, new VertexIndexBufferPair(new VulkanBuffer(m_VulkanDevice), new VulkanBuffer(m_VulkanDevice)));
-				}
+				// (Creates the pair if it doesn't exist yet)
+				GetDynamicVertexIndexBufferIndex(stride, m_Shaders[shaderID]->bDeviceLocalDynamicBuffers);
 			}
 		}
 
@@ -7984,23 +8015,188 @@ namespace flex
 			}
 		}
 
-		void VulkanRenderer::CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, const char* DEBUG_name /* = nullptr */)
+		void VulkanRenderer::CreateDynamicVertexBuffer(VulkanBuffer* vertexBuffer, u32 size, const char* DEBUG_name /* = nullptr */, bool bDeviceLocal /* = false */)
 		{
 			PROFILE_AUTO("CreateDynamicVertexBuffer");
 
 			vertexBuffer->Create(size,
 				// Transfer usage lets resizes copy contents on the GPU (see VulkanBuffer::Resize)
-				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				bDeviceLocal ? VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT : (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
 				DEBUG_name);
 		}
 
-		void VulkanRenderer::CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size, const char* DEBUG_name /* = nullptr */)
+		void VulkanRenderer::CreateDynamicIndexBuffer(VulkanBuffer* indexBuffer, u32 size, const char* DEBUG_name /* = nullptr */, bool bDeviceLocal /* = false */)
 		{
 			PROFILE_AUTO("CreateDynamicIndexBuffer");
 
 			indexBuffer->Create(size,
-				VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+				bDeviceLocal ? VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT : (VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
 				DEBUG_name);
+		}
+
+		void VulkanRenderer::QueueBufferUpload(VulkanBuffer* dst, VkDeviceSize dstOffset, const void* data, VkDeviceSize size)
+		{
+			if (size == 0)
+			{
+				return;
+			}
+
+			const VkDeviceSize alignedSize = (size + 15) & ~(VkDeviceSize)15;
+			if (m_UploadStagingBuffer == nullptr || m_UploadStagingOffset + alignedSize > m_UploadStagingBuffer->m_Size)
+			{
+				// Out of staging space: copy what's queued so far & wait for it (only happens with very large uploads,
+				// e.g. while a world loads)
+				FlushBufferUploads();
+				RecycleBufferUploads();
+
+				if (m_UploadStagingBuffer == nullptr || alignedSize > m_UploadStagingBuffer->m_Size)
+				{
+					PROFILE_AUTO("Create upload staging buffer");
+					const VkDeviceSize minSize = 32 * 1024 * 1024;
+					const VkDeviceSize newSize = glm::max(alignedSize, m_UploadStagingBuffer != nullptr ? m_UploadStagingBuffer->m_Size * 2 : minSize);
+					if (m_UploadStagingBuffer == nullptr)
+					{
+						m_UploadStagingBuffer = new VulkanBuffer(m_VulkanDevice);
+					}
+					m_UploadStagingBuffer->Unmap();
+					VK_CHECK_RESULT(m_UploadStagingBuffer->Create(newSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+						VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "Upload staging buffer"));
+					// Persistently mapped
+					VK_CHECK_RESULT(m_UploadStagingBuffer->Map(m_UploadStagingBuffer->m_Size));
+				}
+			}
+
+			memcpy((u8*)m_UploadStagingBuffer->m_Mapped + m_UploadStagingOffset, data, (size_t)size);
+			m_PendingBufferUploads.push_back({ dst, dstOffset, m_UploadStagingOffset, size });
+			m_UploadStagingOffset += alignedSize;
+		}
+
+		void VulkanRenderer::FlushBufferUploads()
+		{
+			if (m_PendingBufferUploads.empty())
+			{
+				return;
+			}
+
+			PROFILE_AUTO("Flush buffer uploads");
+
+			VkCommandBufferAllocateInfo allocInfo = vks::commandBufferAllocateInfo(m_VulkanDevice->m_CommandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+			VkCommandBuffer commandBuffer;
+			VK_CHECK_RESULT(vkAllocateCommandBuffers(m_VulkanDevice->m_LogicalDevice, &allocInfo, &commandBuffer));
+			VkCommandBufferBeginInfo beginInfo = vks::commandBufferBeginInfo();
+			beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			VK_CHECK_RESULT(vkBeginCommandBuffer(commandBuffer, &beginInfo));
+
+			// Consecutive uploads to the same buffer are copied with one command, unless they overlap (regions copied by
+			// one command mustn't, & the later upload must win)
+			static std::vector<VkBufferCopy> regions;
+			regions.clear();
+			VkDeviceSize regionsMin = 0;
+			VkDeviceSize regionsMax = 0;
+			auto CopyRegions = [this, commandBuffer](VulkanBuffer* dst)
+			{
+				if (!regions.empty())
+				{
+					vkCmdCopyBuffer(commandBuffer, m_UploadStagingBuffer->m_Buffer, dst->m_Buffer, (u32)regions.size(), regions.data());
+					regions.clear();
+				}
+			};
+			for (u32 i = 0; i < (u32)m_PendingBufferUploads.size(); ++i)
+			{
+				const PendingBufferUpload& upload = m_PendingBufferUploads[i];
+				// The destination may have been shrunk (or destroyed) since the upload was queued
+				if (upload.dst->m_Buffer != VK_NULL_HANDLE && upload.dstOffset + upload.size <= upload.dst->m_Size)
+				{
+					const VkDeviceSize start = upload.dstOffset;
+					const VkDeviceSize end = upload.dstOffset + upload.size;
+					bool bOverlaps = false;
+					if (!regions.empty() && start < regionsMax && end > regionsMin)
+					{
+						for (const VkBufferCopy& region : regions)
+						{
+							if (start < region.dstOffset + region.size && end > region.dstOffset)
+							{
+								bOverlaps = true;
+								break;
+							}
+						}
+					}
+					if (bOverlaps)
+					{
+						CopyRegions(upload.dst);
+						VkMemoryBarrier barrier = {};
+						barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+						barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+						barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+						vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 1, &barrier, 0, nullptr, 0, nullptr);
+					}
+					VkBufferCopy region = {};
+					region.srcOffset = upload.stagingOffset;
+					region.dstOffset = upload.dstOffset;
+					region.size = upload.size;
+					regionsMin = regions.empty() ? start : glm::min(regionsMin, start);
+					regionsMax = regions.empty() ? end : glm::max(regionsMax, end);
+					regions.push_back(region);
+				}
+				const bool bLast = i + 1 == (u32)m_PendingBufferUploads.size() || m_PendingBufferUploads[i + 1].dst != upload.dst;
+				if (bLast)
+				{
+					CopyRegions(upload.dst);
+				}
+			}
+
+			// Make the copies visible to all later work on the queue (this frame's draws)
+			VkMemoryBarrier barrier = {};
+			barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT | VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_TRANSFER_READ_BIT;
+			vkCmdPipelineBarrier(commandBuffer, VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VK_PIPELINE_STAGE_VERTEX_INPUT_BIT | VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0, 1, &barrier, 0, nullptr, 0, nullptr);
+
+			VK_CHECK_RESULT(vkEndCommandBuffer(commandBuffer));
+
+			VkFenceCreateInfo fenceInfo = vks::fenceCreateInfo(0);
+			VkFence fence;
+			VK_CHECK_RESULT(vkCreateFence(m_VulkanDevice->m_LogicalDevice, &fenceInfo, nullptr, &fence));
+
+			VkSubmitInfo submitInfo = vks::submitInfo(1, &commandBuffer);
+			VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, fence));
+
+			m_InFlightBufferUploads.push_back({ commandBuffer, fence });
+			m_PendingBufferUploads.clear();
+		}
+
+		void VulkanRenderer::RecycleBufferUploads()
+		{
+			for (const InFlightBufferUpload& upload : m_InFlightBufferUploads)
+			{
+				VK_CHECK_RESULT(vkWaitForFences(m_VulkanDevice->m_LogicalDevice, 1, &upload.fence, VK_TRUE, u64_max));
+				vkDestroyFence(m_VulkanDevice->m_LogicalDevice, upload.fence, nullptr);
+				vkFreeCommandBuffers(m_VulkanDevice->m_LogicalDevice, m_VulkanDevice->m_CommandPool, 1, &upload.commandBuffer);
+			}
+			m_InFlightBufferUploads.clear();
+
+			// Queued uploads' data must stay where it is until they're flushed
+			if (m_PendingBufferUploads.empty())
+			{
+				m_UploadStagingOffset = 0;
+			}
+		}
+
+		void VulkanRenderer::DestroyBufferUploads()
+		{
+			m_PendingBufferUploads.clear();
+			RecycleBufferUploads();
+			if (m_UploadStagingBuffer != nullptr)
+			{
+				m_UploadStagingBuffer->Unmap();
+				m_UploadStagingBuffer->Destroy();
+				delete m_UploadStagingBuffer;
+				m_UploadStagingBuffer = nullptr;
+			}
 		}
 
 		void VulkanRenderer::CreateAndUploadToStaticIndexBuffer(VulkanBuffer* indexBuffer, const std::vector<u32>& indices, const char* DEBUG_name /* = nullptr */)
@@ -8254,11 +8450,21 @@ namespace flex
 
 			const bool bDynamic = material->bDynamic;
 
-			// Shader batches are kept sorted by shader ID (static before dynamic) so draw order is stable
+			// Shader batches are kept sorted by shader ID (static before dynamic) so draw order is stable, with translucent
+			// shaders after opaque ones so they blend over everything behind them (e.g. the terrain, which is forward)
 			ShaderBatch* shaderBatch = GetShaderBatchOfType((u8)batchType);
+			auto DrawsBefore = [this](ShaderID a, bool bDynamicA, ShaderID b, bool bDynamicB)
+			{
+				const bool bTranslucentA = m_Shaders[a]->bTranslucent;
+				const bool bTranslucentB = m_Shaders[b]->bTranslucent;
+				if (bTranslucentA != bTranslucentB)
+				{
+					return bTranslucentB;
+				}
+				return a < b || (a == b && (u32)bDynamicA < (u32)bDynamicB);
+			};
 			auto shaderIter = shaderBatch->batches.begin();
-			while (shaderIter != shaderBatch->batches.end() &&
-				(shaderIter->shaderID < shaderID || (shaderIter->shaderID == shaderID && (u32)shaderIter->bDynamic < (u32)bDynamic)))
+			while (shaderIter != shaderBatch->batches.end() && DrawsBefore(shaderIter->shaderID, shaderIter->bDynamic, shaderID, bDynamic))
 			{
 				++shaderIter;
 			}
@@ -9590,6 +9796,9 @@ namespace flex
 					PROFILE_AUTO("Screen Space Sprites (Post UI)");
 					BeginDebugMarkerRegion(commandBuffer, "Screen Space Sprites (Post UI)");
 
+					// Higher z orders on top (e.g. the teleport fade over the minimap), otherwise in the order enqueued
+					std::stable_sort(m_QueuedSSPostUISprites.begin(), m_QueuedSSPostUISprites.end(),
+						[](const SpriteQuadDrawInfo& a, const SpriteQuadDrawInfo& b) { return a.zOrder < b.zOrder; });
 					DrawSpriteBatch(m_QueuedSSPostUISprites, commandBuffer);
 					m_QueuedSSPostUISprites.clear();
 
@@ -9942,6 +10151,9 @@ namespace flex
 			submitInfo.commandBufferCount = 1;
 			submitInfo.pCommandBuffers = &m_CommandBufferManager.m_CommandBuffers[0];
 
+			// (In case anything was uploaded while recording)
+			FlushBufferUploads();
+
 			PROFILE_BEGIN("Scene rendering queue submit");
 			VK_CHECK_RESULT(vkQueueSubmit(m_GraphicsQueue, 1, &submitInfo, VK_NULL_HANDLE));
 			PROFILE_END("");
@@ -9976,6 +10188,9 @@ namespace flex
 			PROFILE_BEGIN("Queue wait idle on present queue");
 			VK_CHECK_RESULT(vkQueueWaitIdle(m_PresentQueue));
 			PROFILE_END("");
+
+			// The frame's uploads have completed (they were submitted before its rendering)
+			RecycleBufferUploads();
 
 			if (m_ScreenshotStagingBuffer != nullptr)
 			{
@@ -10528,7 +10743,8 @@ namespace flex
 			skyboxData.clouds.y -= camPos.y;
 			skyboxData.clouds.z += camPos.x;
 			skyboxData.clouds.w += camPos.z;
-			glm::vec4 time(g_SecElapsedSinceProgramStart, scene->GetTimeOfDay(), 0.0f, 0.0f);
+			// Wrapped: a float holding the absolute time would make shader animations stutter after hours of play
+			glm::vec4 time(AnimationTime(), scene->GetTimeOfDay(), 0.0f, 0.0f);
 			glm::vec2i windowSize = g_Window->GetSize();
 			glm::vec4 screenSize(windowSize.x, windowSize.y, 1.0f / windowSize.x, 1.0f / windowSize.y);
 

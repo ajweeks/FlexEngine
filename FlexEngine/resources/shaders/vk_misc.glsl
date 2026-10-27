@@ -21,7 +21,8 @@ const float PI = 3.14159265359;
 // Colour pipeline
 // - Material colours (const albedo, textures sampled through SRGBToLinear, vertex colours) & lighting are linear.
 // - Lit shaders convert their final linear radiance with LinearToDisplay (exposure, tone map, sRGB encoding) and
-//   write display values. The sky, fog, clouds & unlit shaders (colour, emissive, sprites, text) work in display
+//   write display values. Lit scene shaders pass the eye adaptation exposure (SkyboxData.sun.w: exactly 1 in daylight,
+//   brighter at night), which only scales linear radiance before the tone map. The sky, fog, clouds & unlit shaders (colour, emissive, sprites, text) work in display
 //   space directly.
 // - Post processing only grades (an identity matrix by default) & the swapchain is UNORM, so display values reach the
 //   screen unchanged.
@@ -75,6 +76,13 @@ vec3 ToneMapPBRNeutral(vec3 colour)
 vec3 LinearToDisplay(vec3 radiance)
 {
 	return LinearToSRGB(clamp(ToneMapPBRNeutral(max(radiance * DISPLAY_EXPOSURE, vec3(0.0))), 0.0, 1.0));
+}
+
+// With eye adaptation: exposure is SkyboxData.sun.w (1 in daylight, higher in the dark, see BaseScene::UpdateExposure).
+// Applied to linear radiance before the tone map, like DISPLAY_EXPOSURE.
+vec3 LinearToDisplay(vec3 radiance, float exposure)
+{
+	return LinearToDisplay(radiance * max(exposure, 1.0));
 }
 
 const mat4 biasMat = mat4( 
@@ -148,7 +156,7 @@ struct SkyboxData
 	vec4 colourMid;
 	vec4 colourBtm;
 	vec4 colourFog; // w: distance fog distance (<= 1: disabled)
-	vec4 sun; // xyz: direction towards the sun
+	vec4 sun; // xyz: direction towards the sun, w: eye adaptation exposure (>= 1, see LinearToDisplay)
 	vec4 clouds; // x: coverage [0, 1] (0: none), y: cloud layer altitude relative to the camera, zw: noise offset (camera xz + wind)
 	vec4 moon; // xyz: direction towards the moon, w: brightness [0, 1]
 	vec4 sunColour; // rgb: colour of sunlight reaching the ground (display space), w: star visibility [0, 1]

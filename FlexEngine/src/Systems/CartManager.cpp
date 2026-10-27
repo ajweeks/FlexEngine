@@ -13,6 +13,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/GameObject.hpp"
 #include "Scene/Objects/Carts.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Systems/TrackManager.hpp"
 
 namespace flex
 {
@@ -386,6 +387,29 @@ namespace flex
 			else if (cart->currentTrackID > removedTrackID)
 			{
 				--cart->currentTrackID;
+			}
+		}
+	}
+
+	void CartManager::OnTrackCut(const TrackCut& cut)
+	{
+		for (BaseCart* cart : m_Carts)
+		{
+			if (cart == nullptr || cart->currentTrackID == InvalidTrackID)
+			{
+				continue;
+			}
+
+			TrackID trackID = cart->currentTrackID;
+			real distAlongTrack = cart->distAlongTrack;
+			if (cut.Remap(trackID, distAlongTrack))
+			{
+				cart->currentTrackID = trackID;
+				cart->distAlongTrack = distAlongTrack;
+			}
+			else
+			{
+				cart->Derail();
 			}
 		}
 	}

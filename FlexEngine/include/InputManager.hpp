@@ -57,6 +57,7 @@ namespace flex
 		bool HasGamepadAxisValueJustPassedThreshold(i32 gamepadIndex, GamepadAxis axis, real threshold) const;
 
 		bool GetActionBindingName(Action action, StringBuilder& outStrBuff) const;
+		const InputBinding& GetActionBinding(Action action) const { return m_InputBindings[(i32)action]; }
 
 		void CursorPosCallback(double x, double y);
 		void MouseButtonCallback(MouseButton mouseButton, KeyAction keyAction, i32 mods);

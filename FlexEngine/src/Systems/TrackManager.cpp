@@ -5,18 +5,24 @@
 
 IGNORE_WARNINGS_PUSH
 #include <glm/gtx/norm.hpp> // For distance2
+
+#include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 IGNORE_WARNINGS_POP
 
 #include "Systems/CartManager.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Graphics/DebugRenderer.hpp"
 #include "Helpers.hpp"
+#include "Physics/PhysicsHelpers.hpp"
+#include "Physics/PhysicsWorld.hpp"
 #include "Player.hpp"
 #include "PlayerController.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
+#include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/SceneManager.hpp"
 
 namespace flex
@@ -222,15 +228,16 @@ namespace flex
 				return;
 			}
 
-			// Centre the sleepers along the track so both ends look the same
-			i32 sleeperCount = glm::max((i32)(totalLength / settings.sleeperSpacing), 1);
-			real startDist = (totalLength - (sleeperCount - 1) * settings.sleeperSpacing) * 0.5f;
+			// Spread evenly with half a gap at each end, so sleepers stay evenly spaced across the joins between tracks
+			i32 sleeperCount = glm::max((i32)glm::round(totalLength / settings.sleeperSpacing), 1);
+			const real spacing = totalLength / (real)sleeperCount;
+			real startDist = spacing * 0.5f;
 			const glm::vec3 extents(settings.sleeperLength * 0.5f, settings.sleeperHeight * 0.5f, settings.sleeperWidth * 0.5f);
 
 			i32 sampleIndex = 0;
 			for (i32 i = 0; i < sleeperCount; ++i)
 			{
-				real dist = startDist + i * settings.sleeperSpacing;
+				real dist = startDist + i * spacing;
 				while (sampleIndex < (i32)samples.size() - 2 && samples[sampleIndex + 1].dist < dist)
 				{
 					++sampleIndex;
@@ -249,6 +256,23 @@ namespace flex
 				builder.AddBox(pos + up * extents.y, right, up, forward, extents);
 			}
 		}
+
+		// Translucent, emissive materials for previews of track to be placed
+		const char* GetPreviewMaterialName(bool bValid)
+		{
+			const char* name = bValid ? "Track preview" : "Track preview blocked";
+			if (g_Renderer->GetMaterialID(name) == InvalidMaterialID)
+			{
+				MaterialCreateInfo createInfo = {};
+				createInfo.name = name;
+				createInfo.shaderName = "hologram";
+				// Alpha is the preview's opacity (matches building previews)
+				createInfo.constEmissive = bValid ? glm::vec4(0.55f, 0.85f, 1.6f, 0.38f) : glm::vec4(1.8f, 0.35f, 0.3f, 0.38f);
+				createInfo.bSerializable = false;
+				g_Renderer->InitializeMaterial(&createInfo);
+			}
+			return name;
+		}
 	} // namespace
 
 	TrackManager::TrackManager()
@@ -259,14 +283,21 @@ namespace flex
 
 	void TrackManager::Initialize()
 	{
+		TerrainGenerator::s_OnTerrainDug = [](const glm::vec3& center, real radius)
+		{
+			GetSystem<TrackManager>(SystemType::TRACK_MANAGER)->OnTerrainDug(center, radius);
+		};
 	}
 
 	void TrackManager::Destroy()
 	{
+		TerrainGenerator::s_OnTerrainDug = nullptr;
+
 		tracks.clear();
 		junctions.clear();
 		m_TrackMeshes.clear();
 		m_PreviewTrackMesh = {};
+		m_BlockedPreviewTrackMesh = {};
 		m_bPreviewTrackVisible = false;
 		m_HighlightTrackMesh = {};
 		m_HighlightedTrackID = InvalidTrackID;
@@ -307,7 +338,7 @@ namespace flex
 			{
 				// Flash
 				Material* highlightMat = g_Renderer->GetMaterial(highlightMatID);
-				real pulse = 0.5f + 0.5f * glm::sin(g_SecElapsedSinceProgramStart * 8.0f);
+				real pulse = 0.5f + 0.5f * glm::sin(AnimationTime() * 8.0f);
 				highlightMat->constAlbedo = glm::vec4(Lerp(glm::vec3(0.12f, 0.02f, 0.02f), glm::vec3(0.35f, 0.04f, 0.04f), pulse), 1.0f);
 				highlightMat->constEmissive = glm::vec4(Lerp(glm::vec3(0.05f, 0.0f, 0.0f), glm::vec3(0.4f, 0.02f, 0.02f), pulse), 1.0f);
 			}
@@ -317,17 +348,19 @@ namespace flex
 			m_HighlightTrackMesh.object->SetVisible(false);
 		}
 
-		if (m_bPreviewTrackVisible)
+		// Hidden rather than destroyed since the preview is shown & hidden frequently
+		for (i32 i = 0; i < 2; ++i)
 		{
-			if (m_PreviewTrackMesh.bDirty)
+			const bool bValidMesh = (i == 0);
+			TrackMesh& previewMesh = bValidMesh ? m_PreviewTrackMesh : m_BlockedPreviewTrackMesh;
+			if (m_bPreviewTrackVisible && m_bPreviewTrackValid == bValidMesh)
 			{
-				UpdateTrackMesh(m_PreviewTrackMesh, m_PreviewTrack, "Track preview mesh", "track rail", "track sleeper", 0.0f);
+				UpdatePreviewMesh(previewMesh, bValidMesh);
 			}
-		}
-		else if (m_PreviewTrackMesh.object != nullptr && m_PreviewTrackMesh.object->IsVisible())
-		{
-			// Hidden rather than destroyed since the preview is shown & hidden frequently
-			m_PreviewTrackMesh.object->SetVisible(false);
+			else if (previewMesh.object != nullptr && previewMesh.object->IsVisible())
+			{
+				previewMesh.object->SetVisible(false);
+			}
 		}
 	}
 
@@ -339,6 +372,7 @@ namespace flex
 			trackMesh.object = nullptr;
 		}
 		m_PreviewTrackMesh = {};
+		m_BlockedPreviewTrackMesh = {};
 		m_bPreviewTrackVisible = false;
 		m_HighlightTrackMesh = {};
 		m_HighlightedTrackID = InvalidTrackID;
@@ -438,6 +472,66 @@ namespace flex
 		mesh->GetSubMesh(1)->UpdateDynamicVertexData(sleeperBuilder.vertexData, sleeperBuilder.indices);
 	}
 
+	void TrackManager::UpdatePreviewMesh(TrackMesh& trackMesh, bool bValid)
+	{
+		if (trackMesh.object == nullptr)
+		{
+			GameObject* object = GameObject::CreateObjectOfType(BaseObjectSID, "Track preview mesh");
+			object->SetSerializable(false);
+			object->SetVisibleInSceneExplorer(false);
+			object->SetCastsShadow(false);
+			g_SceneManager->CurrentScene()->AddRootObject(object);
+			trackMesh.object = object;
+			trackMesh.bDirty = true;
+			// Its mesh is built once it's in the scene (next frame)
+			return;
+		}
+
+		if (trackMesh.bDirty)
+		{
+			PROFILE_AUTO("TrackManager UpdatePreviewMesh");
+
+			static std::vector<TrackSample> samples;
+			SampleTrack(m_PreviewTrack, m_MeshSettings.segmentLength, samples);
+			if (samples.size() < 2 || samples.back().dist < 0.01f)
+			{
+				trackMesh.object->SetVisible(false);
+				return;
+			}
+			trackMesh.bDirty = false;
+
+			const MaterialID materialID = g_Renderer->GetMaterialID(GetPreviewMaterialName(bValid));
+			// Slightly inflated so it doesn't z-fight with tracks it joins
+			const real inflate = 0.01f;
+			TrackMeshSettings settings = m_MeshSettings;
+			settings.railWidth += inflate * 2.0f;
+			settings.railHeight += inflate;
+			settings.sleeperLength += inflate * 2.0f;
+			settings.sleeperWidth += inflate * 2.0f;
+			settings.sleeperHeight += inflate;
+
+			TrackMeshBuilder builder;
+			builder.vertexData.attributes = g_Renderer->GetShader(g_Renderer->GetMaterial(materialID)->shaderID)->vertexAttributes;
+			const real halfGauge = settings.gauge * 0.5f;
+			AddRail(builder, samples, -halfGauge, m_MeshSettings.sleeperHeight, settings);
+			AddRail(builder, samples, halfGauge, m_MeshSettings.sleeperHeight, settings);
+			AddSleepers(builder, samples, settings);
+
+			Mesh* mesh = trackMesh.object->SetMesh(new Mesh(trackMesh.object));
+			if (!builder.IsEmpty())
+			{
+				MeshComponent::LoadFromMemory(mesh, builder.vertexData, builder.indices, materialID);
+				mesh->PostInitialize();
+			}
+		}
+
+		trackMesh.object->GetTransform()->SetWorldPosition(m_PreviewOrigin);
+		if (!trackMesh.object->IsVisible())
+		{
+			trackMesh.object->SetVisible(true);
+		}
+	}
+
 	void TrackManager::DestroyTrackMesh(TrackMesh& trackMesh)
 	{
 		if (trackMesh.object != nullptr)
@@ -473,6 +567,7 @@ namespace flex
 						trackMesh.bDirty = true;
 					}
 					m_PreviewTrackMesh.bDirty = true;
+					m_BlockedPreviewTrackMesh.bDirty = true;
 					m_HighlightTrackMesh.bDirty = true;
 				}
 
@@ -585,6 +680,39 @@ namespace flex
 		m_DEBUG_highlightedJunctionIndex = -1;
 
 		FindJunctions();
+	}
+
+	void TrackManager::ClearTracks()
+	{
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		for (i32 i = 0; scene != nullptr && i < 2; ++i)
+		{
+			Player* player = scene->GetPlayer(i);
+			if (player != nullptr)
+			{
+				player->DetachFromTrack();
+				player->OnTrackRemoved(InvalidTrackID);
+			}
+		}
+
+		for (TrackMesh& trackMesh : m_TrackMeshes)
+		{
+			DestroyTrackMesh(trackMesh);
+		}
+		// (all are root objects, which leaving a world removes)
+		DestroyTrackMesh(m_PreviewTrackMesh);
+		DestroyTrackMesh(m_BlockedPreviewTrackMesh);
+		DestroyTrackMesh(m_HighlightTrackMesh);
+		m_PreviewTrackMesh = {};
+		m_BlockedPreviewTrackMesh = {};
+		m_HighlightTrackMesh = {};
+		tracks.clear();
+		junctions.clear();
+		m_TrackMeshes.clear();
+		m_HighlightedTrackID = InvalidTrackID;
+		m_bPreviewTrackVisible = false;
+		m_PreviewJunctionDir = {};
+		m_DEBUG_highlightedJunctionIndex = -1;
 	}
 
 	void TrackManager::OnTrackModified(TrackID trackID)
@@ -914,7 +1042,7 @@ namespace flex
 		return result;
 	}
 
-	void TrackManager::SetPreviewTrack(const BezierCurveList* track)
+	void TrackManager::SetPreviewTrack(const BezierCurveList* track, bool bValid /* = true */)
 	{
 		if (track == nullptr || track->curves.empty())
 		{
@@ -922,13 +1050,38 @@ namespace flex
 			return;
 		}
 
-		m_PreviewTrack.curves = track->curves;
+		// Only rebuild the mesh when its shape changed (it's moved to the track's start)
+		const glm::vec3 origin = track->curves[0].points[0];
+		std::vector<BezierCurve3D> relativeCurves = track->curves;
+		for (BezierCurve3D& curve : relativeCurves)
+		{
+			for (glm::vec3& point : curve.points)
+			{
+				point -= origin;
+			}
+		}
+		bool bSame = m_bPreviewTrackVisible && m_bPreviewTrackValid == bValid && m_PreviewTrack.curves.size() == relativeCurves.size();
+		for (i32 c = 0; bSame && c < (i32)relativeCurves.size(); ++c)
+		{
+			for (i32 p = 0; p < 4; ++p)
+			{
+				bSame = bSame && glm::distance2(m_PreviewTrack.curves[c].points[p], relativeCurves[c].points[p]) < 1e-8f;
+			}
+		}
+		m_bPreviewTrackVisible = true;
+		m_bPreviewTrackValid = bValid;
+		m_PreviewOrigin = origin;
+		if (bSame)
+		{
+			return;
+		}
+
+		m_PreviewTrack.curves = relativeCurves;
 		for (BezierCurve3D& curve : m_PreviewTrack.curves)
 		{
 			curve.CalculateLength();
 		}
-		m_bPreviewTrackVisible = true;
-		m_PreviewTrackMesh.bDirty = true;
+		(bValid ? m_PreviewTrackMesh : m_BlockedPreviewTrackMesh).bDirty = true;
 	}
 
 	flex::BezierCurveList* TrackManager::GetTrack(TrackID trackID)
@@ -1543,5 +1696,647 @@ namespace flex
 		}
 
 		return targetT;
+	}
+
+	// --- Track pieces ---
+
+	namespace
+	{
+		// Splits a direction into its horizontal heading & grade (rise over run)
+		void GetHeadingAndGrade(const glm::vec3& dir, glm::vec3& outHeading, real& outGrade)
+		{
+			const glm::vec3 horizontal(dir.x, 0.0f, dir.z);
+			const real horizontalLength = glm::length(horizontal);
+			if (horizontalLength < 1e-4f)
+			{
+				outHeading = VEC3_FORWARD;
+				outGrade = 0.0f;
+				return;
+			}
+			outHeading = horizontal / horizontalLength;
+			outGrade = dir.y / horizontalLength;
+		}
+
+		// Track frame (up is perpendicular to the track, tilted with its slope but never rolled)
+		void GetTrackFrame(const BezierCurve3D& curve, real t, glm::vec3& outForward, glm::vec3& outRight, glm::vec3& outUp)
+		{
+			glm::vec3 derivative = curve.GetFirstDerivativeOnCurve(t);
+			if (glm::length2(derivative) < 1e-8f)
+			{
+				derivative = curve.points[3] - curve.points[0];
+			}
+			outForward = glm::length2(derivative) > 1e-8f ? glm::normalize(derivative) : VEC3_FORWARD;
+			glm::vec3 right = glm::cross(VEC3_UP, outForward);
+			outRight = glm::length2(right) > 1e-8f ? glm::normalize(right) : VEC3_RIGHT;
+			outUp = glm::normalize(glm::cross(outForward, outRight));
+		}
+
+		real CurveLength(const BezierCurve3D& curve)
+		{
+			if (curve.calculatedLength > 0.0f)
+			{
+				return curve.calculatedLength;
+			}
+			BezierCurve3D copy = curve;
+			copy.CalculateLength();
+			return copy.calculatedLength;
+		}
+
+		// De Casteljau subdivision
+		void SplitCurve(const BezierCurve3D& curve, real t, BezierCurve3D& outLeft, BezierCurve3D& outRight)
+		{
+			const glm::vec3* p = curve.points;
+			const glm::vec3 p01 = Lerp(p[0], p[1], t);
+			const glm::vec3 p12 = Lerp(p[1], p[2], t);
+			const glm::vec3 p23 = Lerp(p[2], p[3], t);
+			const glm::vec3 p012 = Lerp(p01, p12, t);
+			const glm::vec3 p123 = Lerp(p12, p23, t);
+			const glm::vec3 mid = Lerp(p012, p123, t);
+			outLeft = BezierCurve3D(p[0], p01, p012, mid);
+			outRight = BezierCurve3D(mid, p123, p23, p[3]);
+		}
+
+		// The part of a curve between local t values a & b
+		BezierCurve3D SubCurve(const BezierCurve3D& curve, real a, real b)
+		{
+			BezierCurve3D result = curve;
+			BezierCurve3D unused;
+			if (a > 0.0f)
+			{
+				SplitCurve(curve, a, unused, result);
+			}
+			if (b < 1.0f)
+			{
+				const real remapped = (a < 1.0f) ? (b - a) / (1.0f - a) : 1.0f;
+				SplitCurve(BezierCurve3D(result), remapped, result, unused);
+			}
+			result.calculatedLength = -1.0f;
+			return result;
+		}
+
+		real TrackLength(const std::vector<BezierCurve3D>& curves)
+		{
+			real length = 0.0f;
+			for (const BezierCurve3D& curve : curves)
+			{
+				length += CurveLength(curve);
+			}
+			return length;
+		}
+	} // namespace
+
+	real TrackManager::GetGrade(const glm::vec3& dir)
+	{
+		glm::vec3 heading;
+		real grade;
+		GetHeadingAndGrade(dir, heading, grade);
+		return grade;
+	}
+
+	bool TrackManager::GetClosestFreeEnd(const glm::vec3& pos, real range, TrackEnd& outEnd) const
+	{
+		bool bFound = false;
+		real closestDistSq = range * range;
+		std::vector<TrackPointRef> coincidentNodes;
+		for (i32 t = 0; t < (i32)tracks.size(); ++t)
+		{
+			const BezierCurveList& track = tracks[t];
+			if (track.curves.empty())
+			{
+				continue;
+			}
+			const TrackPointRef ends[2] = { { (TrackID)t, 0, 0 }, { (TrackID)t, (i32)track.curves.size() - 1, 3 } };
+			for (i32 e = 0; e < 2; ++e)
+			{
+				const glm::vec3 endPos = GetPoint(ends[e]);
+				const real distSq = glm::distance2(pos, endPos);
+				if (distSq >= closestDistSq)
+				{
+					continue;
+				}
+
+				// Ends which another track (or the other end of this one) continues on from aren't free
+				GetCoincidentNodes(ends[e], coincidentNodes);
+				bool bFree = true;
+				for (const TrackPointRef& node : coincidentNodes)
+				{
+					bFree = bFree && (node == ends[e]);
+				}
+				if (!bFree)
+				{
+					continue;
+				}
+
+				const glm::vec3 dir = GetNodeDirection(ends[e]);
+				if (glm::length2(dir) < 0.5f)
+				{
+					continue;
+				}
+
+				closestDistSq = distSq;
+				outEnd.ref = ends[e];
+				outEnd.pos = endPos;
+				outEnd.dir = (e == 0) ? -dir : dir;
+				bFound = true;
+			}
+		}
+		return bFound;
+	}
+
+	BezierCurve3D TrackManager::BuildPiece(TrackPieceType type, const glm::vec3& startPos, const glm::vec3& startDir, real gradeChange /* = 0.0f */) const
+	{
+		const TrackPieceSettings& settings = m_PieceSettings;
+
+		glm::vec3 heading;
+		real grade;
+		GetHeadingAndGrade(startDir, heading, grade);
+		const glm::vec3 right = glm::normalize(glm::cross(VEC3_UP, heading));
+		const glm::vec3 slopedHeading = heading + VEC3_UP * grade; // Run of one metre along the track
+
+		// Each piece is a single cubic curve whose end tangents line up with its neighbours'
+		switch (type)
+		{
+		case TrackPieceType::STRAIGHT:
+		case TrackPieceType::STRAIGHT_LONG:
+		{
+			const real length = (type == TrackPieceType::STRAIGHT) ? settings.straightLength : settings.longStraightLength;
+			const glm::vec3 delta = glm::normalize(slopedHeading) * length;
+			return BezierCurve3D(startPos, startPos + delta / 3.0f, startPos + delta * (2.0f / 3.0f), startPos + delta);
+		}
+		case TrackPieceType::CURVE_LEFT:
+		case TrackPieceType::CURVE_RIGHT:
+		{
+			// A circular arc (a helix when on a grade)
+			const real side = (type == TrackPieceType::CURVE_RIGHT) ? 1.0f : -1.0f;
+			const real angle = settings.curveAngle;
+			const real radius = settings.curveRadius;
+			const glm::vec3 endHeading = heading * glm::cos(angle) + right * side * glm::sin(angle);
+			const real rise = grade * radius * angle;
+			const glm::vec3 endPos = startPos + heading * radius * glm::sin(angle) + right * side * radius * (1.0f - glm::cos(angle)) + VEC3_UP * rise;
+			// Handle length which best approximates a circular arc
+			const real handleLength = (4.0f / 3.0f) * glm::tan(angle / 4.0f) * radius;
+			return BezierCurve3D(startPos, startPos + slopedHeading * handleLength, endPos - (endHeading + VEC3_UP * grade) * handleLength, endPos);
+		}
+		case TrackPieceType::RAMP_UP:
+		case TrackPieceType::RAMP_DOWN:
+		case TrackPieceType::FOLLOW_GROUND:
+		{
+			// The grade changes steadily along the ramp (its height is a parabola, which a cubic matches exactly)
+			if (type == TrackPieceType::RAMP_UP)
+			{
+				gradeChange = settings.gradeStep;
+			}
+			else if (type == TrackPieceType::RAMP_DOWN)
+			{
+				gradeChange = -settings.gradeStep;
+			}
+			const real run = settings.rampRun;
+			const real endGrade = grade + gradeChange;
+			const glm::vec3 endPos = startPos + heading * run + VEC3_UP * (grade + endGrade) * 0.5f * run;
+			return BezierCurve3D(startPos, startPos + slopedHeading * (run / 3.0f), endPos - (heading + VEC3_UP * endGrade) * (run / 3.0f), endPos);
+		}
+		case TrackPieceType::S_BEND_LEFT:
+		case TrackPieceType::S_BEND_RIGHT:
+		{
+			const real side = (type == TrackPieceType::S_BEND_RIGHT) ? 1.0f : -1.0f;
+			const real run = settings.sBendLength;
+			const glm::vec3 endPos = startPos + slopedHeading * run + right * side * settings.sBendOffset;
+			return BezierCurve3D(startPos, startPos + slopedHeading * (run / 3.0f), endPos - slopedHeading * (run / 3.0f), endPos);
+		}
+		default:
+			break;
+		}
+
+		return BezierCurve3D(startPos, startPos, startPos, startPos);
+	}
+
+	real TrackManager::ChooseFollowGroundGradeChange(const glm::vec3& startPos, const glm::vec3& startDir) const
+	{
+		const TrackPieceSettings& settings = m_PieceSettings;
+		const real startGrade = GetGrade(startDir);
+		const real searchHeight = settings.maxCutDepth + settings.maxFillDepth + 2.0f;
+
+		real bestChange = 0.0f;
+		real bestCost = 1e30f;
+		for (i32 step = -2; step <= 2; ++step)
+		{
+			const real change = settings.gradeStep * (real)step;
+			const real endGrade = startGrade + change;
+			if (glm::abs(endGrade) > settings.maxGrade + 1e-3f && glm::abs(endGrade) >= glm::abs(startGrade) - 1e-3f)
+			{
+				continue;
+			}
+
+			// How far the ramp would be off the ground, mostly at its end (which sets up the next piece)
+			const BezierCurve3D piece = BuildPiece(TrackPieceType::FOLLOW_GROUND, startPos, startDir, change);
+			real cost = glm::abs(change) * 0.5f;
+			const real ts[2] = { 0.5f, 1.0f };
+			const real weights[2] = { 0.5f, 1.0f };
+			for (i32 i = 0; i < 2; ++i)
+			{
+				const glm::vec3 pos = piece.GetPointOnCurve(ts[i]);
+				glm::vec3 groundPos;
+				if (FindGroundBelow(pos + VEC3_UP * (searchHeight * 0.5f), searchHeight, groundPos))
+				{
+					cost += glm::abs(pos.y - groundPos.y) * weights[i];
+				}
+				else
+				{
+					cost += searchHeight * weights[i];
+				}
+			}
+			if (cost < bestCost)
+			{
+				bestCost = cost;
+				bestChange = change;
+			}
+		}
+		return bestChange;
+	}
+
+	bool TrackManager::FindGroundBelow(const glm::vec3& pos, real maxDistance, glm::vec3& outGroundPos) const
+	{
+		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+		if (terrainGenerator != nullptr)
+		{
+			glm::vec3 hitNormal;
+			return terrainGenerator->Raycast(pos, glm::vec3(0.0f, -1.0f, 0.0f), maxDistance, outGroundPos, hitNormal);
+		}
+
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		if (scene == nullptr || scene->GetPhysicsWorld() == nullptr)
+		{
+			return false;
+		}
+		const btVector3 rayStart = ToBtVec3(pos);
+		const btVector3 rayEnd = ToBtVec3(pos - VEC3_UP * maxDistance);
+		btCollisionWorld::ClosestRayResultCallback rayCallback(rayStart, rayEnd);
+		rayCallback.m_collisionFilterMask = (i32)CollisionType::STATIC;
+		scene->GetPhysicsWorld()->GetWorld()->rayTest(rayStart, rayEnd, rayCallback);
+		if (rayCallback.hasHit())
+		{
+			outGroundPos = ToVec3(rayCallback.m_hitPointWorld);
+			return true;
+		}
+		return false;
+	}
+
+	TrackPieceCheck TrackManager::CheckPiece(const BezierCurve3D& piece, const glm::vec3& startDir, TrackID continuesFromTrackID,
+		real* outMaxCut /* = nullptr */, real* outMaxFill /* = nullptr */) const
+	{
+		const TrackPieceSettings& settings = m_PieceSettings;
+		real maxCut = 0.0f;
+		real maxFill = 0.0f;
+		if (outMaxCut != nullptr)
+		{
+			*outMaxCut = 0.0f;
+		}
+		if (outMaxFill != nullptr)
+		{
+			*outMaxFill = 0.0f;
+		}
+
+		// Track can't get any steeper than the max grade (but already steeper track can be levelled out)
+		const real startGrade = glm::abs(GetGrade(startDir));
+		const real endGrade = glm::abs(GetGrade(piece.GetFirstDerivativeOnCurve(1.0f)));
+		if (endGrade > settings.maxGrade + 1e-3f && endGrade >= startGrade - 1e-3f)
+		{
+			return TrackPieceCheck::TOO_STEEP;
+		}
+
+		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+		const real length = CurveLength(piece);
+		const i32 sampleCount = glm::max((i32)glm::ceil(length / 1.0f), 2);
+		// Pieces ending on another track's free end join it, so may touch it
+		const bool bEndJoins = GetClosestNode(piece.points[3], JUNCTION_THRESHOLD_DIST * 0.5f).IsValid();
+		const real blockRange = m_MeshSettings.sleeperLength * 0.9f;
+		const real ignoreNearEndsDist = 1.5f;
+		const real searchStart = settings.maxCutDepth + 0.5f;
+		const real searchDist = searchStart + settings.maxFillDepth;
+		for (i32 i = 0; i <= sampleCount; ++i)
+		{
+			const real t = (real)i / (real)sampleCount;
+			const glm::vec3 pos = piece.GetPointOnCurve(t);
+
+			// Ground level, which must be within reach of the track
+			const glm::vec3 searchFrom = pos + VEC3_UP * searchStart;
+			if (terrainGenerator != nullptr && terrainGenerator->SampleDensity(searchFrom) < 0.0f)
+			{
+				return TrackPieceCheck::CUT_TOO_DEEP;
+			}
+			glm::vec3 groundPos;
+			if (!FindGroundBelow(searchFrom, searchDist, groundPos))
+			{
+				return TrackPieceCheck::FILL_TOO_DEEP;
+			}
+			const real heightAboveGround = pos.y - groundPos.y;
+			maxCut = glm::max(maxCut, -heightAboveGround);
+			maxFill = glm::max(maxFill, heightAboveGround);
+			if (-heightAboveGround > settings.maxCutDepth)
+			{
+				return TrackPieceCheck::CUT_TOO_DEEP;
+			}
+			if (heightAboveGround > settings.maxFillDepth)
+			{
+				return TrackPieceCheck::FILL_TOO_DEEP;
+			}
+
+			// Running into other tracks (or this one's own track further back)
+			const real distFromStart = t * length;
+			const real distFromEnd = (1.0f - t) * length;
+			if (distFromStart > ignoreNearEndsDist && (!bEndJoins || distFromEnd > ignoreNearEndsDist))
+			{
+				const TrackID nearbyTrackID = GetClosestTrack(pos, blockRange);
+				if (nearbyTrackID != InvalidTrackID)
+				{
+					return TrackPieceCheck::BLOCKED_BY_TRACK;
+				}
+			}
+		}
+		FLEX_UNUSED(continuesFromTrackID);
+
+		if (outMaxCut != nullptr)
+		{
+			*outMaxCut = maxCut;
+		}
+		if (outMaxFill != nullptr)
+		{
+			*outMaxFill = maxFill;
+		}
+		return TrackPieceCheck::OK;
+	}
+
+	void TrackManager::ConformTerrainToTrack(const BezierCurve3D& curve)
+	{
+		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+		if (terrainGenerator == nullptr)
+		{
+			return;
+		}
+
+		PROFILE_AUTO("TrackManager ConformTerrainToTrack");
+
+		const TrackPieceSettings& settings = m_PieceSettings;
+		const real length = CurveLength(curve);
+		const i32 segmentCount = glm::max((i32)glm::ceil(length / 1.0f), 1);
+		std::vector<glm::vec3> points;
+		points.reserve(segmentCount + 1);
+		for (i32 i = 0; i <= segmentCount; ++i)
+		{
+			const real t = (real)i / (real)segmentCount;
+			glm::vec3 forward, right, up;
+			GetTrackFrame(curve, t, forward, right, up);
+			// Just below the sleepers, so they sit in the ballast rather than on top of it
+			points.push_back(curve.GetPointOnCurve(t) - up * 0.04f);
+		}
+
+		// Cut down to & build up to a strip following the track's slope (level across it), in gravel ballast
+		m_bConformingTerrain = true;
+		const real height = glm::max(settings.maxCutDepth, settings.maxFillDepth) + 1.5f;
+		terrainGenerator->FlattenPath(points, settings.earthworksRadius, terrain::Material::GRAVEL, height);
+		m_bConformingTerrain = false;
+	}
+
+	bool TrackCut::Remap(TrackID& inOutTrackID, real& inOutDistAlongTrack) const
+	{
+		if (inOutTrackID != trackID)
+		{
+			return true;
+		}
+
+		const real scaledT = glm::clamp(inOutDistAlongTrack, 0.0f, 1.0f) * (real)curveCount;
+		const i32 curve = glm::clamp((i32)scaledT, 0, curveCount - 1);
+		const real localT = Saturate(scaledT - (real)curve);
+
+		if (curve < beforeCurve || (curve == beforeCurve && localT <= beforeT))
+		{
+			if (!bKeptBefore)
+			{
+				return false;
+			}
+			// Before keeps curves [0, beforeCurve], the last cut short at beforeT
+			const real beforeCount = (real)(beforeCurve + 1);
+			const real newLocalT = (curve < beforeCurve) ? localT : (beforeT > 0.0f ? localT / beforeT : 0.0f);
+			inOutTrackID = trackID;
+			inOutDistAlongTrack = Saturate(((real)curve + newLocalT) / beforeCount);
+			return true;
+		}
+		if (curve > afterCurve || (curve == afterCurve && localT >= afterT))
+		{
+			if (!bKeptAfter)
+			{
+				return false;
+			}
+			// After keeps curves [afterCurve, curveCount), the first starting at afterT
+			const real afterCount = (real)(curveCount - afterCurve);
+			const real newLocalT = (curve > afterCurve) ? localT : (afterT < 1.0f ? (localT - afterT) / (1.0f - afterT) : 1.0f);
+			inOutTrackID = afterTrackID;
+			inOutDistAlongTrack = Saturate(((real)(curve - afterCurve) + newLocalT) / afterCount);
+			return true;
+		}
+		return false;
+	}
+
+	bool TrackManager::CutTrack(TrackID trackID, real t0, real t1)
+	{
+		CHECK_LT((i32)trackID, (i32)tracks.size());
+
+		if (t1 < t0)
+		{
+			std::swap(t0, t1);
+		}
+		t0 = Saturate(t0);
+		t1 = Saturate(t1);
+
+		const std::vector<BezierCurve3D> curves = tracks[(i32)trackID].curves;
+		const i32 curveCount = (i32)curves.size();
+		if (curveCount == 0)
+		{
+			RemoveTrack(trackID);
+			return false;
+		}
+
+		TrackCut cut = {};
+		cut.trackID = trackID;
+		cut.curveCount = curveCount;
+		tracks[(i32)trackID].GetCurveIndexAndLocalTFromGlobalT(t0, &cut.beforeCurve, &cut.beforeT);
+		tracks[(i32)trackID].GetCurveIndexAndLocalTFromGlobalT(t1, &cut.afterCurve, &cut.afterT);
+		if (t1 >= 1.0f)
+		{
+			cut.afterCurve = curveCount - 1;
+			cut.afterT = 1.0f;
+		}
+
+		// Cuts right at the end of a curve keep the whole curve
+		const real epsilon = 1e-3f;
+		if (cut.beforeT < epsilon && cut.beforeCurve > 0)
+		{
+			--cut.beforeCurve;
+			cut.beforeT = 1.0f;
+		}
+		if (cut.afterT > 1.0f - epsilon && cut.afterCurve < curveCount - 1)
+		{
+			++cut.afterCurve;
+			cut.afterT = 0.0f;
+		}
+
+		std::vector<BezierCurve3D> before;
+		for (i32 c = 0; c < cut.beforeCurve; ++c)
+		{
+			before.push_back(curves[c]);
+		}
+		if (cut.beforeT > epsilon)
+		{
+			before.push_back(SubCurve(curves[cut.beforeCurve], 0.0f, cut.beforeT));
+		}
+
+		std::vector<BezierCurve3D> after;
+		if (cut.afterT < 1.0f - epsilon)
+		{
+			after.push_back(SubCurve(curves[cut.afterCurve], cut.afterT, 1.0f));
+		}
+		for (i32 c = cut.afterCurve + 1; c < curveCount; ++c)
+		{
+			after.push_back(curves[c]);
+		}
+
+		// Stubs too short to ride on are removed too
+		const real minLength = 0.75f;
+		cut.bKeptBefore = !before.empty() && TrackLength(before) >= minLength;
+		cut.bKeptAfter = !after.empty() && TrackLength(after) >= minLength;
+		if (!cut.bKeptBefore && !cut.bKeptAfter)
+		{
+			RemoveTrack(trackID);
+			return false;
+		}
+
+		if (cut.bKeptBefore)
+		{
+			tracks[(i32)trackID].curves = before;
+			if (cut.bKeptAfter)
+			{
+				cut.afterTrackID = AddTrack(BezierCurveList(after));
+			}
+		}
+		else
+		{
+			tracks[(i32)trackID].curves = after;
+			cut.afterTrackID = trackID;
+		}
+		OnTrackModified(trackID);
+
+		GetSystem<CartManager>(SystemType::CART_MANAGER)->OnTrackCut(cut);
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		for (i32 i = 0; i < 2; ++i)
+		{
+			Player* player = scene->GetPlayer(i);
+			if (player != nullptr)
+			{
+				player->OnTrackCut(cut);
+			}
+		}
+
+		if (m_HighlightedTrackID == trackID)
+		{
+			m_HighlightTrackMesh.bDirty = true;
+		}
+		m_PreviewJunctionDir = {};
+		m_DEBUG_highlightedJunctionIndex = -1;
+
+		FindJunctions();
+		return true;
+	}
+
+	void TrackManager::OnTerrainDug(const glm::vec3& center, real radius)
+	{
+		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+		if (m_bConformingTerrain || terrainGenerator == nullptr || tracks.empty())
+		{
+			return;
+		}
+
+		PROFILE_AUTO("TrackManager OnTerrainDug");
+
+		// A track is supported by the ground just below its sleepers. Where that's been dug out (near the dig), the
+		// track breaks: the unsupported section is removed, leaving the track in two
+		const real supportDepth = 0.35f;
+		const real reach = radius + 0.75f; // Edits blend in a little past their radius
+		const real sampleSpacing = 0.25f;
+		const real padding = 0.3f; // Extra track removed either side of the unsupported section
+
+		auto IsUnsupported = [&](const BezierCurve3D& curve, real t)
+		{
+			glm::vec3 forward, right, up;
+			GetTrackFrame(curve, t, forward, right, up);
+			const glm::vec3 support = curve.GetPointOnCurve(t) - up * supportDepth;
+			return glm::distance2(support, center) < reach * reach && terrainGenerator->SampleDensity(support) > 0.0f;
+		};
+
+		i32 breakCount = 0;
+		// Each cut changes track IDs & parameters, so search again from the start after each one
+		for (i32 iteration = 0; iteration < 32; ++iteration)
+		{
+			bool bCut = false;
+			for (i32 t = 0; t < (i32)tracks.size() && !bCut; ++t)
+			{
+				const BezierCurveList& track = tracks[t];
+				const i32 curveCount = (i32)track.curves.size();
+				bool bFoundUnsupported = false;
+				real cutStart = 0.0f;
+				real cutEnd = 0.0f;
+				for (i32 c = 0; c < curveCount && !bCut; ++c)
+				{
+					const BezierCurve3D& curve = track.curves[c];
+					const glm::vec3 boundsMin = glm::min(glm::min(curve.points[0], curve.points[1]), glm::min(curve.points[2], curve.points[3])) - glm::vec3(reach + supportDepth);
+					const glm::vec3 boundsMax = glm::max(glm::max(curve.points[0], curve.points[1]), glm::max(curve.points[2], curve.points[3])) + glm::vec3(reach + supportDepth);
+					if (glm::any(glm::lessThan(center, boundsMin)) || glm::any(glm::greaterThan(center, boundsMax)))
+					{
+						// (an unsupported section ends with the curve before this)
+						bCut = bFoundUnsupported;
+						continue;
+					}
+
+					const real curveLength = glm::max(CurveLength(curve), 0.01f);
+					const i32 sampleCount = glm::max((i32)glm::ceil(curveLength / sampleSpacing), 2);
+					const real paddingT = padding / curveLength / (real)curveCount;
+					for (i32 s = 0; s <= sampleCount; ++s)
+					{
+						const real localT = (real)s / (real)sampleCount;
+						const real globalT = ((real)c + localT) / (real)curveCount;
+						if (IsUnsupported(curve, localT))
+						{
+							if (!bFoundUnsupported)
+							{
+								bFoundUnsupported = true;
+								cutStart = globalT - paddingT;
+							}
+							cutEnd = globalT + paddingT;
+						}
+						else if (bFoundUnsupported)
+						{
+							bCut = true;
+							break;
+						}
+					}
+				}
+
+				if (bFoundUnsupported)
+				{
+					bCut = true;
+					CutTrack((TrackID)t, cutStart, cutEnd);
+					++breakCount;
+				}
+			}
+
+			if (!bCut)
+			{
+				break;
+			}
+		}
+
+		if (breakCount > 0)
+		{
+			Print("Digging broke %d track section%s\n", breakCount, breakCount == 1 ? "" : "s");
+		}
 	}
 } // namespace flex

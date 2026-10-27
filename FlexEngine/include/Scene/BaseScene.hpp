@@ -172,6 +172,8 @@ namespace flex
 
 		// Moves the clouds along with the wind & keeps the sun direction (used by the sky) up to date
 		void UpdateSky();
+		// Eye adaptation: sets the exposure lit shaders apply (m_SkyboxData.sun.w) from the light level
+		void UpdateExposure(DirectionalLight* dirLight, const glm::vec3& zenithDisplay);
 
 		void DrawImGuiForSelectedObjectsAndSceneHierarchy();
 
@@ -235,7 +237,7 @@ namespace flex
 		// Returns true when there are nearby items
 		bool GetDroppedItemsInRadius(const glm::vec3& pos, real radius, std::vector<DroppedItem*>& items);
 
-		void CreateDroppedItem(const PrefabID& prefabID, i32 stackSize, const glm::vec3& dropPosWS, const glm::vec3& initialVel);
+		DroppedItem* CreateDroppedItem(const PrefabID& prefabID, i32 stackSize, const glm::vec3& dropPosWS, const glm::vec3& initialVel);
 		void OnDroppedItemDestroyed(DroppedItem* item);
 
 		static const char* GameObjectTypeIDToString(StringID typeID);
@@ -317,6 +319,9 @@ namespace flex
 
 		// Brightness of the midday sun (the directional light's brightness when the scene was loaded)
 		real m_DirLightBaseBrightness = -1.0f;
+		// Eye adaptation exposure (< 0: not yet set, see UpdateExposure)
+		real m_Exposure = -1.0f;
+		real m_ExposureTimeOfDay = 0.0f;
 
 		glm::vec3 m_DirLightColours[4];
 

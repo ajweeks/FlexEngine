@@ -30,6 +30,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/Objects/Vehicle.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Systems/TrackManager.hpp"
 #include "Time.hpp"
 #include "Traversal.hpp"
 
@@ -195,8 +196,66 @@ namespace flex
 				{
 					if (m_Frame == 0)
 					{
+						if (player->IsGrounded())
+						{
+							// Running only this step (FLEX_TRAVERSAL_ONLY=wingsuit): start high above the ground
+							Teleport(player, pos + VEC3_UP * 300.0f);
+						}
 						Press(KeyCode::KEY_LEFT_CONTROL);
 						Look(player, player->GetTransform()->GetForward(), -35.0f);
+					}
+					if (s_bScreenshots && m_StepTime > 4.4f && m_SubStep < 5 && m_Frame >= m_ShotFrame + 6)
+					{
+						// Pulling out of the dive: the wingsuit & air streaks, from the third person camera & from behind &
+						// beside. Saving a screenshot hitches (& the next frame's long step moves the player a long way), so
+						// this waits a few frames after each (the readback completes a couple of frames later).
+						const glm::vec3 dir = glm::length(velocity) > 1.0f ? glm::normalize(velocity) : VEC3_FORWARD;
+						const glm::vec3 heading = glm::normalize(glm::vec3(velocity.x, 0.0f, velocity.z) + glm::vec3(1e-4f, 0.0f, 0.0f));
+						BaseCamera* camera = g_CameraManager->CurrentCamera();
+						if (m_SubStep == 0)
+						{
+							g_CameraManager->SetCameraByName("overhead", false);
+							m_ShotTime = m_StepTime;
+							m_SubStep = 1;
+						}
+						else if (m_SubStep == 1 && m_StepTime > m_ShotTime + 0.4f)
+						{
+							Print("Traversal test: wingsuit at %.1fm/s, openness %.2f, %u air streaks, pitched %.0f degrees, banked %.0f degrees\n", glm::length(velocity),
+								traversal->GetWingsuitOpenness(), traversal->GetAirStreakCount(), glm::degrees(traversal->GetBodyPitch()), glm::degrees(traversal->GetBodyBank()));
+							RequestScreenshot("traversal_wingsuit_3p");
+							m_ShotFrame = m_Frame;
+							m_SubStep = 2;
+						}
+						else if (m_SubStep == 2)
+						{
+							g_CameraManager->SetCameraByName("debug", false);
+							camera = g_CameraManager->CurrentCamera();
+							camera->position = pos - dir * 6.0f + VEC3_UP * 2.0f;
+							const glm::vec3 toPlayer = glm::normalize(pos - camera->position);
+							camera->SetViewDirection(std::atan2(toPlayer.z, toPlayer.x), std::asin(toPlayer.y));
+							RequestScreenshot("traversal_wingsuit");
+							m_ShotFrame = m_Frame;
+							m_SubStep = 3;
+						}
+						else if (m_SubStep == 3)
+						{
+							const glm::vec3 right = glm::cross(heading, VEC3_UP);
+							// (where the player will be when this frame is rendered)
+							const glm::vec3 renderPos = pos + velocity * g_DeltaTime;
+							camera->position = renderPos + right * 8.0f + VEC3_UP * 4.0f + heading * 2.0f;
+							const glm::vec3 toPlayer = glm::normalize(renderPos - camera->position);
+							camera->SetViewDirection(std::atan2(toPlayer.z, toPlayer.x), std::asin(toPlayer.y));
+							RequestScreenshot("traversal_wingsuit_side");
+							m_ShotFrame = m_Frame;
+							m_SubStep = 4;
+						}
+						else if (m_SubStep == 4)
+						{
+							g_CameraManager->SetCameraByName("first-person", false);
+							m_SubStep = 5;
+						}
+						// Switching cameras can drop held keys
+						Press(KeyCode::KEY_LEFT_CONTROL);
 					}
 					if (m_StepTime > 4.0f && m_Max == 0.0f)
 					{
@@ -205,7 +264,7 @@ namespace flex
 						m_StartPos = velocity;
 						Look(player, player->GetTransform()->GetForward(), 5.0f);
 					}
-					if (m_StepTime > 6.0f)
+					if (m_StepTime > 6.0f && (!s_bScreenshots || m_SubStep >= 5))
 					{
 						Print("Traversal test: wingsuit dive reached %.1fm/s (descending at %.1fm/s), after pulling up: %.1fm/s (vertical %.1fm/s)\n",
 							m_Max, -m_StartPos.y, glm::length(velocity), velocity.y);
@@ -220,6 +279,10 @@ namespace flex
 						else if (velocity.y < m_StartPos.y + 5.0f)
 						{
 							Fail("pulling up didn't slow the descent");
+						}
+						if (m_SubStep >= 1 && m_SubStep < 5)
+						{
+							g_CameraManager->SetCameraByName("first-person", false);
 						}
 						Release(KeyCode::KEY_LEFT_CONTROL);
 						NextStep(Step::LAND);
@@ -1365,6 +1428,8 @@ namespace flex
 			Step m_Step = Step::WAIT_FOR_GROUND;
 			bool m_bStepChanged = false;
 			u32 m_SubStep = 0;
+			real m_ShotTime = 0.0f;
+			u32 m_ShotFrame = 0;
 			Step m_OnlyStep = Step::DONE;
 			sec m_SubStepTime = 0.0f; // Step time when the current sub step began
 			sec m_StepTime = 0.0f;
@@ -1818,6 +1883,8 @@ namespace flex
 		};
 
 		VehicleTestScript* s_VehicleTest = nullptr;
+		// See BeginTrackTest
+		bool s_bTrackTest = false;
 	} // anonymous namespace
 
 	SceneTestRunner* SceneTestRunner::s_Instance = nullptr;
@@ -1878,6 +1945,10 @@ namespace flex
 			if (s_VehicleTest != nullptr)
 			{
 				s_VehicleTest->Update();
+			}
+			if (s_bTrackTest)
+			{
+				UpdateTrackTest();
 			}
 			if (const char* spawnCountStr = getenv("FLEX_TEST_SPAWN_OBJECTS"))
 			{
@@ -1940,11 +2011,67 @@ namespace flex
 					}
 				}
 			}
+			if (const char* views = getenv("FLEX_TEST_VIEWS"))
+			{
+				// Fixed views for rendering checks: FLEX_TEST_VIEWS="x,y,z,yaw,pitch,timeOfDay;..." shows each view (from
+				// the debug camera, with the time of day paused & no UI or debug drawing) for FLEX_TEST_VIEW_FRAMES frames
+				// (default 300), then saves saved/screenshots/test_view_<i>.png. With terrain, y is the height above it.
+				static std::vector<std::array<real, 6>> s_Views;
+				static bool bParsed = false;
+				if (!bParsed)
+				{
+					bParsed = true;
+					for (const std::string& view : Split(views, ';'))
+					{
+						std::array<real, 6> v = {};
+						if (sscanf(view.c_str(), "%f,%f,%f,%f,%f,%f", &v[0], &v[1], &v[2], &v[3], &v[4], &v[5]) == 6)
+						{
+							s_Views.push_back(v);
+						}
+					}
+				}
+				const u32 viewFrames = getenv("FLEX_TEST_VIEW_FRAMES") != nullptr ? (u32)glm::max(atoi(getenv("FLEX_TEST_VIEW_FRAMES")), 2) : 300u;
+				const u32 frame = m_FramesPerScene - 1 - m_FramesRemaining;
+				const u32 viewIndex = frame / viewFrames;
+				if (viewIndex < (u32)s_Views.size())
+				{
+					const std::array<real, 6>& v = s_Views[viewIndex];
+					if (g_CameraManager->CurrentCamera()->GetName() != "debug")
+					{
+						g_CameraManager->SetCameraByName("debug", false);
+					}
+					BaseCamera* camera = g_CameraManager->CurrentCamera();
+					TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+					const real groundHeight = terrainGenerator != nullptr ? glm::max(terrainGenerator->SampleHeight(glm::vec2(v[0], v[2])), 0.0f) : 0.0f;
+					camera->position = glm::vec3(v[0], groundHeight + v[1], v[2]);
+					g_Renderer->GetPhysicsDebuggingSettings().bDrawWireframe = false;
+					*TerrainGenerator::GetShowWorldMapPtr() = false;
+					g_EngineInstance->SetRenderImGui(false);
+					camera->SetViewDirection(v[3], v[4]);
+					g_SceneManager->CurrentScene()->SetTimeOfDay(v[5]);
+					g_SceneManager->CurrentScene()->SetTimeOfDayPaused(true);
+					if (frame % viewFrames == viewFrames - 1)
+					{
+						const std::string directory = RelativePathToAbsolute(SCREENSHOT_DIRECTORY);
+						Platform::CreateDirectoryRecursive(directory);
+						g_Renderer->RequestScreenshot(directory + "test_view_" + IntToString((i32)viewIndex) + ".png");
+						if (terrainGenerator != nullptr && terrainGenerator->GetStreamer() != nullptr)
+						{
+							std::string report;
+							const u32 maskErrors = terrainGenerator->GetStreamer()->ValidateDisplayedMasks(&report);
+							const terrain::TerrainStreamer::Stats stats = terrainGenerator->GetStreamer()->GetStats();
+							Print("View %u: %u transition mask errors, %u chunks displayed, settled: %d, exposure %.2f\n%s", viewIndex, maskErrors, stats.displayedChunkCount, (i32)stats.bSettled,
+								g_SceneManager->CurrentScene()->GetSkyboxData().sun.w, report.c_str());
+						}
+					}
+				}
+			}
 			if (m_bProfile && m_FramesRemaining == m_FramesPerScene / 2)
 			{
 				// Skip the first half, while things load
 				Profiler::Reset();
 				Profiler::SetEnabled(true);
+				Profiler::SetHitchLogging(true);
 			}
 			if (m_FramesRemaining == 1)
 			{
@@ -2032,7 +2159,12 @@ namespace flex
 				s_bScreenshots = m_bCaptureScreenshots;
 				// Debug lines would clutter the screenshots
 				physicsDebuggingSettings.bDrawWireframe = physicsDebuggingSettings.bDrawWireframe && !m_bCaptureScreenshots;
-				if (const char* vehicleTest = getenv("FLEX_VEHICLE_TEST"))
+				if (getenv("FLEX_TRACK_TEST") != nullptr)
+				{
+					s_bTrackTest = true;
+					BeginTrackTest(s_bScreenshots);
+				}
+				else if (const char* vehicleTest = getenv("FLEX_VEHICLE_TEST"))
 				{
 					s_VehicleTest = new VehicleTestScript(strcmp(vehicleTest, "boat") == 0);
 				}
@@ -2071,6 +2203,15 @@ namespace flex
 		}
 
 		*TerrainGenerator::GetShowWorldMapPtr() = m_bPrevShowTerrainMap;
+
+		if (s_bTrackTest)
+		{
+			s_bTrackTest = false;
+			if (!EndTrackTest())
+			{
+				PrintError("Track test didn't finish, run with more frames\n");
+			}
+		}
 
 		if (s_VehicleTest != nullptr)
 		{

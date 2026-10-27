@@ -28,6 +28,9 @@ namespace flex
 
 	bool WriteFile(const std::string& filePath, const std::string& fileContents, bool bBinaryFile);
 	bool WriteFile(const std::string& filePath, const std::vector<char>& vec, bool bBinaryFile);
+	// Skips writing when the contents are the same as the last time this was called for the file (for settings which
+	// are saved periodically: writing files can take a while, e.g. while a virus scanner inspects them)
+	bool WriteFileIfChanged(const std::string& filePath, const std::string& fileContents);
 
 	bool OpenJSONFileDialog(const std::string& windowTitle, const std::string& absoluteDirectory, std::string& outSelectedAbsFilePath);
 

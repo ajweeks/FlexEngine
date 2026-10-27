@@ -51,6 +51,7 @@ namespace flex
 			WORLDS,
 			NEW_WORLD,
 			SETTINGS,
+			CONTROLS,
 			LOADING,
 			PLAYING,
 			PAUSED,
@@ -87,6 +88,7 @@ namespace flex
 		void DrawWorlds();
 		void DrawNewWorld();
 		void DrawSettings();
+		void DrawControls();
 		void DrawLoading();
 		void DrawPauseMenu();
 		void DrawMap();
@@ -99,6 +101,8 @@ namespace flex
 
 		void RefreshWorlds();
 		void CreateWorld(const std::string& name, i32 seed);
+		// "World <n>", one more than the highest numbered world
+		std::string NextWorldName() const;
 		void PlayWorld(const WorldInfo& world);
 		void LeaveWorld(); // Saves & returns to the main menu
 		void DeleteWorld(const WorldInfo& world);
@@ -113,7 +117,7 @@ namespace flex
 
 		GameUI m_UI;
 		Screen m_Screen = Screen::NONE;
-		Screen m_ScreenBeforeSettings = Screen::MAIN_MENU;
+		Screen m_ScreenBeforeSettings = Screen::MAIN_MENU; // Where the settings & controls screens go back to
 		real m_ScreenTime = 0.0f;
 
 		std::vector<WorldInfo> m_Worlds;

@@ -60,6 +60,10 @@ namespace flex
 		virtual void UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) = 0;
 		virtual void FreeDynamicVertexData(RenderID renderID) = 0;
 		virtual void ShrinkDynamicVertexData(RenderID renderID, real minUnused = 0.0f) = 0;
+		// Grows the dynamic vertex & index buffers a material's meshes are allocated from to at least usedFactor times
+		// the space in use. Growing stalls (it allocates & copies the whole buffer), so systems which stream geometry
+		// in call this while loading to avoid having to grow during play.
+		virtual void ReserveDynamicVertexData(MaterialID materialID, real usedFactor) = 0;
 		virtual u32 GetDynamicVertexBufferSize(RenderID renderID) = 0;
 		virtual u32 GetDynamicVertexBufferUsedSize(RenderID renderID) = 0;
 
@@ -206,6 +210,8 @@ namespace flex
 
 		void DrawSpecializationConstantInfoImGui();
 		void DrawImGuiSettings();
+		// Physics (Bullet) & render debug drawing toggles
+		void DrawImGuiDebugObjects();
 
 		void AddShaderSpecialziationConstant(ShaderID shaderID, StringID specializationConstant);
 		void RemoveShaderSpecialziationConstant(ShaderID shaderID, StringID specializationConstant);
@@ -401,7 +407,7 @@ namespace flex
 		virtual void RecreateShadowFrameBuffers() = 0;
 
 		virtual u32 GetStaticVertexIndexBufferIndex(u32 stride) = 0;
-		virtual u32 GetDynamicVertexIndexBufferIndex(u32 stride) = 0;
+		virtual u32 GetDynamicVertexIndexBufferIndex(u32 stride, bool bDeviceLocal = false) = 0;
 
 		void ParseShaderMetaData();
 		u32 ParseShaderBufferFields(const std::vector<std::string>& fileLines, u32 j, std::vector<std::string>& outFields);

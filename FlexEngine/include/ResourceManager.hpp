@@ -98,7 +98,6 @@ namespace flex
 		void DrawImGuiWindows();
 		void DrawImGuiMeshList(i32* selectedMeshIndex, ImGuiTextFilter* meshFilter);
 		// Expects to be called from within an ImGui menu
-		void DrawImGuiMenuItemizableItems();
 		bool DrawAudioSourceIDImGui(const char* label, StringID& audioSourceSID);
 		void DrawParticleSystemTemplateImGuiObjects();
 		void DrawParticleParameterTypesImGui();

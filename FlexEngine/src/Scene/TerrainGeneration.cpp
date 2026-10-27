@@ -419,7 +419,7 @@ namespace flex
 
 		static const char* s_VegetationNames[] =
 		{
-			"none", "taiga", "nordic", "broadleaf", "swamp", "tundra", "alpine", "savanna", "desert",
+			"none", "taiga", "nordic", "broadleaf", "swamp", "tundra", "alpine", "savanna", "desert", "volcanic",
 		};
 		static_assert(ARRAY_LENGTH(s_VegetationNames) == (u32)Vegetation::_COUNT, "s_VegetationNames must match Vegetation enum");
 
@@ -475,6 +475,7 @@ namespace flex
 			SEED_FOREST,
 			SEED_TREASURE,
 			SEED_BUSHES,
+			SEED_SPAWN,
 			SEED_BIOME_BASE = 1000,
 		};
 
@@ -688,9 +689,7 @@ namespace flex
 			volcanic.groundColour = glm::vec3(0.24f, 0.23f, 0.21f);
 			volcanic.cliffColour = glm::vec3(0.17f, 0.17f, 0.18f);
 			volcanic.grassiness = 0.2f;
-			volcanic.vegetation = Vegetation::ALPINE;
-			volcanic.treeDensity = 0.8f;
-			volcanic.bushDensity = 0.8f;
+			volcanic.vegetation = Vegetation::VOLCANIC;
 			params.biomes.push_back(volcanic);
 
 			// Very flat, low & full of lakes
@@ -1621,6 +1620,29 @@ namespace flex
 			for (u32 i = 0; i < edits.count; ++i)
 			{
 				const Edit& edit = edits.edits[i];
+				if (IsPlaneEdit(edit.type))
+				{
+					// Blends towards the plane's (signed distance) density, so there's no band: the weight is 0 at the
+					// edge of the edit's bounds
+					const glm::vec3 offset(px - edit.center.x, py - edit.center.y, pz - edit.center.z);
+					const real w = PlaneEditWeight(edit, offset);
+					if (w <= 0.0f)
+					{
+						continue;
+					}
+					const real plane = offset.x * edit.normal.x + offset.y * edit.normal.y + offset.z * edit.normal.z;
+					real target = plane;
+					if (edit.type == EditType::LOWER)
+					{
+						target = Max(d, plane);
+					}
+					else if (edit.type == EditType::RAISE)
+					{
+						target = Min(d, plane);
+					}
+					d += (target - d) * w;
+					continue;
+				}
 				const real dist = Length3(px - edit.center.x, py - edit.center.y, pz - edit.center.z);
 				if (dist >= edit.radius + band || edit.type == EditType::REMOVE_PLANT)
 				{
@@ -1677,6 +1699,29 @@ namespace flex
 			for (i32 i = (i32)edits.count - 1; i >= 0; --i)
 			{
 				const Edit& edit = edits.edits[i];
+				if (IsPlaneEdit(edit.type))
+				{
+					if (PlaneEditWeight(edit, pos - edit.center) <= 0.0f)
+					{
+						continue;
+					}
+					// Surfaces which were in the air before this edit are its placed material, the rest were cut into
+					EditList before;
+					before.edits = edits.edits;
+					before.count = (u32)i;
+					const bool bWasAir = edit.type != EditType::LOWER && Sample(pos, column, before) > 0.05f;
+					if (bWasAir)
+					{
+						SurfaceAttributes placed = MaterialSurface(edit.material, column);
+						const real variation = GradientNoise3(pos.x * 0.3f, pos.y * 0.3f, pos.z * 0.3f, DeriveSeed(m_Seed, SEED_COLOUR) + 1);
+						placed.colour.x *= 1.0f + variation * 0.06f;
+						placed.colour.y *= 1.0f + variation * 0.06f;
+						placed.colour.z *= 1.0f + variation * 0.06f;
+						return placed;
+					}
+					bDug = bDug || edit.type != EditType::RAISE;
+					continue;
+				}
 				const real dist = glm::distance(pos, edit.center);
 				const real tolerance = edit.radius * 0.05f + m_Params.voxelSize * 0.5f;
 				if (dist > edit.radius + tolerance || edit.type == EditType::REMOVE_PLANT)
@@ -2011,6 +2056,8 @@ namespace flex
 			{ 0.012f, 0.025f, 0.0f, PlantSpecies::ACACIA, PlantSpecies::NONE, 0.0f, 1.0f, 0.08f, BushKind::SCRUB, glm::vec3(0.36f, 0.35f, 0.21f), glm::vec3(0.0f), 0.0f },
 			// DESERT
 			{ 0.04f, 0.0f, -2.0f, PlantSpecies::SAGUARO, PlantSpecies::NONE, 0.0f, 1.0f, 0.05f, BushKind::SCRUB, glm::vec3(0.38f, 0.36f, 0.24f), glm::vec3(0.0f), 0.0f },
+			// VOLCANIC (charred remains of a burnt forest, more of them where the forest was)
+			{ 0.006f, 0.03f, 0.0f, PlantSpecies::CHARRED, PlantSpecies::NONE, 0.0f, 1.0f, 0.03f, BushKind::SCRUB, glm::vec3(0.17f, 0.16f, 0.13f), glm::vec3(0.0f), 0.0f },
 		};
 		static_assert(ARRAY_LENGTH(s_VegetationInfos) == (u32)Vegetation::_COUNT, "s_VegetationInfos must match Vegetation enum");
 
@@ -2028,6 +2075,8 @@ namespace flex
 				return PlantKind::DECIDUOUS;
 			case PlantSpecies::SAGUARO:
 				return PlantKind::CACTUS;
+			case PlantSpecies::CHARRED:
+				return PlantKind::SNAG;
 			default:
 				return PlantKind::NONE;
 			}
@@ -2158,6 +2207,12 @@ namespace flex
 				plant.height = (3.0f + 3.5f * s) * scale;
 				plant.trunkHeight = plant.height;
 				plant.trunkRadius = (0.28f + 0.1f * s) * radiusScale;
+				break;
+			case PlantSpecies::CHARRED:
+				// The smallest third are stumps, the rest snags whose tops have burnt & broken off
+				plant.height = (s < 0.33f ? 0.8f + 1.8f * s : 3.5f + 6.0f * s) * scale;
+				plant.trunkHeight = plant.height - 0.3f;
+				plant.trunkRadius = (0.2f + 0.14f * s) * radiusScale;
 				break;
 			default:
 				break;
@@ -2441,6 +2496,36 @@ namespace flex
 				}
 			}
 
+			// A tapered prism along any axis, closed at its far end
+			void AddLimb(const glm::vec3& from, const glm::vec3& to, real fromRadius, real toRadius, u32 sides, const glm::vec3& colour, const glm::vec4& weights)
+			{
+				const glm::vec3 delta = to - from;
+				const real length = glm::length(delta);
+				if (length < 1e-4f)
+				{
+					return;
+				}
+				const glm::vec3 axis = delta / length;
+				// (For a vertical axis these match AddFrustum's directions, so the winding is the same)
+				const glm::vec3 reference = Abs(axis.y) < 0.95f ? glm::vec3(0.0f, 1.0f, 0.0f) : glm::vec3(1.0f, 0.0f, 0.0f);
+				const glm::vec3 u = glm::normalize(glm::cross(reference, axis));
+				const glm::vec3 v = glm::cross(axis, u);
+				for (u32 i = 0; i < sides; ++i)
+				{
+					const real a0 = TWO_PI * (real)i / (real)sides;
+					const real a1 = TWO_PI * (real)(i + 1) / (real)sides;
+					const glm::vec3 d0 = v * std::cos(a0) + u * std::sin(a0);
+					const glm::vec3 d1 = v * std::cos(a1) + u * std::sin(a1);
+					const glm::vec3 b0 = from + d0 * fromRadius;
+					const glm::vec3 b1 = from + d1 * fromRadius;
+					const glm::vec3 t0 = to + d0 * toRadius;
+					const glm::vec3 t1 = to + d1 * toRadius;
+					AddTriangle(b0, t0, b1, colour, weights);
+					AddTriangle(b1, t0, t1, colour, weights);
+					AddTriangle(to, t1, t0, colour, weights);
+				}
+			}
+
 			// A lumpy, low poly ball of leaves (octahedron, subdivided once when detailed)
 			void AddBlob(const glm::vec3& center, const glm::vec3& radii, u32 hash, const glm::vec3& colour, const glm::vec4& weights, bool bSubdivide)
 			{
@@ -2621,6 +2706,50 @@ namespace flex
 							AddFrustum(elbow, height * 0.35f, armRadius, armRadius * 0.8f, sides, armAngle, green, cactusWeights, false);
 							AddFrustum(elbow + glm::vec3(0.0f, height * 0.35f, 0.0f), armRadius * 0.5f, armRadius * 0.8f, 0.0f, sides, armAngle, green, cactusWeights, false);
 						}
+					}
+				} break;
+				case PlantSpecies::CHARRED:
+				{
+					// Blackened bark, with paler (ashy, splintered) broken ends
+					const glm::vec3 charcoal = glm::vec3(0.075f, 0.068f, 0.062f) * (1.0f + variation * 0.4f);
+					const glm::vec3 broken = glm::vec3(0.22f, 0.19f, 0.16f) * (1.0f + variation * 0.3f);
+					const glm::vec4 charWeights(0.0f, 0.5f, 0.5f, 1.0f);
+					const real radius = trunkRadius;
+					m_Target = &m_Trunks;
+					if (plant.size01 < 0.33f)
+					{
+						// Stump: flared base, ragged top
+						AddFrustum(base, trunkLength, radius * 1.25f, radius, trunkSides, angle, charcoal, charWeights, false);
+						AddFrustum(base + glm::vec3(0.0f, trunkLength, 0.0f), radius * 0.6f, radius, 0.0f, trunkSides, angle + 0.3f, broken, charWeights, false);
+						break;
+					}
+
+					// Snag: a tapering trunk, snapped off at the top
+					const real split = trunkLength * 0.55f;
+					AddFrustum(base, split, radius * 1.2f, radius * 0.8f, trunkSides, angle, charcoal, charWeights, false);
+					AddFrustum(base + glm::vec3(0.0f, split, 0.0f), trunkLength - split, radius * 0.8f, radius * 0.45f, trunkSides, angle, charcoal * 0.9f, charWeights, false);
+					const glm::vec3 top = base + glm::vec3(0.0f, trunkLength, 0.0f);
+					// Jagged splinters
+					AddFrustum(top, radius * 2.5f, radius * 0.45f, 0.0f, bDetailed ? 5 : 3, angle + 0.7f, broken, charWeights, false);
+					if (!bDetailed)
+					{
+						break;
+					}
+
+					// A few bare, burnt branch stubs (thin, so not collided with)
+					m_Target = &m_Foliage;
+					const u32 stubCount = 2 + HashU32(hash + 17) % 3;
+					for (u32 i = 0; i < stubCount; ++i)
+					{
+						const u32 stubHash = HashU32(hash + 40 + i);
+						const real t = 0.4f + 0.45f * HashToUnit(stubHash);
+						const real stubAngle = angle + TWO_PI * ((real)i + 0.3f * HashToUnit(HashU32(stubHash + 1))) / (real)stubCount;
+						const glm::vec3 out(std::cos(stubAngle), 0.0f, std::sin(stubAngle));
+						const real stubRadius = radius * (0.8f - 0.35f * t) * 0.35f;
+						const glm::vec3 from = base + glm::vec3(0.0f, trunkLength * t, 0.0f) + out * radius * 0.5f;
+						const real length = (0.6f + 1.2f * HashToUnit(HashU32(stubHash + 2))) * (1.2f - t * 0.6f);
+						const glm::vec3 to = from + glm::normalize(out + glm::vec3(0.0f, 0.5f + 0.5f * HashToUnit(HashU32(stubHash + 3)), 0.0f)) * length;
+						AddLimb(from, to, stubRadius, stubRadius * 0.3f, 4, charcoal, charWeights);
 					}
 				} break;
 				default:
@@ -3331,7 +3460,37 @@ namespace flex
 				}
 			}
 
-			// Flat lake surfaces, outlined with marching squares on the lake's shore field (lakeT == 1)
+			// Density (> 0: air) of the terrain at height y above grid column (i, k), interpolated between the grid points
+			// above & below it like the chunk's mesh is (so water meets the terrain where its surface crosses the water
+			// level at this LOD)
+			real TerrainAirAtLevel(i32 i, i32 k, real y)
+			{
+				const size_t columnIndex = GridColumnIndex(i, k);
+				if (m_WaterLevelDensities.empty())
+				{
+					m_WaterLevelDensities.assign((size_t)G * G, glm::vec2(0.0f, -1e30f));
+				}
+				glm::vec2& cached = m_WaterLevelDensities[columnIndex];
+				if (cached.y == y)
+				{
+					return cached.x;
+				}
+
+				const real chunkMinY = WorldPos(glm::ivec3(0, 0, 0)).y;
+				const i32 j = glm::clamp((i32)std::floor((y - chunkMinY) / m_CellWorldSize), 0, N - 1);
+				const ColumnSample& column = m_Columns[columnIndex];
+				const glm::vec3 p0 = WorldPos(glm::ivec3(i * 2, j * 2, k * 2));
+				const glm::vec3 p1 = WorldPos(glm::ivec3(i * 2, j * 2 + 2, k * 2));
+				// (the same values as the density grid's, which is filled later)
+				const real d0 = m_Density.Sample(p0, column, m_Edits);
+				const real d1 = m_Density.Sample(p1, column, m_Edits);
+				const real t = glm::clamp((y - p0.y) / (p1.y - p0.y), 0.0f, 1.0f);
+				cached = glm::vec2(d0 + (d1 - d0) * t, y);
+				return cached.x;
+			}
+
+			// Flat lake surfaces, outlined with marching squares on the lake's shore field (lakeT == 1), clipped where the
+			// terrain is above the water level
 			void GenerateWater()
 			{
 				const real chunkMinY = WorldPos(glm::ivec3(0, 0, 0)).y;
@@ -3374,6 +3533,12 @@ namespace flex
 						for (u32 c = 0; c < 4; ++c)
 						{
 							values[c] = corners[c]->lakeID == lakeID ? corners[c]->lakeT - 1.0f : 1.0f;
+							if (values[c] < 0.0f)
+							{
+								// Water is also clipped where the terrain rises above it (e.g. beaches, which the shore field
+								// doesn't follow exactly), so it doesn't show through the land
+								values[c] = Max(values[c], -TerrainAirAtLevel(i + cornerOffsets[c][0], k + cornerOffsets[c][1], level) / m_CellWorldSize);
+							}
 							const glm::vec3 p = WorldPos(glm::ivec3((i + cornerOffsets[c][0]) * 2, 0, (k + cornerOffsets[c][1]) * 2));
 							positions[c] = glm::vec2(p.x, p.z);
 						}
@@ -3438,6 +3603,8 @@ namespace flex
 			FlatHashMap<u32, real> m_ExtraDensities;
 			FlatHashMap<u32, glm::vec3> m_ExtraGradients;
 			FlatHashMap<u64, u32> m_VertexMap;
+			// Per grid column: x: terrain density at the water level y (see TerrainAirAtLevel)
+			std::vector<glm::vec2> m_WaterLevelDensities;
 		};
 
 		void GenerateChunkMesh(const TerrainDensity& density, const ChunkKey& key, TransitionMask mask, const EditList& edits, ChunkMeshData& outMesh)
@@ -3477,6 +3644,131 @@ namespace flex
 			edit.type = EditType::REMOVE_PLANT;
 			edit.material = Material::SOIL;
 			return edit;
+		}
+
+		SpawnSearchResult FindSpawnPoint(const TerrainDensity& density, real maxRadius /* = 20000.0f */)
+		{
+			const real seaLevel = density.Params().seaLevel;
+			// Low ground (lowlands are flatter & easier to start out on), but clear of beaches & shallows. Dry land below
+			// sea level (inland basins) is fine, just less preferred.
+			const real idealHeight = seaLevel + 12.0f;
+			const real minHeight = seaLevel - 80.0f;
+			const real maxHeight = seaLevel + 220.0f;
+			const real maxSlope = 0.2f; // Rise over run (~11 degrees)
+			// Score units: one per this many meters above/below the ideal height, of slope & from the origin
+			const real heightAboveScale = 50.0f;
+			const real heightBelowScale = 100.0f;
+			const real slopeScale = 0.1f;
+			const real overhangScale = 20.0f;
+			const real distanceScale = 1000.0f;
+
+			SpawnSearchResult result = {};
+			real bestScore = FLT_MAX;
+			real fallbackScore = FLT_MAX;
+			glm::vec3 fallbackPos(0.0f, density.SampleColumn(0.0f, 0.0f).height, 0.0f);
+
+			auto IsWet = [](const ColumnSample& column, real y)
+			{
+				return column.lakeID != 0 && column.lakeT < 1.15f && y < column.waterLevel + 1.0f;
+			};
+
+			// Rings of samples around the origin, spaced further apart further out. Where each ring starts is derived
+			// from the seed (so ties aren't always broken towards the same direction).
+			const real startAngle = HashToUnit(DeriveSeed(density.Seed(), SEED_SPAWN)) * 6.28318531f;
+			u32 ring = 0;
+			for (real radius = 0.0f; radius <= maxRadius; ++ring)
+			{
+				const real distanceScore = radius / distanceScale;
+				if (distanceScore >= bestScore)
+				{
+					// Nothing further out can beat the best found
+					break;
+				}
+
+				const real step = 40.0f + radius * 0.02f;
+				const u32 count = radius == 0.0f ? 1u : (u32)glm::ceil(6.28318531f * radius / step);
+				for (u32 i = 0; i < count; ++i)
+				{
+					const real angle = startAngle + 6.28318531f * ((real)i + 0.5f * (real)(ring & 1)) / (real)count;
+					const real x = std::cos(angle) * radius;
+					const real z = std::sin(angle) * radius;
+					const ColumnSample column = density.SampleColumn(x, z);
+					++result.samples;
+					const real h = column.height;
+					if (IsWet(column, h))
+					{
+						continue;
+					}
+
+					const real heightScore = h >= idealHeight ? (h - idealHeight) / heightAboveScale : (idealHeight - h) / heightBelowScale;
+					if (heightScore + distanceScore < fallbackScore)
+					{
+						fallbackScore = heightScore + distanceScore;
+						fallbackPos = glm::vec3(x, h, z);
+					}
+
+					// (Not on beaches: land near the sea is always above sea level)
+					if (h < minHeight || h > maxHeight || (column.oceanWeight > 0.0f && h < seaLevel + 2.5f) ||
+						column.massifWeight > 0.05f || column.archRadius > 0.0f || heightScore + distanceScore >= bestScore)
+					{
+						continue;
+					}
+
+					// Slope of the heightfield around the point
+					const real e = 8.0f;
+					const real slopeX = Abs(density.SampleColumn(x + e, z).height - density.SampleColumn(x - e, z).height) / (2.0f * e);
+					const real slopeZ = Abs(density.SampleColumn(x, z + e).height - density.SampleColumn(x, z - e).height) / (2.0f * e);
+					result.samples += 4;
+					const real slope = Max(slopeX, slopeZ);
+					// (Smoother ground is preferred: overhangs make the surface rougher than the heightfield)
+					const real score = heightScore + slope / slopeScale + column.overhangAmplitude / overhangScale + distanceScore;
+					if (slope > maxSlope || score >= bestScore)
+					{
+						continue;
+					}
+
+					// The actual (3D) surface must be open to the sky, flat too (overhangs can make ledges on flat
+					// heightfields) & solid for a way below (not the roof of a cave or a cave entrance)
+					const real yMin = h - column.overhangAmplitude * 1.6f - 12.0f;
+					const real yMax = h + density.MaxExtentAbove() + 10.0f;
+					real y;
+					if (!density.FindTopSurface(x, z, yMin, yMax, column, {}, y) ||
+						IsWet(column, y) ||
+						density.Sample(glm::vec3(x, y - 3.0f, z), column) > 0.0f ||
+						density.Sample(glm::vec3(x, y - 10.0f, z), column) > 0.0f)
+					{
+						continue;
+					}
+					const real s = 3.0f;
+					bool bFlat = true;
+					for (const glm::vec2& offset : { glm::vec2(s, 0.0f), glm::vec2(-s, 0.0f), glm::vec2(0.0f, s), glm::vec2(0.0f, -s) })
+					{
+						const ColumnSample neighbour = density.SampleColumn(x + offset.x, z + offset.y);
+						real neighbourY;
+						if (!density.FindTopSurface(x + offset.x, z + offset.y, yMin, yMax, neighbour, {}, neighbourY) || Abs(neighbourY - y) > maxSlope * 1.5f * s)
+						{
+							bFlat = false;
+							break;
+						}
+					}
+					if (!bFlat)
+					{
+						continue;
+					}
+
+					bestScore = score;
+					result.pos = glm::vec3(x, y, z);
+					result.bIdeal = true;
+				}
+
+				radius += step;
+			}
+
+			if (!result.bIdeal)
+			{
+				result.pos = fallbackPos;
+			}
+			return result;
 		}
 
 		void ChunkMeshData::Clear()
@@ -3770,7 +4062,92 @@ namespace flex
 			hasher.Add(edit.radius);
 			hasher.Add((u8)edit.type);
 			hasher.Add((u8)edit.material);
+			if (IsPlaneEdit(edit.type))
+			{
+				hasher.Add(edit.normal.x);
+				hasher.Add(edit.normal.y);
+				hasher.Add(edit.normal.z);
+				hasher.Add(edit.height);
+			}
 			hash = hasher.value;
+		}
+
+		// Plane edits are full strength within this fraction of their radius, & fade out beyond it
+		static const real PLANE_EDIT_INNER_RADIUS = 0.45f;
+		// ... & fade out over the last part of their height
+		static const real PLANE_EDIT_INNER_HEIGHT = 0.7f;
+
+		real PlaneEditWeight(const Edit& edit, const glm::vec3& offset)
+		{
+			const real axial = offset.x * edit.normal.x + offset.y * edit.normal.y + offset.z * edit.normal.z;
+			const real absAxial = Abs(axial);
+			if (absAxial >= edit.height)
+			{
+				return 0.0f;
+			}
+			const real radialSq = Max(offset.x * offset.x + offset.y * offset.y + offset.z * offset.z - axial * axial, 0.0f);
+			if (radialSq >= edit.radius * edit.radius)
+			{
+				return 0.0f;
+			}
+			const real radial = std::sqrt(radialSq);
+			return (1.0f - Smoothstep(edit.radius * PLANE_EDIT_INNER_RADIUS, edit.radius, radial)) *
+				(1.0f - Smoothstep(edit.height * PLANE_EDIT_INNER_HEIGHT, edit.height, absAxial));
+		}
+
+		void GetEditBounds(const Edit& edit, glm::vec3& outMin, glm::vec3& outMax)
+		{
+			if (!IsPlaneEdit(edit.type))
+			{
+				outMin = edit.center - glm::vec3(edit.radius);
+				outMax = edit.center + glm::vec3(edit.radius);
+				return;
+			}
+			// A cylinder: its axis' extent plus its disc's along each world axis
+			const glm::vec3 n = edit.normal;
+			const glm::vec3 discExtent = edit.radius * glm::sqrt(glm::max(glm::vec3(1.0f) - n * n, glm::vec3(0.0f)));
+			const glm::vec3 extent = glm::abs(n) * edit.height + discExtent;
+			outMin = edit.center - extent;
+			outMax = edit.center + extent;
+		}
+
+		Edit MakePlaneEdit(EditType type, const glm::vec3& center, const glm::vec3& normal, real radius, real height, Material material)
+		{
+			Edit edit = {};
+			edit.type = type;
+			edit.center = center;
+			const real normalLength = glm::length(normal);
+			edit.normal = normalLength > 1e-6f ? normal / normalLength : glm::vec3(0.0f, 1.0f, 0.0f);
+			edit.radius = Max(radius, 0.05f);
+			// Enough to reach the surface of a 45 degree slope from the rim
+			edit.height = height > 0.0f ? height : edit.radius * 1.5f + 1.0f;
+			edit.material = material;
+			return edit;
+		}
+
+		// Whether edit (a plane edit) is the same brush stroke as other, only further along: the same disc, with its plane
+		// moved further in the direction it moves the surface, & reaching at least as far on the side it works on
+		static bool ContinuesPlaneEdit(const Edit& edit, const Edit& other)
+		{
+			if (edit.type != other.type || edit.material != other.material || edit.radius != other.radius || edit.normal != other.normal ||
+				edit.type == EditType::FLATTEN)
+			{
+				return false;
+			}
+			const glm::vec3 offset = edit.center - other.center;
+			const real axial = glm::dot(offset, edit.normal);
+			const real lateral = glm::length(offset - edit.normal * axial);
+			if (lateral > 1e-3f)
+			{
+				return false;
+			}
+			if (edit.type == EditType::LOWER)
+			{
+				// Deeper, & reaching at least as high
+				return axial <= 1e-4f && axial + edit.height >= other.height - 1e-4f;
+			}
+			// Higher, & reaching at least as low
+			return axial >= -1e-4f && axial - edit.height <= -other.height + 1e-4f;
 		}
 
 		void EditStore::Add(const Edit& edit)
@@ -3778,14 +4155,23 @@ namespace flex
 			// A dig/fill which contains the previous edit of the same kind entirely (e.g. a hole growing while the player
 			// keeps digging) replaces it. The result is identical (the larger sphere dominates wherever the smaller one
 			// has any effect), but keeps the edit count down.
+			// Plane edits continuing the last one (a brush stroke growing deeper or higher) replace it too. That isn't
+			// identical to applying both (their blended rims would add up), but is what the stroke means.
 			u32 index = (u32)m_Edits.size();
 			bool bReplacesLast = false;
 			if (!m_Edits.empty() && edit.type != EditType::REMOVE_PLANT)
 			{
 				const Edit& last = m_Edits.back();
-				bReplacesLast = last.type == edit.type &&
-					last.material == edit.material &&
-					glm::distance(last.center, edit.center) + last.radius <= edit.radius + 1e-4f;
+				if (IsPlaneEdit(edit.type))
+				{
+					bReplacesLast = ContinuesPlaneEdit(edit, last);
+				}
+				else
+				{
+					bReplacesLast = last.type == edit.type &&
+						last.material == edit.material &&
+						glm::distance(last.center, edit.center) + last.radius <= edit.radius + 1e-4f;
+				}
 			}
 
 			if (bReplacesLast)
@@ -3801,8 +4187,8 @@ namespace flex
 			}
 			HashEdit(m_Hash, edit);
 
-			const glm::vec3 editMin = edit.center - glm::vec3(edit.radius);
-			const glm::vec3 editMax = edit.center + glm::vec3(edit.radius);
+			glm::vec3 editMin, editMax;
+			GetEditBounds(edit, editMin, editMax);
 			m_BoundsMin = glm::min(m_BoundsMin, editMin);
 			m_BoundsMax = glm::max(m_BoundsMax, editMax);
 
@@ -3887,7 +4273,9 @@ namespace flex
 			for (u32 index : indices)
 			{
 				const Edit& edit = m_Edits[index];
-				if (BoxesOverlap(boxMin, boxMax, edit.center - glm::vec3(edit.radius), edit.center + glm::vec3(edit.radius)))
+				glm::vec3 editMin, editMax;
+				GetEditBounds(edit, editMin, editMax);
+				if (BoxesOverlap(boxMin, boxMax, editMin, editMax))
 				{
 					outEdits.push_back(edit);
 				}
@@ -3914,7 +4302,10 @@ namespace flex
 		static const u32 EDITS_CONTAINER_FILE_VERSION = 2;
 		static const u32 EDITS_SECTION_HEADER = save::FourCC('E', 'H', 'D', 'R');
 		static const u32 EDITS_SECTION_LIST = save::FourCC('E', 'D', 'I', 'T');
-		static const u32 EDIT_RECORD_SIZE = sizeof(glm::vec3) + sizeof(real) + 2;
+		// center, radius, type, material
+		static const u32 EDIT_RECORD_SIZE_V2 = sizeof(glm::vec3) + sizeof(real) + 2;
+		// ... then (appended, so older readers skip them) the plane edit fields: normal, height
+		static const u32 EDIT_RECORD_SIZE = EDIT_RECORD_SIZE_V2 + sizeof(glm::vec3) + sizeof(real);
 
 		bool WriteEdits(const std::string& filePath, i32 seed, const std::vector<Edit>& edits)
 		{
@@ -3926,6 +4317,8 @@ namespace flex
 				memcpy(record + 12, &edit.radius, sizeof(real));
 				record[16] = (u8)edit.type;
 				record[17] = (u8)edit.material;
+				memcpy(record + 18, &edit.normal, sizeof(glm::vec3));
+				memcpy(record + 30, &edit.height, sizeof(real));
 				record += EDIT_RECORD_SIZE;
 			}
 			// Grouping each byte of the floats together makes them much more compressible
@@ -3971,7 +4364,7 @@ namespace flex
 			i32 fileSeed;
 			if (!reader.Read(magic) || !reader.Read(version) || !reader.Read(fileSeed) || !reader.Read(count) ||
 				magic != EDITS_FILE_MAGIC || version != EDITS_FILE_VERSION || fileSeed != seed ||
-				(u64)count * EDIT_RECORD_SIZE > (u64)(bytes.size() - 16))
+				(u64)count * EDIT_RECORD_SIZE_V2 > (u64)(bytes.size() - 16))
 			{
 				return false;
 			}
@@ -3987,6 +4380,7 @@ namespace flex
 					outEdits.clear();
 					return false;
 				}
+				// (Version 1 had no plane edits)
 				edit.type = type <= (u8)EditType::REMOVE_PLANT ? (EditType)type : EditType::DIG;
 				edit.material = material < (u8)Material::_COUNT ? (Material)material : Material::SOIL;
 				outEdits.push_back(edit);
@@ -4006,7 +4400,7 @@ namespace flex
 			u32 count, recordSize;
 			// (Newer versions may append fields to each record, which are ignored)
 			if (!header.Read(fileSeed) || !header.Read(count) || !header.Read(recordSize) || fileSeed != seed ||
-				recordSize < EDIT_RECORD_SIZE || recordSize > 1024 || (u64)count * recordSize != (u64)shuffled.size())
+				recordSize < EDIT_RECORD_SIZE_V2 || recordSize > 1024 || (u64)count * recordSize != (u64)shuffled.size())
 			{
 				return false;
 			}
@@ -4019,8 +4413,23 @@ namespace flex
 			{
 				memcpy(&edit.center, record, sizeof(glm::vec3));
 				memcpy(&edit.radius, record + 12, sizeof(real));
-				edit.type = record[16] <= (u8)EditType::REMOVE_PLANT ? (EditType)record[16] : EditType::DIG;
+				edit.type = record[16] < (u8)EditType::_COUNT ? (EditType)record[16] : EditType::DIG;
 				edit.material = record[17] < (u8)Material::_COUNT ? (Material)record[17] : Material::SOIL;
+				if (recordSize >= EDIT_RECORD_SIZE)
+				{
+					memcpy(&edit.normal, record + 18, sizeof(glm::vec3));
+					memcpy(&edit.height, record + 30, sizeof(real));
+				}
+				if (IsPlaneEdit(edit.type))
+				{
+					// (Corrupt values would make the density NaN)
+					const real normalLength = glm::length(edit.normal);
+					if (!(normalLength > 0.5f && normalLength < 1.5f) || !(edit.height >= 0.0f && edit.height < 1000.0f) || !(edit.radius >= 0.0f && edit.radius < 1000.0f))
+					{
+						edit.type = EditType::REMOVE_PLANT;
+						edit.radius = 0.0f;
+					}
+				}
 				record += recordSize;
 			}
 			return true;
@@ -4693,7 +5102,12 @@ namespace flex
 			BuildSwapGroups(retiring);
 
 			m_BatchCameraPos = cameraPos;
+			m_BatchDesired = desired;
 			m_bBatchInFlight = !m_SwapGroups.empty();
+			if (!m_bBatchInFlight)
+			{
+				VerifyBatchResult();
+			}
 		}
 
 		void TerrainStreamer::BuildSwapGroups(const std::vector<ChunkKey>& retiring)
@@ -4901,9 +5315,44 @@ namespace flex
 				m_SwapGroups.clear();
 				m_RetiringCount = 0;
 				m_bBatchInFlight = false;
+				VerifyBatchResult();
 
 				const real latency = std::chrono::duration<real>(std::chrono::steady_clock::now() - m_BatchStartTime).count();
 				m_BatchLatency += (glm::min(latency, 3.0f) - m_BatchLatency) * 0.3f;
+			}
+		}
+
+		void TerrainStreamer::VerifyBatchResult()
+		{
+			// Once a batch has been applied, exactly its chunks should be displayed, with the transition masks it chose
+			// (which match each other's levels). Anything else (e.g. left over from an interrupted batch) would leave
+			// cracks or overlaps, so it's replaced in the next batch.
+			u32 mismatchCount = 0;
+			for (auto& pair : m_Displayed)
+			{
+				auto iter = m_BatchDesired.find(pair.first);
+				if (iter == m_BatchDesired.end() || iter->second != pair.second.mask)
+				{
+					pair.second.bStale = true;
+					++mismatchCount;
+				}
+			}
+			for (const auto& pair : m_BatchDesired)
+			{
+				if (m_Displayed.find(pair.first) == m_Displayed.end())
+				{
+					++mismatchCount;
+				}
+			}
+
+			if (mismatchCount > 0)
+			{
+				m_bForceRefresh = true;
+				++m_BatchMismatchCount;
+				if (m_BatchMismatchCount <= 10)
+				{
+					PrintWarn("Terrain: %u displayed chunks didn't match the selected LOD after a batch, replacing them\n", mismatchCount);
+				}
 			}
 		}
 
@@ -4972,8 +5421,10 @@ namespace flex
 			for (u32 i = 0; i < count; ++i)
 			{
 				m_Edits.Add(edits[i]);
-				editMin = glm::min(editMin, edits[i].center - glm::vec3(edits[i].radius));
-				editMax = glm::max(editMax, edits[i].center + glm::vec3(edits[i].radius));
+				glm::vec3 boundsMin, boundsMax;
+				GetEditBounds(edits[i], boundsMin, boundsMax);
+				editMin = glm::min(editMin, boundsMin);
+				editMax = glm::max(editMax, boundsMax);
 			}
 			auto Affects = [&](const ChunkKey& key)
 			{
@@ -5441,6 +5892,7 @@ namespace flex
 			}
 
 			{
+				PROFILE_AUTO("TerrainStreamer take results");
 				static std::vector<ChunkResult> results;
 				results.clear();
 				m_Pool.TakeResults(results);
@@ -5518,6 +5970,7 @@ namespace flex
 			{
 				if (m_DesiredFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
 				{
+					PROFILE_AUTO("TerrainStreamer StartBatch");
 					StartBatch(m_DesiredFuture.get());
 				}
 			}
@@ -5538,15 +5991,17 @@ namespace flex
 					for (const Edit& edit : m_Edits.Edits())
 					{
 						const glm::ivec3 cell = glm::ivec3(glm::floor(edit.center / 64.0f));
+						glm::vec3 boundsMin, boundsMax;
+						GetEditBounds(edit, boundsMin, boundsMax);
 						auto iter = editCells.find(cell);
 						if (iter == editCells.end())
 						{
-							editCells.emplace(cell, std::make_pair(edit.center - glm::vec3(edit.radius), edit.center + glm::vec3(edit.radius)));
+							editCells.emplace(cell, std::make_pair(boundsMin, boundsMax));
 						}
 						else
 						{
-							iter->second.first = glm::min(iter->second.first, edit.center - glm::vec3(edit.radius));
-							iter->second.second = glm::max(iter->second.second, edit.center + glm::vec3(edit.radius));
+							iter->second.first = glm::min(iter->second.first, boundsMin);
+							iter->second.second = glm::max(iter->second.second, boundsMax);
 						}
 					}
 					m_EditBoundsForSelection.clear();
@@ -5568,6 +6023,7 @@ namespace flex
 
 			if (m_bBatchInFlight)
 			{
+				PROFILE_AUTO("TerrainStreamer ApplyReadySwapGroups");
 				ApplyReadySwapGroups(outCommands);
 			}
 		}
@@ -5635,6 +6091,97 @@ namespace flex
 			stats.snapshotChunkCount = m_SnapshotChunkCount;
 			stats.bSnapshotLoading = m_SnapshotFuture.valid();
 			return stats;
+		}
+
+		u32 TerrainStreamer::ValidateDisplayedMasks(std::string* outReport /* = nullptr */) const
+		{
+			// (-1: none)
+			auto FindDisplayedLevel = [this](const glm::vec3& pos, bool& bOutNonEmpty) -> i32
+			{
+				for (i32 level = 0; level <= (i32)m_Params.maxLodLevel; ++level)
+				{
+					const ChunkKey key = { level, glm::ivec3(glm::floor(pos / m_Params.ChunkSize((u32)level))) };
+					auto iter = m_Displayed.find(key);
+					if (iter != m_Displayed.end())
+					{
+						bOutNonEmpty = bOutNonEmpty || !iter->second.bEmpty;
+						return level;
+					}
+				}
+				return -1;
+			};
+
+			u32 errorCount = 0;
+			for (const auto& pair : m_Displayed)
+			{
+				const ChunkKey& key = pair.first;
+				const real size = m_Params.ChunkSize((u32)key.level);
+				const glm::vec3 center = (glm::vec3(key.index) + 0.5f) * size;
+				// Faces (axis, side) & edges (axis, side0, side1), probed at the centers of the finer cells across them
+				for (u32 element = 0; element < 18; ++element)
+				{
+					const bool bFace = element < 6;
+					const u32 axis = bFace ? element / 2 : (element - 6) / 4;
+					const u32 o0 = axis == 0 ? 1 : 0;
+					const u32 o1 = axis == 2 ? 1 : 2;
+					glm::vec3 offset(0.0f);
+					u32 bit;
+					if (bFace)
+					{
+						offset[axis] = (element % 2) ? 1.0f : -1.0f;
+						bit = FaceBit(axis, element % 2);
+					}
+					else
+					{
+						const u32 s0 = (element - 6) & 1;
+						const u32 s1 = ((element - 6) >> 1) & 1;
+						offset[o0] = s0 ? 1.0f : -1.0f;
+						offset[o1] = s1 ? 1.0f : -1.0f;
+						bit = EdgeBit(axis, s0, s1);
+					}
+
+					bool bFiner = false;
+					bool bTooFine = false;
+					bool bNeighborNonEmpty = false;
+					for (i32 t0 = -1; t0 <= 1; t0 += 2)
+					{
+						for (i32 t1 = -1; t1 <= 1; t1 += 2)
+						{
+							glm::vec3 probe = center + offset * (size * 0.75f);
+							// Along the face's (or edge's) tangent directions
+							if (bFace)
+							{
+								probe[axis == 0 ? 1 : 0] += (real)t0 * size * 0.25f;
+								probe[axis == 2 ? 1 : 2] += (real)t1 * size * 0.25f;
+							}
+							else
+							{
+								probe[axis] += (real)t0 * size * 0.25f;
+							}
+							const i32 level = FindDisplayedLevel(probe, bNeighborNonEmpty);
+							bFiner = bFiner || (level >= 0 && level < key.level);
+							bTooFine = bTooFine || (level >= 0 && level < key.level - 1);
+						}
+					}
+
+					const bool bMaskFiner = (pair.second.mask & bit) != 0;
+					// Face bits imply the bits of their edges, so an edge bit without a finer neighbor is fine there
+					const bool bImplied = !bFace && (pair.second.mask & (FaceBit(o0, (element - 6) & 1) | FaceBit(o1, ((element - 6) >> 1) & 1))) != 0;
+					if (bTooFine || (bFiner && !bMaskFiner) || (!bFiner && bMaskFiner && !bImplied && !pair.second.bEmpty && bNeighborNonEmpty))
+					{
+						++errorCount;
+						if (outReport != nullptr && errorCount <= 10)
+						{
+							char line[384];
+							snprintf(line, sizeof(line), "chunk L%d (%d, %d, %d) mask %x (now desired: %x, leaf level %d, stale %d): %s %u%s neighbor %s\n", key.level, key.index.x, key.index.y, key.index.z,
+								pair.second.mask, ComputeTransitionMask(m_BatchCameraPos, key), LeafLevelAt(m_BatchCameraPos, center), (i32)pair.second.bStale,
+								bFace ? "face" : "edge", element, bTooFine ? " (2+ levels finer)" : "", bFiner ? "is finer but not in the mask" : "isn't finer");
+							*outReport += line;
+						}
+					}
+				}
+			}
+			return errorCount;
 		}
 
 		void TerrainStreamer::GetDisplayedChunks(std::vector<DisplayedChunkInfo>& outChunks) const

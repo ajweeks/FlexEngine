@@ -58,6 +58,10 @@ namespace flex
 		real GetBodyPitch() const { return m_PitchSpring.pos; }
 		// How deployed the glider is [0, 1] (it inflates & folds away over a fraction of a second)
 		real GetCanopyOpenness() const { return m_CanopyOpenness; }
+		// How spread the wingsuit's wings are [0, 1]
+		real GetWingsuitOpenness() const { return m_WingsuitOpenness; }
+		// Number of rushing air streaks drawn this frame
+		u32 GetAirStreakCount() const { return m_AirStreakCount; }
 
 		void DrawHUD() const;
 		void DrawImGui();
@@ -253,6 +257,10 @@ namespace flex
 		// Smooths the lean & applies it to the player's mesh (called with the render pose)
 		void UpdateBodyTilt();
 		void BuildGlider();
+		// The wingsuit's fabric (between the arms & body, & the legs) & limbs, lying along the leaning body
+		void BuildWingsuit();
+		// Thin streaks of rushing air around the camera while flying or falling fast
+		void DrawAirStreaks();
 
 		// Raycasts against physics colliders (ignoring the player) & the terrain's density
 		bool Raycast(const glm::vec3& from, const glm::vec3& to, glm::vec3& outHitPos, glm::vec3& outHitNormal, u32 flags = 0) const;
@@ -327,6 +335,27 @@ namespace flex
 		MaterialID m_CanopyTrimMaterialID = InvalidMaterialID;
 		MaterialID m_GliderFrameMaterialID = InvalidMaterialID;
 		real m_CanopyOpenness = 0.0f;
+		DynamicMesh* m_WingsuitMesh = nullptr;
+		DynamicMesh* m_WingsuitTrimMesh = nullptr;
+		MaterialID m_WingsuitMaterialID = InvalidMaterialID;
+		MaterialID m_WingsuitTrimMaterialID = InvalidMaterialID;
+		real m_WingsuitOpenness = 0.0f;
+
+		// Air streaks: still in the world (the player rushes past them), respawned ahead once passed
+		struct AirStreak
+		{
+			glm::vec3 pos = VEC3_ZERO;
+			real age = 0.0f;
+			real lengthScale = 1.0f;
+			bool bAlive = false;
+		};
+		static const u32 MAX_AIR_STREAKS = 64;
+		AirStreak m_AirStreaks[MAX_AIR_STREAKS];
+		u32 m_AirStreakSeed = 0;
+		u32 m_AirStreakCount = 0;
+		real m_AirStreakIntensity = 0.0f;
+		DynamicMesh* m_AirStreakMesh = nullptr;
+		MaterialID m_AirStreakMaterialID = InvalidMaterialID;
 
 		// Leaning into turns & pitching with the flight path (the player's mesh & the glider, not the capsule)
 		GameObject* m_BodyMeshObject = nullptr;

@@ -19,12 +19,16 @@ namespace flex
 		static PropertyCollection* BuildTypeUniquePropertyCollection();
 
 		virtual void Initialize() override;
+		virtual void Update() override;
 		virtual void Destroy(bool bDetachFromParent /* = true */) override;
 		virtual void DrawImGuiObjects(bool bDrawingEditorObjects) override;
 		virtual real GetDrivePower() const;
 
 		void OnTrackMount(TrackID trackID, real newDistAlongTrack);
 		void OnTrackDismount();
+		// Comes off the track (e.g. when it's broken), falling to the ground
+		void Derail();
+		bool IsDerailed() const { return m_bDerailed; }
 
 		void SetItemHolding(GameObject* obj);
 		void RemoveItemHolding();
@@ -39,7 +43,7 @@ namespace flex
 
 		TrackID currentTrackID = InvalidTrackID;
 		real distAlongTrack = -1.0f;
-		real velocityT = 1.0f;
+		real velocityT = 1.0f; // Sign is the direction of travel along the track (+1 towards increasing t)
 
 		real distToRearNeighbor = -1.0f;
 
@@ -55,6 +59,10 @@ namespace flex
 	protected:
 		virtual void ParseTypeUniqueFields(const JSONObject& parentObject, const std::vector<MaterialID>& matIDs) override;
 		virtual void SerializeTypeUniqueFields(JSONObject& parentObject, bool bSerializePrefabData) override;
+
+		// Falling after derailing
+		bool m_bDerailed = false;
+		real m_FallSpeed = 0.0f;
 
 	};
 

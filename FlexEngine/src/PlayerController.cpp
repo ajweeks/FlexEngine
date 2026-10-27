@@ -23,6 +23,7 @@ IGNORE_WARNINGS_POP
 #include "FlexEngine.hpp"
 #include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
+#include "GameControls.hpp"
 #include "InputManager.hpp"
 #include "Physics/PhysicsTypeConversions.hpp"
 #include "Physics/PhysicsWorld.hpp"
@@ -127,8 +128,8 @@ namespace flex
 		if (m_Player->m_bPossessed)
 		{
 			real cycleItemAxis = g_InputManager->GetActionAxisValue(Action::CYCLE_SELECTED_ITEM_FORWARD);
-			// The scroll wheel picks build pieces while building
-			if (!ImGui::GetIO().WantCaptureMouse && !m_Player->IsBuilding())
+			// The scroll wheel picks build (or track) pieces while building
+			if (!ImGui::GetIO().WantCaptureMouse && !m_Player->IsBuilding() && !m_Player->IsPlacingTrack())
 			{
 				if (cycleItemAxis > 0.0f)
 				{
@@ -138,8 +139,25 @@ namespace flex
 				{
 					m_Player->SetSelectedQuickAccessItemSlot((m_Player->m_SelectedQuickAccessItemSlot - 1 + Player::QUICK_ACCESS_ITEM_COUNT) % Player::QUICK_ACCESS_ITEM_COUNT);
 				}
-				CHECK(m_Player->m_SelectedQuickAccessItemSlot >= 0 && m_Player->m_SelectedQuickAccessItemSlot < (i32)m_Player->m_QuickAccessInventory.size());
 			}
+
+			// Number keys select quick access slots (1-9, then 0 for the 10th). Build & track modes use them to pick pieces,
+			// & Shift + 1 toggles the debug UI
+			const bool bShiftDown = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT) || g_InputManager->GetKeyDown(KeyCode::KEY_RIGHT_SHIFT);
+			if (!m_Player->IsBuilding() && !m_Player->IsPlacingTrack() && !bShiftDown)
+			{
+				const i32 numberKeySlotCount = glm::min((i32)Player::QUICK_ACCESS_ITEM_COUNT, 10);
+				for (i32 i = 0; i < numberKeySlotCount; ++i)
+				{
+					const KeyCode keyCode = (i == 9) ? KeyCode::KEY_0 : (KeyCode)((i32)KeyCode::KEY_1 + i);
+					if (g_InputManager->GetKeyPressed(keyCode))
+					{
+						m_Player->SetSelectedQuickAccessItemSlot(i);
+					}
+				}
+			}
+
+			CHECK(m_Player->m_SelectedQuickAccessItemSlot >= 0 && m_Player->m_SelectedQuickAccessItemSlot < (i32)m_Player->m_QuickAccessInventory.size());
 
 			if (m_Player->m_TrackRidingID == InvalidTrackID)
 			{
@@ -442,7 +460,7 @@ namespace flex
 			return;
 		}
 
-		const bool bSprinting = g_InputManager->GetKeyDown(KeyCode::KEY_LEFT_SHIFT) != 0;
+		const bool bSprinting = g_InputManager->GetKeyDown(GameKeys::SPRINT) != 0;
 		const real maxMoveSpeed = bSprinting ? m_SprintSpeed : m_MaxMoveSpeed;
 
 		btVector3 vel = rb->getLinearVelocity();
