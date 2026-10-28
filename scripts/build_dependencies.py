@@ -273,6 +273,8 @@ def build_project(config):
 		'-DGLFW_BUILD_TESTS=OFF',
 		'-DGLFW_BUILD_DOCS=OFF',
 		'-DGLFW_INSTALL=OFF',
+		# Flex only links X11 on linux, and Wayland support needs wayland-scanner & its dev packages
+		'-DGLFW_BUILD_WAYLAND=OFF',
 		build_type_arg] + config_args)
 	run_cmake_build(glfw_build_path, external_config, ['glfw'])
 

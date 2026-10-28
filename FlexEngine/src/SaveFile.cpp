@@ -14,7 +14,7 @@
 
 // Implemented in Helpers.cpp (stb_image_write). Only used to write: everything read from disk goes through the
 // bounds checked decoder below instead.
-unsigned char* stbi_zlib_compress(unsigned char* data, int data_len, int* out_len, int quality);
+extern "C" unsigned char* stbi_zlib_compress(unsigned char* data, int data_len, int* out_len, int quality);
 
 namespace flex
 {

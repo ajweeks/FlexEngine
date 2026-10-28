@@ -8,6 +8,7 @@
 #include "Helpers.hpp"
 #include "InputManager.hpp"
 #include "Platform/Platform.hpp"
+#include "Time.hpp"
 #include "Window/Monitor.hpp"
 
 namespace flex
@@ -20,6 +21,49 @@ namespace flex
 		const char* value = getenv("FLEX_NO_FOCUS");
 		return value != nullptr && strcmp(value, "0") != 0;
 	}
+
+#if defined(_WINDOWS)
+	// GLFW's window proc, which ours forwards to
+	static WNDPROC s_GLFWWindowProc = nullptr;
+	static HWND s_SubclassedWindow = nullptr;
+	// Set when raw input reports an absolute mouse position (see GLFWWindowWrapper::m_bAbsoluteMouse)
+	static bool s_bAbsoluteMouseInputSeen = false;
+
+	static LRESULT CALLBACK AbsoluteMouseWindowProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+	{
+		const UINT wmInput = 0x00FF; // WM_INPUT (MinWindows.hpp excludes the WM_* defines)
+		if (msg == wmInput)
+		{
+			RAWINPUT input;
+			UINT size = sizeof(input);
+			if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, &input, &size, sizeof(RAWINPUTHEADER)) != (UINT)-1 &&
+				input.header.dwType == RIM_TYPEMOUSE &&
+				(input.data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) != 0)
+			{
+				// GLFW would turn this into a large jump, so don't pass it on (the next Update switches modes)
+				s_bAbsoluteMouseInputSeen = true;
+				return DefWindowProcW(hWnd, msg, wParam, lParam);
+			}
+		}
+		return CallWindowProcW(s_GLFWWindowProc, hWnd, msg, wParam, lParam);
+	}
+
+	static void ClipCursorToWindow(GLFWwindow* window, bool bClip)
+	{
+		if (!bClip)
+		{
+			ClipCursor(nullptr);
+			return;
+		}
+
+		HWND hwnd = glfwGetWin32Window(window);
+		RECT rect;
+		GetClientRect(hwnd, &rect);
+		ClientToScreen(hwnd, (POINT*)&rect.left);
+		ClientToScreen(hwnd, (POINT*)&rect.right);
+		ClipCursor(&rect);
+	}
+#endif
 
 	GLFWWindowWrapper::GLFWWindowWrapper(const std::string& title) :
 		Window(title)
@@ -263,6 +307,15 @@ namespace flex
 		glfwSetDropCallback(m_Window, GLFWDropCallback);
 		glfwSetJoystickCallback(GLFWJoystickCallback);
 		glfwSetMonitorCallback(GLFWMointorCallback);
+
+#if defined(_WINDOWS)
+		HWND hwnd = glfwGetWin32Window(m_Window);
+		if (hwnd != s_SubclassedWindow)
+		{
+			s_SubclassedWindow = hwnd;
+			s_GLFWWindowProc = (WNDPROC)SetWindowLongPtrW(hwnd, GWLP_WNDPROC, (LONG_PTR)AbsoluteMouseWindowProc);
+		}
+#endif
 	}
 
 	void GLFWWindowWrapper::SetFrameBufferSize(i32 width, i32 height)
@@ -359,6 +412,22 @@ namespace flex
 		{
 			Window::SetCursorMode(mode);
 
+			if (m_bAbsoluteMouse)
+			{
+				m_bAbsoluteMouse = false;
+#if defined(_WINDOWS)
+				if (m_bAbsoluteMouseClipped)
+				{
+					ClipCursorToWindow(m_Window, false);
+					m_bAbsoluteMouseClipped = false;
+				}
+#endif
+			}
+#if defined(_WINDOWS)
+			// Detect absolute input afresh each time, as a remote session can connect or disconnect in between
+			s_bAbsoluteMouseInputSeen = false;
+#endif
+
 			i32 glfwCursorMode = 0;
 
 			switch (mode)
@@ -381,6 +450,125 @@ namespace flex
 				}
 			}
 		}
+	}
+
+	void GLFWWindowWrapper::CursorPosCallback(double x, double y)
+	{
+		if (m_bAbsoluteMouse)
+		{
+			const glm::vec2 pos((real)x, (real)y);
+			if (m_AbsoluteMouseStreamCount == 0)
+			{
+				// The first position is only a reference for the next
+				m_AbsoluteMouseStreams[0] = pos;
+				m_AbsoluteMouseStreamCount = 1;
+				m_AbsoluteMouseLastStream = 0;
+				return;
+			}
+
+			// Positions sent before the pointer saw our re-centre still arrive after it, so measure each position
+			// against whichever stream it continues
+			i32 stream = 0;
+			if (m_AbsoluteMouseStreamCount == 2 && glm::distance(pos, m_AbsoluteMouseStreams[1]) < glm::distance(pos, m_AbsoluteMouseStreams[0]))
+			{
+				stream = 1;
+				++m_AbsoluteMouseRecentredSamples;
+			}
+			m_AbsoluteMouseVirtualPos += pos - m_AbsoluteMouseStreams[stream];
+			m_AbsoluteMouseStreams[stream] = pos;
+			m_AbsoluteMouseLastStream = stream;
+
+			x = (double)m_AbsoluteMouseVirtualPos.x;
+			y = (double)m_AbsoluteMouseVirtualPos.y;
+		}
+
+		Window::CursorPosCallback(x, y);
+	}
+
+	void GLFWWindowWrapper::EnterAbsoluteMouseMode()
+	{
+		Print("Mouse reports absolute positions (remote desktop?), tracking mouse look from cursor positions\n");
+
+		// Carry on from GLFW's virtual cursor position so the camera doesn't jump
+		m_AbsoluteMouseVirtualPos = GetMousePosition();
+		m_bAbsoluteMouse = true;
+		m_AbsoluteMouseStreamCount = 0;
+		m_AbsoluteMouseRecentres = 0;
+		m_AbsoluteMouseRecentresFollowed = 0;
+
+		glfwSetInputMode(m_Window, GLFW_RAW_MOUSE_MOTION, GLFW_FALSE);
+		glfwSetInputMode(m_Window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+	}
+
+	void GLFWWindowWrapper::UpdateAbsoluteMouseMode()
+	{
+#if defined(_WINDOWS)
+		if (!m_bAbsoluteMouse && s_bAbsoluteMouseInputSeen && m_CursorMode == CursorMode::DISABLED)
+		{
+			EnterAbsoluteMouseMode();
+		}
+
+		if (!m_bAbsoluteMouse)
+		{
+			return;
+		}
+
+		// Keep the cursor over the window, as a hidden cursor that leaves it stops sending positions
+		if (HasFocus())
+		{
+			ClipCursorToWindow(m_Window, true);
+			m_bAbsoluteMouseClipped = true;
+		}
+		else if (m_bAbsoluteMouseClipped)
+		{
+			ClipCursorToWindow(m_Window, false);
+			m_bAbsoluteMouseClipped = false;
+		}
+
+		if (m_AbsoluteMouseStreamCount == 0)
+		{
+			return;
+		}
+
+		if (m_AbsoluteMouseStreamCount == 2)
+		{
+			// Once the pointer has followed the re-centre (or long enough has passed that it won't), the stream it
+			// last sent is the only one
+			if (m_AbsoluteMouseRecentredSamples >= 2 || Time::MillisecondsSince(m_AbsoluteMouseRecentreTicks) > 300.0f)
+			{
+				// Whether the remote pointer follows our re-centres decides whether it can be locked to the window
+				m_AbsoluteMouseRecentres++;
+				if (m_AbsoluteMouseLastStream == 1)
+				{
+					m_AbsoluteMouseRecentresFollowed++;
+				}
+				if (m_AbsoluteMouseRecentres == 10)
+				{
+					Print("Absolute mouse: the pointer followed %d of 10 re-centres\n", m_AbsoluteMouseRecentresFollowed);
+				}
+
+				m_AbsoluteMouseStreams[0] = m_AbsoluteMouseStreams[m_AbsoluteMouseLastStream];
+				m_AbsoluteMouseStreamCount = 1;
+				m_AbsoluteMouseLastStream = 0;
+			}
+		}
+
+		if (m_AbsoluteMouseStreamCount == 1 && HasFocus())
+		{
+			// Re-centre before the cursor reaches the window's edge
+			i32 width, height;
+			glfwGetWindowSize(m_Window, &width, &height);
+			const glm::vec2 centre((real)(width / 2), (real)(height / 2));
+			if (glm::distance(m_AbsoluteMouseStreams[0], centre) > glm::min(width, height) * 0.25f)
+			{
+				glfwSetCursorPos(m_Window, (double)centre.x, (double)centre.y);
+				m_AbsoluteMouseStreams[1] = centre;
+				m_AbsoluteMouseStreamCount = 2;
+				m_AbsoluteMouseRecentredSamples = 0;
+				m_AbsoluteMouseRecentreTicks = Time::NowTicks();
+			}
+		}
+#endif
 	}
 
 	void GLFWWindowWrapper::SetWindowMode(WindowMode mode, bool bForce)
@@ -474,6 +662,8 @@ namespace flex
 		// Catch any size change whose callback was missed, so text, UI & the swap chain always agree on the size
 		SyncFrameBufferSize();
 
+		UpdateAbsoluteMouseMode();
+
 		if (glfwWindowShouldClose(m_Window))
 		{
 			g_EngineInstance->Stop();
@@ -535,11 +725,21 @@ namespace flex
 
 	void GLFWWindowWrapper::SetMousePosition(glm::vec2 mousePosition)
 	{
+		if (m_bAbsoluteMouse)
+		{
+			m_AbsoluteMouseVirtualPos = mousePosition;
+			return;
+		}
 		glfwSetCursorPos(m_Window, (double)mousePosition.x, (double)mousePosition.y);
 	}
 
 	glm::vec2 GLFWWindowWrapper::GetMousePosition()
 	{
+		if (m_bAbsoluteMouse)
+		{
+			return m_AbsoluteMouseVirtualPos;
+		}
+
 		double posX, posY;
 		glfwGetCursorPos(m_Window, &posX, &posY);
 		return glm::vec2((real)posX, (real)posY);

@@ -1,6 +1,6 @@
 [submodule "FlexEngine/dependencies/glm"]
 	path = FlexEngine/dependencies/glm
-	url = https://github.com/ajweeks/glm
+	url = https://github.com/g-truc/glm
 [submodule "FlexEngine/dependencies/stb"]
 	path = FlexEngine/dependencies/stb
 	url = https://github.com/nothings/stb
@@ -9,7 +9,7 @@
 	url = https://github.com/glfw/glfw
 [submodule "FlexEngine/dependencies/bullet"]
 	path = FlexEngine/dependencies/bullet
-	url = https://github.com/ajweeks/bullet3
+	url = https://github.com/bulletphysics/bullet3
 [submodule "FlexEngine/dependencies/freetype"]
 	path = FlexEngine/dependencies/freetype
 	url = https://gitlab.freedesktop.org/freetype/freetype

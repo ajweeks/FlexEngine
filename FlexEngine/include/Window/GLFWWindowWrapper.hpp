@@ -45,6 +45,8 @@ namespace flex
 		virtual void SetCursorPos(const glm::vec2& newCursorPos) override;
 		virtual void SetCursorMode(CursorMode mode) override;
 
+		virtual void CursorPosCallback(double x, double y) override;
+
 		virtual void SetWindowMode(WindowMode mode, bool bForce = false) override;
 		virtual void ToggleFullscreen(bool bForce = false) override;
 
@@ -69,6 +71,24 @@ namespace flex
 		GLFWwindow* m_Window = nullptr;
 
 	private:
+		void EnterAbsoluteMouseMode();
+		void UpdateAbsoluteMouseMode();
+
+		// Mouse look when the mouse reports absolute positions (Remote Desktop & other remote tools) instead of motion.
+		// GLFW's disabled cursor reads each position as an offset from the window centre it re-centres to, but a remote
+		// pointer doesn't follow that re-centre in time, so we track motion between consecutive positions instead
+		bool m_bAbsoluteMouse = false;
+		bool m_bAbsoluteMouseClipped = false;
+		glm::vec2 m_AbsoluteMouseVirtualPos;
+		// [0]: the pointer's positions, [1]: positions since we re-centred it, while both may still arrive
+		glm::vec2 m_AbsoluteMouseStreams[2];
+		i32 m_AbsoluteMouseStreamCount = 0;
+		i32 m_AbsoluteMouseLastStream = 0;
+		i32 m_AbsoluteMouseRecentredSamples = 0;
+		u64 m_AbsoluteMouseRecentreTicks = 0;
+		i32 m_AbsoluteMouseRecentres = 0;
+		i32 m_AbsoluteMouseRecentresFollowed = 0;
+
 
 		GLFWWindowWrapper(const GLFWWindowWrapper&) = delete;
 		GLFWWindowWrapper& operator=(const GLFWWindowWrapper&) = delete;

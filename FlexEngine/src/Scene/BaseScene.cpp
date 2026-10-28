@@ -7,6 +7,8 @@ IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 IGNORE_WARNINGS_POP
 
+#include <glm/gtx/quaternion.hpp> // for rotate & rotation
+
 #include "Audio/AudioManager.hpp"
 #include "Callbacks/GameObjectCallbacks.hpp"
 #include "Cameras/BaseCamera.hpp"

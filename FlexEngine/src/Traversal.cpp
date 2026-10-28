@@ -8,6 +8,8 @@ IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btRigidBody.h>
 IGNORE_WARNINGS_POP
 
+#include <glm/gtx/quaternion.hpp> // for rotate & rotation
+
 #include "Audio/AudioManager.hpp"
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
