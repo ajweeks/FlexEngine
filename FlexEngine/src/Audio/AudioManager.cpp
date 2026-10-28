@@ -13,6 +13,9 @@ namespace flex
 {
 	real AudioManager::s_MasterGain = 0.2f;
 	bool AudioManager::s_Muted = false;
+	real AudioManager::s_Muffle = 0.0f;
+	ALuint AudioManager::s_MuffleFilter = 0;
+	bool AudioManager::s_bMuffleSupported = true;
 
 	ALuint AudioManager::s_Buffers[NUM_BUFFERS];
 	u8* AudioManager::s_WaveData[NUM_BUFFERS];
@@ -1021,6 +1024,61 @@ namespace flex
 		DisplayALError("SetSourceRolloff", alGetError());
 	}
 
+	void AudioManager::ApplyMuffleToSource(ALuint alSource)
+	{
+		alSourcei(alSource, AL_DIRECT_FILTER, s_Muffle > 0.0f && s_MuffleFilter != 0 ? (ALint)s_MuffleFilter : (ALint)AL_FILTER_NULL);
+		alGetError();
+	}
+
+	void AudioManager::SetUnderwaterMuffle(real amount)
+	{
+		amount = glm::clamp(amount, 0.0f, 1.0f);
+		if (glm::abs(amount - s_Muffle) < 0.02f && !(amount == 0.0f && s_Muffle != 0.0f))
+		{
+			return;
+		}
+		if (!s_bMuffleSupported)
+		{
+			return;
+		}
+		if (s_MuffleFilter == 0)
+		{
+			alGetError();
+			alGenFilters(1, &s_MuffleFilter);
+			if (alGetError() != AL_NO_ERROR || s_MuffleFilter == 0 || !alIsFilter(s_MuffleFilter))
+			{
+				s_MuffleFilter = 0;
+				s_bMuffleSupported = false;
+				return;
+			}
+			alFilteri(s_MuffleFilter, AL_FILTER_TYPE, AL_FILTER_LOWPASS);
+			if (alGetError() != AL_NO_ERROR)
+			{
+				alDeleteFilters(1, &s_MuffleFilter);
+				s_MuffleFilter = 0;
+				s_bMuffleSupported = false;
+				return;
+			}
+		}
+		s_Muffle = amount;
+		// GainHF falls off as the amount rises
+		alFilterf(s_MuffleFilter, AL_LOWPASS_GAIN, 1.0f - 0.25f * amount);
+		alFilterf(s_MuffleFilter, AL_LOWPASS_GAINHF, glm::mix(1.0f, 0.04f, amount));
+		alGetError();
+		for (const Source& source : s_Sources)
+		{
+			if (source.source != InvalidAudioSourceID)
+			{
+				ApplyMuffleToSource(source.source);
+			}
+		}
+	}
+
+	real AudioManager::GetUnderwaterMuffle()
+	{
+		return s_Muffle;
+	}
+
 	void AudioManager::SetMasterGain(real masterGain)
 	{
 		s_MasterGain = glm::clamp(masterGain, 0.0f, 1.0f);
@@ -1540,6 +1598,11 @@ namespace flex
 
 		alSource3i(s_Sources[newID].source, AL_AUXILIARY_SEND_FILTER, b2D ? SLOT_DEFAULT_2D : SLOT_DEFAULT_3D, 0, AL_FILTER_NULL);
 		DisplayALError("Failed to connect to slot", alGetError());
+
+		if (s_Muffle > 0.0f)
+		{
+			ApplyMuffleToSource(s_Sources[newID].source);
+		}
 
 		return newID;
 	}

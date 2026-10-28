@@ -29,6 +29,23 @@ run & talk to the others. Always pass your name: `scripts/flexsvc -a <name> ...`
 - `flexsvc -a NAME scratch`: your private scratch dir (Windows-visible). Never write into another agent's.
 - The Linux build (`flexsvc -a NAME build --linux`) is only a compile check. Don't run MSBuild or Flex.exe directly.
 
+## Feature scenes & screenshot diffs
+`--test-scenes` (no names) runs every scene in `resources/scenes/default/`. Old scenes (stress_test, sponza, shadow_test,
+prop_test, donut, ...) live in `resources/scenes/archive/`, which it never lists; copy one back to load it. A scene file
+may set `"time of day"` (0 = noon, 0.5 = midnight) & `"pause time of day"`, and `--screenshots` hides the editor UI and
+physics lines, so shots only contain the scene.
+Each `scene_ft_*` scene tests one feature with a fixed camera & time of day (yaw 0 looks along +x, -pi/2 along -z):
+`ft_shadows` (sun cascades), `ft_lights` (point & spot at night), `ft_pbr` (materials), `ft_sky` & `ft_sky_dusk`
+(sky/clouds/fog), `ft_particles` (campfire), `ft_transparency` (tinted opaque glass; no translucent pbr material exists yet), `ft_water` (gerstner waves), `ft_terrain`;
+plus `scene_macbeth` (colour pipeline) & `scene_terminal_test` (text/UI). To find what broke a feature:
+```
+flexsvc -a NAME run -- --test-scenes --screenshots --frames=300 scene_ft_shadows.json scene_ft_lights.json scene_ft_pbr.json scene_ft_sky.json scene_ft_sky_dusk.json scene_ft_particles.json scene_ft_transparency.json scene_ft_water.json scene_ft_terrain.json scene_macbeth.json scene_terminal_test.json
+flexsvc -a NAME shots ref features     # before your change
+flexsvc -a NAME shots diff features    # after: only the broken feature's scene(s) differ
+```
+Terrain needs about 300 frames to settle, and water/particles/clouds animate, so expect
+small noise there.
+
 ## When the tree is broken or you're waiting
 - Keep shared files compiling at every save. Stage a big rewrite in a copy (in your scratch dir) until it compiles, or
   bracket a multi-file edit with `flexsvc -a NAME hold` / `release`: builds wait (max 90 s, holds expire after 10 min)

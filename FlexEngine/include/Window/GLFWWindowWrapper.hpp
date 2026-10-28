@@ -50,6 +50,7 @@ namespace flex
 
 		virtual void Maximize() override;
 		virtual void Iconify() override;
+		virtual void Restore() override;
 
 		virtual const char* GetClipboardText() override;
 		virtual void SetClipboardText(const char* text) override;

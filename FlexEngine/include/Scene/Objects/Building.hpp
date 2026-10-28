@@ -19,6 +19,7 @@ namespace flex
 		TORCH,
 		LADDER,
 		ROPE,
+		FENCE_POST, // Animals can be tied to it (see Animals)
 
 		_COUNT
 	};
@@ -136,6 +137,7 @@ namespace flex
 		OVERLAPS_PIECE,  // Another build piece is in the way
 		OVERLAPS_PLAYER, // The player would be stuck inside it
 		CEILING,         // Torches can't hang from ceilings
+		HEIGHT_LIMIT,    // Outside the world's height limits (terrain::WORLD_MIN_HEIGHT/WORLD_MAX_HEIGHT)
 	};
 
 	// How far (in meters) solid shapes may interpenetrate before they count as overlapping

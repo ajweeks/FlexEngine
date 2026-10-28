@@ -87,6 +87,7 @@ namespace flex
 		virtual bool GetRenderObjectCreateInfo(RenderID renderID, RenderObjectCreateInfo& outInfo) = 0;
 
 		virtual void SetVSyncEnabled(bool bEnableVSync) = 0;
+		bool IsVSyncEnabled() const { return m_bVSyncEnabled; }
 
 		virtual u32 GetRenderObjectCount() const = 0;
 		virtual u32 GetRenderObjectCapacity() const = 0;
@@ -104,7 +105,21 @@ namespace flex
 		// Streamed terrain detail: 0: low, 1: medium, 2: high, 3: ultra
 		i32 GetTerrainQuality() const { return m_TerrainQuality; }
 		void SetTerrainQuality(i32 quality) { m_TerrainQuality = glm::clamp(quality, 0, 3); }
-		real GetEffectiveShadowDistance() const { return m_ShadowDistanceOverride > 0.0f ? m_ShadowDistanceOverride : m_ShadowDistance; }
+		real GetEffectiveShadowDistance() const { return (m_ShadowDistanceOverride > 0.0f ? m_ShadowDistanceOverride : m_ShadowDistance) * m_ShadowDistanceScale; }
+
+		// Scalability settings (set by the game's settings screen, not saved in the renderer settings)
+		// Sun & torch shadows: 0: off, 1: low, 2: medium, 3: high, 4: ultra (resolution, cascades, distance & point shadows)
+		void SetShadowQuality(i32 quality);
+		i32 GetShadowQuality() const { return m_ShadowQuality; }
+		// 0: off, 1: FXAA, 2: TAA
+		void SetAntiAliasing(i32 mode);
+		i32 GetAntiAliasing() const;
+		void SetSSAOEnabled(bool bEnabled);
+		bool IsSSAOEnabled() const { return m_SSAOSamplingData.enabled != 0; }
+		// Scales how far streamed terrain is drawn (TerrainGenerator's view distance), (0, 1]
+		void SetDrawDistanceScale(real scale) { m_DrawDistanceScale = glm::clamp(scale, 0.05f, 1.0f); }
+		real GetDrawDistanceScale() const { return m_DrawDistanceScale; }
+		i32 GetShaderQualityLevel() const { return m_ShaderQualityLevel; }
 
 		// Camera-relative rendering: everything the GPU sees (model matrices, view matrices, light positions, terrain
 		// vertices after the vertex shader...) is in "render space", world space translated by -origin, where origin is
@@ -328,6 +343,13 @@ namespace flex
 		bool GetDisplayShadowCascadePreview() const;
 
 		void SetTAAEnabled(bool bEnabled);
+
+		// Underwater look for this frame: amount [0, 1] (0: above water), depth: meters below the surface. Replaces the
+		// fog & sky gradient with murky water (so the scene fades out a few meters away) & tints the image.
+		void SetUnderwater(real amount, real depth);
+		real GetUnderwaterAmount() const { return m_UnderwaterAmount; }
+		// The fog colour used underwater (display space), darker in deep water & at night
+		glm::vec3 GetUnderwaterFogColour(const glm::vec3& sunColour) const;
 		bool IsTAAEnabled() const;
 
 		i32 GetTAASampleCount() const;
@@ -507,6 +529,10 @@ namespace flex
 		// Distance from the camera that shadow cascades cover (shadows fade out towards this distance)
 		real m_ShadowDistance = 200.0f;
 		real m_ShadowDistanceOverride = 0.0f;
+		real m_ShadowDistanceScale = 1.0f; // See SetShadowQuality
+		i32 m_ShadowQuality = 3;
+		bool m_bSunShadowsEnabled = true;
+		real m_DrawDistanceScale = 1.0f;
 		i32 m_TerrainQuality = 1;
 		// Blend between uniform (0) and logarithmic (1) cascade split distances
 		real m_ShadowCascadeSplitLambda = 0.75f;
@@ -545,6 +571,24 @@ namespace flex
 		bool m_bRenderShadowCascade[MAX_SHADOW_CASCADE_COUNT] = {};
 		bool m_bCacheDistantShadowCascades = true;
 		u64 m_ShadowCascadeFrameIndex = 0;
+
+		// Shadow map updates cross-fade: when the light direction steps (see UpdateShadowLightDirection), cascades move
+		// to the new direction one at a time, each rendered into one spare layer (cascadeCount) which fades in over the
+		// old map. Once faded in, the cascade's own layer is re-rendered with the new direction & the spare is free for
+		// the next one. So only one cascade's worth of extra memory is needed, not a second set of maps.
+		bool m_bShadowUpdateCrossFade = true;
+		sec m_ShadowFadeDuration = 0.4f;
+		glm::vec3 m_CascadeLightDirs[MAX_SHADOW_CASCADE_COUNT] = {}; // The direction each cascade's layer was rendered with
+		i32 m_ShadowFadeCascade = -1; // < 0: none
+		real m_ShadowFadeT = 0.0f;
+		glm::vec3 m_ShadowFadeLightDir = VEC3_ZERO;
+		CachedShadowCascade m_ShadowFadeCache;
+		bool m_bRenderShadowFade = false; // Whether the spare layer must be rendered this frame
+		real m_ShadowFadeDepthRange = 1.0f;
+		bool m_bShadowFadeLayerAllocated = false; // Whether the shadow image has the spare layer
+
+		// Layers in the shadow map image (the cascades, plus a spare one for cross-fading updates)
+		i32 GetShadowLayerCount() const { return m_ShadowCascadeCount + (m_bShadowUpdateCrossFade ? 1 : 0); }
 
 		void InvalidateShadowCascadeCache();
 
@@ -616,6 +660,8 @@ namespace flex
 		BitmapFont* m_CurrentFont = nullptr;
 
 		PostProcessSettings m_PostProcessSettings;
+		real m_UnderwaterAmount = 0.0f;
+		real m_UnderwaterDepth = 0.0f;
 		ConfigFile m_Settings;
 
 		UIMesh* m_UIMesh = nullptr;

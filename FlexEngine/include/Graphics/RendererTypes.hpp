@@ -114,7 +114,7 @@ namespace flex
 		i32 bDEBUGShowEdges;   // 28
 	};
 
-	// 320 bytes
+	// 400 bytes
 	struct ShadowSamplingData
 	{
 		glm::mat4 cascadeViewProjMats[MAX_SHADOW_CASCADE_COUNT];	// 0
@@ -128,6 +128,10 @@ namespace flex
 		// Receiver offset along its normal, in shadow map texels
 		real normalOffset;											// 308
 		real pad[2];												// 312
+		// While a cascade is re-rendered for a new light direction, the new map (in the spare layer, cascadeCount) fades
+		// in over the old one (see Renderer::UpdateShadowCascades)
+		glm::mat4 fadeViewProj;										// 320
+		glm::vec4 fadeParams; // x: cascade (< 0: none), y: weight of the new map, z: its texel size, w: its depth bias // 384
 	};
 
 	// Point light shadows (see VulkanRenderer::UpdatePointShadowSlots), indexed like the point lights. 528 bytes
@@ -1434,6 +1438,9 @@ namespace flex
 		i32 subpass = 0;
 		bool bDepthWriteEnable = true;
 		bool bTranslucent = false;
+		// Drawn after the other opaque forward shaders, so early depth tests skip the pixels they covered (the skybox,
+		// which is at the far plane & only fills what nothing else covers)
+		bool bDrawAfterOpaque = false;
 		bool bCompute = false;
 
 		bool bNeedPushConstantBlock = false;

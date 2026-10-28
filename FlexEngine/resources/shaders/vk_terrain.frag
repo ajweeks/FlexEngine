@@ -237,6 +237,23 @@ void main()
 
 		albedo = grass * weights.x + rock * weights.y + granular * weights.z + snow * weights.w;
 
+		// Distant terrain is made of large, smoothly shaded triangles (so looks rounded & blobby): crags & gullies
+		// tens of meters across are added to its normals instead, fading in where the finer detail has faded out
+		// (each octave fades before it gets small enough on screen to alias)
+		float farCrags = smoothstep(150.0, 1200.0, dist);
+		if (farCrags > 0.0)
+		{
+			float craggy = weights.y + weights.w * 0.7 + weights.z * 0.4 + weights.x * 0.15;
+			float near = 1.0 - smoothstep(6000.0, 12000.0, dist);
+			float far = 1.0 - smoothstep(25000.0, 40000.0, dist);
+			vec4 crags = near > 0.0 ? NoiseOffset(1.0 / 32.0, vec3(2.9, 7.4, 1.6)) : vec4(0.0);
+			vec4 ridges = NoiseOffset(1.0 / 128.0, vec3(5.3, 3.8, 8.2));
+			vec3 cragBump = crags.yzw * 3.0 * near + ridges.yzw * 9.0 * far;
+			bump += cragBump * craggy * farCrags;
+			// Crevices are a little darker, so the shapes still read where the sun doesn't pick them out
+			albedo *= 1.0 - 0.12 * craggy * farCrags * clamp(-(crags.x * near + ridges.x), 0.0, 1.0);
+		}
+
 		// Marble veins
 		float vein = clamp(ex_Colour.a, 0.0, 1.0);
 		if (vein > 0.01)

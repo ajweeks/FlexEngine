@@ -471,6 +471,10 @@ namespace flex
 
 			void BeginGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
 			void EndGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
+			// Query resets aren't allowed inside render passes: reserve (& reset) a timestamp before the pass begins, then
+			// time a part of the pass with BeginReservedGPUTimeStamp & EndGPUTimeStamp
+			void ReserveGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
+			void BeginReservedGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name);
 			ms GetDurationBetweenTimeStamps(const std::string& name);
 
 			static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(

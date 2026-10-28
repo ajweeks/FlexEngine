@@ -25,6 +25,7 @@ IGNORE_WARNINGS_POP
 #include "FlexEngine.hpp"
 #include "GameUI.hpp"
 #include "Graphics/Renderer.hpp"
+#include "Platform/Platform.hpp"
 #include "GameControls.hpp"
 #include "InputManager.hpp"
 #include "Localization.hpp"
@@ -37,6 +38,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/GameObject.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/Objects/Industry.hpp"
+#include "Scene/Objects/Campfire.hpp"
 #include "Scene/Objects/Props.hpp"
 #include "Scene/Objects/Terminal.hpp"
 #include "Scene/Objects/Treasure.hpp"
@@ -49,6 +51,7 @@ IGNORE_WARNINGS_POP
 #include "Systems/TrackManager.hpp"
 #include "Traversal.hpp"
 #include "Woodcraft.hpp"
+#include "Crafting.hpp"
 
 namespace flex
 {
@@ -135,6 +138,8 @@ namespace flex
 		m_Traversal->Initialize(this);
 		m_Woodcraft = new WoodcraftController();
 		m_Woodcraft->Initialize(this);
+		m_Crafting = new CraftingController();
+		m_Crafting->Initialize(this);
 
 		m_BuildMode.Initialize(this);
 
@@ -175,6 +180,12 @@ namespace flex
 			m_Woodcraft->Destroy();
 			delete m_Woodcraft;
 			m_Woodcraft = nullptr;
+		}
+		if (m_Crafting != nullptr)
+		{
+			m_Crafting->Destroy();
+			delete m_Crafting;
+			m_Crafting = nullptr;
 		}
 
 		if (m_Traversal != nullptr)
@@ -220,13 +231,14 @@ namespace flex
 			m_BuildMode.SetActive(false);
 		}
 		m_BuildMode.Update();
+		// Crafting panel ([I]), chests & furnaces ([E]) & placing them
+		m_Crafting->Update();
 
 		m_CrawlAmount = glm::clamp(m_CrawlAmount + (m_bCrawling ? 1.0f : -1.0f) * g_DeltaTime * 6.0f, 0.0f, 1.0f);
 
 		// Chopping & campfires (before digging, which it takes the mouse buttons from while aiming at a plant)
 		m_ToolSwingTimer = glm::max(m_ToolSwingTimer - g_DeltaTime, 0.0f);
-		m_Woodcraft->Update();
-		UpdateTerrainTool();
+		// (the woodcraft & terrain tool update in OnRenderPoseUpdated, once the render pose they aim from is known)
 
 		if (TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive())
 		{
@@ -286,8 +298,11 @@ namespace flex
 
 		// Terrain can extend far below the scene's minimum height (UpdateTerrainSafety handles falling out of it)
 		BaseScene* scene = g_SceneManager->CurrentScene();
-		if (TerrainGenerator::GetActive() == nullptr && m_Transform.GetWorldPosition().y < scene->GetPlayerMinHeight())
+		// Streamed terrain has a hard floor (terrain::WORLD_MIN_HEIGHT), fall out of the world below it & respawn
+		const real minHeight = TerrainGenerator::GetActive() != nullptr ? terrain::DESPAWN_HEIGHT : scene->GetPlayerMinHeight();
+		if (m_Transform.GetWorldPosition().y < minHeight)
 		{
+			PrintWarn("Player fell below the world (y = %.1f), respawning\n", m_Transform.GetWorldPosition().y);
 			Reset();
 		}
 
@@ -305,16 +320,6 @@ namespace flex
 					AddToInventory(item);
 				}
 			}
-		}
-
-		if (m_HeldItemLeftHand.IsValid())
-		{
-			GameObject::UpdateHeldItem(m_HeldItemLeftHand);
-		}
-
-		if (m_HeldItemRightHand.IsValid())
-		{
-			GameObject::UpdateHeldItem(m_HeldItemRightHand);
 		}
 
 		GameObjectStack& stack = m_QuickAccessInventory[m_SelectedQuickAccessItemSlot];
@@ -380,7 +385,9 @@ namespace flex
 			}
 		}
 
-		if (activeItem != nullptr)
+		// FLEX_HELD_JITTER_LEGACY=<any>: positions the held tool before physics interpolation like it used to be, to show the jitter test fails
+		static const bool bLegacy = getenv("FLEX_HELD_JITTER_LEGACY") != nullptr;
+		if (bLegacy && activeItem != nullptr)
 		{
 			GameObject::UpdateActiveItem(*activeItem);
 		}
@@ -1095,6 +1102,150 @@ namespace flex
 	void Player::OnRenderPoseUpdated()
 	{
 		m_Traversal->UpdateVisuals();
+
+		// Everything placed relative to the view is positioned here, after physics interpolation & with the camera
+		// already following the final pose. (They used to be updated before the interpolation, so held items &
+		// holograms lagged the camera by up to a physics step & visibly jittered when moving.)
+		if (BaseCamera* camera = g_CameraManager->CurrentCamera())
+		{
+			camera->OnPlayerPoseUpdated();
+		}
+
+		// Chopping & campfires (before digging, which it takes the mouse buttons from while aiming at a plant)
+		m_Woodcraft->Update();
+		UpdateTerrainTool();
+
+		if (m_HeldItemLeftHand.IsValid())
+		{
+			GameObject::UpdateHeldItem(m_HeldItemLeftHand);
+		}
+
+		if (m_HeldItemRightHand.IsValid())
+		{
+			GameObject::UpdateHeldItem(m_HeldItemRightHand);
+		}
+
+		static const bool bLegacy = getenv("FLEX_HELD_JITTER_LEGACY") != nullptr;
+		if (m_ActiveItemIndex != -1 && !bLegacy)
+		{
+			GameObject::UpdateActiveItem(m_ActiveItemCache[m_ActiveItemIndex]);
+		}
+	}
+
+	void Player::UpdateHeldJitterTest()
+	{
+		// FLEX_HELD_JITTER_TEST=<any>: walks forward while turning, & checks the held tool & the campfire hologram stay
+		// put relative to the camera (their frame to frame change in view space should be about 0). Run with --play.
+		// FLEX_HELD_TOOL_SHOTS=<any>: screenshots each quick access item as held (saved/screenshots/held_<slot>.png), in the swing's middle too (held_<slot>_swing.png)
+		static const char* shots = getenv("FLEX_HELD_TOOL_SHOTS");
+		if (shots != nullptr && g_DeltaTime > 0.0f && TerrainGenerator::GetActive() != nullptr && g_CameraManager->CurrentCamera() != nullptr && g_CameraManager->CurrentCamera()->bPossessPlayer)
+		{
+			static i32 s_ShotFrame = 0;
+			static i32 s_Slot = -1;
+			++s_ShotFrame;
+			if (s_ShotFrame > 400 && s_Slot < (i32)QUICK_ACCESS_ITEM_COUNT)
+			{
+				const i32 phase = (s_ShotFrame - 400) % 90;
+				if (phase == 1)
+				{
+					do { ++s_Slot; } while (s_Slot < (i32)QUICK_ACCESS_ITEM_COUNT && m_QuickAccessInventory[s_Slot].count <= 0);
+					m_SelectedQuickAccessItemSlot = glm::min(s_Slot, (i32)QUICK_ACCESS_ITEM_COUNT - 1);
+					if (s_Slot >= (i32)QUICK_ACCESS_ITEM_COUNT)
+					{
+						Print("Held tool shots done\n");
+					}
+				}
+				else if (phase == 40 || phase == 60)
+				{
+					if (phase == 60)
+					{
+						SwingTool(0.5f);
+					}
+					else
+					{
+						const std::string directory = RelativePathToAbsolute(SCREENSHOT_DIRECTORY);
+						Platform::CreateDirectoryRecursive(directory);
+						g_Renderer->RequestScreenshot(directory + "held_" + std::to_string(s_Slot) + ".png");
+					}
+				}
+				else if (phase == 75)
+				{
+					const std::string directory = RelativePathToAbsolute(SCREENSHOT_DIRECTORY);
+					g_Renderer->RequestScreenshot(directory + "held_" + std::to_string(s_Slot) + "_swing.png");
+				}
+			}
+		}
+
+		static const char* test = getenv("FLEX_HELD_JITTER_TEST");
+		if (test == nullptr || g_DeltaTime <= 0.0f)
+		{
+			return;
+		}
+		BaseCamera* cam = g_CameraManager->CurrentCamera();
+		static i32 s_Warmup = 600;
+		static bool s_bPrevValid[2] = {};
+		static glm::vec3 s_Prev[2];
+		static real s_Sum[2] = {}, s_Max[2] = {};
+		static u32 s_Frames[2] = {};
+		if (cam == nullptr || !cam->bPossessPlayer || TerrainGenerator::GetActive() == nullptr)
+		{
+			return;
+		}
+		if (s_Warmup > 0)
+		{
+			--s_Warmup;
+			return;
+		}
+		const PrefabID woodID = woodcraft::GetWoodPrefabID();
+		if (woodID.IsValid() && m_Woodcraft->CountItems(woodID) < 20)
+		{
+			AddToInventory(woodID, 20);
+		}
+		m_Woodcraft->SetPlacingCampfire(true);
+
+		glm::vec3 world[2] = { VEC3_ZERO, VEC3_ZERO };
+		bool bValid[2] = { false, false };
+		if (m_ActiveItemIndex != -1)
+		{
+			world[0] = m_ActiveItemCache[m_ActiveItemIndex].m_ItemProxyObject->GetTransform()->GetWorldPosition();
+			bValid[0] = true;
+		}
+		if (m_Woodcraft->IsCampfirePlacementValid())
+		{
+			world[1] = m_Woodcraft->GetPlacementPos();
+			bValid[1] = true;
+		}
+		for (i32 i = 0; i < 2; ++i)
+		{
+			if (!bValid[i])
+			{
+				s_bPrevValid[i] = false;
+				continue;
+			}
+			const glm::vec3 d = world[i] - cam->position;
+			const glm::vec3 local(glm::dot(d, cam->right), glm::dot(d, cam->up), glm::dot(d, cam->forward));
+			if (s_bPrevValid[i])
+			{
+				const real change = glm::length(local - s_Prev[i]);
+				s_Sum[i] += change;
+				s_Max[i] = glm::max(s_Max[i], change);
+				++s_Frames[i];
+			}
+			s_Prev[i] = local;
+			s_bPrevValid[i] = true;
+		}
+
+		if (s_Frames[0] + s_Frames[1] >= 600)
+		{
+			// (the hologram sits on terrain, so it moves in view space as the player walks; only the held tool is held to a strict limit)
+			const real toolMean = s_Frames[0] ? s_Sum[0] / s_Frames[0] : 0.0f;
+			const bool bPass = s_Frames[0] > 0 && s_Max[0] < 0.002f;
+			Print("Held item jitter test: tool %u frames, mean %.2fmm max %.2fmm; hologram %u frames, mean %.1fmm max %.1fmm: %s\n",
+				s_Frames[0], toolMean * 1000.0f, s_Max[0] * 1000.0f, s_Frames[1], s_Frames[1] ? s_Sum[1] / s_Frames[1] * 1000.0f : 0.0f, s_Max[1] * 1000.0f,
+				bPass ? "PASS" : "FAIL");
+			s_Frames[0] = s_Frames[1] = 0;
+			s_Sum[0] = s_Sum[1] = s_Max[0] = s_Max[1] = 0.0f;
+		}
 	}
 
 	void Player::SetItemPickingUp(GameObject* pickedItem)

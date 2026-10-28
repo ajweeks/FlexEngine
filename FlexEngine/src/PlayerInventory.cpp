@@ -12,11 +12,13 @@ IGNORE_WARNINGS_POP
 
 #include <queue>
 
+#include "Crafting.hpp"
 #include "Inventory.hpp"
 #include "JSONParser.hpp"
 #include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/Objects/Animals.hpp" // For Animals::IsNamingDialogOpen
 #include "Scene/Objects/Industry.hpp"
 #include "Scene/Objects/Props.hpp"
 #include "Scene/SceneManager.hpp"
@@ -584,6 +586,11 @@ namespace flex
 	{
 		ResetInventory();
 
+		if (m_Crafting != nullptr)
+		{
+			m_Crafting->Parse(inventoryObj);
+		}
+
 		std::vector<JSONObject> slotLists[3];
 
 		inventoryObj.TryGetObjectArray("slots", slotLists[0]);
@@ -678,6 +685,11 @@ namespace flex
 			inventoryObj.fields.emplace_back("wearable slots", JSONValue(wearablesSlots));
 		}
 
+		if (m_Crafting != nullptr)
+		{
+			m_Crafting->Serialize(inventoryObj);
+		}
+
 		return inventoryObj;
 	}
 
@@ -692,11 +704,15 @@ namespace flex
 			}
 		}
 		ClearInventory();
+		if (m_Crafting != nullptr)
+		{
+			m_Crafting->Reset();
+		}
 	}
 
 	void Player::AddStarterKit()
 	{
-		for (const char* toolName : { "pickaxe", "axe", "shovel", "bed" })
+		for (const char* toolName : { "pickaxe", "axe", "shovel", "bed", "lasso" })
 		{
 			const PrefabID toolID = g_ResourceManager->GetPrefabID(toolName);
 			if (toolID.IsValid())
@@ -774,7 +790,9 @@ namespace flex
 
 	bool Player::IsAnyInventoryShowing() const
 	{
-		return m_bInventoryShowing || m_bMinerInventoryShowing;
+		// (Naming a tamed animal also shows the cursor & takes the keyboard)
+		return m_bInventoryShowing || m_bMinerInventoryShowing || Animals::IsNamingDialogOpen() ||
+			(m_Crafting != nullptr && m_Crafting->IsPanelOpen());
 	}
 
 	bool Player::IsInventoryShowing() const

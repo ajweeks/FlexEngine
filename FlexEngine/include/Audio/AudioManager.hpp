@@ -216,6 +216,11 @@ namespace flex
 		static void SetSourceRolloff(AudioSourceID sourceID, real referenceDistance, real maxDistance, real rolloffFactor = 1.0f);
 
 		/* [0.0, 1.0] logarithmic */
+		// Low-pass muffles every sound (e.g. while underwater). amount in [0, 1]: 0 = off, 1 = heavily muffled. Cheap to
+		// call every frame (only touches OpenAL when the value changes noticeably). No-op without EFX support.
+		static void SetUnderwaterMuffle(real amount);
+		static real GetUnderwaterMuffle();
+
 		static void SetMasterGain(real masterGain);
 		static real GetMasterGain();
 
@@ -303,6 +308,11 @@ namespace flex
 
 		static void CreateAudioEffects();
 		static void ClearAudioEffects();
+
+		static void ApplyMuffleToSource(ALuint alSource);
+		static real s_Muffle;
+		static ALuint s_MuffleFilter;
+		static bool s_bMuffleSupported;
 
 		static real s_MasterGain;
 		static bool s_Muted;

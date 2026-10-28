@@ -303,8 +303,8 @@ namespace flex
 				m_SSAOBlurVFBColourAttachment0 = new FrameBufferAttachment(m_VulkanDevice, frameBufCreateInfo);
 
 				m_ShadowBufFormat = VK_FORMAT_D16_UNORM;
-				m_ShadowCascades.resize(m_ShadowCascadeCount);
-				for (i32 i = 0; i < m_ShadowCascadeCount; ++i)
+				m_ShadowCascades.resize(GetShadowLayerCount());
+				for (i32 i = 0; i < GetShadowLayerCount(); ++i)
 				{
 					m_ShadowCascades[i] = new Cascade(m_VulkanDevice);
 				}
@@ -2668,7 +2668,7 @@ namespace flex
 			SetVSyncEnabled(m_bVSyncEnabled);
 
 			if (m_bInitialized &&
-				((i32)m_ShadowCascades.size() != m_ShadowCascadeCount ||
+				((i32)m_ShadowCascades.size() != GetShadowLayerCount() ||
 					m_ShadowCascades[0]->frameBuffer.width != m_ShadowMapBaseResolution ||
 					m_PointShadowSettings.resolution != m_PointShadowResolution ||
 					m_PointShadowSettings.slotCount != m_PointShadowSlotCount))
@@ -4537,6 +4537,11 @@ namespace flex
 
 			PROFILE_AUTO("RecreateShadowFrameBuffers");
 
+			// The cascades, plus a spare layer when updates cross-fade (see Renderer::m_bShadowUpdateCrossFade)
+			const i32 layerCount = GetShadowLayerCount();
+			m_bShadowFadeLayerAllocated = layerCount > m_ShadowCascadeCount;
+			m_ShadowFadeCascade = -1;
+
 			VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 
 			VkImageCreateInfo imageCreateInfo = vks::imageCreateInfo();
@@ -4546,7 +4551,7 @@ namespace flex
 			imageCreateInfo.extent.height = m_ShadowMapBaseResolution;
 			imageCreateInfo.extent.depth = 1;
 			imageCreateInfo.mipLevels = 1;
-			imageCreateInfo.arrayLayers = m_ShadowCascadeCount;
+			imageCreateInfo.arrayLayers = layerCount;
 			imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 			imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 			imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
@@ -4572,7 +4577,7 @@ namespace flex
 			fullImageView.subresourceRange.baseMipLevel = 0;
 			fullImageView.subresourceRange.levelCount = 1; // Number of mipmap levels
 			fullImageView.subresourceRange.baseArrayLayer = 0;
-			fullImageView.subresourceRange.layerCount = m_ShadowCascadeCount;
+			fullImageView.subresourceRange.layerCount = layerCount;
 			fullImageView.image = m_ShadowImage;
 			fullImageView.flags = 0;
 			VK_CHECK_RESULT(vkCreateImageView(m_VulkanDevice->m_LogicalDevice, &fullImageView, nullptr, m_ShadowImageView.replace()));
@@ -4594,28 +4599,28 @@ namespace flex
 				EndSingleTimeCommands(m_VulkanDevice, m_GraphicsQueue, transitionCmdBuffer);
 			}
 
-			if ((i32)m_ShadowCascades.size() < m_ShadowCascadeCount)
+			if ((i32)m_ShadowCascades.size() < layerCount)
 			{
 				i32 prevSize = (i32)m_ShadowCascades.size();
-				m_ShadowCascades.resize(m_ShadowCascadeCount);
-				for (i32 i = prevSize; i < (i32)m_ShadowCascadeCount; ++i)
+				m_ShadowCascades.resize(layerCount);
+				for (i32 i = prevSize; i < layerCount; ++i)
 				{
 					m_ShadowCascades[i] = new Cascade(m_VulkanDevice);
 				}
 				InvalidateShadowCascadeCache();
 			}
-			else if ((i32)m_ShadowCascades.size() > m_ShadowCascadeCount)
+			else if ((i32)m_ShadowCascades.size() > layerCount)
 			{
-				for (i32 i = (i32)m_ShadowCascades.size() - 1; i >= (i32)m_ShadowCascadeCount; --i)
+				for (i32 i = (i32)m_ShadowCascades.size() - 1; i >= layerCount; --i)
 				{
 					delete m_ShadowCascades[i];
 				}
-				m_ShadowCascades.resize(m_ShadowCascadeCount);
+				m_ShadowCascades.resize(layerCount);
 				m_ShadowCascades.shrink_to_fit();
 			}
 
 			// One frame buffer & view per cascade
-			for (i32 i = 0; i < m_ShadowCascadeCount; ++i)
+			for (i32 i = 0; i < layerCount; ++i)
 			{
 				VkImageViewCreateInfo imageView = vks::imageViewCreateInfo();
 				imageView.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
@@ -9167,7 +9172,8 @@ namespace flex
 			const bool bDynamic = material->bDynamic;
 
 			// Shader batches are kept sorted by shader ID (static before dynamic) so draw order is stable, with translucent
-			// shaders after opaque ones so they blend over everything behind them (e.g. the terrain, which is forward)
+			// shaders after opaque ones so they blend over everything behind them (e.g. the terrain, which is forward), and
+			// the skybox between them (bDrawAfterOpaque) so it only shades the pixels nothing opaque covered
 			ShaderBatch* shaderBatch = GetShaderBatchOfType((u8)batchType);
 			auto DrawsBefore = [this](ShaderID a, bool bDynamicA, ShaderID b, bool bDynamicB)
 			{
@@ -9176,6 +9182,12 @@ namespace flex
 				if (bTranslucentA != bTranslucentB)
 				{
 					return bTranslucentB;
+				}
+				const bool bLateA = m_Shaders[a]->bDrawAfterOpaque;
+				const bool bLateB = m_Shaders[b]->bDrawAfterOpaque;
+				if (bLateA != bLateB)
+				{
+					return bLateB;
 				}
 				return a < b || (a == b && (u32)bDynamicA < (u32)bDynamicB);
 			};
@@ -9819,7 +9831,7 @@ namespace flex
 				// Cascaded shadow mapping
 				//
 
-				bool bEnableShadows = true;
+				const bool bEnableShadows = m_bSunShadowsEnabled; // See SetShadowQuality
 				const bool bSunShadows = bEnableShadows && m_DirectionalLight && m_DirectionalLight->data.castShadows;
 				// Shadow casters are drawn straight out of the regular (non-editor) batches
 				ShaderBatch* shadowCasterBatches[] = { &m_DeferredObjectBatches, &m_ForwardObjectBatches };
@@ -9880,14 +9892,18 @@ namespace flex
 					shadowDrawCallInfo.cullPlanes = m_CameraCullPlanes;
 					shadowDrawCallInfo.cullExtrusion = -glm::normalize(m_DirectionalLight->data.dir) * GetEffectiveShadowDistance();
 
-					for (i32 c = 0; c < m_ShadowCascadeCount; ++c)
+					const i32 shadowLayerCount = m_ShadowCascadeCount + (m_bRenderShadowFade && m_bShadowFadeLayerAllocated && (i32)m_ShadowCascades.size() > m_ShadowCascadeCount ? 1 : 0);
+					for (i32 c = 0; c < shadowLayerCount; ++c)
 					{
-						if (!m_bRenderShadowCascade[c])
+						if (c < m_ShadowCascadeCount && !m_bRenderShadowCascade[c])
 						{
 							// Still holds what was rendered into it on a previous frame (see CachedShadowCascade)
 							continue;
 						}
 
+						// The spare layer (see Renderer::m_bShadowUpdateCrossFade) is rendered after the cascades
+						const bool bFadeLayer = c == m_ShadowCascadeCount;
+						const glm::mat4& viewProj = bFadeLayer ? m_ShadowSamplingData.fadeViewProj : m_ShadowSamplingData.cascadeViewProjMats[c];
 						m_ShadowRenderPass->Begin_WithFrameBuffer(m_OffScreenCmdBuffer, &depthStencilClearValue, 1, &m_ShadowCascades[c]->frameBuffer);
 
 						{
@@ -9895,16 +9911,16 @@ namespace flex
 							// negative). The slope term is in texels so it adapts to each cascade's resolution; the clamp
 							// (converted from texels to this cascade's normalized depth) stops near-vertical faces being
 							// pushed so far that their shadows detach from them
-							const real depthRange = glm::max(m_ShadowCascadeDepthRanges[c], 1e-3f);
-							const real texelSize = m_ShadowSamplingData.cascadeTexelSizes[c];
+							const real depthRange = glm::max(bFadeLayer ? m_ShadowFadeDepthRange : m_ShadowCascadeDepthRanges[c], 1e-3f);
+							const real texelSize = bFadeLayer ? m_ShadowSamplingData.fadeParams.z : m_ShadowSamplingData.cascadeTexelSizes[c];
 							const real clamp = m_VulkanDevice->m_EnabledFeatures.depthBiasClamp ? -(m_ShadowSlopeBiasMaxTexels * texelSize) / depthRange : 0.0f;
 							vkCmdSetDepthBias(m_OffScreenCmdBuffer, 0.0f, clamp, -m_ShadowSlopeBias);
 						}
 
 						// TODO: Upload as one draw
-						m_CascadedShadowMapPushConstantBlock->SetData(m_ShadowSamplingData.cascadeViewProjMats[c]);
+						m_CascadedShadowMapPushConstantBlock->SetData(viewProj);
 						shadowDrawCallInfo.pushConstantOverride = m_CascadedShadowMapPushConstantBlock;
-						shadowDrawCallInfo.shadowCascadeViewProj = &m_ShadowSamplingData.cascadeViewProjMats[c];
+						shadowDrawCallInfo.shadowCascadeViewProj = &viewProj;
 
 						for (ShaderBatch* shaderBatches : shadowCasterBatches)
 						{
@@ -10145,6 +10161,10 @@ namespace flex
 
 			// Query resets aren't allowed within render passes, so this times the whole pass
 			BeginGPUTimeStamp(commandBuffer, "Forward pass");
+			for (const ShaderBatchPair& shaderBatch : m_ForwardObjectBatches.batches)
+			{
+				ReserveGPUTimeStamp(commandBuffer, "Fwd " + m_Shaders[shaderBatch.shaderID]->name + (shaderBatch.bDynamic ? " dynamic" : ""));
+			}
 			m_ForwardRenderPass->Begin(commandBuffer, clearValues, (u32)ARRAY_LENGTH(clearValues));
 			{
 				PROFILE_AUTO("Forward render pass");
@@ -10156,7 +10176,10 @@ namespace flex
 					forwardDrawCallInfo.cullPlanes = m_CameraCullPlanes;
 					for (const ShaderBatchPair& shaderBatch : m_ForwardObjectBatches.batches)
 					{
+						const std::string timestampName = "Fwd " + m_Shaders[shaderBatch.shaderID]->name + (shaderBatch.bDynamic ? " dynamic" : "");
+						BeginReservedGPUTimeStamp(commandBuffer, timestampName);
 						DrawShaderBatch(shaderBatch, commandBuffer, &forwardDrawCallInfo);
+						EndGPUTimeStamp(commandBuffer, timestampName);
 					}
 
 					EndDebugMarkerRegion(commandBuffer, "End Forward");
@@ -11483,6 +11506,16 @@ namespace flex
 			skyboxData.clouds.y -= cam->position.y;
 			skyboxData.clouds.z += cam->position.x;
 			skyboxData.clouds.w += cam->position.z;
+			if (m_UnderwaterAmount > 0.5f)
+			{
+				// Underwater: murky water in every direction, hiding everything more than a few meters away
+				const glm::vec3 water = GetUnderwaterFogColour(glm::vec3(skyboxData.sunColour));
+				skyboxData.top = glm::vec4(water * 1.5f, 1.0f);
+				skyboxData.mid = glm::vec4(water, 1.0f);
+				skyboxData.btm = glm::vec4(water * 0.45f, 1.0f);
+				skyboxData.fog = glm::vec4(water, 30.0f);
+				skyboxData.clouds.x = 0.0f;
+			}
 			// Wrapped: a float holding the absolute time would make shader animations stutter after hours of play
 			glm::vec4 time(AnimationTime(), scene->GetTimeOfDay(), 0.0f, 0.0f);
 			glm::vec2i windowSize = g_Window->GetSize();
@@ -11496,9 +11529,17 @@ namespace flex
 			TerrainGenConstantData* terrainGenConstantData = m_Terrain != nullptr ? &m_Terrain->constantData : nullptr;
 
 			DirLightData* dirLightData = &defaultDirLightData;
+			DirLightData unshadowedDirLightData;
 			if (m_DirectionalLight != nullptr)
 			{
 				dirLightData = &m_DirectionalLight->data;
+				if (!m_bSunShadowsEnabled)
+				{
+					// Shadow maps aren't rendered (see SetShadowQuality)
+					unshadowedDirLightData = *dirLightData;
+					unshadowedDirLightData.castShadows = 0;
+					dirLightData = &unshadowedDirLightData;
+				}
 			}
 
 			// Lights & water clip volumes in render space
@@ -12027,6 +12068,26 @@ namespace flex
 
 			vkCmdResetQueryPool(commandBuffer, m_TimestampQueryPool, (u32)(queryIndex - 1), 2);
 			vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, m_TimestampQueryPool, (u32)(queryIndex - 1));
+		}
+
+		void VulkanRenderer::ReserveGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name)
+		{
+			const i32 queryIndex = (i32)(m_TimestampQueryNames.size() * 2) + 1;
+			CHECK_LT(queryIndex, (i32)MAX_TIMESTAMP_QUERIES - 2);
+			m_TimestampQueryNames[name] = queryIndex;
+
+			vkCmdResetQueryPool(commandBuffer, m_TimestampQueryPool, (u32)(queryIndex - 1), 2);
+		}
+
+		void VulkanRenderer::BeginReservedGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name)
+		{
+			auto iter = m_TimestampQueryNames.find(name);
+			if (iter == m_TimestampQueryNames.end())
+			{
+				PrintError("Attempted to begin GPU timestamp that wasn't reserved.\n");
+				return;
+			}
+			vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, m_TimestampQueryPool, (u32)(iter->second - 1));
 		}
 
 		void VulkanRenderer::EndGPUTimeStamp(VkCommandBuffer commandBuffer, const std::string& name)

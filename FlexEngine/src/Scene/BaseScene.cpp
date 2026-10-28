@@ -1,6 +1,7 @@
 #include "stdafx.hpp"
 
 #include "Scene/BaseScene.hpp"
+#include "Water.hpp"
 
 IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
@@ -239,6 +240,8 @@ namespace flex
 			m_PhysicsWorld->ApplyInterpolatedTransforms();
 		}
 
+		water::UpdateDespawning(this);
+
 		UpdateSky();
 
 		if (m_Player0 != nullptr)
@@ -255,6 +258,8 @@ namespace flex
 	void BaseScene::FixedUpdate()
 	{
 		PROFILE_AUTO("Scene fixed update");
+
+		water::FixedUpdateBuoyancy(this);
 
 		for (GameObject* rootObject : m_RootObjects)
 		{
@@ -439,6 +444,16 @@ namespace flex
 
 		sceneRootObject.TryGetFloat("cloud coverage", m_CloudCoverage);
 		sceneRootObject.TryGetFloat("cloud altitude", m_CloudAltitude);
+
+		// Optional fixed time of day (0 = noon, 0.5 = midnight), for deterministic test scenes
+		{
+			real timeOfDay = 0.0f;
+			if (sceneRootObject.TryGetFloat("time of day", timeOfDay))
+			{
+				SetTimeOfDay(timeOfDay);
+			}
+			sceneRootObject.TryGetBool("pause time of day", m_bPauseTimeOfDay);
+		}
 
 		if (!sceneRootObject.TryGetGUID("player 0 guid", m_PlayerGUIDs[0]))
 		{

@@ -7,6 +7,10 @@
 		"id" : "361FC57CDA633FB14CBAE8A233B42CC7",
 		"name" : "battery",
 		"type" : "battery",
+		"transform" : 
+		{
+			"scale" : "0.120, 0.120, 0.120"
+		},
 		"mesh" : "battery_cell_2.glb",
 		"materials" : 
 		[

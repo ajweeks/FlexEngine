@@ -1,0 +1,139 @@
+{
+	"version": 7,
+	"name": "ft_lights",
+	"spawn player": false,
+	"cloud coverage": 0.0,
+	"fog distance": 0.0,
+	"time of day": 0.5,
+	"pause time of day": true,
+	"camera": {
+		"type": "debug",
+		"near plane": 0.5,
+		"far plane": 2000.0,
+		"fov": 0.785398,
+		"aperture": 1.0,
+		"shutter speed": 0.125,
+		"light sensitivity": 800.0,
+		"exposure": 1.2,
+		"move speed": 18.0,
+		"transform": {
+			"position": "0.000, 6.000, 16.000",
+			"pitch": -0.2,
+			"yaw": -1.5708
+		}
+	},
+	"objects": [
+		{
+			"id": "E58B081006F7E3DFC967A64CB14028D5",
+			"name": "Skybox",
+			"type": "skybox",
+			"casts shadow": false,
+			"materials": [
+				"skybox 01"
+			]
+		},
+		{
+			"id": "12C9791E558E08BAA7196B50AC2F8670",
+			"name": "Reflection Probe",
+			"type": "reflection probe",
+			"transform": {
+				"pos": "0.000, 10.000, 0.000"
+			},
+			"visible": false
+		},
+		{
+			"id": "2824C1C099724CAF4941D4072014B3CE",
+			"name": "Directional Light",
+			"type": "directional light",
+			"transform": {
+				"pos": "0.000, 15.000, 0.000",
+				"rot": "2.0, 0.4, 0.0"
+			},
+			"directional light info": {
+				"brightness": 0.0,
+				"colour": "1.00,1.00,1.00",
+				"cast shadows": 0
+			}
+		},
+		{
+			"id": "107F80E222F828767EFC2F91624A8940",
+			"name": "ground",
+			"type": "object",
+			"transform": {
+				"pos": "0.000, 0.000, 0.000",
+				"scale": "60.000, 1.000, 60.000"
+			},
+			"mesh": "unit-plane.glb",
+			"materials": [
+				"pbr light grey"
+			]
+		},
+		{
+			"id": "F1F836F99EEE3692F09E2E8C662248B4",
+			"name": "sphere",
+			"type": "object",
+			"transform": {
+				"pos": "0.000, 2.000, 0.000",
+				"scale": "2.000, 2.000, 2.000"
+			},
+			"mesh": "ico-sphere.glb",
+			"materials": [
+				"pbr white"
+			]
+		},
+		{
+			"id": "83B7FFC050FEC94DBCA3A0AAC36098B2",
+			"name": "wall",
+			"type": "object",
+			"transform": {
+				"pos": "0.000, 4.000, -8.000",
+				"scale": "14.000, 4.000, 0.500"
+			},
+			"mesh": "cube.glb",
+			"materials": [
+				"pbr white"
+			]
+		},
+		{
+			"id": "CC2BD818319478DA6BD0C621DE49F145",
+			"name": "p0",
+			"type": "point light",
+			"transform": {
+				"pos": "-8.000, 4.000, 3.000"
+			},
+			"point light info": {
+				"brightness": 120.0,
+				"colour": "1.00,0.30,0.20",
+				"enabled": 1
+			}
+		},
+		{
+			"id": "FDA9988C79FC35526F7EAED46725A2A7",
+			"name": "p1",
+			"type": "point light",
+			"transform": {
+				"pos": "8.000, 4.000, 3.000"
+			},
+			"point light info": {
+				"brightness": 120.0,
+				"colour": "0.20,0.50,1.00",
+				"enabled": 1
+			}
+		},
+		{
+			"id": "B860DCD6C8A1F8B46287CCED9041DFF0",
+			"name": "spot",
+			"type": "spot light",
+			"transform": {
+				"pos": "0.000, 9.000, 6.000",
+				"rot": "-1.0, 3.1416, 0.0"
+			},
+			"spot light info": {
+				"brightness": 200.0,
+				"colour": "1.00,0.95,0.80",
+				"enabled": 1,
+				"angle": 0.6
+			}
+		}
+	]
+}

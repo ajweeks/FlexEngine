@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "2E557869A7654D68B69F73A710A18810",
+	"root" : 
+	{
+		"id" : "F7FAB087A42443AEA2388E891135B13E",
+		"name" : "aluminum ingot",
+		"type" : "object",
+		"mesh" : "cube.glb",
+		"materials" : 
+		[
+			"aluminum ingot"
+		]
+	}
+}

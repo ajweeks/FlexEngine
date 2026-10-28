@@ -1,0 +1,163 @@
+{
+	"version": 7,
+	"name": "ft_transparency",
+	"spawn player": false,
+	"cloud coverage": 0.0,
+	"fog distance": 0.0,
+	"time of day": 0.0,
+	"pause time of day": true,
+	"camera": {
+		"type": "debug",
+		"near plane": 0.5,
+		"far plane": 2000.0,
+		"fov": 0.785398,
+		"aperture": 1.0,
+		"shutter speed": 0.125,
+		"light sensitivity": 800.0,
+		"exposure": 1.2,
+		"move speed": 18.0,
+		"transform": {
+			"position": "0.000, 4.000, 14.000",
+			"pitch": -0.2,
+			"yaw": -1.5708
+		}
+	},
+	"objects": [
+		{
+			"id": "78C8D5F08B79AFFD2B49C12A4B006298",
+			"name": "Skybox",
+			"type": "skybox",
+			"casts shadow": false,
+			"materials": [
+				"skybox 01"
+			]
+		},
+		{
+			"id": "3475EB46C5296F62E338D74FF1FE4F7F",
+			"name": "Reflection Probe",
+			"type": "reflection probe",
+			"transform": {
+				"pos": "0.000, 10.000, 0.000"
+			},
+			"visible": false
+		},
+		{
+			"id": "505AEF9EBDD25B001A3FF416D4A3BAF6",
+			"name": "Directional Light",
+			"type": "directional light",
+			"transform": {
+				"pos": "0.000, 15.000, 0.000",
+				"rot": "2.0, 0.4, 0.0"
+			},
+			"directional light info": {
+				"brightness": 5.0,
+				"colour": "1.00,1.00,1.00",
+				"cast shadows": 0
+			}
+		},
+		{
+			"id": "9DAD8199BFCA8B6F3A6A9421CC1C9301",
+			"name": "ground",
+			"type": "object",
+			"transform": {
+				"pos": "0.000, 0.000, 0.000",
+				"scale": "60.000, 1.000, 60.000"
+			},
+			"mesh": "unit-plane.glb",
+			"materials": [
+				"pbr light grey"
+			]
+		},
+		{
+			"id": "6F1C4261E5351D30B49895D1A0D1F13D",
+			"name": "c0",
+			"type": "object",
+			"transform": {
+				"pos": "-6.000, 1.000, 0.000",
+				"scale": "1.500, 1.500, 1.500"
+			},
+			"mesh": "cube.glb",
+			"materials": [
+				"pbr cyan"
+			]
+		},
+		{
+			"id": "CE20C4FD32F640D0032634F087E51B42",
+			"name": "g0",
+			"type": "object",
+			"transform": {
+				"pos": "-6.000, 1.500, 2.500",
+				"scale": "2.500, 2.500, 0.100"
+			},
+			"mesh": "cube.glb",
+			"materials": [
+				"glass item"
+			]
+		},
+		{
+			"id": "9FE8110102C995F1ABEF543B5DFCE8A9",
+			"name": "c1",
+			"type": "object",
+			"transform": {
+				"pos": "0.000, 1.000, 0.000",
+				"scale": "1.500, 1.500, 1.500"
+			},
+			"mesh": "cube.glb",
+			"materials": [
+				"pbr green"
+			]
+		},
+		{
+			"id": "81A049D7CCC7E90A88D519448FB2FC67",
+			"name": "g1",
+			"type": "object",
+			"transform": {
+				"pos": "0.000, 1.500, 2.500",
+				"scale": "2.500, 2.500, 0.100"
+			},
+			"mesh": "cube.glb",
+			"materials": [
+				"glass item"
+			]
+		},
+		{
+			"id": "91CE680CE2B27C8AF6666259BBC471FB",
+			"name": "c2",
+			"type": "object",
+			"transform": {
+				"pos": "6.000, 1.000, 0.000",
+				"scale": "1.500, 1.500, 1.500"
+			},
+			"mesh": "cube.glb",
+			"materials": [
+				"pbr blue"
+			]
+		},
+		{
+			"id": "3BE24A0B80316F688D3E481A65C2011B",
+			"name": "g2",
+			"type": "object",
+			"transform": {
+				"pos": "6.000, 1.500, 2.500",
+				"scale": "2.500, 2.500, 0.100"
+			},
+			"mesh": "cube.glb",
+			"materials": [
+				"glass item"
+			]
+		},
+		{
+			"id": "EF2C328A72C5E5B77518B1018F134A06",
+			"name": "gball",
+			"type": "object",
+			"transform": {
+				"pos": "0.000, 1.500, -5.000",
+				"scale": "1.500, 1.500, 1.500"
+			},
+			"mesh": "ico-sphere.glb",
+			"materials": [
+				"glass item"
+			]
+		}
+	]
+}

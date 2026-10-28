@@ -23,6 +23,7 @@ IGNORE_WARNINGS_POP
 #include "Player.hpp"
 #include "PlayerController.hpp"
 #include "ResourceManager.hpp"
+#include "Swimming.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
@@ -257,6 +258,8 @@ namespace flex
 	void Traversal::Initialize(Player* player)
 	{
 		m_Player = player;
+		m_Swimming = new Swimming();
+		m_Swimming->Initialize(player);
 
 		m_RopeMaterialID = GetOrCreateMaterial("Traversal rope", glm::vec4(0.75f, 0.42f, 0.12f, 1.0f), 0.8f);
 		// Ripstop nylon (linear colours): a deep orange-red with cream tips & centre, dark lines & webbing
@@ -323,6 +326,8 @@ namespace flex
 
 	void Traversal::Destroy()
 	{
+		delete m_Swimming;
+		m_Swimming = nullptr;
 		// The mesh objects are children of the player, so they're destroyed along with it
 		delete m_RopeMesh;
 		m_RopeMesh = nullptr;
@@ -361,6 +366,10 @@ namespace flex
 		m_BankSpring.Reset();
 		m_PitchSpring.Reset();
 		m_TiltLastVelocity = VEC3_ZERO;
+		if (m_Swimming != nullptr)
+		{
+			m_Swimming->Reset();
+		}
 	}
 
 	bool Traversal::CanControl() const
@@ -634,6 +643,12 @@ namespace flex
 	{
 		m_bJumpHeld = true;
 
+		// Swims up while held (see Swimming::FixedUpdate)
+		if (m_Swimming->IsSwimming() && m_Mode == Mode::NONE)
+		{
+			return;
+		}
+
 		if (m_Hook.state == HookState::ATTACHED)
 		{
 			// Reels in while held, lifting the player off the ground (see UpdateInput)
@@ -694,6 +709,7 @@ namespace flex
 		UpdateHook();
 		UpdateRopeToss();
 		UpdateSounds();
+		m_Swimming->Update();
 
 		// Camera feedback: widen the view with speed, & bank into turns while flying
 		const glm::vec3 velocity = ToVec3(m_Player->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
@@ -781,6 +797,11 @@ namespace flex
 				break;
 			}
 			if (bClimbHeld && !m_bStaminaExhausted && TryStartClimbing())
+			{
+				break;
+			}
+			// Crouch dives while swimming
+			if (m_Swimming->IsSwimming())
 			{
 				break;
 			}
@@ -1000,7 +1021,7 @@ namespace flex
 		m_RopeToss.state = RopeTossState::FLYING;
 		m_RopeToss.pos = GetHandPos();
 		m_RopeToss.velocity = GetLookDirection() * m_Settings.ropeTossSpeed + VEC3_UP * 2.0f;
-		AudioManager::PlaySource(m_HookFireID);
+		GameSounds::PlayRopeThrow();
 		return true;
 	}
 
@@ -1329,6 +1350,26 @@ namespace flex
 		if (m_Mode == Mode::NONE && m_Hook.state != HookState::ATTACHED)
 		{
 			TryAutoMantle(velocity);
+		}
+
+		// Swimming: flying & sliding end on hitting the water, & the water carries the player while not climbing out
+		if (m_Mode != Mode::CLIMBING && !m_bMantling && m_Hook.state != HookState::ATTACHED)
+		{
+			const bool bSwimUp = m_bJumpHeld;
+			const bool bSwimDown = CanControl() && g_InputManager->GetKeyDown(GameKeys::CROUCH) != 0;
+			const bool bSprint = CanControl() && g_InputManager->GetKeyDown(GameKeys::SPRINT) != 0;
+			if (m_Swimming->FixedUpdate(velocity, CanControl(), GetMoveForward(), GetMoveRight(), bSwimUp, bSwimDown, bSprint))
+			{
+				if (m_Mode != Mode::NONE)
+				{
+					SetMode(Mode::NONE);
+				}
+				m_bJumpQueued = false;
+				rb->setFriction(0.0f);
+				rb->activate();
+				rb->setLinearVelocity(ToBtVec3(velocity));
+				return true;
+			}
 		}
 
 		bool bControlled = false;
@@ -2851,6 +2892,8 @@ namespace flex
 			}
 		}
 
+		m_Swimming->DrawHUD();
+
 		// Stamina bar below the cross hair while it's being used
 		if (m_Stamina < 0.999f)
 		{
@@ -2875,6 +2918,7 @@ namespace flex
 		ImGui::Text("Grounded: %s, height above ground: %.1fm", m_bGrounded ? "true" : "false", m_HeightAboveGround);
 		ImGui::Text("Lift: %.2fm/s, ground slipperiness: %.2f", m_Lift, m_GroundSlipperiness);
 		ImGui::ProgressBar(m_Stamina, ImVec2(-1.0f, 0.0f), "Stamina");
+		m_Swimming->DrawImGui();
 
 		ImGui::DragFloat("Jump speed", &m_Settings.jumpSpeed, 0.1f, 0.0f, 30.0f);
 		ImGui::DragFloat("Glide speed", &m_Settings.glideSpeed, 0.1f, 1.0f, 40.0f);

@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "coconut",
+		"shader" : "pbr",
+		"const albedo" : "0.220,0.130,0.060",
+		"const roughness" : 0.800000
+	}
+}

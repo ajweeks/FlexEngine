@@ -1,0 +1,321 @@
+# Svenska. Nycklar som saknas visas på engelska (se en.txt).
+
+Language_Name = Svenska
+
+# Huvudmeny
+MainMenu_Tagline = En oändlig värld att utforska, klättra i & bygga i
+MainMenu_Continue = Fortsätt: %s
+MainMenu_NewWorld = Ny värld
+MainMenu_Worlds = Världar
+MainMenu_Settings = Inställningar
+MainMenu_Controls = Kontroller
+MainMenu_Editor = Motorns testscener
+MainMenu_Quit = Avsluta
+MainMenu_Version = %s v%s
+
+# Världar
+Worlds_Title = Världar
+Worlds_Subtitle = Varje värld är oändlig & skapas från sitt frö
+Worlds_ListSubtitle = Frö %d   |   Spelat %s   |   Senast spelad %s
+Worlds_Play = Spela
+Worlds_New = Ny värld
+Worlds_Delete = Ta bort
+Worlds_ConfirmDelete = Ta bort på riktigt?
+Worlds_DefaultName = Värld %d
+Worlds_FirstWorldName = Min värld
+
+# Världsstatistik
+Stats_Created = Skapad
+Stats_LastPlayed = Senast spelad
+Stats_TimeInWorld = Tid i världen
+Stats_AreaExplored = Utforskad yta
+Stats_DistanceTravelled = Tillryggalagd sträcka
+Stats_RailLaid = Lagd räls
+Stats_TorchesPlaced = Placerade facklor
+Stats_PiecesBuilt = Byggda delar
+Stats_ChestsOpened = Öppnade kistor
+Stats_Seed = Frö
+Stats_Unknown = Okänt
+Units_Km = %.2f km
+Units_SquareKm = %.2f km²
+Units_Minutes = %d min
+Units_HoursMinutes = %d h %d min
+
+# Ny värld
+NewWorld_Title = Ny värld
+NewWorld_Subtitle = Namnge den & välj ett frö (eller behåll det slumpade)
+NewWorld_Name = Världens namn
+NewWorld_Seed = Frö
+NewWorld_SeedPlaceholder = Slumpat
+NewWorld_Random = Slumpa
+NewWorld_Create = Skapa & spela
+
+# Inställningar
+Settings_Title = Inställningar
+Settings_Subtitle = Sparas automatiskt
+Settings_Fov = Synfält
+Settings_FovValue = %.0f grader
+Settings_MouseSensitivity = Musens känslighet
+Settings_InvertMouse = Invertera musen
+Settings_Volume = Volym
+Settings_MusicVolume = Musikvolym
+Settings_ShowFps = Visa FPS & bildtid
+Settings_TerrainDetail = Terrängdetaljer: %s
+Settings_QualityLow = Låg
+Settings_QualityMedium = Medel
+Settings_QualityHigh = Hög
+Settings_QualityUltra = Ultra
+Settings_ShowMinimap = Visa minikarta
+Settings_Language = Språk: %s
+Settings_GraphicsHeader = Grafik
+Settings_Preset = Grafikinställning: %s
+Settings_PresetCustom = Anpassad
+Settings_ShadowQuality = Skuggkvalitet: %s
+Settings_DrawDistance = Siktavstånd: %s
+Settings_DrawNear = Nära
+Settings_DrawMedium = Medel
+Settings_DrawFar = Långt
+Settings_DrawMax = Max
+Settings_AntiAliasing = Kantutjämning: %s
+Settings_Off = Av
+Settings_AmbientOcclusion = Omgivningsskuggning
+Settings_EffectsQuality = Effektkvalitet: %s
+Settings_VSync = V-sync
+
+Common_Back = Tillbaka
+
+# Kontroller
+Controls_Title = Kontroller
+Controls_Subtitle = Vad varje tangent gör (klicka på en för att ändra den)
+Controls_Movement = Rörelse
+Controls_Items = Föremål & verktyg
+Controls_Building = Byggande
+Controls_General = Allmänt
+Controls_MoveForward = Gå framåt
+Controls_MoveLeft = Gå åt vänster
+Controls_MoveBackward = Gå bakåt
+Controls_MoveRight = Gå åt höger
+Controls_Look = Se dig omkring
+Controls_Jump = Hoppa (i luften: skärmflygare)
+Controls_Sprint = Spring
+Controls_Climb = Klättra (håll vid en brant vägg)
+Controls_Crawl = Krypa (håll, man ramlar inte över kanter)
+Controls_Crouch = Glid, åk skidor & vingdräkt (håll)
+Controls_GrapplingHook = Hakrep
+Controls_UseItem = Använd föremål (gräv, hugg)
+Controls_UseItemSecondary = Placera terräng (spade)
+Controls_FlattenTerrain = Platta till terräng (håll)
+Controls_SelectItem = Välj föremål
+Controls_Inventory = Ryggsäck
+Controls_Interact = Interagera
+Controls_PickUp = Plocka upp
+Controls_Drop = Släpp föremål
+Controls_BuildMode = Byggläge
+Controls_BuildRotate = Rotera del
+Controls_BuildMaterial = Byt material
+Controls_Campfire = Bygg en lägereld
+Controls_TerrainMaterial = Terrängmaterial (spade)
+Controls_TrackBuild = Lägg räls
+Controls_Map = Karta
+Controls_Pause = Paus
+Controls_Screenshot = Skärmdump
+Controls_Console = Kommandokonsol
+Controls_KeyMouse = Mus
+Controls_KeyScroll = Rulla
+Controls_LightCampfire = Tänd en lägereld (håll)
+Controls_MapRecenter = Karta: centrera på dig
+Controls_Waypoint = Placera eller ta bort en målpunkt (upp till 9)
+Controls_MapWaypoint = På kartan: placera eller ta bort en målpunkt
+Controls_PressKey = Tryck på en tangent...
+Controls_ResetDefaults = Återställ standard
+Controls_RebindHint = Klicka på en kontroll & tryck sedan på den nya tangenten eller musknappen. Esc avbryter.
+Controls_RebindWaiting = Tryck på en tangent eller musknapp för den här kontrollen, eller Esc för att avbryta
+Controls_RebindInvalid = Den tangenten kan inte användas för den här kontrollen
+Controls_RebindSwapped = Bytte plats med "%s"
+Controls_RebindReset = Alla kontroller har återställts till standard
+
+Loading_Terrain = Skapar terräng...
+
+# Pausmeny
+Pause_Title = Pausad
+Pause_Played = %s   |   %s spelat
+Pause_Resume = Fortsätt
+Pause_Map = Karta & teleportering
+Pause_Settings = Inställningar
+Pause_Controls = Kontroller
+Pause_QuitToMenu = Spara & gå till menyn
+Pause_QuitGame = Spara & avsluta spelet
+
+# Karta
+Map_Title = Karta
+Map_Controls = [Rulla] Zooma   [Mittenknapp, dra] Panorera   [C] Centrera   [Klick] Teleportera   [Högerklick] Målpunkt   [Esc / M] Stäng
+Map_Scale = %.1f km bred
+Map_Mapping = Kartlägger området...
+Map_Hover = %s   |   %.0f m hög   |   %.1f km bort   |   Klicka för att teleportera
+Map_Teleported = Teleporterade %.1f km
+Map_LegendYou = Du
+Map_LegendTreasure = Skatt
+Map_LegendOpened = Öppnad skatt
+Map_LegendWaypoint = Målpunkt
+Map_TipChest = %s   |   %.1f km bort
+Map_TipWaypoint = Målpunkt %d   |   %.1f km bort   |   Högerklicka för att ta bort
+Waypoint_Placed = Målpunkt %d placerad
+Waypoint_Removed = Målpunkt %d borttagen
+Waypoint_Full = Alla 9 målpunkter är placerade. Ta bort en först
+
+# Interaktion
+Prompt_OpenChest = [E] Öppna kista
+Prompt_Sleep = [E] Sov till morgonen
+Prompt_Drive = [E] Kör
+Prompt_Row = [E] Ro
+Prompt_UseTerminal = [E] Använd terminal
+
+# Meddelanden
+Notify_Treasure = Skatt! Hittade %s
+Notify_BedNotTired = Du är inte trött, det är fortfarande dag. Sov på natten.
+Notify_BedWake = Du vaknar utvilad när morgonen gryr
+Notify_TreasureEmpty = Skatt! Hittade ingenting (den var tom)
+Notify_TreasureGlint = Något glimmar i fjärran... en skatt? (Kistor markeras på kartan [M])
+Notify_ItemCount = %dx %s
+Notify_CampfireReady = Du har nog med ved för en lägereld: tryck [H] för att bygga en
+Notify_CampfireNeedsWood = En lägereld behöver %d ved (du har %d). Hugg ner träd för att få mer.
+Notify_CampfireBuilt = Lägerelden är byggd. Håll [E] bredvid den för att tända den.
+Notify_CampfireLit = Lägerelden är tänd. Den brinner i %d minuter.
+
+# Vedhuggning
+Woodcraft_BuildCampfire = [LMB] Bygg lägereld (%d ved)   [RMB]/[H] Avbryt
+Woodcraft_FindGround = Hitta plan, torr mark till lägerelden   [RMB]/[H] Avbryt
+Woodcraft_ChopTree = [LMB] Hugg träd
+Woodcraft_ChopCactus = [LMB] Hugg kaktus
+Woodcraft_ChopBurntTree = [LMB] Hugg bränt träd (för kol)
+Woodcraft_QuickerWithAxe = " (snabbare med yxa)"
+Woodcraft_LightCampfire = [Håll E] Tänd lägereld
+Woodcraft_CampfireBurning = Lägerelden brinner (%d:%02d kvar)
+
+# Gräva & placera terräng
+TerrainTool_DigLoose = [Håll LMB] Gräv (snabbt i jord, sand & grus)
+TerrainTool_DigRock = [Håll LMB] Gräv (snabbt i sten)
+TerrainTool_Place = [Håll RMB] Placera %s
+TerrainTool_Flatten = [Håll MMB] Platta till till nivån du först siktade på
+TerrainTool_ChangeMaterial = [R] / [Skift+R] Byt material
+
+# Byggläge
+Build_Title = BYGGER: %s
+Build_TitleMaterial = BYGGER: %s (%s)
+Build_Controls = [LMB] Placera   [RMB] Ta bort   [Rulla/1-7] Del   [R] Rotera   [N] Material   [B] Avsluta
+Build_Floor = Golv
+Build_Wall = Vägg
+Build_Roof = Tak
+Build_Stairs = Trappa
+Build_Torch = Fackla
+Build_Ladder = Stege
+Build_Rope = Rep
+Build_Wood = Trä
+Build_Stone = Sten
+Build_Blocked_NoTarget = Inget att bygga på inom räckhåll
+Build_Blocked_Piece = %s är i vägen
+Build_Blocked_Player = Du står i vägen
+Build_Blocked_Ceiling = Facklor kan inte hänga i taket
+
+# Rälsbygge
+Track_BuildingTitle = RÄLSBYGGE - %d noder placerade
+Track_PlaceNode = [%s] Placera nod
+Track_UndoNode = [%s] Ångra senaste noden
+Track_Finish = [%s] Avsluta rälsen
+Track_FinishExit = [%s] Avsluta & gå ur
+Track_AimAtGround = Sikta på marken för att placera noder
+Track_SnappedLoop = Fäst - att placera här sluter slingan & avslutar rälsen
+Track_SnappedBranch = Fäst - ny räls grenar ut från den här noden
+Track_SnappedJoin = Fäst - att placera här förenar & avslutar rälsen
+Track_EditingTitle = RÄLSREDIGERING
+Track_GrabPoint = [%s] Ta tag i punkt
+Track_ReleasePoint = [%s] Släpp punkt
+Track_DeleteNode = [%s] Ta bort markerad nod
+Track_DeleteTrack = [%s] Ta bort markerad räls
+Track_Exit = [%s] Gå ur
+Track_ForkLeft = GAFFEL FRAMFÖR - åker åt vänster
+Track_ForkRight = GAFFEL FRAMFÖR - åker åt höger
+Track_ForkStraight = GAFFEL FRAMFÖR - åker rakt fram
+Track_ChooseFork = [%s] / [%s] Välj vänster / höger
+Track_PrimaryBinding = LMB / %s
+Track_PieceTitle = RÄLSBYGGE - %s (%d/%d)
+Track_PieceChoose = [Rulla / 1-9, 0 / R] Byt del (%s / %s)
+Track_PlacePiece = [%s] Placera del
+Track_UndoPiece = [%s] Ångra senaste delen
+Track_PieceAimAtGround = Sikta på marken eller nära slutet av en räls
+Track_PieceSnapped = Fortsätter från slutet av en räls
+Track_PieceNewTrack = Startar en ny räls (sikta nära slutet av en räls för att fortsätta den)
+Track_PieceTooSteep = För brant - rälsen kan inte bli brantare
+Track_PieceCutTooDeep = Marken är för hög här för att gräva igenom
+Track_PieceFillTooDeep = Marken är för långt ner för att bygga upp till
+Track_PieceBlocked = Blockeras av en annan räls
+Track_PieceInfo = Lutning %d%%  -  skär %.1f m, fyller %.1f m
+Track_Piece_Straight = Rak
+Track_Piece_StraightLong = Lång rak
+Track_Piece_CurveLeft = Kurva vänster
+Track_Piece_CurveRight = Kurva höger
+Track_Piece_RampUp = Ramp upp
+Track_Piece_RampDown = Ramp ner
+Track_Piece_SBendLeft = S-kurva vänster
+Track_Piece_SBendRight = S-kurva höger
+Track_Piece_FollowGround = Följ marken
+Track_Piece_Freeform = Fri form
+
+Input_Unbound = Obunden
+
+# Föremål
+Item_Pickaxe = Hacka
+Item_Axe = Yxa
+Item_Shovel = Spade
+Item_Wood = Ved
+Item_Charcoal = Kol
+Item_DuneBuggy = Sandbuggy
+Item_RowBoat = Roddbåt
+Item_Headlamp = Pannlampa
+Item_SolarPanel = Solpanel
+Item_Battery = Batteri
+Item_Lamp = Lampa
+Item_Bed = Säng
+Item_Quartz = Kvarts
+Item_Aluminum = Aluminium
+Item_Tin = Tenn
+Item_Olivine = Olivin
+Item_Iron = Järn
+Item_Silicon = Kisel
+Item_Stone = Sten
+
+# Förflyttning
+Traversal_GliderTitle = SKÄRMFLYGARE
+Traversal_GliderStats = Höjd %.0f m   Fart %.0f km/h   Vario %+.1f m/s
+Traversal_RisingAir = Stigande luft! Cirkla för att stanna kvar
+Traversal_FindRisingAir = Hitta stigande luft: soliga sluttningar, åsar mot vinden
+Traversal_GliderControls = [W/S] Fart   [Ctrl] Vingdräkt   [Mellanslag] Stuva
+Traversal_WingsuitTitle = VINGDRÄKT
+Traversal_FlightStats = Höjd %.0f m   Fart %.0f km/h
+Traversal_WingsuitHint = Titta ner för att dyka, dra upp för att byta fart mot höjd
+Traversal_WingsuitControls = [Släpp Ctrl] Öppna skärmen
+Traversal_ClimbingTitle = KLÄTTRAR
+Traversal_ClimbingControls = [WASD] Klättra   [Mellanslag] Hoppa   [Släpp Skift] Släpp taget
+Traversal_SkiingTitle = ÅKER SKIDOR
+Traversal_SlidingTitle = GLIDER
+Traversal_SpeedStats = Fart %.0f km/h
+Traversal_SkiingControls = Titta för att svänga   [S] Bromsa   [Mellanslag] Hoppa   [Släpp Ctrl] Res dig
+Traversal_HookTitle = HAKREP
+Traversal_HookControls = [Mellanslag] Veva in   [Ctrl] Släpp ut   [WASD] Svinga   [F] Släpp
+
+# Konsol
+Console_Placeholder = Skriv ett kommando (help listar dem)
+Console_Unknown = Okänt kommando "%s"
+Console_DidYouMean = Menade du %s?
+Console_Usage = Användning: %s %s
+Console_NoMatch = Inget matchande kommando
+Console_HelpFooter = Tab kompletterar, Upp & Ner bläddrar i historiken, Esc eller ~ stänger
+Console_NoItem = Inget föremål som heter "%s"
+Console_Granted = Gav %d x %s
+Console_NoPlayer = Det finns ingen spelare att göra det med
+Console_Teleported = Teleporterade till %.0f, %.0f, %.0f
+Console_BadTime = Ange en tid från 0 till 24, som 12:20 (eller noon, midnight, dawn, dusk)
+Console_TimeIs = Klockan är %02d:%02d
+Console_FovIs = Synfältet är %.0f grader
+Console_FpsOn = FPS-räknare på
+Console_FpsOff = FPS-räknare av

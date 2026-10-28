@@ -1,0 +1,60 @@
+{
+	"version": 7,
+	"name": "ft_sky",
+	"spawn player": false,
+	"cloud coverage": 0.55,
+	"fog distance": 3000.0,
+	"time of day": 0.12,
+	"pause time of day": true,
+	"camera": {
+		"type": "debug",
+		"near plane": 0.5,
+		"far plane": 2000.0,
+		"fov": 0.785398,
+		"aperture": 1.0,
+		"shutter speed": 0.125,
+		"light sensitivity": 800.0,
+		"exposure": 1.2,
+		"move speed": 18.0,
+		"transform": {
+			"position": "0.000, 5.000, 0.000",
+			"pitch": 0.25,
+			"yaw": 0.8
+		}
+	},
+	"objects": [
+		{
+			"id": "49DDB14F71010B93B7D946BF54074E32",
+			"name": "Skybox",
+			"type": "skybox",
+			"casts shadow": false,
+			"materials": [
+				"skybox 01"
+			]
+		},
+		{
+			"id": "48C801BEF750110C57513064D6D59291",
+			"name": "Reflection Probe",
+			"type": "reflection probe",
+			"transform": {
+				"pos": "0.000, 10.000, 0.000"
+			},
+			"visible": false
+		},
+		{
+			"id": "F0CDE2E5738713A818D8962058765A6C",
+			"name": "Directional Light",
+			"type": "directional light",
+			"transform": {
+				"pos": "0.000, 15.000, 0.000",
+				"rot": "2.4,0.2,0.0"
+			},
+			"directional light info": {
+				"brightness": 5.0,
+				"colour": "1.00,1.00,1.00",
+				"cast shadows": 0
+			}
+		}
+	],
+	"cloud altitude": 2400.0
+}

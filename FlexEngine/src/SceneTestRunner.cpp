@@ -2455,7 +2455,12 @@ namespace flex
 		// should measure regular frames.
 		PhysicsDebuggingSettings& physicsDebuggingSettings = g_Renderer->GetPhysicsDebuggingSettings();
 		m_bPrevDrawPhysicsWireframe = physicsDebuggingSettings.bDrawWireframe;
-		physicsDebuggingSettings.bDrawWireframe = !m_bProfile;
+		physicsDebuggingSettings.bDrawWireframe = !m_bProfile && !m_bCaptureScreenshots;
+		if (m_bCaptureScreenshots)
+		{
+			// Editor UI & debug lines would clutter the screenshots (used for diffs)
+			g_EngineInstance->SetRenderImGui(false);
+		}
 
 		// e.g. FLEX_DEBUG_OVERLAY=11 shows SSAO (see config/debug_overlay_names.json)
 		if (const char* overlay = getenv("FLEX_DEBUG_OVERLAY"))

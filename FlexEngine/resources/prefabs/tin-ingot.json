@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "B6522FA80CD940FFAB6525608255B3C3",
+	"root" : 
+	{
+		"id" : "52750CF890284D0AB390A19A7324496D",
+		"name" : "tin ingot",
+		"type" : "object",
+		"mesh" : "cube.glb",
+		"materials" : 
+		[
+			"tin ingot"
+		]
+	}
+}

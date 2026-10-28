@@ -14,6 +14,9 @@ namespace flex
 		// Hash a name & variant index into a seed, so each variant of each sound is different but reproducible
 		u32 HashSeed(const char* name, u32 variant);
 
+		// When this file was compiled. Caches of synthesized sounds include it, so they're remade after any change here.
+		const char* BuildStamp();
+
 		struct Rng
 		{
 			explicit Rng(u32 seed);

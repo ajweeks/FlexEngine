@@ -26,6 +26,10 @@ namespace flex
 		// [0, 1] multipliers on top of the master volume
 		void SetSfxVolume(real volume);
 		void SetAmbienceVolume(real volume);
+		// Background music volume [0, 1] (default 0.7). Tracks of calm procedural music play about half the time, with
+		// silent gaps between them. 0 mutes it.
+		void SetMusicVolume(real volume);
+		real GetMusicVolume();
 
 		// One shots
 		void PlayFootstep(Surface surface, real gain = 1.0f);
@@ -41,6 +45,17 @@ namespace flex
 		void PlayChop(const glm::vec3& posWS);
 		void PlayTreeFall(const glm::vec3& posWS);
 		// Short UI click (e.g. a slider being released) & a brighter two note confirm
+		// A pickaxe stroke on terrain: stone clink, sand swoosh or gravel crunch depending on the ground at posWS.
+		// hardness: [0, 1] (1: rock). Rate limited, so it can be called for every terrain edit.
+		void PlayDig(const glm::vec3& posWS, const glm::vec3& normal, real hardness);
+		void PlayRopeThrow();
+		// A breath in after surfacing
+		void PlayGasp();
+		// Call every frame while the camera is underwater (amount [0, 1], 0 when not): fades in a muffled ambience loop
+		// & fades out wind, crickets & waves. Combine with AudioManager::SetUnderwaterMuffle.
+		void SetUnderwaterAmbience(real amount);
+		// Entering water. strength: [0, 1]
+		void PlaySplash(const glm::vec3& posWS, real strength);
 		void PlayUITick();
 		void PlayUIConfirm();
 

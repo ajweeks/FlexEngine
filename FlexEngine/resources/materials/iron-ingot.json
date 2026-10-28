@@ -1,0 +1,11 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "iron ingot",
+		"shader" : "pbr",
+		"const albedo" : "0.560,0.570,0.580",
+		"const metallic" : 1.000000,
+		"const roughness" : 0.350000
+	}
+}

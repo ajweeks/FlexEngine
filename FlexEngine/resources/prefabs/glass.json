@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "0D20BB5B17B149D98525013534EBBD64",
+	"root" : 
+	{
+		"id" : "4ADBDF9299434C739E5C4B94855DBB73",
+		"name" : "glass",
+		"type" : "object",
+		"mesh" : "cube.glb",
+		"materials" : 
+		[
+			"glass item"
+		]
+	}
+}

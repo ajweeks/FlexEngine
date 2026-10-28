@@ -1999,6 +1999,10 @@ namespace flex
 				}
 			}
 
+			// The world's floor & ceiling (continuous: a plane density blended with min/max)
+			d = Min(d, py - WORLD_MIN_HEIGHT);
+			d = Max(d, py - WORLD_MAX_HEIGHT);
+
 			return d;
 		}
 
@@ -2039,7 +2043,7 @@ namespace flex
 			return result;
 		}
 
-		SurfaceAttributes TerrainDensity::ComputeSurface(const glm::vec3& pos, const glm::vec3& normal, const ColumnSample& column, const EditList& edits) const
+		SurfaceAttributes TerrainDensity::ComputeSurface(const glm::vec3& pos, const glm::vec3& normal, const ColumnSample& column, const EditList& edits, real footprint /* = 0.0f */) const
 		{
 			// The latest placed material containing this point wins. Dug surfaces expose whatever was there before.
 			bool bDug = false;
@@ -2088,12 +2092,22 @@ namespace flex
 			}
 
 			const u32 seed = DeriveSeed(m_Seed, SEED_COLOUR);
-			const real variation = GradientNoise3(pos.x * 0.03f, pos.y * 0.03f, pos.z * 0.03f, seed);
+			// Distant (coarse) vertices are far apart, so sampling the ~33m variation noise or making sharp slope decisions
+			// at each one picks a random material per vertex: a dark rock blotch smeared over the triangles around it. Coarse
+			// vertices use a lower frequency noise instead, & the slope thresholds widen (a mix, like the average over the
+			// cell would be).
+			const real coarse = Smoothstep(6.0f, 32.0f, footprint);
+			real variation = coarse < 1.0f ? GradientNoise3(pos.x * 0.03f, pos.y * 0.03f, pos.z * 0.03f, seed) * (1.0f - coarse) : 0.0f;
+			if (coarse > 0.0f)
+			{
+				variation += GradientNoise3(pos.x * 0.004f, pos.y * 0.004f, pos.z * 0.004f, seed + 7) * coarse;
+			}
+			const real widen = 0.18f * coarse;
 
-			const real flatness = Smoothstep(0.55f, 0.8f, normal.y + variation * 0.08f);
+			const real flatness = Smoothstep(0.55f - widen, 0.8f + widen * 0.5f, normal.y + variation * 0.08f);
 
 			SurfaceAttributes ground;
-			const real grassiness = column.grassiness * Smoothstep(0.6f, 0.85f, normal.y);
+			const real grassiness = column.grassiness * Smoothstep(0.6f - widen, 0.85f + widen * 0.5f, normal.y);
 			ground.colour = glm::vec4(column.groundColour, 0.0f);
 			ground.weights = glm::vec4(grassiness, 0.0f, 1.0f - grassiness, 0.0f);
 
@@ -2126,7 +2140,7 @@ namespace flex
 			}
 
 			// Snow on flat-ish high ground
-			const real snow = Smoothstep(column.peakHeight - 60.0f, column.peakHeight + 60.0f, pos.y + variation * 80.0f) * Smoothstep(0.35f, 0.65f, normal.y);
+			const real snow = Smoothstep(column.peakHeight - 60.0f, column.peakHeight + 60.0f, pos.y + variation * 80.0f) * Smoothstep(0.35f - widen, 0.65f + widen * 0.5f, normal.y);
 			if (snow > 0.0f)
 			{
 				SurfaceAttributes snowSurface;
@@ -2136,7 +2150,9 @@ namespace flex
 			}
 
 			// Below the original surface (dug out, or caves): soil, then rock
-			const real depth = column.height - pos.y;
+			// (Coarse meshes cut through convex ground, putting their vertices up to about a cell below the real surface, which
+			// isn't subsurface: it showed as dark soil & cave blotches all over distant hills)
+			const real depth = column.height - pos.y - footprint * 0.75f;
 			const real overhangOffset = bDug ? 0.0f : column.overhangAmplitude * 1.5f;
 			const real subsurface = Smoothstep(0.3f + overhangOffset, 1.2f + overhangOffset, depth);
 			if (subsurface > 0.0f)
@@ -3841,7 +3857,7 @@ namespace flex
 				const ColumnSample& column = (t < 0.5f) ? ca : cb;
 				ColumnSample blended = column;
 				blended.height = ca.height + (cb.height - ca.height) * t;
-				const SurfaceAttributes surface = m_Density.ComputeSurface(pos, normal, blended, m_Edits);
+				const SurfaceAttributes surface = m_Density.ComputeSurface(pos, normal, blended, m_Edits, 2.0f * m_HalfCellWorldSize);
 
 				const u32 index = (u32)m_Out.positions.size();
 				m_Out.positions.push_back(pos);
@@ -4206,6 +4222,22 @@ namespace flex
 			ForEachPlant(density, edits, boxMin, boxMax, 0, [&outPlants](const PlantInfo& plant)
 			{
 				outPlants.push_back(plant);
+			});
+		}
+
+		void FindBerryBushes(const TerrainDensity& density, const EditList& edits, const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<BerryBushInfo>& outBushes)
+		{
+			ForEachBush(density, edits, boxMin, boxMax, [&outBushes](const BushInfo& bush)
+			{
+				const VegetationInfo& info = *bush.vegetation;
+				// (the same roll as the berries drawn on the bush, see AddBush)
+				if (info.bushKind == BushKind::BERRY && HashToUnit(HashU32(bush.hash + 16)) < info.berryFraction)
+				{
+					BerryBushInfo berryBush;
+					berryBush.base = bush.base;
+					berryBush.hash = bush.hash;
+					outBushes.push_back(berryBush);
+				}
 			});
 		}
 
@@ -5340,6 +5372,13 @@ namespace flex
 			m_bForceRefresh = true;
 		}
 
+		void TerrainStreamer::SetViewDistance(real viewDistance)
+		{
+			CancelDesiredComputation();
+			m_Params.viewDistance = glm::max(viewDistance, 100.0f);
+			m_bForceRefresh = true;
+		}
+
 		void TerrainStreamer::GetChunkBounds(const ChunkKey& key, glm::vec3& outMin, glm::vec3& outMax) const
 		{
 			const real size = m_Params.ChunkSize((u32)key.level);
@@ -5597,7 +5636,48 @@ namespace flex
 					priority = glm::min(priority, DistanceToBox(m_PriorityCameraPos + travel * t, boxMin, boxMax) + travelDistance * t * 0.5f);
 				}
 			}
+
+			// Chunks outside the view cone count as several times further away: those in view (which the player sees
+			// change) come first, while those nearby behind the camera still get updated before distant ones in view
+			if (m_bPriorityViewPriority)
+			{
+				priority *= 1.0f + 3.0f * OutsideViewAmount(key);
+			}
 			return priority;
+		}
+
+		real TerrainStreamer::OutsideViewAmount(const ChunkKey& key) const
+		{
+			if (m_PriorityViewForward == glm::vec3(0.0f))
+			{
+				return 0.0f;
+			}
+			glm::vec3 boxMin, boxMax;
+			GetChunkBounds(key, boxMin, boxMax);
+			const glm::vec3 center = (boxMin + boxMax) * 0.5f;
+			const glm::vec3 toChunk = center - m_PriorityCameraPos;
+			const real chunkDistance = glm::length(toChunk);
+			const real chunkRadius = glm::length(boxMax - boxMin) * 0.5f;
+			if (chunkDistance <= chunkRadius)
+			{
+				return 0.0f;
+			}
+			// Angle between the view direction & the chunk, less the angle the chunk itself covers
+			const real cosToChunk = glm::dot(toChunk / chunkDistance, m_PriorityViewForward);
+			const real angle = glm::acos(glm::clamp(cosToChunk, -1.0f, 1.0f)) - glm::asin(glm::min(chunkRadius / chunkDistance, 1.0f));
+			const real halfAngle = glm::acos(glm::clamp(m_PriorityViewCosHalfAngle, -1.0f, 1.0f));
+			// Ramps up over 20 degrees outside of the view
+			return glm::clamp((angle - halfAngle) / glm::radians(20.0f), 0.0f, 1.0f);
+		}
+
+		u32 TerrainStreamer::GetPendingInViewCount() const
+		{
+			u32 count = 0;
+			for (const auto& pair : m_Pending)
+			{
+				count += (pair.second.bInView && !pair.second.bDone) ? 1u : 0u;
+			}
+			return count;
 		}
 
 		void TerrainStreamer::UpdateVelocity(const glm::vec3& cameraPos)
@@ -5634,6 +5714,9 @@ namespace flex
 			m_DesiredCount = (u32)desired.size();
 			m_PriorityCameraPos = cameraPos;
 			m_PriorityVelocity = m_SmoothedVelocity;
+			m_PriorityViewForward = m_ViewForward;
+			m_PriorityViewCosHalfAngle = m_ViewCosHalfAngle;
+			m_bPriorityViewPriority = m_bViewPriority;
 
 			const bool bRetireAll = m_bRetireAllOnNextBatch;
 			m_bRetireAllOnNextBatch = false;
@@ -5670,7 +5753,8 @@ namespace flex
 					{
 						retainedJobPriorities.emplace(previousIter->second.jobID, priority);
 					}
-					m_Pending.emplace(pair.first, std::move(previousIter->second));
+					auto emplaced = m_Pending.emplace(pair.first, std::move(previousIter->second));
+					emplaced.first->second.bInView = OutsideViewAmount(pair.first) <= 0.0f;
 					continue;
 				}
 
@@ -5680,6 +5764,7 @@ namespace flex
 				pending.mask = job.mask;
 				pending.jobID = job.jobID;
 				pending.bDone = false;
+				pending.bInView = OutsideViewAmount(pair.first) <= 0.0f;
 				m_Pending.emplace(job.key, std::move(pending));
 
 				jobs.emplace_back(std::move(job));
@@ -6169,6 +6254,22 @@ namespace flex
 			}
 
 			return false;
+		}
+
+		void TerrainStreamer::FindBerryBushes(const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<BerryBushInfo>& outBushes) const
+		{
+			if (m_Density == nullptr)
+			{
+				return;
+			}
+
+			std::vector<Edit> edits;
+			const real margin = m_Density->EditBand() + 4.0f;
+			m_Edits.Gather(boxMin - margin, boxMax + margin, edits);
+			EditList editList;
+			editList.edits = edits.data();
+			editList.count = (u32)edits.size();
+			terrain::FindBerryBushes(*m_Density, editList, boxMin, boxMax, outBushes);
 		}
 
 		void TerrainStreamer::FindPlants(const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<PlantInfo>& outPlants) const

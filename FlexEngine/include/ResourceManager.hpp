@@ -136,6 +136,8 @@ namespace flex
 		GameObject* GetPrefabTemplate(const char* prefabName) const;
 		// DEPRECATED (see cpp)
 		PrefabID GetPrefabID(const char* prefabName) const;
+		// The name of every prefab (e.g. for console command suggestions)
+		std::vector<std::string> GetPrefabNames() const;
 		GameObject* GetPrefabTemplate(const PrefabIDPair& prefabIDPair) const;
 		GameObject* GetPrefabTemplate(const PrefabID& prefabID) const;
 		GameObject* GetPrefabTemplate(const PrefabID& prefabID, const GameObjectID& subObjectID) const;

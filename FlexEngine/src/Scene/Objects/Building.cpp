@@ -45,7 +45,7 @@ namespace flex
 
 	namespace
 	{
-		const char* s_PieceTypeNames[] = { "Floor", "Wall", "Roof", "Stairs", "Torch", "Ladder", "Rope" };
+		const char* s_PieceTypeNames[] = { "Floor", "Wall", "Roof", "Stairs", "Torch", "Ladder", "Rope", "FencePost" };
 		static_assert(ARRAY_LENGTH(s_PieceTypeNames) == (u32)BuildPieceType::_COUNT, "s_PieceTypeNames must match BuildPieceType");
 		const char* s_MaterialNames[] = { "Wood", "Stone" };
 		static_assert(ARRAY_LENGTH(s_MaterialNames) == (u32)BuildMaterial::_COUNT, "s_MaterialNames must match BuildMaterial");
@@ -243,7 +243,7 @@ namespace flex
 
 	const char* BuildPieceDisplayName(BuildPieceType type)
 	{
-		static const LocID ids[] = { LOC_ID(Build_Floor), LOC_ID(Build_Wall), LOC_ID(Build_Roof), LOC_ID(Build_Stairs), LOC_ID(Build_Torch), LOC_ID(Build_Ladder), LOC_ID(Build_Rope) };
+		static const LocID ids[] = { LOC_ID(Build_Floor), LOC_ID(Build_Wall), LOC_ID(Build_Roof), LOC_ID(Build_Stairs), LOC_ID(Build_Torch), LOC_ID(Build_Ladder), LOC_ID(Build_Rope), LOC_ID(Build_FencePost) };
 		static_assert(ARRAY_LENGTH(ids) == (u32)BuildPieceType::_COUNT, "ids must match BuildPieceType");
 		return (u32)type < (u32)BuildPieceType::_COUNT ? Loc::Get(ids[(u32)type]) : "";
 	}
@@ -331,6 +331,12 @@ namespace flex
 				outBoxes.push_back({ glm::vec3(0.0f, -y, 0.0f), glm::vec3(0.055f, 0.05f, 0.055f), QUAT_IDENTITY, 0 });
 			}
 			break;
+		case BuildPieceType::FENCE_POST:
+			// A stout post (sunk a little into the ground) with a cap & a rail stub to tie ropes around
+			outBoxes.push_back({ glm::vec3(0.0f, 0.55f, 0.0f), glm::vec3(0.09f, 0.75f, 0.09f), QUAT_IDENTITY, 0 });
+			outBoxes.push_back({ glm::vec3(0.0f, 1.33f, 0.0f), glm::vec3(0.12f, 0.035f, 0.12f), QUAT_IDENTITY, 1 });
+			outBoxes.push_back({ glm::vec3(0.0f, 1.0f, 0.0f), glm::vec3(0.11f, 0.05f, 0.11f), QUAT_IDENTITY, 1 });
+			break;
 		default:
 			break;
 		}
@@ -353,6 +359,9 @@ namespace flex
 			// Fill underneath so it can't be walked through from the side
 			outBoxes.push_back({ glm::vec3(0.0f, half * 0.5f, half * 0.5f), glm::vec3(half * 0.8f, half * 0.5f, half * 0.5f), QUAT_IDENTITY, 0 });
 		} break;
+		case BuildPieceType::FENCE_POST:
+			outBoxes.push_back({ glm::vec3(0.0f, 0.55f, 0.0f), glm::vec3(0.09f, 0.75f, 0.09f), QUAT_IDENTITY, 0 });
+			break;
 		default:
 			// Torches, ladders & ropes don't block movement
 			break;
@@ -1174,6 +1183,18 @@ namespace flex
 			}
 			return true;
 		}
+		case BuildPieceType::FENCE_POST:
+		{
+			// Upright on the ground
+			outRot = glm::angleAxis((real)m_Rotation * PI_DIV_TWO, VEC3_UP);
+			outPos = hitPos;
+			if (hitNormal.y < 0.5f)
+			{
+				m_BlockReason = BuildBlockReason::NO_TARGET;
+				return false;
+			}
+			return true;
+		}
 		case BuildPieceType::LADDER:
 		{
 			// Against the wall being looked at, from the ground up to a little above the aimed point
@@ -1438,6 +1459,11 @@ namespace flex
 		}
 
 		m_bPlacementValid = ComputePlacement(m_PlacementPos, m_PlacementRot, m_PlacementLength, m_bPlacementHasPosition);
+		if (m_bPlacementHasPosition && (m_PlacementPos.y < terrain::WORLD_MIN_HEIGHT || m_PlacementPos.y > terrain::WORLD_MAX_HEIGHT))
+		{
+			m_bPlacementValid = false;
+			m_BlockReason = BuildBlockReason::HEIGHT_LIMIT;
+		}
 		// Ropes are tossed rather than placed (see Traversal::TossRope)
 		const bool bTossing = m_SelectedType == BuildPieceType::ROPE;
 		UpdatePreview(m_bPlacementHasPosition && !bTossing);
@@ -1532,6 +1558,7 @@ namespace flex
 			case BuildBlockReason::OVERLAPS_PIECE: blocked = LOCF(Build_Blocked_Piece, m_BlockingType < BuildPieceType::_COUNT ? BuildPieceDisplayName(m_BlockingType) : ""); break;
 			case BuildBlockReason::OVERLAPS_PLAYER: blocked = LOC(Build_Blocked_Player); break;
 			case BuildBlockReason::CEILING: blocked = LOC(Build_Blocked_Ceiling); break;
+			case BuildBlockReason::HEIGHT_LIMIT: blocked = LOC(Build_Blocked_HeightLimit); break;
 			default: break;
 			}
 		}

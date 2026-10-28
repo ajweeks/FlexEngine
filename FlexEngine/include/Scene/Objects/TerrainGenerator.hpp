@@ -69,6 +69,7 @@ namespace flex
 		// Trees & cacti (generated as part of the terrain) whose bases lie within the box. Plants are found from the
 		// density, so they're available whether or not their chunk has loaded.
 		void FindPlants(const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<terrain::PlantInfo>& outPlants) const;
+		void FindBerryBushes(const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<terrain::BerryBushInfo>& outBushes) const;
 		// Removes a plant for good (saved with the terrain's edits), regenerating its chunks without it, & has it fall
 		// over (dropping wood). fallDirection: horizontal direction to topple towards (zero: away from the player).
 		void FellPlant(const terrain::PlantInfo& plant, const glm::vec3& fallDirection);
@@ -293,6 +294,8 @@ namespace flex
 
 		// Applied quality level (see Renderer::GetTerrainQuality), scales the LOD distance factor
 		i32 m_AppliedQuality = -1;
+		real m_AppliedDrawDistanceScale = 1.0f;
+		ms m_InViewLoadTime = -1.0f; // Since m_LoadStartTime, < 0: not yet
 
 		// World map debug window & minimap
 		struct WorldMap

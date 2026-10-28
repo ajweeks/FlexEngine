@@ -1,6 +1,8 @@
 {
 	"version" : 7,
 	"name" : "scene_macbeth",
+	"time of day" : 0.0,
+	"pause time of day" : true,
 	"spawn player" : false,
 	"cloud coverage" : 0.000000,
 	"camera" : {

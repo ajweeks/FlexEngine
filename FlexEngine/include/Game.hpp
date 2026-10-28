@@ -23,6 +23,9 @@ namespace flex
 		// Called every frame after the scene has updated, draws menus & screens
 		void Update();
 
+		// The music volume setting in [0, 1] (multiply the music's gain by it, & by AudioManager's master gain)
+		real GetMusicVolume() const { return m_Settings.musicVolume; }
+
 		bool IsPlaying() const { return m_Screen == Screen::PLAYING; }
 		bool IsLoadingWorld() const { return m_Screen == Screen::LOADING; }
 		// Whether a menu is taking input instead of the player
@@ -56,6 +59,7 @@ namespace flex
 			PLAYING,
 			PAUSED,
 			MAP,
+			CONSOLE, // The console is open while playing (the game is paused)
 		};
 
 		struct WorldInfo
@@ -78,7 +82,16 @@ WorldStats stats;
 			real mouseSensitivity = 1.0f;
 			bool bInvertMouse = false;
 			real masterVolume = 0.5f;
+			real musicVolume = 0.7f; // [0, 1], applied by the music system (see GetMusicVolume)
+			bool bShowFps = false; // FPS & frame time in the corner
 			i32 terrainQuality = 1;
+			// Scalability (see Game::ApplySettings & the presets in Game::DrawSettings)
+			i32 shadowQuality = 3; // 0: off, 1: low ... 4: ultra (Renderer::SetShadowQuality)
+			i32 drawDistance = 3; // 0: near ... 3: maximum (see DRAW_DISTANCE_SCALES)
+			i32 antiAliasing = 1; // 0: off, 1: FXAA, 2: TAA
+			bool bAmbientOcclusion = true;
+			i32 effectsQuality = 1; // The shader quality level: 0: low, 1: high
+			bool bVSync = false;
 			bool bShowMinimap = true;
 			std::string language = "en"; // A Language code (see Localization.hpp)
 			std::string keyBindings; // Rebound controls (see Game::SaveBindings)
@@ -88,10 +101,18 @@ WorldStats stats;
 		ActionCallback<Game> m_ActionCallback;
 
 		void SetScreen(Screen screen);
+		void SetConsoleOpen(bool bOpen);
+		void RegisterConsoleCommands(); // The game's console commands (others are registered by their systems)
 		void DrawMainMenu();
 		void DrawWorlds();
 		void DrawNewWorld();
 		void DrawSettings();
+		// Graphics presets (low, medium, high, ultra) set all of the scalability settings at once
+		static const i32 GRAPHICS_PRESET_COUNT = 4;
+		// Scales streamed terrain's view distance, per draw distance setting
+		static constexpr real DRAW_DISTANCE_SCALES[] = { 0.2f, 0.4f, 0.7f, 1.0f };
+		i32 GetGraphicsPreset() const; // -1: custom
+		void ApplyGraphicsPreset(i32 preset);
 		void DrawControls();
 		void SaveBindings();
 		void LoadBindings();
@@ -128,6 +149,8 @@ WorldStats stats;
 		Screen m_Screen = Screen::NONE;
 		Screen m_ScreenBeforeSettings = Screen::MAIN_MENU; // Where the settings & controls screens go back to
 		real m_ScreenTime = 0.0f;
+		real m_SettingsScroll = 0.0f;
+		real m_SettingsContentHeight = 0.0f;
 
 		// Controls screen: the row being rebound (-1 for none), & the message about the last change
 		i32 m_RebindIndex = -1;

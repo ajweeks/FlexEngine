@@ -1,0 +1,35 @@
+# Crafting recipes (see docs/crafting.md). One per line:
+#   <station>: <output> [xN] = <input> [xN], <input> [xN] [@ <seconds>]
+#   fuel: <item> = <seconds it burns for>
+# station: hand (the crafting panel, [I]) or furnace (one input at a time, @ seconds each, while burning fuel).
+# Names are prefab names (resources/prefabs). Outputs named chest & furnace are built in the world.
+# A recipe is listed once the player has held any of its ingredients (or its output).
+
+# Stations
+hand: chest = wood x10
+hand: furnace = mineral deposit stone x12, wood x4
+
+# Tools
+hand: pickaxe = wood x3, mineral deposit stone x3
+hand: axe = wood x3, mineral deposit stone x2
+hand: shovel = wood x3, mineral deposit stone x1
+hand: lasso = cactus x2, wood x1
+
+# Things to make from what's smelted
+hand: lamp = iron ingot x1, glass x1, charcoal x1
+hand: headlamp = iron ingot x1, glass x1, tin ingot x1
+hand: battery = tin ingot x2, aluminum ingot x1, charcoal x2
+hand: solar panel = glass x4, aluminum ingot x2, mineral deposit silicon x2
+hand: row boat = wood x24
+hand: bed = wood x12
+
+# Furnace
+furnace: iron ingot = mineral deposit iron @ 12
+furnace: tin ingot = mineral deposit tin @ 8
+furnace: aluminum ingot = mineral deposit aluminum @ 15
+furnace: glass = mineral deposit quartz @ 10
+furnace: charcoal = wood @ 6
+
+fuel: wood = 15
+fuel: charcoal = 40
+fuel: cactus = 5

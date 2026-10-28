@@ -19,6 +19,7 @@ namespace flex
 				{ "footstep_snow", 6, false, false },
 				{ "footstep_wood", 6, false, false },
 				{ "footstep_water", 6, false, false },
+				{ "footstep_sand", 6, false, false },
 				{ "jump", 3, false, false },
 				{ "land_light", 3, false, false },
 				{ "land_heavy", 2, false, false },
@@ -30,6 +31,11 @@ namespace flex
 				{ "tree_fall", 2, false, true },
 				{ "ui_tick", 1, false, false },
 				{ "ui_confirm", 1, false, false },
+				{ "dig_stone", 5, false, true },
+				{ "dig_sand", 4, false, true },
+				{ "dig_gravel", 5, false, true },
+				{ "rope_throw", 3, false, false },
+				{ "gasp", 2, false, false },
 				{ "loop_engine", 1, true, false },
 				{ "loop_skid", 1, true, false },
 				{ "loop_wind", 1, true, false },
@@ -37,6 +43,9 @@ namespace flex
 				{ "loop_crickets", 1, true, false },
 				{ "loop_campfire", 1, true, true },
 				{ "loop_treasure_hum", 1, true, true },
+				{ "loop_waves", 1, true, false },
+				{ "loop_underwater", 1, true, false },
+				{ "music_calm", 3, false, false },
 			};
 			static_assert(sizeof(s_Descs) / sizeof(s_Descs[0]) == (u32)Sound::_COUNT, "s_Descs must match the Sound enum");
 
@@ -257,6 +266,27 @@ namespace flex
 					AddModes(out, heel, 1.0f, freqs, gains, decays, 4);
 					AddModes(out, toe, toeGain * 0.6f, freqs, gains, decays, 4);
 					AddClick(out, rng, heel, 0.12f, 2000.0f, 0.002f);
+				} break;
+				case Surface::SAND:
+				{
+					// Dry sand: a soft muffled press & a hiss of fine grains sliding, with almost no click
+					AddThump(out, rng, heel, 0.3f, thumpFreq * 0.85f, 0.03f);
+					AddThump(out, rng, toe, 0.15f, thumpFreq * 0.9f, 0.025f);
+					Buffer slide(out.Length());
+					WhiteNoise noise(rng.NextU32());
+					Biquad bandpass;
+					const real f0 = rng.Range(2400.0f, 3200.0f);
+					const real f1 = rng.Range(900.0f, 1300.0f);
+					for (u32 i = 0; i < slide.Count(); ++i)
+					{
+						const real t = (real)i / (real)slide.sampleRate;
+						bandpass.Set(BQ::BANDPASS, ExpSweep(t - heel, 0.18f, f0, f1), 0.7f);
+						const real env = EnvAttackDecay(t - heel, 0.02f, 0.05f) + toeGain * 0.6f * EnvAttackDecay(t - toe, 0.015f, 0.04f);
+						slide.samples[i] = bandpass.Process(noise.Next()) * env;
+					}
+					AddGrains(slide, rng, heel, 0.16f, 1800.0f, 0.04f, 0.25f, 2.0f);
+					FilterInPlace(slide, Biquad(BQ::LOWPASS, 4500.0f, 0.7f));
+					Mix(out, slide, 1.6f);
 				} break;
 				case Surface::WATER:
 				default:
@@ -824,7 +854,370 @@ namespace flex
 				Normalize(out, 0.5f);
 				return out;
 			}
+
+			// Pickaxe on stone: a hard tick, a ringing metallic clink & a dull knock from the rock
+			Buffer DigStone(u32 variant)
+			{
+				Rng rng(HashSeed("dig_stone", variant));
+				Buffer out(0.5f);
+				AddThump(out, rng, 0.0f, 0.5f, rng.Range(90.0f, 130.0f), 0.02f);
+				AddClick(out, rng, 0.0f, 0.5f, 2500.0f, 0.0025f);
+				const real base = rng.Range(1500.0f, 2300.0f);
+				const real freqs[] = { base, base * 2.76f, base * 5.4f, base * 8.9f, base * 0.52f };
+				const real gains[] = { 0.28f, 0.2f, 0.1f, 0.05f, 0.15f };
+				const real decays[] = { 0.05f, 0.03f, 0.018f, 0.01f, 0.07f };
+				AddModes(out, 0.0f, 1.0f, freqs, gains, decays, 5);
+				// A smaller bright chip bouncing off a moment later
+				const real freqs2[] = { base * 1.37f, base * 3.1f };
+				const real gains2[] = { 0.12f, 0.06f };
+				const real decays2[] = { 0.03f, 0.015f };
+				AddModes(out, rng.Range(0.045f, 0.09f), 0.8f, freqs2, gains2, decays2, 2);
+				// Rubble skittering away
+				Buffer grit(out.Length());
+				AddGrains(grit, rng, 0.02f, 0.12f, 700.0f, 0.03f, 0.5f, 3.0f);
+				FilterInPlace(grit, Biquad(BQ::BANDPASS, 3200.0f, 1.0f));
+				Mix(out, grit, 1.0f);
+				Finish(out, ONE_SHOT_PEAK * rng.Range(0.85f, 1.0f), 0.1f);
+				return out;
+			}
+
+			// Pickaxe into sand: a soft thud & a falling swoosh of fine sand
+			Buffer DigSand(u32 variant)
+			{
+				Rng rng(HashSeed("dig_sand", variant));
+				Buffer out(0.6f);
+				AddThump(out, rng, 0.0f, 0.3f, rng.Range(70.0f, 100.0f), 0.03f);
+				WhiteNoise noise(rng.NextU32());
+				Biquad bandpass;
+				Biquad soften(BQ::LOWPASS, 5500.0f, 0.7f);
+				const real f0 = rng.Range(2800.0f, 3800.0f);
+				const real f1 = rng.Range(500.0f, 800.0f);
+				const sec swoosh = rng.Range(0.3f, 0.4f);
+				for (u32 i = 0; i < out.Count(); ++i)
+				{
+					const real t = (real)i / (real)out.sampleRate;
+					bandpass.Set(BQ::BANDPASS, ExpSweep(t, swoosh, f0, f1), 0.8f);
+					const real env = EnvAttackDecay(t, 0.025f, swoosh * 0.3f);
+					out.samples[i] += soften.Process(bandpass.Process(noise.Next())) * env * 1.6f;
+				}
+				// Falling grains
+				Buffer grains(out.Length());
+				AddGrains(grains, rng, 0.05f, 0.3f, 1500.0f, 0.06f, 0.5f, 2.0f);
+				FilterInPlace(grains, Biquad(BQ::BANDPASS, 2400.0f, 0.7f));
+				Mix(out, grains, 0.8f);
+				Finish(out, ONE_SHOT_PEAK * rng.Range(0.8f, 0.95f), 0.15f);
+				return out;
+			}
+
+			// Pickaxe into gravel: a thump & many stones crunching against each other
+			Buffer DigGravel(u32 variant)
+			{
+				Rng rng(HashSeed("dig_gravel", variant));
+				Buffer out(0.55f);
+				AddThump(out, rng, 0.0f, 0.5f, rng.Range(80.0f, 115.0f), 0.025f);
+				Buffer crunch(out.Length());
+				AddGrains(crunch, rng, 0.0f, rng.Range(0.25f, 0.34f), 2400.0f, 0.04f, 1.0f, 2.2f);
+				Buffer mid = crunch;
+				Buffer high = crunch;
+				FilterInPlace(crunch, Biquad(BQ::BANDPASS, rng.Range(700.0f, 1000.0f), 1.1f));
+				FilterInPlace(mid, Biquad(BQ::BANDPASS, rng.Range(1600.0f, 2100.0f), 1.0f));
+				FilterInPlace(high, Biquad(BQ::BANDPASS, rng.Range(3200.0f, 4200.0f), 1.2f));
+				Mix(out, crunch, 2.2f);
+				Mix(out, mid, 1.8f);
+				Mix(out, high, 1.0f);
+				// A couple of individual stones knocking
+				for (i32 s = 0; s < rng.RangeInt(2, 4); ++s)
+				{
+					const real freqs[] = { rng.Range(900.0f, 1700.0f) };
+					const real gains[] = { 0.12f };
+					const real decays[] = { 0.012f };
+					AddModes(out, rng.Range(0.01f, 0.2f), rng.Range(0.5f, 1.0f), freqs, gains, decays, 1);
+				}
+				Finish(out, ONE_SHOT_PEAK * rng.Range(0.85f, 1.0f), 0.12f);
+				return out;
+			}
+
+			// A rope thrown: whip-like whoosh rising then falling, with a flutter of the loose end
+			Buffer RopeThrow(u32 variant)
+			{
+				Rng rng(HashSeed("rope_throw", variant));
+				const sec length = rng.Range(0.55f, 0.7f);
+				Buffer out(length + 0.1f);
+				WhiteNoise noise(rng.NextU32());
+				PinkNoise pink(rng.NextU32());
+				Biquad bandpass;
+				Biquad flutterFilter(BQ::LOWPASS, 3500.0f, 0.7f);
+				const real peakT = length * rng.Range(0.35f, 0.5f);
+				const real fLow = rng.Range(500.0f, 700.0f);
+				const real fHigh = rng.Range(1800.0f, 2600.0f);
+				const real flutterRate = rng.Range(28.0f, 44.0f);
+				for (u32 i = 0; i < out.Count(); ++i)
+				{
+					const real t = (real)i / (real)out.sampleRate;
+					const real shape = EnvBump(t, peakT, length);
+					const real centre = Lerp(fLow, fHigh, shape);
+					bandpass.Set(BQ::BANDPASS, centre, 1.3f);
+					// Rope rippling through the air
+					const real flutter = 0.65f + 0.35f * std::sin(SYNTH_TWO_PI * flutterRate * t);
+					const real swish = bandpass.Process(noise.Next()) * shape * shape;
+					out.samples[i] = flutterFilter.Process(swish * flutter * 1.8f + pink.Next() * 0.15f * shape);
+				}
+				// Leaving the hand
+				AddClick(out, rng, 0.0f, 0.12f, 1200.0f, 0.004f);
+				AddThump(out, rng, 0.0f, 0.1f, 110.0f, 0.02f);
+				Finish(out, ONE_SHOT_PEAK * 0.8f * rng.Range(0.9f, 1.0f), 0.12f);
+				return out;
+			}
+
+			// Waves on a shore: slow swells that rise, crash into hiss & drain away
+			Buffer WavesLoop()
+			{
+				Rng rng(HashSeed("loop_waves", 0));
+				const sec loopLength = 16.0f;
+				const sec crossfade = 1.5f;
+				Buffer out(loopLength + crossfade);
+				PinkNoise pink(rng.NextU32());
+				BrownNoise brown(rng.NextU32());
+				WhiteNoise white(rng.NextU32());
+				Biquad rumble(BQ::LOWPASS, 300.0f, 0.7f);
+				Biquad wash;
+				Biquad hiss(BQ::HIGHPASS, 1800.0f, 0.7f);
+				const real p0 = rng.Range(0.0f, SYNTH_TWO_PI);
+				const real p1 = rng.Range(0.0f, SYNTH_TWO_PI);
+				real swell = 0.0f, foam = 0.0f;
+				for (u32 i = 0; i < out.Count(); ++i)
+				{
+					const real t = (real)i / (real)out.sampleRate;
+					if ((i & 31) == 0)
+					{
+						const real w = SYNTH_TWO_PI * t / loopLength;
+						// Two overlapping wave trains: 2 & 3 swells per loop, each rising slowly & falling faster
+						const real a = 0.5f + 0.5f * std::sin(2.0f * w + p0);
+						const real b = 0.5f + 0.5f * std::sin(3.0f * w + p1);
+						swell = 0.15f + 0.85f * std::pow(Clamp01(0.7f * a * a + 0.5f * b * b * b), 1.2f);
+						// Foam trails the swell's crest
+						const real c = 0.5f + 0.5f * std::sin(2.0f * w + p0 - 0.9f);
+						const real d = 0.5f + 0.5f * std::sin(3.0f * w + p1 - 0.9f);
+						foam = Clamp01(0.7f * c * c * c + 0.6f * d * d * d * d);
+						wash.Set(BQ::BANDPASS, 350.0f + 1400.0f * swell, 0.7f);
+					}
+					const real p = pink.Next();
+					out.samples[i] = wash.Process(p) * swell * 1.8f + rumble.Process(brown.Next()) * swell * 0.9f + hiss.Process(white.Next()) * foam * foam * 0.5f;
+				}
+				MakeSeamlessLoop(out, crossfade);
+				Normalize(out, LOOP_PEAK);
+				return out;
+			}
+
+			// Tiny Schroeder reverb (4 damped combs + 2 allpasses) to give the music some space
+			void AddReverb(Buffer& buffer, real wet)
+			{
+				static const u32 combLengths[] = { 1557, 1617, 1491, 1422 };
+				static const u32 allpassLengths[] = { 225, 556 };
+				const Buffer dry = buffer;
+				Buffer sum(dry.Length(), dry.sampleRate);
+				for (u32 c = 0; c < 4; ++c)
+				{
+					const u32 len = combLengths[c] * 2;
+					std::vector<real> line(len, 0.0f);
+					real damp = 0.0f;
+					u32 pos = 0;
+					for (u32 i = 0; i < dry.Count(); ++i)
+					{
+						const real y = line[pos];
+						damp += 0.45f * (y - damp);
+						line[pos] = dry.samples[i] + damp * 0.86f;
+						pos = (pos + 1) % len;
+						sum.samples[i] += y * 0.25f;
+					}
+				}
+				for (u32 a = 0; a < 2; ++a)
+				{
+					const u32 len = allpassLengths[a] * 2;
+					std::vector<real> line(len, 0.0f);
+					u32 pos = 0;
+					for (u32 i = 0; i < sum.Count(); ++i)
+					{
+						const real delayed = line[pos];
+						const real x = sum.samples[i];
+						const real y = -x + delayed;
+						line[pos] = x + delayed * 0.5f;
+						sum.samples[i] = y;
+						pos = (pos + 1) % len;
+					}
+				}
+				Mix(buffer, sum, wet);
+			}
+
+			// Slow pads & a sparse pentatonic pluck arpeggio, in a different key for each variant
+			Buffer MusicCalm(u32 variant)
+			{
+				Rng rng(HashSeed("music_calm", variant));
+				static const i32 roots[] = { 45, 50, 43, 48 }; // A2, D3, G2, C3 (midi)
+				const real root = 440.0f * std::pow(2.0f, (real)(roots[variant % 4] - 69) / 12.0f);
+				// Major pentatonic (minor feel arises from starting chords on the 6th degree)
+				static const i32 scale[] = { 0, 2, 4, 7, 9 };
+				auto ScaleNote = [&](i32 degree) -> real
+				{
+					const i32 octave = (degree >= 0 ? degree / 5 : -((-degree + 4) / 5));
+					const i32 idx = degree - octave * 5;
+					return root * std::pow(2.0f, (real)(scale[idx] + 12 * octave) / 12.0f);
+				};
+
+				const sec trackLength = 64.0f;
+				const sec chordLength = 8.0f;
+				Buffer pad(trackLength + 2.0f);
+				Buffer pluck(trackLength + 2.0f);
+
+				// Chord roots as scale degrees (drifting, always consonant in a pentatonic scale)
+				static const i32 progressions[][8] = {
+					{ 0, 3, 1, 4, 0, 2, 3, 0 },
+					{ 2, 0, 3, 1, 2, 4, 1, 0 },
+					{ 0, 4, 2, 3, 0, 1, 4, 0 },
+				};
+				const i32* prog = progressions[variant % 3];
+				for (u32 c = 0; c < 8; ++c)
+				{
+					const sec start = (real)c * chordLength;
+					const i32 degrees[] = { prog[c], prog[c] + 2, prog[c] + 3, prog[c] + 5 };
+					for (i32 n = 0; n < 4; ++n)
+					{
+						const real freq = ScaleNote(degrees[n]) * (n == 0 ? 0.5f : 1.0f);
+						const sec dur = chordLength + 3.0f;
+						const real gain = n == 0 ? 0.5f : 0.3f;
+						const u32 begin = pad.IndexOf(start);
+						const u32 count = pad.IndexOf(dur);
+						Oscillator osc[3];
+						const real detune[] = { 0.996f, 1.0f, 1.0045f };
+						const real lfoRate = rng.Range(0.08f, 0.2f);
+						const real lfoPhase = rng.Range(0.0f, SYNTH_TWO_PI);
+						for (u32 i = 0; i < count && begin + i < pad.Count(); ++i)
+						{
+							const real t = (real)i / (real)pad.sampleRate;
+							const real env = SmoothStep(0.0f, 3.0f, t) * (1.0f - SmoothStep(dur - 3.5f, dur, t));
+							real v = 0.0f;
+							for (u32 o = 0; o < 3; ++o)
+							{
+								v += osc[o].Triangle(freq * detune[o]);
+							}
+							const real swell = 0.8f + 0.2f * std::sin(SYNTH_TWO_PI * lfoRate * t + lfoPhase);
+							pad.samples[begin + i] += v * (1.0f / 3.0f) * env * swell * gain;
+						}
+					}
+				}
+				FilterInPlace(pad, Biquad(BQ::LOWPASS, 1400.0f, 0.6f));
+
+				// Plucked arpeggio: a wandering melody over two octaves of the scale
+				i32 degree = 5 + rng.RangeInt(0, 4);
+				const sec step = rng.Range(0.8f, 1.0f);
+				for (sec t = 4.0f; t < trackLength - 2.0f; t += step * (rng.Next01() < 0.25f ? 2.0f : 1.0f))
+				{
+					if (rng.Next01() < 0.3f)
+					{
+						continue;
+					}
+					degree = glm::clamp(degree + rng.RangeInt(-2, 2), 3, 11);
+					const real freq = ScaleNote(degree);
+					const real gain = rng.Range(0.1f, 0.2f);
+					const u32 begin = pluck.IndexOf(t);
+					const u32 count = pluck.IndexOf(2.5f);
+					Oscillator osc, osc2;
+					for (u32 i = 0; i < count && begin + i < pluck.Count(); ++i)
+					{
+						const real tt = (real)i / (real)pluck.sampleRate;
+						const real env = EnvAttackDecay(tt, 0.006f, 0.45f);
+						pluck.samples[begin + i] += (osc.Sine(freq) + 0.25f * osc2.Sine(freq * 2.0f) * EnvAttackDecay(tt, 0.002f, 0.15f)) * env * gain;
+					}
+				}
+
+				Buffer out(trackLength + 2.0f);
+				Mix(out, pad, 1.0f);
+				Mix(out, pluck, 1.0f);
+				// Echo, then reverb
+				{
+					const u32 delay = out.IndexOf(0.375f);
+					Biquad tone(BQ::LOWPASS, 2500.0f, 0.7f);
+					for (u32 i = delay; i < out.Count(); ++i)
+					{
+						out.samples[i] += tone.Process(out.samples[i - delay]) * 0.35f;
+					}
+				}
+				AddReverb(out, 0.7f);
+				RemoveDC(out);
+				Normalize(out, 0.5f);
+				FadeIn(out, 4.0f);
+				FadeOut(out, 5.0f);
+				return out;
+			}
+
+			// A sharp breath in through the mouth: noise through a resonant band that opens upwards
+			Buffer Gasp(u32 variant)
+			{
+				Rng rng(HashSeed("gasp", variant));
+				const sec length = rng.Range(0.5f, 0.6f);
+				Buffer out(length + 0.1f);
+				PinkNoise pink(rng.NextU32());
+				Biquad formant1, formant2;
+				const real shift = rng.Range(0.9f, 1.1f);
+				for (u32 i = 0; i < out.Count(); ++i)
+				{
+					const real t = (real)i / (real)out.sampleRate;
+					const real env = EnvAttackDecay(t, 0.07f, 0.12f);
+					const real open = SmoothStep(0.0f, 0.3f, t);
+					formant1.Set(BQ::BANDPASS, Lerp(500.0f, 900.0f, open) * shift, 2.5f);
+					formant2.Set(BQ::BANDPASS, Lerp(1500.0f, 2400.0f, open) * shift, 3.0f);
+					const real n = pink.Next();
+					out.samples[i] = (formant1.Process(n) * 1.5f + formant2.Process(n) * 1.1f + n * 0.2f) * env;
+				}
+				Finish(out, ONE_SHOT_PEAK * 0.7f, 0.1f);
+				return out;
+			}
+
+			// Underwater: a deep muffled rumble with slow swells & the odd faint bubble
+			Buffer UnderwaterLoop()
+			{
+				Rng rng(HashSeed("loop_underwater", 0));
+				const sec loopLength = 12.0f;
+				const sec crossfade = 1.0f;
+				Buffer out(loopLength + crossfade);
+				BrownNoise brown(rng.NextU32());
+				PinkNoise pink(rng.NextU32());
+				Biquad low(BQ::LOWPASS, 350.0f, 0.7f);
+				Biquad mid(BQ::BANDPASS, 180.0f, 1.0f);
+				const real p0 = rng.Range(0.0f, SYNTH_TWO_PI);
+				for (u32 i = 0; i < out.Count(); ++i)
+				{
+					const real t = (real)i / (real)out.sampleRate;
+					const real w = SYNTH_TWO_PI * t / loopLength;
+					const real swell = 0.7f + 0.3f * std::sin(w + p0) * std::sin(3.0f * w);
+					out.samples[i] = (low.Process(brown.Next()) * 1.6f + mid.Process(pink.Next()) * 0.8f) * swell;
+				}
+				// Bubbles
+				const i32 bubbles = rng.RangeInt(10, 16);
+				for (i32 b = 0; b < bubbles; ++b)
+				{
+					Oscillator osc;
+					const sec start = rng.Range(0.0f, loopLength - 0.2f);
+					const real f0 = rng.Range(250.0f, 700.0f);
+					const real gain = rng.Range(0.03f, 0.1f);
+					const u32 begin = out.IndexOf(start);
+					const u32 count = out.IndexOf(0.08f);
+					for (u32 i = 0; i < count && begin + i < out.Count(); ++i)
+					{
+						const real tt = (real)i / (real)out.sampleRate;
+						out.samples[begin + i] += osc.Sine(ExpSweep(tt, 0.05f, f0, f0 * 2.0f)) * EnvAttackDecay(tt, 0.002f, 0.015f) * gain;
+					}
+				}
+				MakeSeamlessLoop(out, crossfade);
+				Normalize(out, LOOP_PEAK);
+				return out;
+			}
 		} // namespace
+
+		const char* BuildStamp()
+		{
+			return __DATE__ " " __TIME__;
+		}
 
 		const SoundDesc& GetSoundDesc(Sound sound)
 		{
@@ -841,6 +1234,7 @@ namespace flex
 			case Sound::FOOTSTEP_SNOW:
 			case Sound::FOOTSTEP_WOOD:
 			case Sound::FOOTSTEP_WATER:
+			case Sound::FOOTSTEP_SAND:
 				return Footstep((Surface)((u32)sound - (u32)Sound::FOOTSTEP_GRASS), variant);
 			case Sound::JUMP: return Jump(variant);
 			case Sound::LAND_LIGHT: return Land(false, variant);
@@ -853,6 +1247,14 @@ namespace flex
 			case Sound::TREE_FALL: return TreeFall(variant);
 			case Sound::UI_TICK: return UITick();
 			case Sound::UI_CONFIRM: return UIConfirm();
+			case Sound::DIG_STONE: return DigStone(variant);
+			case Sound::DIG_SAND: return DigSand(variant);
+			case Sound::DIG_GRAVEL: return DigGravel(variant);
+			case Sound::ROPE_THROW: return RopeThrow(variant);
+			case Sound::GASP: return Gasp(variant);
+			case Sound::LOOP_UNDERWATER: return UnderwaterLoop();
+			case Sound::LOOP_WAVES: return WavesLoop();
+			case Sound::MUSIC_CALM: return MusicCalm(variant);
 			case Sound::LOOP_ENGINE: return EngineLoop();
 			case Sound::LOOP_SKID: return SkidLoop();
 			case Sound::LOOP_WIND: return WindLoop();

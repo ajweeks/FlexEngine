@@ -1,6 +1,8 @@
 {
 	"version" : 7,
 	"name" : "Scene_terminal_test",
+	"time of day" : 0.0,
+	"pause time of day" : true,
 	"spawn player" : true,
 	"player 0 guid" : "6E63A06A6FD9D39C4608AF519EFB8A2E",
 	"camera" : 

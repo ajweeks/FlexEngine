@@ -1,0 +1,20 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "4845B9F6D0FF4719A96B14A6E2361C00",
+	"root" : 
+	{
+		"id" : "D702ACE4B8DF4A38902C0BF30E3C36A3",
+		"name" : "berries",
+		"type" : "object",
+		"mesh" : "sphere.glb",
+		"materials" : 
+		[
+			"berries"
+		],
+		"transform" : 
+		{
+			"scale" : "0.060, 0.060, 0.060"
+		}
+	}
+}

@@ -15,6 +15,7 @@ namespace flex
 	class PlayerController;
 	class Traversal;
 	class WoodcraftController;
+	class CraftingController;
 
 	enum class InventoryType
 	{
@@ -187,6 +188,7 @@ namespace flex
 
 		Traversal* GetTraversal() { return m_Traversal; }
 		WoodcraftController* GetWoodcraft() { return m_Woodcraft; }
+		CraftingController* GetCrafting() { return m_Crafting; }
 		BuildMode& GetBuildMode() { return m_BuildMode; }
 		bool IsBuilding() const { return m_BuildMode.IsActive(); }
 		void DrawBuildModeHUD() const { m_BuildMode.DrawHUD(); }
@@ -214,6 +216,8 @@ namespace flex
 		bool IsAwaitingTerrainCollision() const { return m_bAwaitingTerrainCollision || m_bTerrainPlacementPending; }
 		// Called once the player's render pose (interpolated between physics steps) has been applied
 		void OnRenderPoseUpdated();
+		// FLEX_HELD_JITTER_TEST (called after the camera has updated)
+		void UpdateHeldJitterTest();
 
 		GameObjectID GetRidingVehicleID() const { return m_RidingVehicleID; }
 
@@ -254,7 +258,9 @@ namespace flex
 	private:
 		friend class PlayerController;
 		friend class Traversal;
+		friend class Swimming;
 		friend class WoodcraftController;
+		friend class CraftingController;
 
 		void CreateDroppedItemFromStack(GameObjectStack* stack);
 
@@ -336,6 +342,7 @@ namespace flex
 		PlayerController* m_Controller = nullptr;
 		Traversal* m_Traversal = nullptr;
 		WoodcraftController* m_Woodcraft = nullptr;
+		CraftingController* m_Crafting = nullptr;
 		BuildMode m_BuildMode;
 
 		struct Notification

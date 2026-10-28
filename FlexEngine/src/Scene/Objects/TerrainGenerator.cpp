@@ -54,6 +54,8 @@ namespace flex
 	bool TerrainGenerator::s_bShowMinimap = true;
 
 	// LOD distance factor multipliers for each terrain quality level (see Renderer::GetTerrainQuality)
+	// FLEX_TERRAIN_VIEW_PRIORITY=0: chunks are generated nearest first, wherever the camera's looking (for comparisons)
+	static const bool s_bDisableViewPriority = getenv("FLEX_TERRAIN_VIEW_PRIORITY") != nullptr && atoi(getenv("FLEX_TERRAIN_VIEW_PRIORITY")) == 0;
 	static const real s_TerrainQualityLodScales[] = { 0.9f, 1.0f, 1.3f, 1.65f };
 	static const char* s_TerrainQualityNames[] = { "Low", "Medium", "High", "Ultra" };
 
@@ -210,6 +212,7 @@ namespace flex
 		}
 
 		m_AppliedQuality = g_Renderer->GetTerrainQuality();
+		m_AppliedDrawDistanceScale = g_Renderer->GetDrawDistanceScale();
 		const terrain::WorldParams params = GetEffectiveParams();
 		m_Streamer = new terrain::TerrainStreamer();
 
@@ -249,6 +252,8 @@ namespace flex
 		terrain::WorldParams params = m_Params;
 		const i32 quality = glm::clamp(g_Renderer->GetTerrainQuality(), 0, (i32)ARRAY_LENGTH(s_TerrainQualityLodScales) - 1);
 		params.lodDistanceFactor = glm::max(params.lodDistanceFactor * s_TerrainQualityLodScales[quality], 1.8f);
+		// The draw distance setting (never below a few km, so the world doesn't look like a small island)
+		params.viewDistance = glm::max(params.viewDistance * g_Renderer->GetDrawDistanceScale(), glm::min(params.viewDistance, 4000.0f));
 		return params;
 	}
 
@@ -260,7 +265,7 @@ namespace flex
 		}
 
 		// Fade out terrain before it reaches the view distance so the cutoff isn't visible
-		g_SceneManager->CurrentScene()->SetFogDistance(m_Params.viewDistance * 0.92f);
+		g_SceneManager->CurrentScene()->SetFogDistance(GetEffectiveParams().viewDistance * 0.92f);
 	}
 
 	void TerrainGenerator::UpdateQuality()
@@ -271,6 +276,13 @@ namespace flex
 			m_AppliedQuality = quality;
 			// Only changes which chunks are selected, so existing chunks are kept where possible
 			m_Streamer->SetLodDistanceFactor(GetEffectiveParams().lodDistanceFactor);
+		}
+		const real drawDistanceScale = g_Renderer->GetDrawDistanceScale();
+		if (drawDistanceScale != m_AppliedDrawDistanceScale && m_Streamer != nullptr)
+		{
+			m_AppliedDrawDistanceScale = drawDistanceScale;
+			m_Streamer->SetViewDistance(GetEffectiveParams().viewDistance);
+			UpdateSceneFog();
 		}
 	}
 
@@ -335,13 +347,28 @@ namespace flex
 
 			const glm::vec3 center = m_bPinCenter ? m_PinnedPos : g_CameraManager->CurrentCamera()->position;
 			m_LastCenter = center;
+			{
+				// Chunks in view are generated first (see TerrainStreamer::SetViewDirection)
+				BaseCamera* viewCamera = g_CameraManager->CurrentCamera();
+				const glm::mat4 projection = viewCamera->GetProjection();
+				const real tanX = 1.0f / glm::max(glm::abs(projection[0][0]), 1e-4f);
+				const real tanY = 1.0f / glm::max(glm::abs(projection[1][1]), 1e-4f);
+				const real cosHalfAngle = 1.0f / glm::sqrt(1.0f + tanX * tanX + tanY * tanY);
+				m_Streamer->SetViewDirection(m_bPinCenter ? glm::vec3(0.0f) : glm::normalize(viewCamera->forward), cosHalfAngle, !s_bDisableViewPriority);
+			}
 			m_Streamer->Update(center, m_ChunkCommands);
+			if (!m_bLoadComplete && m_InViewLoadTime < 0.0f && m_Streamer->GetPendingInViewCount() == 0 && m_Streamer->GetStats().displayedChunkCount > 0)
+			{
+				// (Chunks are displayed once their neighbours are ready too, so this is when generation in view finished)
+				m_InViewLoadTime = Time::MillisecondsSince(m_LoadStartTime);
+			}
 
 			// Ensure the far plane reaches the view distance
 			BaseCamera* camera = g_CameraManager->CurrentCamera();
-			if (m_bAutoFog && camera->zFar < m_Params.viewDistance * 1.05f)
+			const real viewDistance = GetEffectiveParams().viewDistance;
+			if (m_bAutoFog && camera->zFar < viewDistance * 1.05f)
 			{
-				camera->zFar = m_Params.viewDistance * 1.05f;
+				camera->zFar = viewDistance * 1.05f;
 			}
 			ApplyChunkCommands();
 			{
@@ -379,6 +406,11 @@ namespace flex
 						triangleCount += pair.second.meshComponent != nullptr ? pair.second.meshComponent->GetIndexCount() / 3 : 0;
 					}
 					const ms loadTime = Time::MillisecondsSince(m_LoadStartTime);
+					if (m_InViewLoadTime >= 0.0f)
+					{
+						Print("Terrain in view generated in %.0fms\n", m_InViewLoadTime);
+					}
+					m_InViewLoadTime = -1.0f;
 					Print("Terrain loaded in %.0fms (%u chunks, %u non-empty, %u from disk cache, %u triangles, avg %.2fms/chunk on %u threads, avg upload %.2fms/chunk, max upload %.1fms/frame)\n",
 						loadTime, stats.displayedChunkCount, stats.displayedNonEmptyChunkCount, stats.snapshotChunkCount, triangleCount,
 						stats.averageGenerationTime, stats.threadCount, m_UploadCount > 0 ? m_TotalUploadTime / (real)m_UploadCount : 0.0f, m_MaxApplyTime);
@@ -1193,6 +1225,14 @@ namespace flex
 		if (s_OnTerrainDug != nullptr)
 		{
 			s_OnTerrainDug(center, radius);
+		}
+	}
+
+	void TerrainGenerator::FindBerryBushes(const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<terrain::BerryBushInfo>& outBushes) const
+	{
+		if (m_Streamer != nullptr)
+		{
+			m_Streamer->FindBerryBushes(boxMin, boxMax, outBushes);
 		}
 	}
 

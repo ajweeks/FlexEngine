@@ -1,0 +1,18 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "FC962D87BFD24B648287E0C4D60C9DF4",
+	"root" : 
+	{
+		"id" : "48BF57C24855478487AF87C8D3EDEC3D",
+		"name" : "lasso",
+		"type" : "object",
+		"mesh" : "donut.glb",
+		"materials" : 
+		[
+			"lasso rope",
+			"lasso rope",
+			"lasso rope"
+		]
+	}
+}

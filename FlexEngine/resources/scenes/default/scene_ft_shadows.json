@@ -1,0 +1,176 @@
+{
+	"version": 7,
+	"name": "ft_shadows",
+	"spawn player": false,
+	"cloud coverage": 0.0,
+	"fog distance": 0.0,
+	"time of day": 0.0,
+	"pause time of day": true,
+	"camera": {
+		"type": "debug",
+		"near plane": 0.5,
+		"far plane": 2000.0,
+		"fov": 0.785398,
+		"aperture": 1.0,
+		"shutter speed": 0.125,
+		"light sensitivity": 800.0,
+		"exposure": 1.2,
+		"move speed": 18.0,
+		"transform": {
+			"position": "-14.000, 9.000, -18.000",
+			"pitch": -0.25,
+			"yaw": 0.65
+		}
+	},
+	"objects": [
+		{
+			"id": "A4C123B1612DD272D1371C17149D4395",
+			"name": "Skybox",
+			"type": "skybox",
+			"casts shadow": false,
+			"materials": [
+				"skybox 01"
+			]
+		},
+		{
+			"id": "36B3216FDAEEB975729FAE923D5A4FD1",
+			"name": "Reflection Probe",
+			"type": "reflection probe",
+			"transform": {
+				"pos": "0.000, 10.000, 0.000"
+			},
+			"visible": false
+		},
+		{
+			"id": "2AABFE228F219E9CB0EB53F16947CCF2",
+			"name": "Directional Light",
+			"type": "directional light",
+			"transform": {
+				"pos": "0.000, 15.000, 0.000",
+				"rot": "2.0, 0.4, 0.0"
+			},
+			"directional light info": {
+				"brightness": 5.0,
+				"colour": "1.00,1.00,1.00",
+				"cast shadows": 1
+			}
+		},
+		{
+			"id": "5EC84D8DBC74254770F58904DBA41ECC",
+			"name": "ground",
+			"type": "object",
+			"transform": {
+				"pos": "0.000, 0.000, 0.000",
+				"scale": "200.000, 1.000, 200.000"
+			},
+			"mesh": "unit-plane.glb",
+			"materials": [
+				"pbr light grey"
+			]
+		},
+		{
+			"id": "CC3FC1626E53A13043B026C48BBF33FE",
+			"name": "caster0",
+			"type": "object",
+			"transform": {
+				"pos": "-6.000, 1.500, 0.000",
+				"scale": "1.500, 1.500, 1.500"
+			},
+			"mesh": "cube.glb",
+			"materials": [
+				"pbr white"
+			]
+		},
+		{
+			"id": "FF9243A8F506B40928B5B7A767C76FB0",
+			"name": "caster1",
+			"type": "object",
+			"transform": {
+				"pos": "0.000, 2.000, 4.000",
+				"scale": "2.000, 2.000, 2.000"
+			},
+			"mesh": "cube.glb",
+			"materials": [
+				"pbr white"
+			]
+		},
+		{
+			"id": "08F86BEBB2737F6A6F0FB23C6F5DA2CE",
+			"name": "caster2",
+			"type": "object",
+			"transform": {
+				"pos": "8.000, 1.500, -3.000",
+				"scale": "1.500, 1.500, 1.500"
+			},
+			"mesh": "cube.glb",
+			"materials": [
+				"pbr white"
+			]
+		},
+		{
+			"id": "C255404E4FB440034D6608697A8D41BE",
+			"name": "caster3",
+			"type": "object",
+			"transform": {
+				"pos": "20.000, 3.000, 10.000",
+				"scale": "3.000, 3.000, 3.000"
+			},
+			"mesh": "cube.glb",
+			"materials": [
+				"pbr white"
+			]
+		},
+		{
+			"id": "D440E50454F31AF3176813E02EA68EF7",
+			"name": "caster4",
+			"type": "object",
+			"transform": {
+				"pos": "45.000, 5.000, -20.000",
+				"scale": "5.000, 5.000, 5.000"
+			},
+			"mesh": "cube.glb",
+			"materials": [
+				"pbr white"
+			]
+		},
+		{
+			"id": "86E4D3CEA27D26934B484E73CF575DCA",
+			"name": "caster5",
+			"type": "object",
+			"transform": {
+				"pos": "90.000, 8.000, 30.000",
+				"scale": "8.000, 8.000, 8.000"
+			},
+			"mesh": "cube.glb",
+			"materials": [
+				"pbr white"
+			]
+		},
+		{
+			"id": "D6BA2B0AEE0CA923732881584D8C4FA2",
+			"name": "caster6",
+			"type": "object",
+			"transform": {
+				"pos": "160.000, 12.000, 0.000",
+				"scale": "12.000, 12.000, 12.000"
+			},
+			"mesh": "cube.glb",
+			"materials": [
+				"pbr white"
+			]
+		},
+		{
+			"id": "815D2802827283E0AD84173581569969",
+			"name": "ball",
+			"type": "object",
+			"transform": {
+				"pos": "-2.000, 2.000, -6.000",
+				"scale": "2.000, 2.000, 2.000"
+			},
+			"mesh": "ico-sphere.glb",
+			"materials": [
+				"pbr green"
+			]
+		}
+	]
+}

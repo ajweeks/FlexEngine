@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "lasso rope",
+		"shader" : "pbr",
+		"const albedo" : "0.330,0.220,0.100",
+		"const roughness" : 0.950000
+	}
+}

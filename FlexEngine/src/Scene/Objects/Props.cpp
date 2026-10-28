@@ -6,6 +6,8 @@ IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
 #include <BulletCollision/CollisionShapes/btCylinderShape.h>
 #include <BulletDynamics/Dynamics/btRigidBody.h>
+#include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
 
 #include <LinearMath/btIDebugDraw.h>
 #include <LinearMath/btTransform.h>
@@ -35,6 +37,11 @@ IGNORE_WARNINGS_POP
 #include "Localization.hpp"
 #include "Player.hpp"
 #include "Scene/SceneManager.hpp"
+#include "Scene/GameObjectTypes.hpp"
+#include "FlexEngine.hpp"
+#include "Physics/PhysicsWorld.hpp"
+#include "Scene/Objects/TerrainGenerator.hpp"
+#include "Water.hpp"
 
 namespace flex
 {
@@ -724,6 +731,9 @@ namespace flex
 			m_RigidBody->SetAngularFactor(btVector3(0.0f, 0.0f, 0.0f)); // Prevent rotation
 			m_RigidBody->GetRigidBodyInternal()->setLinearVelocity(ToBtVec3(initialVel));
 		}
+
+		velocity = initialVel;
+		density = water::GetPrefabDensity(prefabID);
 	}
 
 	void DroppedItem::Destroy(bool bDetachFromParent /* = true */)
@@ -739,12 +749,15 @@ namespace flex
 
 		secondsAlive += g_DeltaTime;
 
+		UpdateFalling();
+
 		GameObject* child = GetChild(0);
 		if (child != nullptr)
 		{
 			Transform* childTransform = child->GetTransform();
 
-			bobAmount = (sin(AnimationTime() * 7.0f) * 0.5f + 0.5f) * 0.6f;
+			// (Bobbing on the waves rather than hovering in water)
+			bobAmount = bInWater ? std::sin(AnimationTime() * 2.0f) * 0.1f : (sin(AnimationTime() * 7.0f) * 0.5f + 0.5f) * 0.6f;
 
 			glm::vec3 newPos(0.0f, bobAmount, 0.0f);
 
@@ -756,6 +769,105 @@ namespace flex
 		}
 
 		GameObject::Update();
+	}
+
+	namespace
+	{
+		// Ignores dropped items & the player
+		struct DroppedItemRayCallback : public btCollisionWorld::ClosestRayResultCallback
+		{
+			DroppedItemRayCallback(const btVector3& from, const btVector3& to) : ClosestRayResultCallback(from, to) {}
+
+			virtual bool needsCollision(btBroadphaseProxy* proxy) const override
+			{
+				const btCollisionObject* object = static_cast<const btCollisionObject*>(proxy->m_clientObject);
+				const GameObject* gameObject = object != nullptr ? static_cast<const GameObject*>(object->getUserPointer()) : nullptr;
+				if (gameObject != nullptr && (gameObject->GetTypeID() == DroppedItemSID || gameObject->GetTypeID() == PlayerSID))
+				{
+					return false;
+				}
+				return ClosestRayResultCallback::needsCollision(proxy);
+			}
+		};
+	}
+
+	void DroppedItem::UpdateFalling()
+	{
+		if (bSettled || flyTime > 0.0f || g_EngineInstance->IsSimulationPaused())
+		{
+			return;
+		}
+
+		const real dt = glm::min((real)g_DeltaTime, 0.05f);
+		if (dt <= 0.0f)
+		{
+			return;
+		}
+
+		// Height of the item's origin above whatever it rests on
+		const real REST_HEIGHT = 0.2f;
+		const glm::vec3 pos = m_Transform.GetWorldPosition();
+		TerrainGenerator* terrain = TerrainGenerator::GetActive();
+		if (secondsAlive <= dt * 1.5f && terrain != nullptr && terrain->SampleDensity(pos) < 0.0f)
+		{
+			// Spawned inside the ground: leave it where it is (rather than letting it fall out of the world)
+			bSettled = true;
+			return;
+		}
+
+		velocity.y -= water::GRAVITY_ACCEL * dt;
+
+		real surface;
+		bInWater = water::SampleSurface(pos, surface) && pos.y < surface + 0.1f;
+		if (bInWater)
+		{
+			// Buoyancy grows as it goes under, settling where the submerged fraction matches its density
+			const real submerged = glm::clamp((surface - pos.y) / 0.3f + 0.5f, 0.0f, 1.0f);
+			velocity.y += water::GRAVITY_ACCEL * (water::DENSITY / density) * submerged * dt;
+			velocity *= 1.0f - glm::min(2.5f * dt, 1.0f);
+		}
+
+		glm::vec3 newPos = pos + velocity * dt;
+		const glm::vec3 rayEnd = newPos - VEC3_UP * REST_HEIGHT;
+		bool bHit = false;
+		glm::vec3 hitPos;
+		PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+		if (physicsWorld != nullptr && physicsWorld->GetWorld() != nullptr)
+		{
+			DroppedItemRayCallback callback(ToBtVec3(pos), ToBtVec3(rayEnd));
+			physicsWorld->GetWorld()->rayTest(callback.m_rayFromWorld, callback.m_rayToWorld, callback);
+			if (callback.hasHit())
+			{
+				bHit = true;
+				hitPos = ToVec3(callback.m_hitPointWorld);
+			}
+		}
+		if (!bHit && terrain != nullptr)
+		{
+			const glm::vec3 toEnd = rayEnd - pos;
+			const real dist = glm::length(toEnd);
+			glm::vec3 hitNormal;
+			if (dist > 1e-4f && terrain->Raycast(pos, toEnd / dist, dist, hitPos, hitNormal))
+			{
+				bHit = true;
+			}
+			else if (terrain->SampleDensity(newPos) < 0.0f)
+			{
+				// Missed the surface (e.g. its collision isn't loaded): stop where it was
+				bHit = true;
+				hitPos = pos - VEC3_UP * REST_HEIGHT;
+			}
+		}
+
+		if (bHit)
+		{
+			newPos = glm::vec3(hitPos.x, hitPos.y + REST_HEIGHT, hitPos.z);
+			velocity = VEC3_ZERO;
+			// Floating items keep moving with the water, others stay put
+			bSettled = !bInWater;
+		}
+
+		m_Transform.SetWorldPosition(newPos);
 	}
 
 	bool DroppedItem::CanBePickedUp() const

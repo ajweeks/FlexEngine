@@ -1,0 +1,11 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "glass item",
+		"shader" : "pbr",
+		"const albedo" : "0.600,0.800,0.850",
+		"const metallic" : 0.000000,
+		"const roughness" : 0.080000
+	}
+}

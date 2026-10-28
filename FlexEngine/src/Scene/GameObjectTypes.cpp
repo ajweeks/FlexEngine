@@ -14,6 +14,7 @@
 #include "Scene/Objects/Props.hpp"
 #include "Scene/Objects/Road.hpp"
 #include "Scene/Objects/SoftBody.hpp"
+#include "Scene/Objects/Stations.hpp"
 #include "Scene/Objects/Terminal.hpp"
 #include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/Objects/Vehicle.hpp"
@@ -75,6 +76,8 @@ namespace flex
 			TYPE(TreasureChest, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
 			TYPE(Campfire, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
 			TYPE(Bed, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
+			TYPE(Chest, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
+			TYPE(Furnace, PROCEDURAL | GameObjectTypeInfo::NO_SERIALIZED_PHYSICS),
 		};
 
 #undef TYPE

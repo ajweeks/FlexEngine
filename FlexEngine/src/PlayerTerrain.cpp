@@ -1,6 +1,8 @@
 #include "stdafx.hpp"
 
 #include "Player.hpp"
+#include "Swimming.hpp"
+#include "GameSounds.hpp"
 
 IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
@@ -16,6 +18,7 @@ IGNORE_WARNINGS_POP
 #include <queue>
 
 #include "Cameras/BaseCamera.hpp"
+#include "Crafting.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
 #include "Game.hpp"
@@ -181,7 +184,8 @@ namespace flex
 			IsPlacingTrack() ||
 			IsEditingTrack() ||
 			g_EngineInstance->IsSimulationPaused() ||
-			(m_Woodcraft != nullptr && m_Woodcraft->BlocksTerrainTool()))
+			(m_Woodcraft != nullptr && m_Woodcraft->BlocksTerrainTool()) ||
+			(m_Crafting != nullptr && m_Crafting->IsPlacing()))
 		{
 			EndTerrainStroke();
 			m_bFlattenPlaneLocked = false;
@@ -424,6 +428,7 @@ namespace flex
 		else
 		{
 			terrainGenerator->LowerArea(center, normal, radius, height);
+			GameSounds::PlayDig(center, normal, m_TerrainStroke.hardness);
 		}
 		m_TerrainStroke.bApplied = true;
 		m_TerrainStroke.appliedLevel = level;
@@ -444,6 +449,11 @@ namespace flex
 				{
 					terrainGenerator->RemoveFloatingFragments(GetTerrainStrokeCenter(m_TerrainStroke.appliedLevel), m_TerrainDigRadius + 1.0f);
 				}
+			}
+			if (m_TerrainStroke.action == TerrainToolAction::DIG && m_Crafting != nullptr)
+			{
+				// Rock gives stone (& sometimes ore)
+				m_Crafting->OnDug(GetTerrainStrokeCenter(m_TerrainStroke.appliedLevel), m_TerrainStroke.hardness);
 			}
 		}
 		m_TerrainStroke = {};
@@ -591,7 +601,10 @@ namespace flex
 
 	void Player::DrawTeleportFade() const
 	{
-		if (m_TeleportFadeAlpha <= 0.0f)
+		// (Also the flashing blackout while drowning)
+		const real drowningAlpha = m_Traversal != nullptr && m_Traversal->GetSwimming() != nullptr ? m_Traversal->GetSwimming()->GetBlackoutAlpha() : 0.0f;
+		const real fadeAlpha = glm::max(m_TeleportFadeAlpha, drowningAlpha);
+		if (fadeAlpha <= 0.0f)
 		{
 			return;
 		}
@@ -611,7 +624,7 @@ namespace flex
 		drawInfo.bEnableAlbedoSampler = false;
 		// Above the HUD (& minimap)
 		drawInfo.zOrder = Z_ORDER_UI + 40;
-		drawInfo.colour = glm::vec4(0.0f, 0.0f, 0.0f, glm::smoothstep(0.0f, 1.0f, m_TeleportFadeAlpha));
+		drawInfo.colour = glm::vec4(0.0f, 0.0f, 0.0f, glm::smoothstep(0.0f, 1.0f, fadeAlpha));
 		drawInfo.pos = VEC3_ZERO;
 		drawInfo.scale = glm::vec3(aspectRatio * 1.05f, 1.05f, 1.0f);
 		g_Renderer->EnqueueSprite(drawInfo);

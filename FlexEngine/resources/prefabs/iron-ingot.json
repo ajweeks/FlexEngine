@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "DD57DAD61F3D4F78A799C36FCFF46DBD",
+	"root" : 
+	{
+		"id" : "8ABF19AC5FE247F29D9A64FC950FEFB9",
+		"name" : "iron ingot",
+		"type" : "object",
+		"mesh" : "cube.glb",
+		"materials" : 
+		[
+			"iron ingot"
+		]
+	}
+}

@@ -77,6 +77,9 @@ namespace flex
 		m_Settings.RegisterProperty("ambient intensity", &m_SSAOSamplingData.ambientIntensity);
 		m_Settings.RegisterProperty("ambient shadow amount", &m_SSAOSamplingData.ambientShadowAmount);
 
+		// FLEX_SHADOW_CROSSFADE=0: shadow map updates (light direction steps) snap instead of fading (& no spare shadow layer)
+		m_bShadowUpdateCrossFade = getenv("FLEX_SHADOW_CROSSFADE") == nullptr || atoi(getenv("FLEX_SHADOW_CROSSFADE")) != 0;
+
 		m_Settings.SetOnDeserialize([this]()
 		{
 			OnSettingsReloaded();
@@ -1012,6 +1015,50 @@ namespace flex
 		return m_bEnableTAA;
 	}
 
+	void Renderer::SetShadowQuality(i32 quality)
+	{
+		quality = glm::clamp(quality, 0, 4);
+		m_ShadowQuality = quality;
+		// Index: quality (off uses low's maps, which aren't rendered)
+		static const u32 s_Resolutions[] = { 1024, 1024, 2048, 4096, 4096 };
+		static const i32 s_CascadeCounts[] = { 2, 2, 3, 4, 4 };
+		static const real s_DistanceScales[] = { 1.0f, 0.4f, 0.7f, 1.0f, 1.6f };
+		static const u32 s_PointShadowResolutions[] = { 128, 128, 256, 256, 512 };
+
+		m_bSunShadowsEnabled = quality > 0;
+		m_ShadowDistanceScale = s_DistanceScales[quality];
+		m_PointShadowSettings.bEnabled = quality >= 2;
+		const bool bRecreate = m_ShadowMapBaseResolution != s_Resolutions[quality] || m_ShadowCascadeCount != s_CascadeCounts[quality] ||
+			m_PointShadowSettings.resolution != s_PointShadowResolutions[quality];
+		m_ShadowMapBaseResolution = s_Resolutions[quality];
+		m_ShadowCascadeCount = s_CascadeCounts[quality];
+		m_PointShadowSettings.resolution = s_PointShadowResolutions[quality];
+		InvalidateShadowCascadeCache();
+		if (bRecreate && m_bInitialized)
+		{
+			RecreateEverything();
+		}
+	}
+
+	void Renderer::SetAntiAliasing(i32 mode)
+	{
+		mode = glm::clamp(mode, 0, 2);
+		m_PostProcessSettings.bEnableFXAA = mode == 1;
+		SetTAAEnabled(mode == 2);
+	}
+
+	i32 Renderer::GetAntiAliasing() const
+	{
+		return m_bEnableTAA ? 2 : m_PostProcessSettings.bEnableFXAA ? 1 : 0;
+	}
+
+	void Renderer::SetSSAOEnabled(bool bEnabled)
+	{
+		// The SSAO passes are skipped & the shaders ignore their (stale) result while disabled, so nothing needs to be
+		// rebuilt. (Rebuilding the SSAO state this early, from the game's settings, crashed.)
+		m_SSAOSamplingData.enabled = bEnabled ? 1 : 0;
+	}
+
 	i32 Renderer::GetTAASampleCount() const
 	{
 		return m_TAASampleCount;
@@ -1116,6 +1163,7 @@ namespace flex
 		{
 			cache.bValid = false;
 		}
+		m_ShadowFadeCache.bValid = false;
 	}
 
 	void Renderer::DrawPointShadowImGui(bool& bSaveSettings)
@@ -1268,59 +1316,97 @@ namespace flex
 		}
 
 		const glm::vec3 lightDir = UpdateShadowLightDirection(glm::normalize(m_DirectionalLight->data.dir)); // Points towards the light
-		const glm::vec3 up = glm::abs(glm::dot(lightDir, VEC3_UP)) > 0.99f ? VEC3_FORWARD : VEC3_UP;
-		const glm::mat4 lightRotation = glm::lookAt(VEC3_ZERO, -lightDir, up);
-		const glm::mat4 invLightRotation = glm::inverse(lightRotation);
 
 		++m_ShadowCascadeFrameIndex;
+
+		// Which direction each cascade uses (see m_bShadowUpdateCrossFade)
+		const bool bCrossFade = m_bShadowUpdateCrossFade && m_bShadowFadeLayerAllocated && IsShadowStabilizationEnabled();
+		for (i32 c = 0; c < cascadeCount; ++c)
+		{
+			// Big jumps (the time of day being set, the first frame) aren't faded
+			if (!bCrossFade || m_CascadeLightDirs[c] == VEC3_ZERO || glm::length(m_CascadeLightDirs[c] - lightDir) > glm::radians(4.0f))
+			{
+				m_CascadeLightDirs[c] = lightDir;
+				if (m_ShadowFadeCascade == c)
+				{
+					m_ShadowFadeCascade = -1;
+				}
+			}
+		}
+		if (m_ShadowFadeCascade >= cascadeCount)
+		{
+			m_ShadowFadeCascade = -1;
+		}
+		if (m_ShadowFadeCascade >= 0)
+		{
+			m_ShadowFadeT += (real)g_UnpausedDeltaTime / glm::max((real)m_ShadowFadeDuration, 0.01f);
+			if (m_ShadowFadeT >= 1.0f)
+			{
+				// Faded in: the cascade's own layer takes the new direction (rendered this frame) & the spare is free
+				m_CascadeLightDirs[m_ShadowFadeCascade] = m_ShadowFadeLightDir;
+				m_CachedShadowCascades[m_ShadowFadeCascade].bValid = false;
+				m_ShadowFadeCascade = -1;
+			}
+		}
+		if (m_ShadowFadeCascade < 0 && bCrossFade)
+		{
+			// The furthest cascades first: their shadows (of hills, far away) move the most when the light turns
+			for (i32 c = cascadeCount - 1; c >= 0; --c)
+			{
+				if (m_CascadeLightDirs[c] != lightDir)
+				{
+					m_ShadowFadeCascade = c;
+					m_ShadowFadeT = 0.0f;
+					m_ShadowFadeLightDir = lightDir;
+					m_ShadowFadeCache.bValid = false;
+					break;
+				}
+			}
+		}
 
 		real splitDepths[MAX_SHADOW_CASCADE_COUNT];
 		ComputeShadowCascadeSplits(zNear, shadowDistance, cascadeCount, splitDepths);
 
-		real lastSplitDepth = zNear;
-		for (i32 c = 0; c < cascadeCount; ++c)
+		// Fits cascade c's map for light direction dir. Returns false when cache (if bCacheable) still covers it, so it
+		// doesn't need to be rendered this frame (& the outputs aren't changed).
+		auto FitCascade = [&](i32 c, const glm::vec3& dir, CachedShadowCascade& cache, bool bCacheable, real nearDepth, real farDepth,
+			glm::mat4& outViewProj, real& outTexelSize, real& outDepthBias, real& outDepthRange) -> bool
 		{
-			const real splitDepth = splitDepths[c];
-			// Normalized linear depth (matches linDepth in shaders)
-			const real splitDist = (splitDepth - zNear) / (zFar - zNear);
-
 			real centerDepth, radius;
-			FrustumSliceBoundingSphere(lastSplitDepth, splitDepth, tanDiagonalSq, centerDepth, radius);
+			FrustumSliceBoundingSphere(nearDepth, farDepth, tanDiagonalSq, centerDepth, radius);
 			glm::vec3 frustumCenter = camPos + camForward * centerDepth;
 			radius = std::ceil(radius * 16.0f) / 16.0f;
-			lastSplitDepth = splitDepth;
 
-		// Distant cascades are only re-rendered every few frames (see CachedShadowCascade)
-			CachedShadowCascade& cache = m_CachedShadowCascades[c];
-			const bool bCacheable = m_bCacheDistantShadowCascades && c >= 2;
+			// Distant cascades are only re-rendered every few frames (see CachedShadowCascade)
 			if (bCacheable && cache.bValid)
 			{
 				const u64 interval = c == 2 ? 2 : 4;
 				const bool bDue = m_ShadowCascadeFrameIndex - cache.frameRendered >= interval;
 				const bool bContained = glm::distance(frustumCenter, cache.center) + radius <= cache.radius;
-				// (The light direction only changes in steps, see UpdateShadowLightDirection, & all cascades follow each at once)
-				const bool bLightUnchanged = lightDir == cache.lightDir && cache.shadowDistance == shadowDistance &&
+				// (The light direction only changes in steps, see UpdateShadowLightDirection)
+				const bool bLightUnchanged = dir == cache.lightDir && cache.shadowDistance == shadowDistance &&
 					cache.renderOrigin == renderOrigin;
 				if (!bDue && bContained && bLightUnchanged)
 				{
-					m_bRenderShadowCascade[c] = false;
-					m_ShadowSamplingData.cascadeDepthSplits[c] = splitDist;
-					continue;
+					return false;
 				}
 			}
-			m_bRenderShadowCascade[c] = true;
 			if (bCacheable)
 			{
 				const glm::vec3 unsnappedCenter = frustumCenter;
 				radius = std::ceil(radius * 1.15f * 16.0f) / 16.0f;
 				cache.center = unsnappedCenter;
 				cache.radius = radius;
-				cache.lightDir = lightDir;
+				cache.lightDir = dir;
 				cache.shadowDistance = shadowDistance;
 				cache.renderOrigin = renderOrigin;
 				cache.frameRendered = m_ShadowCascadeFrameIndex;
 				cache.bValid = true;
 			}
+
+			const glm::vec3 up = glm::abs(glm::dot(dir, VEC3_UP)) > 0.99f ? VEC3_FORWARD : VEC3_UP;
+			const glm::mat4 lightRotation = glm::lookAt(VEC3_ZERO, -dir, up);
+			const glm::mat4 invLightRotation = glm::inverse(lightRotation);
 
 			const real texelSize = (2.0f * radius) / (real)m_ShadowMapBaseResolution;
 
@@ -1333,14 +1419,43 @@ namespace flex
 			frustumCenter = glm::vec3(glm::dmat3(invLightRotation) * centerLS - renderOriginD);
 
 			// Reversed-Z: depth is 1 at casterMargin towards the light & 0 at the far side of the cascade
-			m_ShadowLightViewMats[c] = glm::lookAt(frustumCenter + lightDir * radius, frustumCenter, up);
-			m_ShadowLightProjMats[c] = glm::ortho(-radius, radius, -radius, radius, 2.0f * radius, -casterMargin);
+			const glm::mat4 lightView = glm::lookAt(frustumCenter + dir * radius, frustumCenter, up);
+			const glm::mat4 lightProj = glm::ortho(-radius, radius, -radius, radius, 2.0f * radius, -casterMargin);
 
-			m_ShadowSamplingData.cascadeViewProjMats[c] = m_ShadowLightProjMats[c] * m_ShadowLightViewMats[c];
-			m_ShadowSamplingData.cascadeDepthSplits[c] = splitDist;
-			m_ShadowSamplingData.cascadeTexelSizes[c] = texelSize;
-			m_ShadowSamplingData.cascadeDepthBiases[c] = m_ShadowBias / (2.0f * radius + casterMargin);
-			m_ShadowCascadeDepthRanges[c] = 2.0f * radius + casterMargin;
+			outViewProj = lightProj * lightView;
+			outTexelSize = texelSize;
+			outDepthBias = m_ShadowBias / (2.0f * radius + casterMargin);
+			outDepthRange = 2.0f * radius + casterMargin;
+			return true;
+		};
+
+		real lastSplitDepth = zNear;
+		m_bRenderShadowFade = false;
+		for (i32 c = 0; c < cascadeCount; ++c)
+		{
+			const real splitDepth = splitDepths[c];
+			// Normalized linear depth (matches linDepth in shaders)
+			m_ShadowSamplingData.cascadeDepthSplits[c] = (splitDepth - zNear) / (zFar - zNear);
+
+			const bool bCacheable = m_bCacheDistantShadowCascades && c >= 2;
+			m_bRenderShadowCascade[c] = FitCascade(c, m_CascadeLightDirs[c], m_CachedShadowCascades[c], bCacheable, lastSplitDepth, splitDepth,
+				m_ShadowSamplingData.cascadeViewProjMats[c], m_ShadowSamplingData.cascadeTexelSizes[c], m_ShadowSamplingData.cascadeDepthBiases[c],
+				m_ShadowCascadeDepthRanges[c]);
+
+			if (c == m_ShadowFadeCascade)
+			{
+				real texelSize = m_ShadowSamplingData.fadeParams.z;
+				real depthBias = m_ShadowSamplingData.fadeParams.w;
+				m_bRenderShadowFade = FitCascade(c, m_ShadowFadeLightDir, m_ShadowFadeCache, bCacheable, lastSplitDepth, splitDepth,
+					m_ShadowSamplingData.fadeViewProj, texelSize, depthBias, m_ShadowFadeDepthRange);
+				const real t = glm::clamp(m_ShadowFadeT, 0.0f, 1.0f);
+				m_ShadowSamplingData.fadeParams = glm::vec4((real)c, t * t * (3.0f - 2.0f * t), texelSize, depthBias);
+			}
+			lastSplitDepth = splitDepth;
+		}
+		if (m_ShadowFadeCascade < 0)
+		{
+			m_ShadowSamplingData.fadeParams = glm::vec4(-1.0f, 0.0f, 0.0f, 0.0f);
 		}
 
 		// Unused cascades are never selected (normalized depth never exceeds 1)
@@ -2386,6 +2501,7 @@ namespace flex
 
 		// Skybox
 		m_Shaders[shaderID]->renderPassType = RenderPassType::FORWARD;
+		m_Shaders[shaderID]->bDrawAfterOpaque = true;
 		m_Shaders[shaderID]->bNeedPushConstantBlock = true;
 		m_Shaders[shaderID]->pushConstantBlockSize = 128;
 		m_Shaders[shaderID]->vertexAttributes =
@@ -4181,6 +4297,20 @@ namespace flex
 		return Lerp(colour0, colour1, sin(AnimationTime() * pulseSpeed) * 0.5f + 0.5f);
 	}
 
+	void Renderer::SetUnderwater(real amount, real depth)
+	{
+		m_UnderwaterAmount = glm::clamp(amount, 0.0f, 1.0f);
+		m_UnderwaterDepth = glm::max(depth, 0.0f);
+	}
+
+	glm::vec3 Renderer::GetUnderwaterFogColour(const glm::vec3& sunColour) const
+	{
+		// Light fades with depth (red first), & follows the daylight
+		const real daylight = glm::clamp(glm::dot(sunColour, glm::vec3(0.2126f, 0.7152f, 0.0722f)) * 1.2f + 0.08f, 0.06f, 1.0f);
+		const real depthFade = glm::exp(-m_UnderwaterDepth / 25.0f);
+		return glm::vec3(0.05f, 0.30f, 0.34f) * daylight * glm::mix(0.35f, 1.0f, depthFade);
+	}
+
 	glm::mat4 Renderer::GetPostProcessingMatrix() const
 	{
 		// TODO: OPTIMIZATION: Cache result
@@ -4189,6 +4319,14 @@ namespace flex
 		real sat = m_PostProcessSettings.saturation;
 		glm::vec3 brightness = m_PostProcessSettings.brightness;
 		glm::vec3 offset = m_PostProcessSettings.offset;
+		if (m_UnderwaterAmount > 0.0f)
+		{
+			// Underwater: washed out, blue-green & dimmer (the fog does the rest)
+			const real a = m_UnderwaterAmount;
+			sat *= glm::mix(1.0f, 0.65f, a);
+			brightness *= glm::mix(VEC3_ONE, glm::vec3(0.62f, 0.9f, 0.95f), a);
+			offset += glm::vec3(0.0f, 0.025f, 0.035f) * a;
+		}
 
 		static const glm::vec3 wgt(0.3086f, 0.6094f, 0.0820f);
 		real a = (1.0f - sat) * wgt.r + sat;

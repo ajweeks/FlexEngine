@@ -140,6 +140,10 @@ struct ShadowSamplingData
 	int cascadeCount;
 	float normalOffset; // In texels
 	vec2 _pad;
+	// While a cascade is re-rendered for a new light direction, the new map (in the spare layer, cascadeCount) fades in
+	// over the old one (see Renderer::UpdateShadowCascades)
+	mat4 fadeViewProj;
+	vec4 fadeParams; // x: cascade (< 0: none), y: weight of the new map, z: its texel size, w: its depth bias
 };
 
 // Point light shadows (see VulkanRenderer::UpdatePointShadowSlots), indexed like the point lights
@@ -296,32 +300,24 @@ vec3 ReconstructWSPosFromDepth(mat4 invProj, mat4 invView, vec2 uv, float depth)
 	return (invView * vec4(posNDC, 1)).xyz;
 }
 
-// Returns 1.0 when fully lit, (1 - shadowDarkness) when fully shadowed
-// shadowMaps must be bound with a depth-comparison sampler (hardware PCF)
-float DoShadowMapping(DirectionalLight dirLight, ShadowSamplingData shadowSamplingData, vec3 posWS, vec3 N, float linDepth, uint cascadeIndex, sampler2DArrayShadow shadowMaps, float NoL)
+// One shadow map layer's visibility [0: shadowed, 1: lit], or -1 when posWS is outside of it
+float SampleShadowLayer(mat4 viewProj, float layer, float texelSize, float depthBias, float normalOffset, vec3 posWS, vec3 N, sampler2DArrayShadow shadowMaps, float NoL)
 {
-	if (dirLight.castShadows == 0 || cascadeIndex >= uint(shadowSamplingData.cascadeCount))
-	{
-		// Beyond shadow distance
-		return 1.0;
-	}
-
 	// Offset receiver along its normal by a few texels to avoid acne without a large depth bias
 	// (more offset is needed the more grazing the light is)
-	float texelSize = shadowSamplingData.cascadeTexelSizes[cascadeIndex];
-	vec3 offsetPosWS = posWS + N * (texelSize * shadowSamplingData.normalOffset * (1.0 - NoL * 0.5));
+	vec3 offsetPosWS = posWS + N * (texelSize * normalOffset * (1.0 - NoL * 0.5));
 
-	vec4 shadowPos = (biasMat * shadowSamplingData.cascadeViewProjMats[cascadeIndex]) * vec4(offsetPosWS, 1.0);
+	vec4 shadowPos = (biasMat * viewProj) * vec4(offsetPosWS, 1.0);
 	shadowPos.y = 1.0 - shadowPos.y;
 	shadowPos /= shadowPos.w;
 
-	if (shadowPos.z <= 0.0 || shadowPos.z >= 1.0)
+	if (shadowPos.z <= 0.0 || shadowPos.z >= 1.0 || any(lessThan(shadowPos.xy, vec2(0.0))) || any(greaterThan(shadowPos.xy, vec2(1.0))))
 	{
-		return 1.0;
+		return -1.0;
 	}
 
 	// Reversed-Z: comparison passes (lit) when receiver is at least as close to the light as the occluder
-	float refDepth = shadowPos.z + shadowSamplingData.cascadeDepthBiases[cascadeIndex];
+	float refDepth = shadowPos.z + depthBias;
 
 	float lit;
 	if (QUALITY_LEVEL >= 1)
@@ -334,15 +330,65 @@ float DoShadowMapping(DirectionalLight dirLight, ShadowSamplingData shadowSampli
 			for (int y = -1; y <= 1; ++y)
 			{
 				vec2 uv = shadowPos.xy + vec2(x, y) * shadowMapTexelSize;
-				lit += texture(shadowMaps, vec4(uv, float(cascadeIndex), refDepth));
+				lit += texture(shadowMaps, vec4(uv, layer, refDepth));
 			}
 		}
 		lit /= 9.0;
 	}
 	else
 	{
-		lit = texture(shadowMaps, vec4(shadowPos.xy, float(cascadeIndex), refDepth));
+		lit = texture(shadowMaps, vec4(shadowPos.xy, layer, refDepth));
 	}
+	return lit;
+}
+
+// A cascade's visibility, including the newer map fading in over it
+float SampleShadowCascade(ShadowSamplingData data, uint cascadeIndex, vec3 posWS, vec3 N, sampler2DArrayShadow shadowMaps, float NoL)
+{
+	float lit = SampleShadowLayer(data.cascadeViewProjMats[cascadeIndex], float(cascadeIndex), data.cascadeTexelSizes[cascadeIndex],
+		data.cascadeDepthBiases[cascadeIndex], data.normalOffset, posWS, N, shadowMaps, NoL);
+	if (int(data.fadeParams.x) == int(cascadeIndex) && data.fadeParams.x >= 0.0)
+	{
+		float faded = SampleShadowLayer(data.fadeViewProj, float(data.cascadeCount), data.fadeParams.z, data.fadeParams.w,
+			data.normalOffset, posWS, N, shadowMaps, NoL);
+		if (faded >= 0.0)
+		{
+			lit = lit >= 0.0 ? mix(lit, faded, data.fadeParams.y) : faded;
+		}
+	}
+	return lit;
+}
+
+// Returns 1.0 when fully lit, (1 - shadowDarkness) when fully shadowed
+// shadowMaps must be bound with a depth-comparison sampler (hardware PCF)
+float DoShadowMapping(DirectionalLight dirLight, ShadowSamplingData shadowSamplingData, vec3 posWS, vec3 N, float linDepth, uint cascadeIndex, sampler2DArrayShadow shadowMaps, float NoL)
+{
+	if (dirLight.castShadows == 0 || cascadeIndex >= uint(shadowSamplingData.cascadeCount))
+	{
+		// Beyond shadow distance
+		return 1.0;
+	}
+
+	float lit = SampleShadowCascade(shadowSamplingData, cascadeIndex, posWS, N, shadowMaps, NoL);
+
+	// Cross-fade into the next cascade over the last part of this one, so the change in resolution (& in which
+	// casters are captured) doesn't show as a line. The next cascade covers all of this one, so it's always valid there.
+	if (cascadeIndex + 1u < uint(shadowSamplingData.cascadeCount))
+	{
+		float cascadeStart = cascadeIndex > 0u ? shadowSamplingData.cascadeDepthSplits[cascadeIndex - 1u] : 0.0;
+		float cascadeEnd = shadowSamplingData.cascadeDepthSplits[cascadeIndex];
+		float blendStart = mix(cascadeStart, cascadeEnd, 0.8);
+		float blend = smoothstep(blendStart, cascadeEnd, linDepth);
+		if (blend > 0.0)
+		{
+			float next = SampleShadowCascade(shadowSamplingData, cascadeIndex + 1u, posWS, N, shadowMaps, NoL);
+			if (next >= 0.0)
+			{
+				lit = lit >= 0.0 ? mix(lit, next, blend) : next;
+			}
+		}
+	}
+	lit = lit >= 0.0 ? lit : 1.0;
 
 	// Fade out over the last 10% of the shadow distance to hide the cutoff
 	float shadowEnd = shadowSamplingData.cascadeDepthSplits[shadowSamplingData.cascadeCount - 1];

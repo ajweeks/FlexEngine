@@ -38,3 +38,5 @@ treasure chest
 row boat
 campfire
 bed
+chest
+furnace

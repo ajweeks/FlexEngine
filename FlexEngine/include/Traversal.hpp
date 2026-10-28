@@ -12,6 +12,7 @@ namespace flex
 	class GameObject;
 	class TerrainGenerator;
 	class BuildPiece;
+	class Swimming;
 
 	// Movement abilities for getting around large terrain: jumping, a paraglider (lifted by thermals & ridge lift),
 	// a wingsuit, a grappling hook, climbing (using stamina) & skiing/sandboarding. Owned by a Player, which hands
@@ -46,6 +47,8 @@ namespace flex
 
 
 		Mode GetMode() const { return m_Mode; }
+		// Swimming & breath (see Swimming.hpp)
+		Swimming* GetSwimming() const { return m_Swimming; }
 		bool IsGrappling() const { return m_Hook.state != HookState::NONE; }
 		// Whether the player is flying/sliding fast enough that walking speed limits shouldn't apply
 		bool HasMomentum() const;
@@ -374,5 +377,7 @@ namespace flex
 
 		real m_WindAngle = 0.0f;
 		std::vector<Thermal> m_NearbyThermals;
+
+		Swimming* m_Swimming = nullptr;
 	};
 } // namespace flex

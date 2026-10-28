@@ -1017,6 +1017,11 @@ namespace flex
 
 					currentCamera->LateUpdate();
 
+					if (Player* testPlayer = currentScene->GetPlayer(0))
+					{
+						testPlayer->UpdateHeldJitterTest();
+					}
+
 					if (g_Game != nullptr)
 					{
 						g_Game->LateUpdate();

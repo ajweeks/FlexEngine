@@ -43,8 +43,16 @@ namespace flex
 		// Seconds before the player can pick it up (so items they drop aren't picked straight back up)
 		real pickupDelay = MIN_TIME_BEFORE_PICKUP;
 		real flyTime = 0.0f;
+		// Dropped items fall to the ground & float on water (or sink, by their density, see water::GetDensity)
+		glm::vec3 velocity = VEC3_ZERO;
+		real density = 800.0f;
+		bool bSettled = false;
+		bool bInWater = false;
 
 		static const real MIN_TIME_BEFORE_PICKUP;
+
+	private:
+		void UpdateFalling();
 
 	};
 

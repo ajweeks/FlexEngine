@@ -24,6 +24,9 @@ namespace flex
 		virtual void FixedUpdate();
 		virtual void Update();
 		virtual void LateUpdate();
+		// The player's render pose (after physics interpolation) is final: gameplay cameras follow it now, so things placed
+		// relative to the view (held items, placement holograms) use the same pose as what is rendered
+		virtual void OnPlayerPoseUpdated() {}
 		virtual void Destroy();
 
 		virtual void OnPostSceneChange();

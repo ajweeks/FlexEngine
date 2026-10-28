@@ -1861,6 +1861,16 @@ namespace flex
 		return InvalidPrefabID;
 	}
 
+	std::vector<std::string> ResourceManager::GetPrefabNames() const
+	{
+		std::vector<std::string> names;
+		for (const PrefabTemplateInfo& prefabTemplateInfo : prefabTemplates)
+		{
+			names.push_back(prefabTemplateInfo.templateObject->GetName());
+		}
+		return names;
+	}
+
 	GameObject* ResourceManager::GetPrefabTemplate(const PrefabIDPair& prefabIDPair) const
 	{
 		return GetPrefabTemplate(prefabIDPair.m_PrefabID, prefabIDPair.m_SubGameObjectID);

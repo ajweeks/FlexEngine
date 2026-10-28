@@ -16,6 +16,7 @@ namespace flex
 		virtual void OnPostSceneChange() override;
 		virtual void FixedUpdate() override;
 		virtual void LateUpdate() override;
+		virtual void OnPlayerPoseUpdated() override { TrackPlayer(); }
 
 	private:
 		void TrackPlayer();

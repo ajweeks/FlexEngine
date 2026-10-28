@@ -11,6 +11,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/CameraManager.hpp"
 #include "Helpers.hpp"
 #include "Player.hpp"
+#include "Swimming.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
 #include "Scene/SceneManager.hpp"
@@ -86,6 +87,11 @@ namespace flex
 		//position = ToVec3(t.getOrigin());
 
 		position = m_Player->GetEyePosition();
+		// Never right at the water line (the surface would cut the view in two)
+		if (m_Player->GetTraversal() != nullptr && m_Player->GetTraversal()->GetSwimming() != nullptr)
+		{
+			m_Player->GetTraversal()->GetSwimming()->AdjustCameraForWaterLine(position);
+		}
 
 		// (Scenes can set a larger near plane for the camera they start with)
 		zNear = glm::min(zNear, MAX_NEAR_PLANE);

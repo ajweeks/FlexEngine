@@ -462,6 +462,11 @@ namespace flex
 		glfwIconifyWindow(m_Window);
 	}
 
+	void GLFWWindowWrapper::Restore()
+	{
+		glfwRestoreWindow(m_Window);
+	}
+
 	void GLFWWindowWrapper::Update()
 	{
 		Window::Update();

@@ -1239,9 +1239,18 @@ namespace flex
 				{
 					mesh = object->SetMesh(new Mesh(object));
 				}
+				if (scale != 1.0f)
+				{
+					for (glm::vec3& pos : vertexData.positions_3D)
+					{
+						pos *= scale;
+					}
+				}
 				MeshComponent::LoadFromMemory(mesh, vertexData, indices, materialID);
 			}
 
+			// The tools are modelled about 2.2m long; this brings them to a believable size
+			real scale = 1.0f;
 			MaterialID materialID;
 			VertexBufferDataCreateInfo vertexData;
 			std::vector<u32> indices;
@@ -1276,6 +1285,10 @@ namespace flex
 		ToolPart wood(GetOrCreateToolMaterial("Tool handle wood", glm::vec3(0.21f, 0.105f, 0.042f), 0.62f));
 		ToolPart stone(GetOrCreateToolMaterial("Tool stone", glm::vec3(0.17f, 0.165f, 0.155f), 0.82f));
 		ToolPart rope(GetOrCreateToolMaterial("Tool lashing", glm::vec3(0.36f, 0.27f, 0.15f), 0.95f));
+
+		// (keep in sync with the colliders in the tools' prefabs)
+		const real toolScale = typeID == AxeSID ? 0.42f : (typeID == ShovelSID ? 0.45f : 0.5f);
+		wood.scale = stone.scale = rope.scale = toolScale;
 
 		switch (typeID)
 		{

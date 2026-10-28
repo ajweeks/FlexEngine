@@ -1,0 +1,20 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "12366A8A723E4D579C4E5D6813F3391C",
+	"root" : 
+	{
+		"id" : "909D00101C9747DEB685C77100AF5351",
+		"name" : "coconut",
+		"type" : "object",
+		"mesh" : "sphere.glb",
+		"materials" : 
+		[
+			"coconut"
+		],
+		"transform" : 
+		{
+			"scale" : "0.060, 0.060, 0.060"
+		}
+	}
+}

@@ -32,10 +32,18 @@ namespace flex
 	{
 		static const u32 MAX_BIOME_COUNT = 24;
 
+		// Hard vertical limits of the world. The density is solid below WORLD_MIN_HEIGHT & empty above WORLD_MAX_HEIGHT
+		// (player edits included, so nothing can be dug below the floor), & nothing can be built outside them. Both are
+		// well beyond the natural terrain (ocean floors ~-300m, massifs ~7km), so generation is unchanged.
+		static constexpr real WORLD_MIN_HEIGHT = -600.0f;
+		static constexpr real WORLD_MAX_HEIGHT = 8000.0f;
+		// Anything falling below this is despawned (& the player respawns)
+		static constexpr real DESPAWN_HEIGHT = WORLD_MIN_HEIGHT - 10.0f;
+
 		// Bump whenever generation output changes to invalidate cached chunks. Worlds record the version they were
 		// created with ("terrain version" in world.bin's META section, 0: before it was recorded), so generation
 		// changes can later be made conditional on it to keep old worlds intact.
-		static const u32 GENERATOR_VERSION = 17;
+		static const u32 GENERATOR_VERSION = 18; // 18: material classification filtered at coarse LODs
 
 		enum class Material : u8
 		{
@@ -326,7 +334,8 @@ namespace flex
 			real Sample(const glm::vec3& pos, const ColumnSample& column, const EditList& edits = {}) const;
 			real Sample(const glm::vec3& pos, const EditList& edits = {}) const;
 
-			SurfaceAttributes ComputeSurface(const glm::vec3& pos, const glm::vec3& normal, const ColumnSample& column, const EditList& edits) const;
+			// footprint: the size of the area the result stands for (a mesh cell), so coarse LODs don't alias small scale detail into blotches
+			SurfaceAttributes ComputeSurface(const glm::vec3& pos, const glm::vec3& normal, const ColumnSample& column, const EditList& edits, real footprint = 0.0f) const;
 
 			// Conservative bounds on how far the surface can deviate from the column height
 			real MaxExtentAbove() const { return m_MaxExtentAbove; }
@@ -491,6 +500,14 @@ namespace flex
 		// Plants whose bases lie within the box (as shown at full detail), excluding removed ones. Edits must include
 		// those overlapping the box.
 		void FindPlants(const TerrainDensity& density, const EditList& edits, const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<PlantInfo>& outPlants);
+		// A bush with berries on it (bushes are otherwise only found when building chunks)
+		struct BerryBushInfo
+		{
+			glm::vec3 base = glm::vec3(0.0f);
+			u32 hash = 0;
+			real radius = 0.9f;
+		};
+		void FindBerryBushes(const TerrainDensity& density, const EditList& edits, const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<BerryBushInfo>& outBushes);
 		// A single plant's (full detail) mesh, in world space. Trunk triangles come first, outMesh.collisionIndexCount
 		// of them (as in chunks).
 		void BuildPlantMesh(const TerrainDensity& density, const PlantInfo& plant, ChunkMeshData& outMesh);
@@ -601,9 +618,19 @@ namespace flex
 			void SetParams(const WorldParams& params);
 			// Changes the LOD distance factor (quality) without discarding chunks
 			void SetLodDistanceFactor(real lodDistanceFactor);
+			// Only changes which chunks are selected (like SetLodDistanceFactor), so existing chunks are kept where possible
+			void SetViewDistance(real viewDistance);
 
 			// Returns show/hide commands to be applied this frame
 			void Update(const glm::vec3& cameraPos, std::vector<ChunkCommand>& outCommands);
+			// Chunks in view are generated before those behind the camera (which are still updated, just later) when
+			// bPrioritize. cosHalfAngle: the cosine of half the view cone's angle (covering the frustum's corners).
+			void SetViewDirection(const glm::vec3& forward, real cosHalfAngle, bool bPrioritize)
+			{
+				m_ViewForward = forward; m_ViewCosHalfAngle = cosHalfAngle; m_bViewPriority = bPrioritize;
+			}
+			// Chunks of the current batch in view (at its start) which haven't been generated yet
+			u32 GetPendingInViewCount() const;
 
 			// Hides all displayed chunks (call before destroying renderer side resources)
 			void HideAll(std::vector<ChunkCommand>& outCommands);
@@ -615,6 +642,7 @@ namespace flex
 
 			// Plants (not yet removed) whose bases lie within the box
 			void FindPlants(const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<PlantInfo>& outPlants) const;
+			void FindBerryBushes(const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<BerryBushInfo>& outBushes) const;
 
 			// Marches along a ray against the density (including edits). Returns true on hit.
 			bool Raycast(const glm::vec3& origin, const glm::vec3& dir, real maxDistance, glm::vec3& outHitPos, glm::vec3& outHitNormal) const;
@@ -685,6 +713,7 @@ namespace flex
 				TransitionMask mask;
 				u64 jobID;
 				bool bDone;
+				bool bInView = false;
 				ChunkMeshData mesh;
 				std::shared_ptr<const PackedChunk> packed;
 				u32 group = 0;
@@ -795,6 +824,14 @@ namespace flex
 			bool m_bHasLastCameraPos = false;
 			glm::vec3 m_PriorityCameraPos = glm::vec3(0.0f);
 			glm::vec3 m_PriorityVelocity = glm::vec3(0.0f);
+			glm::vec3 m_ViewForward = glm::vec3(0.0f);
+			real m_ViewCosHalfAngle = 0.5f;
+			glm::vec3 m_PriorityViewForward = glm::vec3(0.0f);
+			real m_PriorityViewCosHalfAngle = 0.5f;
+			bool m_bViewPriority = true;
+			bool m_bPriorityViewPriority = true;
+			// How far outside of the view a chunk is, in [0: in view, 1: well outside]
+			real OutsideViewAmount(const ChunkKey& key) const;
 			// Time from requesting a batch until it's ready (smoothed)
 			std::chrono::steady_clock::time_point m_BatchStartTime;
 			real m_BatchLatency = 0.3f;

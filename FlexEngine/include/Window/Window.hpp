@@ -106,6 +106,7 @@ namespace flex
 
 		virtual void Maximize() = 0;
 		virtual void Iconify() = 0;
+		virtual void Restore() = 0; // From minimized or maximized
 
 		virtual const char* GetClipboardText() = 0;
 		virtual void SetClipboardText(const char* text) = 0;

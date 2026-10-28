@@ -1,0 +1,11 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "tin ingot",
+		"shader" : "pbr",
+		"const albedo" : "0.800,0.800,0.780",
+		"const metallic" : 1.000000,
+		"const roughness" : 0.300000
+	}
+}

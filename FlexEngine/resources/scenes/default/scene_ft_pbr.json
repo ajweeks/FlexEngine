@@ -1,0 +1,202 @@
+{
+	"version": 7,
+	"name": "ft_pbr",
+	"spawn player": false,
+	"cloud coverage": 0.0,
+	"fog distance": 0.0,
+	"time of day": 0.0,
+	"pause time of day": true,
+	"camera": {
+		"type": "debug",
+		"near plane": 0.5,
+		"far plane": 2000.0,
+		"fov": 0.785398,
+		"aperture": 1.0,
+		"shutter speed": 0.125,
+		"light sensitivity": 800.0,
+		"exposure": 1.2,
+		"move speed": 18.0,
+		"transform": {
+			"position": "0.000, 9.000, 14.000",
+			"pitch": -0.5,
+			"yaw": -1.5708
+		}
+	},
+	"objects": [
+		{
+			"id": "2CEE737443E210471948D33296C87009",
+			"name": "Skybox",
+			"type": "skybox",
+			"casts shadow": false,
+			"materials": [
+				"skybox 01"
+			]
+		},
+		{
+			"id": "E8A7F770D9106FD287DB7F1ADBC60926",
+			"name": "Reflection Probe",
+			"type": "reflection probe",
+			"transform": {
+				"pos": "0.000, 10.000, 0.000"
+			},
+			"visible": false
+		},
+		{
+			"id": "F6967E7893F57FD14C1604D115CEA325",
+			"name": "Directional Light",
+			"type": "directional light",
+			"transform": {
+				"pos": "0.000, 15.000, 0.000",
+				"rot": "1.9,0.3,0.0"
+			},
+			"directional light info": {
+				"brightness": 4.0,
+				"colour": "1.00,1.00,1.00",
+				"cast shadows": 0
+			}
+		},
+		{
+			"id": "A65E19CBAE530282BD36CB9D21F6BE6A",
+			"name": "ground",
+			"type": "object",
+			"transform": {
+				"pos": "0.000, 0.000, 0.000",
+				"scale": "60.000, 1.000, 60.000"
+			},
+			"mesh": "unit-plane.glb",
+			"materials": [
+				"pbr light grey"
+			]
+		},
+		{
+			"id": "BF0D7C1C1E21862AB8A18A8902073FEC",
+			"name": "s0",
+			"type": "object",
+			"transform": {
+				"pos": "-9.000, 1.200, -2.000",
+				"scale": "1.200, 1.200, 1.200"
+			},
+			"mesh": "ico-sphere.glb",
+			"materials": [
+				"pbr white"
+			]
+		},
+		{
+			"id": "8DF4F50947AAEB26C57D21FA5D328263",
+			"name": "s1",
+			"type": "object",
+			"transform": {
+				"pos": "-4.500, 1.200, -2.000",
+				"scale": "1.200, 1.200, 1.200"
+			},
+			"mesh": "ico-sphere.glb",
+			"materials": [
+				"pbr green"
+			]
+		},
+		{
+			"id": "DFE574DE739988B886E7577496A2C877",
+			"name": "s2",
+			"type": "object",
+			"transform": {
+				"pos": "0.000, 1.200, -2.000",
+				"scale": "1.200, 1.200, 1.200"
+			},
+			"mesh": "ico-sphere.glb",
+			"materials": [
+				"pbr green"
+			]
+		},
+		{
+			"id": "3E130F7EB19731662B5E803B61BA4168",
+			"name": "s3",
+			"type": "object",
+			"transform": {
+				"pos": "4.500, 1.200, -2.000",
+				"scale": "1.200, 1.200, 1.200"
+			},
+			"mesh": "ico-sphere.glb",
+			"materials": [
+				"pbr blue"
+			]
+		},
+		{
+			"id": "160ADB59261FF2D3C425C8D99D19BDD0",
+			"name": "s4",
+			"type": "object",
+			"transform": {
+				"pos": "9.000, 1.200, -2.000",
+				"scale": "1.200, 1.200, 1.200"
+			},
+			"mesh": "ico-sphere.glb",
+			"materials": [
+				"pbr cyan"
+			]
+		},
+		{
+			"id": "B6CC60D5D32CBE54014C2B54B95523CF",
+			"name": "s5",
+			"type": "object",
+			"transform": {
+				"pos": "-9.000, 1.200, 2.500",
+				"scale": "1.200, 1.200, 1.200"
+			},
+			"mesh": "ico-sphere.glb",
+			"materials": [
+				"pbr grey"
+			]
+		},
+		{
+			"id": "6941FA1C257C6F561C5CB347611A3CE9",
+			"name": "s6",
+			"type": "object",
+			"transform": {
+				"pos": "-4.500, 1.200, 2.500",
+				"scale": "1.200, 1.200, 1.200"
+			},
+			"mesh": "ico-sphere.glb",
+			"materials": [
+				"pbr chrome"
+			]
+		},
+		{
+			"id": "D97DCBEE500FE7EE5FC324BDB2E1142A",
+			"name": "s7",
+			"type": "object",
+			"transform": {
+				"pos": "0.000, 1.200, 2.500",
+				"scale": "1.200, 1.200, 1.200"
+			},
+			"mesh": "ico-sphere.glb",
+			"materials": [
+				"gold"
+			]
+		},
+		{
+			"id": "21C402364F9572B85A8E48F687AB165C",
+			"name": "s8",
+			"type": "object",
+			"transform": {
+				"pos": "4.500, 1.200, 2.500",
+				"scale": "1.200, 1.200, 1.200"
+			},
+			"mesh": "ico-sphere.glb",
+			"materials": [
+				"rubber"
+			]
+		},
+		{
+			"id": "58AC5831BE38CB8CB4BA2E751989A017",
+			"name": "s9",
+			"type": "object",
+			"transform": {
+				"pos": "9.000, 1.200, 2.500",
+				"scale": "1.200, 1.200, 1.200"
+			},
+			"mesh": "ico-sphere.glb",
+			"materials": [
+				"black plastic"
+			]
+		}
+	]
+}

@@ -474,7 +474,8 @@ namespace flex
 		btRigidBody* rb = m_Player->GetRigidBody()->GetRigidBodyInternal();
 
 		const real moveLR = -g_InputManager->GetActionAxisValue(Action::MOVE_LEFT) + g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT);
-		const real moveFB = -g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD) + g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD);
+		static const bool bJitterTest = getenv("FLEX_HELD_JITTER_TEST") != nullptr;
+		const real moveFB = bJitterTest ? 1.0f : (-g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD) + g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD));
 
 		bool bMoving = false;
 

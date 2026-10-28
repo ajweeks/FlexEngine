@@ -6,6 +6,11 @@ namespace flex
 {
 	namespace synth
 	{
+		const char* BuildStamp()
+		{
+			return __DATE__ " " __TIME__;
+		}
+
 		u32 HashSeed(const char* name, u32 variant)
 		{
 			// FNV-1a, then mixed with the variant

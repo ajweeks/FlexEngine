@@ -1,6 +1,7 @@
 #include "stdafx.hpp"
 
 #include "Game.hpp"
+#include "Harvest.hpp"
 
 IGNORE_WARNINGS_PUSH
 #include <BulletDynamics/Dynamics/btRigidBody.h>
@@ -10,7 +11,9 @@ IGNORE_WARNINGS_POP
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
+#include "GameConsole.hpp"
 #include "GameControls.hpp"
+#include "GameSounds.hpp"
 #include "Graphics/Renderer.hpp"
 #include "InputManager.hpp"
 #include "JSONParser.hpp"
@@ -23,12 +26,14 @@ IGNORE_WARNINGS_POP
 #include "PlayerController.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/Objects/Animals.hpp"
 #include "Scene/Objects/Building.hpp"
 #include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/Objects/Treasure.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Systems/TrackManager.hpp"
 #include "Time.hpp"
+#include "ResourceManager.hpp"
 #include "Traversal.hpp"
 #include "Window/Window.hpp"
 
@@ -302,7 +307,15 @@ namespace flex
 		m_SettingsFile.RegisterProperty("mouse sensitivity", &m_Settings.mouseSensitivity).SetRange(0.1f, 4.0f);
 		m_SettingsFile.RegisterProperty("invert mouse", &m_Settings.bInvertMouse);
 		m_SettingsFile.RegisterProperty("master volume", &m_Settings.masterVolume).SetRange(0.0f, 1.0f);
+		m_SettingsFile.RegisterProperty("music volume", &m_Settings.musicVolume).SetRange(0.0f, 1.0f);
+		m_SettingsFile.RegisterProperty("show fps", &m_Settings.bShowFps);
 		m_SettingsFile.RegisterProperty("terrain quality", &m_Settings.terrainQuality);
+		m_SettingsFile.RegisterProperty("shadow quality", &m_Settings.shadowQuality);
+		m_SettingsFile.RegisterProperty("draw distance", &m_Settings.drawDistance);
+		m_SettingsFile.RegisterProperty("anti-aliasing", &m_Settings.antiAliasing);
+		m_SettingsFile.RegisterProperty("ambient occlusion", &m_Settings.bAmbientOcclusion);
+		m_SettingsFile.RegisterProperty("effects quality", &m_Settings.effectsQuality);
+		m_SettingsFile.RegisterProperty("v-sync", &m_Settings.bVSync);
 		m_SettingsFile.RegisterProperty("show minimap", &m_Settings.bShowMinimap);
 		m_SettingsFile.RegisterProperty("language", &m_Settings.language);
 		m_SettingsFile.RegisterProperty("key bindings", &m_Settings.keyBindings);
@@ -319,6 +332,7 @@ namespace flex
 			m_SettingsFile.Serialize();
 		}
 		LoadBindings();
+		RegisterConsoleCommands();
 
 		// Before the player controller, so the pause key opens the pause menu
 		g_InputManager->BindActionCallback(&m_ActionCallback, 30);
@@ -559,6 +573,37 @@ namespace flex
 				g_Window->SetSize(w, h);
 				bResized = true;
 			}
+			// FLEX_TOUR_WINDOW=1: resizes, minimizes, restores, enters & leaves fullscreen & maximizes (screenshotting the
+			// menu after each), logging "WINDOW TEST" lines & checking the swap chain follows the window size
+			static i32 s_WindowStage = 0;
+			static sec s_WindowStageTime = 0.0f;
+			static bool bWindowTest = getenv("FLEX_TOUR_WINDOW") != nullptr;
+			if (bWindowTest && s_WindowStage < 8)
+			{
+				s_WindowStageTime += g_UnpausedDeltaTime;
+				auto Log = [](const char* what)
+				{
+					const glm::vec2 size = g_Window->GetSize();
+					Print("WINDOW TEST: %s -> %dx%d iconified=%d maximized=%d mode=%s\n", what, (i32)size.x, (i32)size.y,
+						(i32)g_Window->IsIconified(), (i32)g_Window->IsMaximized(), g_Window->WindowModeToStr(g_Window->GetWindowMode()));
+				};
+				auto StageNext = [&]() { ++s_WindowStage; s_WindowStageTime = 0.0f; };
+				if (m_TourTime > 2.0f && s_WindowStageTime > 1.0f)
+				{
+					switch (s_WindowStage)
+					{
+					case 0: g_Window->SetSize(1000, 600); Log("resized"); StageNext(); break;
+					case 1: Screenshot("window_resized"); g_Window->Iconify(); StageNext(); break;
+					case 2: Log("minimized"); g_Window->Restore(); StageNext(); break;
+					case 3: Log("restored"); g_Window->SetWindowMode(WindowMode::FULLSCREEN); StageNext(); break;
+					case 4: Log("fullscreen"); Screenshot("window_fullscreen"); StageNext(); break;
+					case 5: g_Window->ToggleFullscreen(); StageNext(); break;
+					case 6: Log("left fullscreen"); Screenshot("window_windowed"); g_Window->Maximize(); StageNext(); break;
+					case 7: Log("maximized"); Screenshot("window_maximized"); StageNext(); break;
+					}
+				}
+				return;
+			}
 			if (m_TourTime > 8.0f) { Screenshot("main_menu"); Next(); }
 		} break;
 		case 1: if (m_TourTime > 0.5f) { m_ScreenBeforeSettings = Screen::MAIN_MENU; SetScreen(Screen::SETTINGS); Next(); } break;
@@ -567,7 +612,44 @@ namespace flex
 		case 4: if (m_TourTime > 1.0f) { Screenshot("new_world"); Next(); } break;
 		case 5: if (m_TourTime > 0.5f) { CreateWorld(m_NewWorldName, 4242); Next(); } break;
 		case 6: if (m_TourTime > 0.4f) { m_TourWorldDirectory = m_CurrentWorld.directory; Screenshot("loading"); Next(); } break;
-		case 7: if (m_Screen == Screen::PLAYING && m_TourTime > 6.0f) { Screenshot("playing"); Next(); } break;
+		case 7:
+		{
+			// FLEX_TOUR_CONSOLE=1: runs some console commands, & screenshots the console with a half typed command
+			static i32 s_ConsoleStage = 0;
+			GameConsole& console = GameConsole::Get();
+			if (getenv("FLEX_TOUR_CONSOLE") != nullptr && s_ConsoleStage == 0 && m_Screen == Screen::PLAYING && m_TourTime > 6.0f)
+			{
+				SetConsoleOpen(true);
+				for (const char* line : { "tod 12:20", "tp 10,80,20", "time", "grant wood", "grnat wood 4", "bogus", "fps on" })
+				{
+					console.Log(std::string("> ") + line);
+					const std::string output = console.Execute(line);
+					console.Log(output[0] == '!' ? output.substr(1) : output, output[0] == '!');
+				}
+				console.SetInput("gra");
+				s_ConsoleStage = 1;
+				m_TourTime = 0.0f;
+			}
+			else if (s_ConsoleStage == 1 && m_TourTime > 1.0f)
+			{
+				Screenshot("console");
+				console.SetInput("tp 5,");
+				s_ConsoleStage = 2;
+				m_TourTime = 0.0f;
+			}
+			else if (s_ConsoleStage == 2 && m_TourTime > 1.0f)
+			{
+				Screenshot("console_args");
+				SetConsoleOpen(false);
+				s_ConsoleStage = 3;
+				m_TourTime = 6.1f;
+			}
+			else if (s_ConsoleStage != 1 && s_ConsoleStage != 2 && m_Screen == Screen::PLAYING && m_TourTime > 6.0f)
+			{
+				Screenshot("playing");
+				Next();
+			}
+		} break;
 		case 8:
 		{
 			// A little hut in front of the player, with a torch inside, a ladder up the side & a rope off the roof
@@ -806,6 +888,7 @@ namespace flex
 			break;
 		case Screen::PAUSED:
 		case Screen::MAP:
+		case Screen::CONSOLE:
 			g_EngineInstance->SetSimulationPaused(true);
 			g_Window->SetCursorMode(CursorMode::NORMAL);
 			// The map opens centered on the player
@@ -834,6 +917,15 @@ namespace flex
 		if (m_Screen == Screen::CONTROLS && m_RebindIndex >= 0 && action == Action::PAUSE)
 		{
 			// Waiting for a key on the Controls screen: whatever pause is bound to is a candidate (Esc cancels, see DrawControls)
+			return EventReply::CONSUMED;
+		}
+		if (action == Action::PAUSE && GameConsole::Get().IsOpen())
+		{
+			// Closes the console (only on the press: the release shouldn't also pause)
+			if (actionEvent == ActionEvent::ACTION_TRIGGER)
+			{
+				SetConsoleOpen(false);
+			}
 			return EventReply::CONSUMED;
 		}
 		if (m_Screen == Screen::NONE || action != Action::PAUSE || actionEvent != ActionEvent::ACTION_TRIGGER)
@@ -953,8 +1045,16 @@ namespace flex
 		}
 		*TerrainGenerator::GetShowMinimapPtr() = m_Settings.bShowMinimap;
 
+		// The console (tilde) opens over any screen; while playing it pauses the game (so typing doesn't move the player)
+		GameConsole& console = GameConsole::Get();
+		if (g_InputManager->GetKeyPressed(GameKeys::CONSOLE, true) && m_Screen != Screen::LOADING)
+		{
+			SetConsoleOpen(!console.IsOpen());
+		}
+
 		switch (m_Screen)
 		{
+		case Screen::CONSOLE: break;
 		case Screen::MAIN_MENU: DrawMainMenu(); break;
 		case Screen::WORLDS: DrawWorlds(); break;
 		case Screen::NEW_WORLD: DrawNewWorld(); break;
@@ -965,6 +1065,8 @@ namespace flex
 		case Screen::MAP: DrawMap(); break;
 		case Screen::PLAYING:
 		{
+			Animals::Update();
+			Animals::DrawHUD(m_UI);
 			// Adding each frame's dt directly to the (float) total loses precision once it's large (after ~3 days of play
 			// it would stop increasing), so whole seconds are moved over instead (exact for ~190 days)
 			m_PlayTimeRemainder += g_DeltaTime;
@@ -1015,6 +1117,143 @@ namespace flex
 		default:
 			break;
 		}
+
+		console.Draw(m_UI);
+		if (m_Settings.bShowFps)
+		{
+			// Smoothed over about half a second
+			static real s_SmoothedDelta = 0.016f;
+			s_SmoothedDelta = glm::mix(s_SmoothedDelta, glm::clamp((real)g_UnpausedDeltaTime, 0.0001f, 1.0f), 0.05f);
+			char fpsText[64];
+			snprintf(fpsText, ARRAY_LENGTH(fpsText), "%.0f fps  %.1f ms", 1.0f / s_SmoothedDelta, s_SmoothedDelta * 1000.0f);
+			const real s = m_UI.Scale();
+			m_UI.Text(fpsText, m_UI.Width() - 24.0f * s, 24.0f * s, UITheme::TEXT_SMALL * s, UITheme::WithAlpha(UITheme::TEXT_PRIMARY, 0.85f), TextAlign::RIGHT);
+		}
+	}
+
+	void Game::SetConsoleOpen(bool bOpen)
+	{
+		GameConsole& console = GameConsole::Get();
+		if (console.IsOpen() == bOpen)
+		{
+			return;
+		}
+		console.SetOpen(bOpen);
+		if (bOpen && m_Screen == Screen::PLAYING)
+		{
+			SetScreen(Screen::CONSOLE);
+		}
+		else if (!bOpen && m_Screen == Screen::CONSOLE)
+		{
+			SetScreen(Screen::PLAYING);
+		}
+	}
+
+	void Game::RegisterConsoleCommands()
+	{
+		GameConsole& console = GameConsole::Get();
+
+		console.Register({ "grant", "give" }, "<item> [count=1]", "Gives items to the player",
+			[](const std::vector<std::string>& args) -> std::string
+			{
+				const i32 count = glm::max(ParseInt(args[1]), 1);
+				std::string message;
+				if (GameConsole::Get().Grant(args[0], count, message))
+				{
+					return message;
+				}
+				const std::vector<std::string> names = g_ResourceManager->GetPrefabNames();
+				const i32 index = GameConsole::BestMatch(args[0], names, true);
+				Player* player = g_SceneManager->HasSceneLoaded() ? g_SceneManager->CurrentScene()->GetPlayer(0) : nullptr;
+				if (index < 0 || player == nullptr)
+				{
+					return std::string("!") + LOCF(Console_NoItem, args[0].c_str());
+				}
+				const PrefabID prefabID = g_ResourceManager->GetPrefabID(names[index].c_str());
+				player->AddToInventory(prefabID, count);
+				return LOCF(Console_Granted, count, names[index].c_str());
+			},
+			[](u32 argIndex) -> std::vector<std::string>
+			{
+				std::vector<std::string> names;
+				if (argIndex == 0)
+				{
+					names = GameConsole::Get().GetGrantableNames();
+					for (const std::string& name : g_ResourceManager->GetPrefabNames()) { names.push_back(name); }
+				}
+				return names;
+			});
+
+		console.Register({ "teleport", "tp" }, "<x> <y> <z>", "Teleports the player (meters)",
+			[](const std::vector<std::string>& args) -> std::string
+			{
+				Player* player = g_SceneManager->HasSceneLoaded() ? g_SceneManager->CurrentScene()->GetPlayer(0) : nullptr;
+				if (player == nullptr)
+				{
+					return std::string("!") + LOC(Console_NoPlayer);
+				}
+				const glm::vec3 pos(ParseFloat(args[0]), ParseFloat(args[1]), ParseFloat(args[2]));
+				player->TeleportOnTerrain(pos);
+				return LOCF(Console_Teleported, pos.x, pos.y, pos.z);
+			});
+
+		console.Register({ "tod", "time", "settime" }, "[time]", "Sets the time of day (e.g. 12:20, 6, midnight), or shows it",
+			[](const std::vector<std::string>& args) -> std::string
+			{
+				if (!g_SceneManager->HasSceneLoaded())
+				{
+					return std::string("!") + LOC(Console_NoPlayer);
+				}
+				BaseScene* scene = g_SceneManager->CurrentScene();
+				// 0 is noon, 0.5 midnight
+				auto ToHours = [](real t) { return glm::mod(t * 24.0f + 12.0f, 24.0f); };
+				if (!args[0].empty())
+				{
+					real hours = 0.0f;
+					const std::string arg = args[0];
+					if (arg == "noon" || arg == "midday") { hours = 12.0f; }
+					else if (arg == "midnight") { hours = 0.0f; }
+					else if (arg == "dawn" || arg == "morning" || arg == "sunrise") { hours = 6.0f; }
+					else if (arg == "dusk" || arg == "evening" || arg == "sunset") { hours = 18.0f; }
+					else
+					{
+						const size_t colon = arg.find(':');
+						hours = ParseFloat(colon == std::string::npos ? arg : arg.substr(0, colon));
+						if (colon != std::string::npos)
+						{
+							hours += ParseFloat(arg.substr(colon + 1)) / 60.0f;
+						}
+						if (hours < 0.0f || hours >= 24.0f)
+						{
+							return std::string("!") + LOC(Console_BadTime);
+						}
+					}
+					scene->SetTimeOfDay(glm::mod((hours - 12.0f) / 24.0f + 1.0f, 1.0f));
+				}
+				const real hours = ToHours(scene->GetTimeOfDay());
+				return LOCF(Console_TimeIs, (i32)hours, (i32)((hours - glm::floor(hours)) * 60.0f));
+			});
+
+		console.Register({ "fov" }, "[degrees]", "Sets (or shows) the field of view",
+			[this](const std::vector<std::string>& args) -> std::string
+			{
+				if (!args[0].empty())
+				{
+					m_Settings.fov = glm::clamp(ParseFloat(args[0]), 50.0f, 110.0f);
+					ApplySettings();
+					m_SettingsFile.Serialize();
+				}
+				return LOCF(Console_FovIs, m_Settings.fov);
+			});
+
+		console.Register({ "fps", "showfps" }, "[on|off]", "Shows or hides the FPS & frame time",
+			[this](const std::vector<std::string>& args) -> std::string
+			{
+				m_Settings.bShowFps = args[0].empty() ? !m_Settings.bShowFps : (args[0] == "on" || args[0] == "1" || args[0] == "true");
+				m_SettingsFile.Serialize();
+				return m_Settings.bShowFps ? LOC(Console_FpsOn) : LOC(Console_FpsOff);
+			},
+			[](u32) { return std::vector<std::string>{ "on", "off" }; });
 	}
 
 	void Game::UpdateExplored()
@@ -1335,29 +1574,117 @@ namespace flex
 		const real rowHeight = UITheme::ROW_HEIGHT * s;
 		const real gap = UITheme::SPACE_S * s;
 
+		// The back button sits below a scrolling list of options. To add an option, add a Row(...) below (rows that
+		// are scrolled out of view aren't drawn).
+		UIRect backRect = UIRect(content.x, content.y + content.h - UITheme::BUTTON_HEIGHT * s, content.w, UITheme::BUTTON_HEIGHT * s);
+		UIRect list(content.x, content.y, content.w - 18.0f * s, content.h - backRect.h - 8.0f * s);
+		const real totalHeight = m_SettingsContentHeight;
+		if (m_UI.ScrollDelta() != 0.0f && m_UI.IsMouseOver(panel))
+		{
+			m_SettingsScroll -= m_UI.ScrollDelta() * (rowHeight + gap);
+		}
+		m_UI.Scrollbar("settings_scroll", UIRect(list.x + list.w + 6.0f * s, list.y, 8.0f * s, list.h), totalHeight, list.h, &m_SettingsScroll);
+		m_SettingsScroll = glm::clamp(m_SettingsScroll, 0.0f, glm::max(totalHeight - list.h, 0.0f));
+		real rowY = list.y - m_SettingsScroll;
+		auto Row = [&](auto&& draw)
+		{
+			const UIRect rect(list.x, rowY, list.w, rowHeight);
+			rowY += rowHeight + gap;
+			if (rect.y >= list.y - 1.0f && rect.y + rect.h <= list.y + list.h + 1.0f)
+			{
+				draw(rect);
+			}
+		};
+
 		bool bChanged = false;
-		bChanged |= m_UI.Slider("fov", content.CutTop(rowHeight, gap), LOC(Settings_Fov), &m_Settings.fov, 50.0f, 110.0f, LOC(Settings_FovValue));
-		bChanged |= m_UI.Slider("sensitivity", content.CutTop(rowHeight, gap), LOC(Settings_MouseSensitivity), &m_Settings.mouseSensitivity, 0.1f, 4.0f, "%.2f");
-		bChanged |= m_UI.Checkbox("invert", content.CutTop(rowHeight, gap), LOC(Settings_InvertMouse), &m_Settings.bInvertMouse);
-		real volume = m_Settings.masterVolume * 100.0f;
-		if (m_UI.Slider("volume", content.CutTop(rowHeight, gap), LOC(Settings_Volume), &volume, 0.0f, 100.0f, "%.0f%%"))
+		Row([&](const UIRect& r) { bChanged |= m_UI.Slider("fov", r, LOC(Settings_Fov), &m_Settings.fov, 50.0f, 110.0f, LOC(Settings_FovValue)); });
+		Row([&](const UIRect& r) { bChanged |= m_UI.Slider("sensitivity", r, LOC(Settings_MouseSensitivity), &m_Settings.mouseSensitivity, 0.1f, 4.0f, "%.2f"); });
+		Row([&](const UIRect& r) { bChanged |= m_UI.Checkbox("invert", r, LOC(Settings_InvertMouse), &m_Settings.bInvertMouse); });
+		Row([&](const UIRect& r)
 		{
-			m_Settings.masterVolume = volume / 100.0f;
-			bChanged = true;
-		}
-		if (m_UI.WasReleased("volume"))
+			real volume = m_Settings.masterVolume * 100.0f;
+			if (m_UI.Slider("volume", r, LOC(Settings_Volume), &volume, 0.0f, 100.0f, "%.0f%%"))
+			{
+				m_Settings.masterVolume = volume / 100.0f;
+				bChanged = true;
+			}
+			if (m_UI.WasReleased("volume"))
+			{
+				// Lets the new volume be heard (the master gain was applied while dragging)
+				m_UI.PlayConfirm();
+			}
+		});
+		Row([&](const UIRect& r)
 		{
-			// Lets the new volume be heard (the master gain was applied while dragging)
-			m_UI.PlayConfirm();
-		}
-		real quality = (real)m_Settings.terrainQuality;
+			real volume = m_Settings.musicVolume * 100.0f;
+			if (m_UI.Slider("music_volume", r, LOC(Settings_MusicVolume), &volume, 0.0f, 100.0f, "%.0f%%"))
+			{
+				m_Settings.musicVolume = volume / 100.0f;
+				bChanged = true;
+			}
+		});
+		// Graphics: a preset sets all of the options below it (which show it as custom once changed individually)
 		const char* qualityNames[] = { LOC(Settings_QualityLow), LOC(Settings_QualityMedium), LOC(Settings_QualityHigh), LOC(Settings_QualityUltra) };
-		if (m_UI.Slider("quality", content.CutTop(rowHeight, gap), LOCF(Settings_TerrainDetail, qualityNames[glm::clamp(m_Settings.terrainQuality, 0, 3)]), &quality, 0.0f, 3.0f, ""))
+		// A slider through count named steps
+		auto Stepped = [&](const char* id, const UIRect& r, const std::string& label, i32* value, i32 count) -> bool
 		{
-			m_Settings.terrainQuality = glm::clamp((i32)glm::round(quality), 0, 3);
-			bChanged = true;
-		}
-		bChanged |= m_UI.Checkbox("minimap", content.CutTop(rowHeight, gap), LOC(Settings_ShowMinimap), &m_Settings.bShowMinimap);
+			real v = (real)*value;
+			if (m_UI.Slider(id, r, label, &v, 0.0f, (real)(count - 1), ""))
+			{
+				const i32 newValue = glm::clamp((i32)glm::round(v), 0, count - 1);
+				if (newValue != *value)
+				{
+					*value = newValue;
+					return true;
+				}
+			}
+			return false;
+		};
+		Row([&](const UIRect& r)
+		{
+			m_UI.Text(LOC(Settings_GraphicsHeader), r.x, r.y + r.h * 0.7f, UITheme::TEXT_BODY_LARGE * s, UITheme::EMBER, TextAlign::LEFT, true);
+		});
+		Row([&](const UIRect& r)
+		{
+			const i32 preset = GetGraphicsPreset();
+			// Custom sits past the end, so dragging from it picks a preset
+			i32 presetIndex = preset >= 0 ? preset : GRAPHICS_PRESET_COUNT;
+			const std::string label = LOCF(Settings_Preset, preset >= 0 ? qualityNames[preset] : LOC(Settings_PresetCustom));
+			if (Stepped("preset", r, label, &presetIndex, GRAPHICS_PRESET_COUNT + 1) && presetIndex < GRAPHICS_PRESET_COUNT)
+			{
+				ApplyGraphicsPreset(presetIndex);
+				bChanged = true;
+			}
+		});
+		Row([&](const UIRect& r)
+		{
+			const char* names[] = { LOC(Settings_Off), qualityNames[0], qualityNames[1], qualityNames[2], qualityNames[3] };
+			bChanged |= Stepped("shadow_quality", r, LOCF(Settings_ShadowQuality, names[glm::clamp(m_Settings.shadowQuality, 0, 4)]), &m_Settings.shadowQuality, 5);
+		});
+		Row([&](const UIRect& r)
+		{
+			const char* names[] = { LOC(Settings_DrawNear), LOC(Settings_DrawMedium), LOC(Settings_DrawFar), LOC(Settings_DrawMax) };
+			bChanged |= Stepped("draw_distance", r, LOCF(Settings_DrawDistance, names[glm::clamp(m_Settings.drawDistance, 0, 3)]), &m_Settings.drawDistance, 4);
+		});
+		Row([&](const UIRect& r)
+		{
+			bChanged |= Stepped("quality", r, LOCF(Settings_TerrainDetail, qualityNames[glm::clamp(m_Settings.terrainQuality, 0, 3)]), &m_Settings.terrainQuality, 4);
+		});
+		Row([&](const UIRect& r)
+		{
+			const char* names[] = { LOC(Settings_Off), "FXAA", "TAA" };
+			bChanged |= Stepped("anti_aliasing", r, LOCF(Settings_AntiAliasing, names[glm::clamp(m_Settings.antiAliasing, 0, 2)]), &m_Settings.antiAliasing, 3);
+		});
+		Row([&](const UIRect& r)
+		{
+			const char* names[] = { qualityNames[0], qualityNames[2] };
+			bChanged |= Stepped("effects_quality", r, LOCF(Settings_EffectsQuality, names[glm::clamp(m_Settings.effectsQuality, 0, 1)]), &m_Settings.effectsQuality, 2);
+		});
+		Row([&](const UIRect& r) { bChanged |= m_UI.Checkbox("ssao", r, LOC(Settings_AmbientOcclusion), &m_Settings.bAmbientOcclusion); });
+		Row([&](const UIRect& r) { bChanged |= m_UI.Checkbox("vsync", r, LOC(Settings_VSync), &m_Settings.bVSync); });
+		Row([&](const UIRect& r) { bChanged |= m_UI.Checkbox("minimap", r, LOC(Settings_ShowMinimap), &m_Settings.bShowMinimap); });
+		Row([&](const UIRect& r) { bChanged |= m_UI.Checkbox("show_fps", r, LOC(Settings_ShowFps), &m_Settings.bShowFps); });
+		Row([&](const UIRect& r)
 		{
 			// Clicking cycles through the languages
 			u32 languageIndex = 0;
@@ -1365,20 +1692,20 @@ namespace flex
 			{
 				languageIndex = m_Settings.language == Loc::GetLanguageCode(i) ? i : languageIndex;
 			}
-			if (m_UI.Button("language", content.CutTop(rowHeight, gap), LOCF(Settings_Language, Loc::GetLanguageName(languageIndex))))
+			if (m_UI.Button("language", r, LOCF(Settings_Language, Loc::GetLanguageName(languageIndex))))
 			{
 				m_Settings.language = Loc::GetLanguageCode((languageIndex + 1) % Loc::GetLanguageCount());
 				bChanged = true;
 			}
-		}
+		});
+		m_SettingsContentHeight = rowY + m_SettingsScroll - list.y;
 
 		if (bChanged)
 		{
 			ApplySettings();
 		}
 
-		content.CutTop(8.0f * s);
-		if (m_UI.Button("back", content.CutTop(UITheme::BUTTON_HEIGHT * s), LOC(Common_Back), true))
+		if (m_UI.Button("back", backRect, LOC(Common_Back), true))
 		{
 			m_SettingsFile.Serialize();
 			SetScreen(m_ScreenBeforeSettings);
@@ -1764,6 +2091,8 @@ namespace flex
 				{ LOC(Controls_BuildMaterial), {}, G("build material") },
 				{ LOC(Controls_Campfire), {}, G("campfire") },
 				{ LOC(Controls_LightCampfire), {}, G("light campfire") },
+				{ LOC(Controls_Crafting), {}, G("crafting") },
+				{ LOC(Controls_UseStation), {}, G("use station") },
 				{ LOC(Controls_TerrainMaterial), {}, G("terrain material") },
 				{ LOC(Controls_TrackBuild), {}, A(Action::ENTER_TRACK_BUILD_MODE) },
 			} },
@@ -1774,6 +2103,7 @@ namespace flex
 				{ LOC(Controls_MapWaypoint), {}, G("map waypoint") },
 				{ LOC(Controls_Pause), {}, A(Action::PAUSE) },
 				{ LOC(Controls_Screenshot), {}, A(Action::TAKE_SCREENSHOT) },
+				{ LOC(Controls_Console), {}, G("console") },
 			} },
 		};
 
@@ -2460,19 +2790,76 @@ namespace flex
 		}
 	}
 
+	// Low, medium, high, ultra
+	static const struct GraphicsPreset
+	{
+		i32 shadowQuality;
+		i32 drawDistance;
+		i32 terrainQuality;
+		i32 antiAliasing;
+		bool bAmbientOcclusion;
+		i32 effectsQuality;
+	} s_GraphicsPresets[4] = {
+		{ 1, 1, 0, 1, false, 0 },
+		{ 2, 2, 0, 1, true, 1 },
+		{ 3, 3, 1, 1, true, 1 }, // The defaults
+		{ 4, 3, 3, 2, true, 1 },
+	};
+
+	i32 Game::GetGraphicsPreset() const
+	{
+		for (i32 i = 0; i < GRAPHICS_PRESET_COUNT; ++i)
+		{
+			const GraphicsPreset& p = s_GraphicsPresets[i];
+			if (p.shadowQuality == m_Settings.shadowQuality && p.drawDistance == m_Settings.drawDistance && p.terrainQuality == m_Settings.terrainQuality &&
+				p.antiAliasing == m_Settings.antiAliasing && p.bAmbientOcclusion == m_Settings.bAmbientOcclusion && p.effectsQuality == m_Settings.effectsQuality)
+			{
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	void Game::ApplyGraphicsPreset(i32 preset)
+	{
+		const GraphicsPreset& p = s_GraphicsPresets[glm::clamp(preset, 0, GRAPHICS_PRESET_COUNT - 1)];
+		m_Settings.shadowQuality = p.shadowQuality;
+		m_Settings.drawDistance = p.drawDistance;
+		m_Settings.terrainQuality = p.terrainQuality;
+		m_Settings.antiAliasing = p.antiAliasing;
+		m_Settings.bAmbientOcclusion = p.bAmbientOcclusion;
+		m_Settings.effectsQuality = p.effectsQuality;
+	}
+
 	void Game::ApplySettings()
 	{
 		BaseCamera* firstPersonCamera = g_CameraManager->GetCameraByName("first-person");
 		if (firstPersonCamera != nullptr)
 		{
 			firstPersonCamera->FOV = glm::radians(m_Settings.fov);
+			// The camera doesn't update while the simulation is paused, so the new FOV is applied now (as the slider is dragged)
+			firstPersonCamera->RecalculateViewProjection();
 		}
 		AudioManager::SetMasterGain(m_Settings.masterVolume);
+		GameSounds::SetMusicVolume(m_Settings.musicVolume);
 		if (!Loc::SetLanguage(m_Settings.language))
 		{
 			m_Settings.language = Loc::GetLanguage();
 		}
 		g_Renderer->SetTerrainQuality(m_Settings.terrainQuality);
+		m_Settings.drawDistance = glm::clamp(m_Settings.drawDistance, 0, (i32)ARRAY_LENGTH(DRAW_DISTANCE_SCALES) - 1);
+		g_Renderer->SetDrawDistanceScale(DRAW_DISTANCE_SCALES[m_Settings.drawDistance]);
+		g_Renderer->SetShadowQuality(m_Settings.shadowQuality);
+		g_Renderer->SetAntiAliasing(m_Settings.antiAliasing);
+		g_Renderer->SetSSAOEnabled(m_Settings.bAmbientOcclusion);
+		if (g_Renderer->GetShaderQualityLevel() != m_Settings.effectsQuality)
+		{
+			g_Renderer->SetShaderQualityLevel(glm::clamp(m_Settings.effectsQuality, 0, 1));
+		}
+		if (g_Renderer->IsVSyncEnabled() != m_Settings.bVSync)
+		{
+			g_Renderer->SetVSyncEnabled(m_Settings.bVSync);
+		}
 
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 		if (player != nullptr)
@@ -2689,6 +3076,15 @@ namespace flex
 		scene->SetTimeOfDay(timeOfDay);
 		scene->SetTimeOfDayPaused(false);
 
+		// Animals (tamed ones, & the wild ones near where the player was)
+		Animals::Load(worldObj);
+
+		{
+			std::string harvested;
+			worldObj.TryGetString("harvested", harvested);
+			harvest::Deserialize(harvested);
+		}
+
 		// Chests already looted
 		std::set<u64>& openedChests = TreasureChest::GetOpenedChests();
 		openedChests.clear();
@@ -2902,6 +3298,8 @@ namespace flex
 			chestFields.emplace_back("", JSONValue(std::to_string(chest)));
 		}
 		worldObj.fields.emplace_back("opened chests", JSONValue(chestFields));
+		worldObj.fields.emplace_back("harvested", JSONValue(harvest::Serialize()));
+		Animals::Serialize(worldObj);
 		{
 			// Waypoints, as "slot,x,z;" for each one placed
 			std::string waypointStr;

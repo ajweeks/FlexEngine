@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "berries",
+		"shader" : "pbr",
+		"const albedo" : "0.090,0.060,0.300",
+		"const roughness" : 0.400000
+	}
+}

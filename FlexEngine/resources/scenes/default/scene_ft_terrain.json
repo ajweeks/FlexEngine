@@ -1,0 +1,120 @@
+{
+	"version": 7,
+	"name": "ft_terrain",
+	"spawn player": false,
+	"fog distance": 36800.0,
+	"cloud coverage": 0.0,
+	"cloud altitude": 2400.0,
+	"player 0 guid": "E2CBD1972FA1B384473636A0385DCA2E",
+	"camera": {
+		"type": "debug",
+		"near plane": 0.5,
+		"far plane": 42000.0,
+		"fov": 0.785398,
+		"aperture": 1.0,
+		"shutter speed": 0.125,
+		"light sensitivity": 800.0,
+		"exposure": 1.2,
+		"move speed": 18.0,
+		"transform": {
+			"position": "-508.528, 120.000, 612.793",
+			"pitch": -0.35,
+			"yaw": 2.06796
+		}
+	},
+	"objects": [
+		{
+			"id": "7336F9FE6DDF8E9742B01481AEFD83E1",
+			"name": "Skybox",
+			"type": "skybox",
+			"casts shadow": false,
+			"materials": [
+				"skybox 01"
+			]
+		},
+		{
+			"id": "A63DF4AA4D639FB447EB4F5073F7FB1B",
+			"name": "Reflection Probe 01",
+			"type": "reflection probe",
+			"transform": {
+				"pos": "0.000, 8.000, 0.000"
+			}
+		},
+		{
+			"id": "D38F03C3DEDF55A8459E5F7BFBAFB069",
+			"name": "Directional Light",
+			"type": "directional light",
+			"transform": {
+				"pos": "0.000, 15.000, 0.000",
+				"rot": "2.0, 0.4, 0.0"
+			},
+			"directional light info": {
+				"brightness": 5.0,
+				"colour": "1.00,1.00,1.00"
+			}
+		},
+		{
+			"id": "D747202C0AE085AF4FF5E4A4815437FA",
+			"name": "Terrain",
+			"type": "terrain generator",
+			"chunk generator info": {
+				"arch cell size": 400.0,
+				"arch max radius": 40.0,
+				"arch min radius": 15.0,
+				"auto fog": true,
+				"biome blend distance": 2500.0,
+				"biome cell size": 9000.0,
+				"cave max depth": 160.0,
+				"cave wavelength": 300.0,
+				"cavern chance": 0.5,
+				"cavern wavelength": 160.0,
+				"cells per chunk axis": 24,
+				"climate wavelength": 80000.0,
+				"continent amplitude": 200.0,
+				"continent wavelength": 14000.0,
+				"enable disk cache": true,
+				"lake cell size": 3000.0,
+				"lake chance": 0.85,
+				"lake max radius": 750.0,
+				"lake max relief": 90.0,
+				"lake min radius": 150.0,
+				"lod distance factor": 2.0,
+				"massif cell size": 32000.0,
+				"massif chance": 0.45,
+				"massif max height": 5000.0,
+				"massif min height": 2000.0,
+				"max lod level": 10,
+				"ocean coverage": 0.3,
+				"ocean depth": 260.0,
+				"ocean wavelength": 60000.0,
+				"overhang wavelength": 90.0,
+				"pin center": false,
+				"pinned center": "0.30,5.18,-0.22",
+				"rigid body load radius": 250.0,
+				"sea level": 0.0,
+				"seed": 1234124,
+				"shadow distance": 1500.0,
+				"thread count": 0,
+				"tunnel radius": 5.5,
+				"view distance": 40000.0,
+				"voxel size": 2.0
+			}
+		},
+		{
+			"id": "FBBD8A10B6C4E5B942E87958914E03AA",
+			"name": "cube",
+			"type": "object",
+			"transform": {
+				"pos": "190.176, 0.000, 158.723",
+				"scale": "61.318, 59.842, 59.842"
+			},
+			"visible": false,
+			"mesh": "cube.glb",
+			"materials": [
+				"pbr chrome"
+			]
+		}
+	],
+	"time of day": 0.0,
+	"pause time of day": true
+}

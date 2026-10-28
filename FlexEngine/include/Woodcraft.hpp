@@ -1,6 +1,7 @@
 #pragma once
 
 #include "PlacementPreview.hpp"
+#include "Harvest.hpp"
 #include "Scene/TerrainGeneration.hpp" // For PlantInfo
 
 // The player's woodcraft (owned by Player): chopping down trees & cacti (left mouse button while aiming at a trunk),
@@ -35,6 +36,7 @@ namespace flex
 		// (as if [H] were pressed)
 		void SetPlacingCampfire(bool bPlacing) { m_bPlacingCampfire = bPlacing; }
 		bool IsCampfirePlacementValid() const { return m_bPlacementValid; }
+		const glm::vec3& GetPlacementPos() const { return m_PlacementPos; }
 
 		static constexpr real CHOP_REACH = 3.6f;
 
@@ -43,6 +45,8 @@ namespace flex
 		void RefreshNearbyPlants(bool bForce);
 		void UpdateTarget();
 		void UpdateChopping(bool bCanAct);
+		// Aiming at a berry bush or palm tree: [E] picks its fruit (which regrows later, see Harvest.hpp)
+		void UpdateHarvest(bool bCanAct);
 		void UpdateCampfirePlacement(bool bCanAct);
 		void UpdateLighting(bool bCanAct);
 		// One hit on the targeted plant
@@ -58,6 +62,13 @@ namespace flex
 		std::vector<terrain::PlantInfo> m_NearbyPlants;
 		glm::vec3 m_NearbyQueryPos = glm::vec3(1e30f);
 		sec m_NearbyQueryAge = 0.0f;
+
+		std::vector<terrain::BerryBushInfo> m_NearbyBushes;
+		// Fruit being aimed at (a berry bush or palm)
+		bool m_bHasHarvestTarget = false;
+		harvest::Kind m_HarvestKind = harvest::Kind::BERRIES;
+		u32 m_HarvestHash = 0;
+		glm::vec3 m_HarvestPos = VEC3_ZERO;
 
 		// Plant being aimed at
 		bool m_bHasTarget = false;

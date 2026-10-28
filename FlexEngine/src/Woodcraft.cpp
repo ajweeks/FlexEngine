@@ -141,6 +141,7 @@ namespace flex
 			UpdateTest();
 		}
 
+		harvest::Tick(g_DeltaTime);
 		const bool bCanAct = CanAct();
 		m_ChopCooldown -= g_DeltaTime;
 		m_TimeSinceChop += g_DeltaTime;
@@ -148,6 +149,7 @@ namespace flex
 		if (!bCanAct || TerrainGenerator::GetActive() == nullptr)
 		{
 			m_bHasTarget = false;
+			m_bHasHarvestTarget = false;
 			m_bPlacingCampfire = m_bPlacingCampfire && bCanAct;
 			m_CampfirePreview.Hide();
 			m_NearbyCampfireID = InvalidGameObjectID;
@@ -161,12 +163,14 @@ namespace flex
 		if (m_bPlacingCampfire)
 		{
 			m_bHasTarget = false;
+			m_bHasHarvestTarget = false;
 		}
 		else
 		{
 			RefreshNearbyPlants(false);
 			UpdateTarget();
 			UpdateChopping(bCanAct);
+			UpdateHarvest(bCanAct);
 		}
 	}
 
@@ -185,8 +189,10 @@ namespace flex
 		m_NearbyQueryPos = pos;
 		m_NearbyQueryAge = 0.0f;
 		m_NearbyPlants.clear();
+		m_NearbyBushes.clear();
 		const glm::vec3 extent(NEARBY_PLANT_EXTENT, 16.0f, NEARBY_PLANT_EXTENT);
 		terrainGenerator->FindPlants(pos - extent, pos + extent, m_NearbyPlants);
+		terrainGenerator->FindBerryBushes(pos - extent, pos + extent, m_NearbyBushes);
 	}
 
 	void WoodcraftController::UpdateTarget()
@@ -305,6 +311,71 @@ namespace flex
 			m_bHasTarget = false;
 			m_ChopCooldown = 0.8f;
 			RefreshNearbyPlants(true);
+		}
+	}
+
+	void WoodcraftController::UpdateHarvest(bool bCanAct)
+	{
+		m_bHasHarvestTarget = false;
+		BaseCamera* camera = g_CameraManager->CurrentCamera();
+		if (!bCanAct || camera == nullptr)
+		{
+			return;
+		}
+
+		const glm::vec3 origin = camera->position;
+		const glm::vec3 dir = camera->forward;
+		real closest = FLT_MAX;
+		// Palm trees (their trunk is the chop target)
+		if (m_bHasTarget && m_Target.species == terrain::PlantSpecies::PALM)
+		{
+			closest = glm::distance(origin, m_TargetHitPos);
+			m_bHasHarvestTarget = true;
+			m_HarvestKind = harvest::Kind::COCONUTS;
+			m_HarvestHash = m_Target.hash;
+			m_HarvestPos = m_Target.base + VEC3_UP * m_Target.trunkHeight * 0.9f;
+		}
+
+		// Berry bushes
+		for (const terrain::BerryBushInfo& bush : m_NearbyBushes)
+		{
+			const glm::vec3 center = bush.base + VEC3_UP * (bush.radius * 0.6f);
+			const glm::vec3 oc = origin - center;
+			const real b = glm::dot(oc, dir);
+			const real cc = glm::dot(oc, oc) - bush.radius * bush.radius;
+			const real disc = b * b - cc;
+			if (disc < 0.0f)
+			{
+				continue;
+			}
+			const real t = glm::max(-b - glm::sqrt(disc), 0.0f);
+			if (t < closest && t <= CHOP_REACH)
+			{
+				closest = t;
+				m_bHasHarvestTarget = true;
+				m_HarvestKind = harvest::Kind::BERRIES;
+				m_HarvestHash = bush.hash;
+				m_HarvestPos = center;
+			}
+		}
+
+		if (!m_bHasHarvestTarget)
+		{
+			return;
+		}
+
+		if (g_InputManager->GetKeyPressed(GameKeys::LIGHT_CAMPFIRE) && harvest::IsReady(m_HarvestKind, m_HarvestHash))
+		{
+			const char* prefabName = harvest::ItemPrefabName(m_HarvestKind);
+			const PrefabID itemID = g_ResourceManager->GetPrefabID(prefabName);
+			const i32 count = harvest::GetYield(m_HarvestKind, m_HarvestHash);
+			if (itemID.IsValid())
+			{
+				harvest::MarkPicked(m_HarvestKind, m_HarvestHash);
+				m_Player->AddToInventory(itemID, count);
+				GameSounds::PlayPlace(m_HarvestPos);
+				m_Player->ShowNotification(LOCF(Notify_Picked, count, Loc::ItemName(prefabName)));
+			}
 		}
 	}
 
@@ -434,6 +505,20 @@ namespace flex
 			return;
 		}
 
+		if (m_bHasHarvestTarget && !m_bHasTarget)
+		{
+			const sec wait = harvest::TimeUntilReady(m_HarvestKind, m_HarvestHash);
+			if (wait > 0.0f)
+			{
+				DrawPrompt(LOCF(Woodcraft_PickedClean, (i32)glm::ceil(wait / 60.0f)));
+			}
+			else
+			{
+				DrawPrompt(m_HarvestKind == harvest::Kind::BERRIES ? LOC(Woodcraft_PickBerries) : LOC(Woodcraft_PickCoconuts));
+			}
+			return;
+		}
+
 		if (m_bHasTarget)
 		{
 			const i32 hitsNeeded = HitsToFell(m_Target);
@@ -443,6 +528,10 @@ namespace flex
 			if (!m_Player->IsWieldingAxe())
 			{
 				prompt += LOC(Woodcraft_QuickerWithAxe);
+			}
+			if (m_bHasHarvestTarget && harvest::IsReady(m_HarvestKind, m_HarvestHash))
+			{
+				prompt += std::string("   ") + LOC(Woodcraft_PickCoconuts);
 			}
 			DrawPrompt(prompt);
 			if (hits > 0)
