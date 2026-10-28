@@ -8,7 +8,7 @@ General lessons for working in this repo (not task specifics).
 - MSVC and GCC disagree. Code that compiles on Linux can still fail on Windows, so always do a Windows build before handing off.
   - `include/ThirdParty/sse_mathfun.h` `#define`s `inline` on MSVC. Any standard header first included after it breaks. Add new std headers to `include/stdafx.hpp`, not to engine headers.
 - `--test-scenes` only runs 10 frames per scene by default. Streaming/async systems need `--frames=1500` or more, or they never finish loading and their stats are never printed.
-- Don't use `pkill -f <pattern>` from a shell whose own command line contains the pattern, because it kills itself. Use `pgrep -x` + `kill`.
+- Don't use `pkill -f <pattern>` from a shell whose own command line contains the pattern, because it kills itself. Use `pgrep -x` + `kill`, or `flexsvc -a NAME kill` for your own stuck flexsvc commands & Flex.exe.
 - Disk caches (`FlexEngine/saved/`) persist between test runs. A short run can save a partial cache that skews the next run's numbers, so check which run you are measuring.
 - ImGui here is an old version: no `ImGuiSliderFlags_*` (use the float `power` argument) and no `ImGuiMouseButton_*` (use integers).
 - `stdafx.hpp` uses CRLF; most other files use LF. Text-mode edits with `sed` `$` anchors silently fail on CRLF files, so verify that edits actually applied.

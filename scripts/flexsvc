@@ -78,7 +78,7 @@ def lock(name, shared=False, what=None):
 		fcntl.flock(f, (fcntl.LOCK_SH if shared else fcntl.LOCK_EX) | fcntl.LOCK_NB)
 	except BlockingIOError:
 		write_json(act, dict(info, state="waiting"))
-		print("[%s] waiting for %s lock..." % (now_str(), name), flush=True)
+		print("[%s] waiting for %s lock%s..." % (now_str(), name, lock_holders(name)), flush=True)
 		fcntl.flock(f, fcntl.LOCK_SH if shared else fcntl.LOCK_EX)
 	write_json(act, dict(info, state="holding", since=time.time()))
 	try:
@@ -88,6 +88,16 @@ def lock(name, shared=False, what=None):
 			os.remove(act)
 		fcntl.flock(f, fcntl.LOCK_UN)
 		f.close()
+
+
+def lock_holders(name):
+	"""' (held by X: what, 120s; use `run --detach` to keep working)' for a waiting message, so long waits are explained."""
+	held = []
+	for p in glob.glob(os.path.join(LOCKS, "activity", "*-%s.json" % name)):
+		a = read_json(p)
+		if a and a.get("state") == "holding" and a.get("pid") != os.getpid() and os.path.exists("/proc/%d" % a["pid"]):
+			held.append("%s: %s, %.0fs" % (a["agent"], a["what"][:50], time.time() - a["since"]))
+	return " (held by %s; `run --detach` to keep working meanwhile)" % "; ".join(held) if held else ""
 
 
 @contextlib.contextmanager
@@ -522,6 +532,31 @@ def kill_sandbox(sb):
 	return r.stdout.split()
 
 
+def own_flexsvc_processes():
+	"""Pids of this agent's other flexsvc commands (stuck runs/waits), never this process or its ancestors, so agents
+	don't need `pkill -f "flexsvc -a NAME"`, which matches & kills the calling shell too."""
+	skip, pid = set(), os.getpid()
+	while pid > 1:
+		skip.add(pid)
+		try:
+			pid = int(open("/proc/%d/stat" % pid).read().rsplit(")", 1)[1].split()[1])
+		except (OSError, ValueError, IndexError):
+			break
+	found = []
+	for d in os.listdir("/proc"):
+		if not d.isdigit() or int(d) in skip:
+			continue
+		try:
+			argv = open("/proc/%s/cmdline" % d, "rb").read().split(b"\0")
+		except OSError:
+			continue
+		args = [x.decode(errors="replace") for x in argv if x]
+		if any(os.path.basename(x) == "flexsvc" for x in args[:2]) and "kill" not in args and \
+				("-a" in args and args[args.index("-a") + 1:args.index("-a") + 2] == [AGENT] or "--agent=" + AGENT in args):
+			found.append(int(d))
+	return found
+
+
 def flex_processes():
 	"""[(pid, exe path)] of running Flex.exe, or None if powershell timed out."""
 	ps = "Get-Process -Name Flex -ErrorAction SilentlyContinue | ForEach-Object { '{0} {1}' -f $_.Id, $_.Path }"
@@ -894,8 +929,20 @@ def status():
 	h = read_json(hold_file())
 	if h:
 		print("  builds held by %s for %.0fs" % (h.get("agent"), time.time() - h.get("since", 0)))
+	good = read_json(os.path.join(HOME, "builds", "Release-good.json"))
 	for agent, paths in sorted(claims().items()):
 		print("claims %s: %s" % (agent, ", ".join(paths)))
+		if good:  # after a crash, these are the half-finished edits to check first
+			newer = [p for p in paths if os.path.isfile(os.path.join(REPO, p)) and p.endswith(SRC_EXTS) and os.path.getmtime(os.path.join(REPO, p)) > good["started"]]
+			if newer:
+				print("  uncompiled since last good build %s: %s" % (good["id"], ", ".join(newer)))
+	if good:
+		os.chdir(REPO)
+		changed = subprocess.run("git status --porcelain -- FlexEngine/src FlexEngine/include", shell=True, capture_output=True, text=True).stdout.split("\n")
+		files = [l[3:].strip() for l in changed if l.strip()]
+		newer = [p for p in files if os.path.isfile(p) and os.path.getmtime(p) > good["started"]]
+		if newer:
+			print("source edited since last good build %s (%d): %s" % (good["id"], len(newer), ", ".join(newer[:30])))
 
 
 def hooks():
@@ -1021,7 +1068,11 @@ def main():
 	if a.cmd == "scratch":
 		return print(scratch_dir())
 	if a.cmd == "kill":
-		return print("killed: %s" % (kill_sandbox(sandbox(AGENT)) or "nothing"))
+		mine = own_flexsvc_processes()
+		for pid in mine:
+			with contextlib.suppress(OSError):
+				os.kill(pid, 15)
+		return print("killed Flex.exe: %s; flexsvc processes: %s" % (kill_sandbox(sandbox(AGENT)) or "nothing", mine or "none"))
 	if a.cmd == "shots":
 		return shots(a.action, a.set)
 	if a.cmd == "shaders":

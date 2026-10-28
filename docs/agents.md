@@ -71,6 +71,14 @@ small noise there.
 - GPU slots (`FLEXSVC_GPU_SLOTS`, default 3) only cap concurrent runs; they aren't per GPU. With one GPU the limit is
   usually CPU, and a Linux build slows runs a lot (it now runs `nice`d at half the cores). Don't take timings during one.
 - Runs in one sandbox take turns (they share its `saved/`, exe & shaders), so a second `run` waits for the first.
+- Lock waits name the holder & how long they've held it. A `--perf` run or `bench` holds the whole machine for minutes,
+  so if you're stuck behind one, `run --detach` and keep working instead of waiting in the foreground.
+- `flexsvc -a NAME kill` stops your sandbox's Flex.exe *and* your other flexsvc commands (stuck runs/waits). Use it
+  instead of `pkill -f "flexsvc -a NAME"`, which matches & kills your own shell.
+- After a crash or restart, `flexsvc status` lists each agent's claimed sources edited since the last good build and
+  all source files edited since then: check those half-finished edits first.
+- `--test-scenes` & `--play=` runs write stdout unbuffered, so a run that timed out still logs up to where it hung.
+  Raise `--timeout` for long scene lists (each scene loads separately; 5+ scenes can exceed the default 300s).
 
 ## The board
 - `build` & `run` print new board messages for you, and `flexsvc -a NAME read` shows them any time.

@@ -64,6 +64,17 @@ int main(int argc, char *argv[])
 #endif // DEBUG
 #endif // _WINDOWS
 
+	// Scripted runs redirect stdout to a file, which is fully buffered, so a run killed on timeout left an empty log.
+	// Unbuffered keeps everything up to the hang (MSVC treats _IOLBF as full buffering)
+	for (int i = 1; i < argc; ++i)
+	{
+		if (strcmp(argv[i], "--test-scenes") == 0 || strncmp(argv[i], "--play=", 7) == 0)
+		{
+			setvbuf(stdout, nullptr, _IONBF, 0);
+			break;
+		}
+	}
+
 	flex::Platform::GetConsoleHandle();
 	flex::InitializeLogger();
 
