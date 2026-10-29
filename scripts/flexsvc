@@ -15,7 +15,8 @@ Every agent passes its own name (-a NAME, or FLEX_AGENT=NAME). See docs/agents.m
   flexsvc -a NAME shaders [NAME...]                        compile changed (or named) shaders into saved/spv
   flexsvc -a NAME shots ref|diff SET                       save / compare the last run's screenshots
   flexsvc -a NAME kill                                     kill Flex.exe processes left in your sandbox
-  flexsvc status | hooks | scratch                         queue/activity, test hook catalogue, scratch dir
+  flexsvc -a NAME done                                     pre-report check: build passes with your edits, no DBG: prints
+  flexsvc status | hooks | scratch | metrics               queue/activity, test hook catalogue, scratch dir, dispatch stats
 
 State lives in $FLEXSVC_HOME (default C:\\Code\\Flex\\agents): board.md, builds/, sandboxes/<agent>/, scratch/<agent>/.
 Each agent's exe runs in its own sandbox (bin/<build id>/FlexEngine/Flex.exe beside a FlexEngine/ folder whose
@@ -143,6 +144,12 @@ def gpu_slot(what):
 
 
 # ---------------------------------------------------------------- board
+
+def history(event, **fields):
+	"""One line per build/done in <HOME>/history.jsonl (archived with the board), for `metrics`."""
+	with open(os.path.join(HOME, "history.jsonl"), "a") as f:
+		f.write(json.dumps(dict(event=event, t=time.time(), agent=AGENT, **fields)) + "\n")
+
 
 def board_path():
 	return os.path.join(HOME, "board.md")
@@ -412,6 +419,7 @@ def build(config="Release", linux=False, quiet_cached=False):
 			else:
 				post("%s build BROKEN (%s, first error: %s)" % (key, build_id, state["errors"][0][:200]), sender="flexsvc")
 		write_json(state_file, state)
+		history("build", id=build_id, config=key, started=started, seconds=state["seconds"], ok=state["ok"])
 		if state["ok"] and not linux and not late:
 			write_json(os.path.join(HOME, "builds", key + "-good.json"), state)
 		prune_builds()
@@ -904,6 +912,77 @@ def compile_shaders(names):
 	sys.exit(1 if failed else 0)
 
 
+# ---------------------------------------------------------------- done & metrics
+
+def done():
+	"""Run before the final report: the newest Release build must pass & include your claimed files, and your claimed
+	files must have no DBG: prints left. Releases a hold you forgot."""
+	os.chdir(REPO)
+	mine = [p for p in claims().get(AGENT, []) if os.path.exists(p)]
+	problems = []
+	with lock("board"):
+		h = read_json(hold_file())
+		if h and h.get("agent") == AGENT:
+			os.remove(hold_file())
+			problems.append("you still held builds (released now)")
+	if not mine:
+		problems.append("nothing claimed, so nothing could be checked (flexsvc claim PATH...)")
+	if mine:
+		diff = subprocess.run(["git", "diff", "-U0", "HEAD", "--"] + mine, capture_output=True, text=True, errors="replace").stdout
+		untracked = subprocess.run(["git", "ls-files", "--others", "--exclude-standard", "--"] + mine, capture_output=True, text=True).stdout.split()
+		dbg = [l[1:].strip() for l in diff.splitlines() if l.startswith("+") and not l.startswith("+++") and "DBG:" in l]
+		for p in untracked:
+			with open(p, errors="replace") as f:
+				dbg += [l.strip() for l in f if "DBG:" in l]
+		if dbg:
+			problems.append("%d DBG: line(s) left in your files, e.g. %s" % (len(dbg), dbg[0][:120]))
+	good = read_json(os.path.join(HOME, "builds", "Release-good.json"))
+	last = read_json(os.path.join(HOME, "builds", "Release.json"))
+	if not last or not last.get("ok"):
+		problems.append("the newest Release build %s fails: `build` & check whose errors they are" % (last or {}).get("id"))
+	newer = [p for p in mine if p.endswith(SRC_EXTS) and good and os.path.getmtime(p) > good["started"]]
+	if newer:
+		problems.append("edited after the last good build %s: %s (`build` again)" % (good["id"], ", ".join(newer)))
+	if mine:
+		print(subprocess.run(["git", "diff", "--stat", "HEAD", "--"] + mine, capture_output=True, text=True).stdout.rstrip() or "(no tracked changes in your claimed files)")
+	history("done", ok=not problems, build=(good or {}).get("id"))
+	for p in problems:
+		print("DONE CHECK: " + p)
+	print("DONE CHECK %s" % ("PASS" if not problems else "FAIL"))
+	sys.exit(0 if not problems else 1)
+
+
+def metrics():
+	"""Stats for this dispatch from history.jsonl: builds, failures, minutes the shared Release tree was broken, done
+	checks per agent. The manager adds them to the archive's metrics.json."""
+	events = []
+	with contextlib.suppress(OSError), open(os.path.join(HOME, "history.jsonl")) as f:
+		events = [json.loads(l) for l in f if l.strip()]
+	if not events:
+		return print("no history yet (history.jsonl is written by builds & `done`)")
+	builds = [e for e in events if e["event"] == "build"]
+	rel = sorted((e for e in builds if e["config"] == "Release"), key=lambda e: e["started"])
+	broken, since = 0.0, None
+	for e in rel:
+		if not e["ok"] and since is None:
+			since = e["started"]
+		elif e["ok"] and since is not None:
+			broken += e["started"] - since
+			since = None
+	if since is not None:
+		broken += time.time() - since
+	span = (events[-1]["t"] - events[0]["t"]) / 60
+	out = {"span_min": round(span), "builds": len(builds), "release_builds": len(rel), "release_failed": sum(not e["ok"] for e in rel),
+		"release_broken_min": round(broken / 60), "build_min": round(sum(e["seconds"] for e in builds) / 60),
+		"builds_by_agent": {}, "done_checks": {}}
+	for e in builds:
+		out["builds_by_agent"][e["agent"]] = out["builds_by_agent"].get(e["agent"], 0) + 1
+	for e in events:
+		if e["event"] == "done":
+			out["done_checks"][e["agent"]] = "PASS" if e["ok"] else "FAIL"  # last check wins
+	print(json.dumps(out, indent=1))
+
+
 # ---------------------------------------------------------------- status & hooks
 
 def status():
@@ -1014,19 +1093,23 @@ def main():
 	s.add_argument("set")
 	sh = sub.add_parser("shaders")
 	sh.add_argument("names", nargs="*")
-	for name in ("kill", "status", "hooks", "scratch", "hold", "release", "changes"):
+	for name in ("kill", "status", "hooks", "scratch", "hold", "release", "changes", "done", "metrics"):
 		sub.add_parser(name)
 	a = ap.parse_args()
 
 	if a.cmd == "hooks":
 		return hooks()
-	AGENT = a.agent or ("user" if a.cmd in ("status", "read", "board", "post") else None)
+	AGENT = a.agent or ("user" if a.cmd in ("status", "read", "board", "post", "metrics") else None)
 	if not AGENT or not re.match(r"^[A-Za-z0-9_-]+$", AGENT):
 		die("pass your agent name: flexsvc -a NAME %s ... (or set FLEX_AGENT)" % a.cmd)
 	os.makedirs(HOME, exist_ok=True)
 
 	if a.cmd == "status":
 		return status()
+	if a.cmd == "metrics":
+		return metrics()
+	if a.cmd == "done":
+		return done()
 	if a.cmd == "post":
 		return post(" ".join(a.message), a.to)
 	if a.cmd in ("read", "board"):

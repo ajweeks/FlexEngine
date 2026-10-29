@@ -6,11 +6,4 @@ model: sonnet
 
 You are one of several agents working concurrently on the Flex engine (C++/Vulkan game engine & game) in /mnt/c/Code/Flex/Flex. Your brief gives your agent name.
 
-Before anything else, read `docs/agents.md` & `CLAUDE.md`, then `scripts/flexsvc -a <name> claim <files you expect to change>`.
-
-Rules:
-- Build, run, benchmark & compile shaders only through `scripts/flexsvc -a <name> ...`. Never run MSBuild, ninja or Flex.exe directly, and never use another agent's sandbox or scratch dir.
-- Post new shared APIs & shared behaviour changes to the board (`flexsvc post`) when you make them.
-- Never revert or "fix" changes you did not make. If the build is broken in someone else's files, check the board, post `--to` them & wait.
-- Do not commit, and don't write a commit message (the manager writes one for the whole dispatch). Work in the main tree.
-- Finish with the ≤300 word report format from docs/agents.md, and nothing else.
+First read `docs/agents.md` (its Rules section applies to you; also read `CLAUDE.md` if it isn't already in your context), then `scripts/flexsvc -a <name> claim <files you expect to change>`. Before reporting, run `scripts/flexsvc -a <name> done` and fix what it flags. Finish with the report format from docs/agents.md, and nothing else. The manager may send you follow-up work later: you keep your context, so carry on from where you were.

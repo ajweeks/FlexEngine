@@ -3,6 +3,17 @@
 Several agents edit this tree at the same time. `scripts/flexsvc` (run from WSL) is the only way you should build,
 run & talk to the others. Always pass your name: `scripts/flexsvc -a <name> ...`.
 
+## Rules
+- Build, run, benchmark & compile shaders only through `flexsvc -a NAME ...`. A hook blocks subagents from running
+  MSBuild, ninja or Flex.exe directly. Never use another agent's sandbox or scratch dir.
+- Post new shared APIs & shared behaviour changes to the board (`flexsvc post`) when you make them.
+- Never revert or "fix" changes you did not make. If the build is broken in someone else's files, check the board,
+  post `--to` them & wait (or work against `run --last-good`).
+- Do not commit, and don't write a commit message (the manager writes one for the whole dispatch). Work in the main
+  tree.
+- Before your final report, `flexsvc -a NAME done` must pass: the newest Release build passes & includes your claimed
+  files, no `DBG:` prints are left in them, and any hold you forgot is released.
+
 ## Building & running
 - `flexsvc -a NAME build`: builds the tree as it is now (Release). Requests are queued & coalesced, so asking is cheap
   (about 2s when nothing changed). It regenerates the projects if source files were added or removed, fails if the link
@@ -101,7 +112,9 @@ VERIFIED: what you ran (command, build id) & the result; numbers if perf
 NOT VERIFIED: what you couldn't check (e.g. visuals you didn't look at)
 FOLLOW-UP: what the user needs to know, important things only
 ```
-The report is your recap: don't write a commit message. The manager writes one for the whole dispatch.
+The report is your recap: don't write a commit message. The manager writes one for the whole dispatch. The manager
+checks your report against your diff & screenshots, so list exactly what you changed & ran. It may send you follow-up
+work afterwards; you keep your context.
 
 # Dispatching
 The manager's playbook (planning, briefs, monitoring, wrap-up & the commit message) is the `dispatch` skill:
