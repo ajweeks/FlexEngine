@@ -48,6 +48,7 @@ namespace flex
 		GAME_KEY(CONSOLE, KeyCode::KEY_GRAVE_ACCENT); // Opens the command console (tilde)
 		GAME_KEY(CRAFTING, KeyCode::KEY_I); // Opens/closes the crafting panel
 		GAME_KEY(USE_STATION, KeyCode::KEY_E); // Opens a nearby chest or furnace
+		GAME_KEY(PET, KeyCode::KEY_E); // Pets the animal being looked at
 
 		// The held item's actions (dig, chop, place terrain)
 		GAME_MOUSE(USE_ITEM, MouseButton::LEFT);
@@ -88,6 +89,7 @@ namespace flex
 				{ "console", &CONSOLE, nullptr, CONSOLE.code, MouseButton::_NONE, 0 },
 				{ "crafting", &CRAFTING, nullptr, CRAFTING.code, MouseButton::_NONE, 0 },
 				{ "use station", &USE_STATION, nullptr, USE_STATION.code, MouseButton::_NONE, 3 },
+				{ "pet", &PET, nullptr, PET.code, MouseButton::_NONE, 3 },
 				{ "use item", nullptr, &USE_ITEM, KeyCode::_NONE, USE_ITEM.button, 0 },
 				{ "use item secondary", nullptr, &USE_ITEM_SECONDARY, KeyCode::_NONE, USE_ITEM_SECONDARY.button, 4 },
 				{ "terrain flatten", nullptr, &TERRAIN_FLATTEN, KeyCode::_NONE, TERRAIN_FLATTEN.button, 0 },

@@ -30,6 +30,26 @@ namespace flex
 		m_Texture = nullptr;
 	}
 
+	std::wstring BitmapFont::DecodeUTF8(const std::string& str)
+	{
+		std::wstring result;
+		result.reserve(str.size());
+		for (size_t i = 0; i < str.size(); ++i)
+		{
+			u8 b = (u8)str[i];
+			if (b >= 0xC0 && b < 0xE0 && i + 1 < str.size() && ((u8)str[i + 1] & 0xC0) == 0x80)
+			{
+				result.push_back((wchar_t)(((b & 0x1F) << 6) | ((u8)str[i + 1] & 0x3F)));
+				++i;
+			}
+			else
+			{
+				result.push_back((wchar_t)b);
+			}
+		}
+		return result;
+	}
+
 	bool BitmapFont::IsCharValid(wchar_t character)
 	{
 		return character < CHAR_COUNT;

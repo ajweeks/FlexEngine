@@ -55,6 +55,7 @@ namespace flex
 		~BitmapFont();
 
 		static bool IsCharValid(wchar_t character);
+		static std::wstring DecodeUTF8(const std::string& str); // Code points (Latin-1 range is what the atlas holds)
 
 		// Horizontal kerning (in layout units) to add between leftChar & rightChar
 		real GetKerning(wchar_t leftChar, wchar_t rightChar) const;
@@ -89,7 +90,7 @@ namespace flex
 		u32 GetTextureChannelCount() const;
 
 		// TODO: Investigate crash when this value is higher (256)
-		static const i32 CHAR_COUNT = 200;
+		static const i32 CHAR_COUNT = 256; // Latin-1
 
 		std::string name;
 		i32 characterCount = 0;

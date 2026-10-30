@@ -8,11 +8,13 @@ IGNORE_WARNINGS_PUSH
 
 #include <BulletCollision/CollisionDispatch/btCollisionWorld.h>
 #include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
 IGNORE_WARNINGS_POP
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
+#include "GameControls.hpp"
 #include "GameUI.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Graphics/VertexBufferData.hpp"
@@ -20,6 +22,7 @@ IGNORE_WARNINGS_POP
 #include "JSONTypes.hpp"
 #include "Localization.hpp"
 #include "Physics/PhysicsWorld.hpp"
+#include "Physics/RigidBody.hpp"
 #include "Platform/Platform.hpp"
 #include "Player.hpp"
 #include "ResourceManager.hpp"
@@ -114,12 +117,31 @@ namespace flex
 			real sleepBias = 0.0f; // So a herd doesn't all fall asleep in the same frame
 			real lastUpdate = 0.0f; // Sim time of its last update (far animals are updated round-robin)
 			std::string name;
+
+			real petTimer = 0.0f; // Being petted: faces the player, hops & wiggles
+			real calmTimer = 0.0f; // Wild animals petted recently don't flee
+			real heartTimer = 0.0f;
+			// Flocking (set each frame from nearby animals of the same species)
+			bool bFollower = false;
+			bool bLeaderMoving = false;
+			u32 leaderID = 0;
+			glm::vec3 leaderPos = VEC3_ZERO;
+			real leaderHeading = 0.0f;
+			real flockSpacing = 2.0f;
+		};
+
+		struct Heart
+		{
+			glm::vec3 pos;
+			glm::vec3 vel;
+			real age;
 		};
 
 		// Everything about the world's animals (kept outside the renderer object, which belongs to the scene)
 		struct AnimalWorld
 		{
 			std::vector<Animal> animals;
+			std::vector<Heart> hearts;
 			std::unordered_set<u32> cells; // Cells whose animals have been spawned
 			u32 nextID = 1;
 			real time = 0.0f;
@@ -429,6 +451,34 @@ namespace flex
 			}
 		}
 
+		// Where a pack follower aims for, by the pack's pattern (a trailing line, a V or a loose huddle around the leader)
+		glm::vec3 FlockSlot(const Animal& animal)
+		{
+			const u32 pattern = Hash(animal.leaderID, 77u) % 3;
+			const real rank = 1.0f + (real)(Hash(animal.id, 5u) % 4);
+			const glm::vec3 back = -HeadingDir(animal.leaderHeading);
+			const glm::vec3 side = glm::vec3(back.z, 0.0f, -back.x);
+			const real spacing = animal.flockSpacing;
+			const real sign = (Hash(animal.id, 9u) & 1u) ? 1.0f : -1.0f;
+			glm::vec3 offset;
+			if (pattern == 0)
+			{
+				offset = back * spacing * rank;
+			}
+			else if (pattern == 1)
+			{
+				offset = back * spacing * rank * 0.8f + side * sign * spacing * rank * 0.7f;
+			}
+			else
+			{
+				const real a = (real)(Hash(animal.id, 13u) % 628) * 0.01f;
+				offset = glm::vec3(std::sin(a), 0.0f, std::cos(a)) * spacing * 1.6f;
+			}
+			glm::vec3 result = animal.leaderPos + offset;
+			result.y = animal.pos.y;
+			return result;
+		}
+
 		void StartStep(Animal& animal, const glm::vec3& to, real duration)
 		{
 			animal.from = animal.pos;
@@ -473,7 +523,29 @@ namespace flex
 			const real playerDist = glm::distance(glm::vec2(playerFeet.x, playerFeet.z), glm::vec2(animal.pos.x, animal.pos.z));
 
 			// Wild animals keep away from the player
-			if (!bTamed && bNear && playerDist < (info.bFlies ? 7.0f : 5.0f) && animal.state != AnimalState::FLEE)
+			if (animal.petTimer > 0.0f && !bAirborne)
+			{
+				// Being petted: turn to the player & stay close
+				const glm::vec3 toPlayer = playerFeet - animal.pos;
+				animal.heading = std::atan2(toPlayer.x, toPlayer.z);
+				if (bTamed && animal.state != AnimalState::TIED && playerDist > 2.2f && playerDist < 20.0f)
+				{
+					const real heading = animal.heading;
+					glm::vec3 to;
+					real newHeading;
+					if (PlanStep(terrain, animal, heading, glm::min(0.7f, playerDist - 1.8f), true, to, newHeading))
+					{
+						animal.heading = newHeading;
+						animal.state = AnimalState::WANDER;
+						StartStep(animal, to, glm::max(glm::distance(to, animal.pos) / (info.walkSpeed * 1.5f), 0.1f));
+						return;
+					}
+				}
+				StartStep(animal, animal.pos, 0.3f);
+				return;
+			}
+
+			if (!bTamed && bNear && animal.calmTimer <= 0.0f && playerDist < (info.bFlies ? 7.0f : 5.0f) && animal.state != AnimalState::FLEE)
 			{
 				if (info.bFlies)
 				{
@@ -593,9 +665,15 @@ namespace flex
 			{
 				// Being pulled towards the post: keep going
 			}
+			else if (!bTied && animal.bFollower && glm::distance(glm::vec2(animal.pos.x, animal.pos.z), glm::vec2(animal.leaderPos.x, animal.leaderPos.z)) > animal.flockSpacing + 5.0f)
+			{
+				// Fallen behind the pack: catch up
+				animal.goal = FlockSlot(animal);
+				animal.state = AnimalState::WANDER;
+			}
 			else if (animal.state != AnimalState::WANDER || goalDist < 0.6f)
 			{
-				if (rng.Float() < 0.5f)
+				if (rng.Float() < (animal.bFollower && animal.bLeaderMoving ? 0.1f : 0.5f))
 				{
 					// Stand about for a while
 					animal.state = bTied ? AnimalState::TIED : AnimalState::IDLE;
@@ -609,6 +687,10 @@ namespace flex
 				const real angle = rng.Range(-PI, PI);
 				const real dist = roam * glm::sqrt(rng.Float());
 				animal.goal = centre + glm::vec3(std::sin(angle), 0.0f, std::cos(angle)) * dist;
+				if (!bTied && animal.bFollower)
+				{
+					animal.goal = FlockSlot(animal);
+				}
 				if (!bTied)
 				{
 					animal.state = AnimalState::WANDER;
@@ -882,6 +964,215 @@ namespace flex
 		}
 
 		//
+		// Petting
+		//
+
+		const real PET_RANGE = 3.2f;
+
+		void Pet(Animal& animal)
+		{
+			animal.petTimer = 3.0f;
+			animal.calmTimer = 30.0f;
+			animal.heartTimer = 0.0f;
+			animal.stepTime = animal.stepDuration; // Reacts on the next frame
+		}
+
+		void SpawnHeart(const Animal& animal, u32 salt)
+		{
+			Rng rng(Hash(animal.id, salt + (u32)(s_World.time * 100.0f)));
+			const SpeciesInfo& info = Info(animal.species);
+			Heart heart;
+			heart.pos = animal.pos + VEC3_UP * (info.neckHeight + 0.5f) + glm::vec3(rng.Range(-0.3f, 0.3f), 0.0f, rng.Range(-0.3f, 0.3f));
+			heart.vel = glm::vec3(rng.Range(-0.15f, 0.15f), rng.Range(0.7f, 1.0f), rng.Range(-0.15f, 0.15f));
+			heart.age = 0.0f;
+			if (s_World.hearts.size() < 200)
+			{
+				s_World.hearts.push_back(heart);
+			}
+		}
+
+		void UpdatePet(Player* player, real dt)
+		{
+			for (Animal& animal : s_World.animals)
+			{
+				if (animal.petTimer > 0.0f)
+				{
+					animal.petTimer -= dt;
+					animal.heartTimer -= dt;
+					if (animal.heartTimer <= 0.0f)
+					{
+						animal.heartTimer = 0.28f;
+						SpawnHeart(animal, 1u);
+					}
+				}
+				if (animal.calmTimer > 0.0f)
+				{
+					animal.calmTimer -= dt;
+				}
+			}
+			for (i32 i = (i32)s_World.hearts.size() - 1; i >= 0; --i)
+			{
+				Heart& heart = s_World.hearts[i];
+				heart.age += dt;
+				heart.pos += heart.vel * dt;
+				heart.vel.y *= glm::exp(-0.6f * dt);
+				if (heart.age > 1.8f)
+				{
+					s_World.hearts[i] = s_World.hearts.back();
+					s_World.hearts.pop_back();
+				}
+			}
+
+			if (player == nullptr || s_World.bNaming || player->IsAnyInventoryShowing() || player->GetBuildMode().IsActive() || g_EngineInstance->IsSimulationPaused())
+			{
+				return;
+			}
+			BaseCamera* camera = g_CameraManager->CurrentCamera();
+			Animal* aimed = FindAimedAnimal(camera->position, camera->forward, PET_RANGE + 1.5f);
+			if (aimed == nullptr || (aimed->flags & AIRBORNE) != 0 || aimed->state == AnimalState::SLEEP ||
+				glm::distance(glm::vec2(aimed->pos.x, aimed->pos.z), glm::vec2(player->GetTransform()->GetWorldPosition().x, player->GetTransform()->GetWorldPosition().z)) > PET_RANGE + Info(aimed->species).radius)
+			{
+				return;
+			}
+			if (s_World.prompt.empty())
+			{
+				s_World.prompt = LOCF(Animal_PromptPet, DisplayName(*aimed).c_str());
+			}
+			if (g_InputManager->GetKeyPressed(GameKeys::PET))
+			{
+				Pet(*aimed);
+				for (u32 n = 0; n < 4; ++n)
+				{
+					SpawnHeart(*aimed, 100u + n);
+				}
+			}
+		}
+
+		//
+		// Flocking & collision
+		//
+
+		void ShiftAnimal(Animal& animal, const glm::vec3& delta)
+		{
+			animal.pos += delta;
+			animal.from += delta;
+			animal.to += delta;
+		}
+
+		// Finds each animal's pack leader (the lowest id of the same species nearby), then pushes animals out of one
+		// another & out of the player
+		void UpdateFlockingAndCollision(Player* player)
+		{
+			std::vector<Animal*> list;
+			const glm::vec3 playerFeet = PlayerFeet(player);
+			for (Animal& animal : s_World.animals)
+			{
+				if ((animal.flags & AIRBORNE) == 0 && glm::distance2(animal.pos, playerFeet) < 120.0f * 120.0f)
+				{
+					list.push_back(&animal);
+				}
+			}
+			if (list.size() > 500)
+			{
+				list.resize(500);
+			}
+
+			const real flockRadiusSq = 18.0f * 18.0f;
+			for (Animal* a : list)
+			{
+				a->bFollower = false;
+				const bool bFree = a->state != AnimalState::TIED && a->state != AnimalState::FOLLOW && a->state != AnimalState::FLEE && (a->flags & TAMED) == 0;
+				if (!bFree)
+				{
+					continue;
+				}
+				Animal* leader = a;
+				for (Animal* b : list)
+				{
+					if (b->species == a->species && b->id < leader->id && b->state != AnimalState::TIED && b->state != AnimalState::FOLLOW && (b->flags & TAMED) == 0 &&
+						glm::distance2(glm::vec2(a->pos.x, a->pos.z), glm::vec2(b->pos.x, b->pos.z)) < flockRadiusSq)
+					{
+						leader = b;
+					}
+				}
+				if (leader != a)
+				{
+					a->bFollower = true;
+					a->leaderID = leader->id;
+					a->leaderPos = leader->pos;
+					a->leaderHeading = leader->heading;
+					a->bLeaderMoving = leader->state == AnimalState::WANDER;
+					a->flockSpacing = Info(a->species).radius * 1.8f + 0.6f;
+				}
+			}
+
+			// Animals push each other apart (radii are about half the lasso radius)
+			for (u32 i = 0; i < (u32)list.size(); ++i)
+			{
+				Animal& a = *list[i];
+				const real ra = Info(a.species).radius * 0.5f;
+				for (u32 j = i + 1; j < (u32)list.size(); ++j)
+				{
+					Animal& b = *list[j];
+					glm::vec2 d(b.pos.x - a.pos.x, b.pos.z - a.pos.z);
+					const real minDist = ra + Info(b.species).radius * 0.5f;
+					const real distSq = glm::dot(d, d);
+					if (distSq >= minDist * minDist || glm::abs(a.pos.y - b.pos.y) > 2.0f)
+					{
+						continue;
+					}
+					const real dist = glm::sqrt(distSq);
+					d = dist > 1e-4f ? d / dist : glm::vec2(std::cos((real)a.id), std::sin((real)a.id));
+					const real overlap = minDist - dist;
+					const bool bAFixed = a.state == AnimalState::TIED;
+					const bool bBFixed = b.state == AnimalState::TIED;
+					const real aShare = bAFixed ? 0.0f : bBFixed ? 1.0f : 0.5f;
+					const real bShare = bBFixed ? 0.0f : bAFixed ? 1.0f : 0.5f;
+					ShiftAnimal(a, -glm::vec3(d.x, 0.0f, d.y) * overlap * aShare);
+					ShiftAnimal(b, glm::vec3(d.x, 0.0f, d.y) * overlap * bShare);
+				}
+			}
+
+			// The player: the animal gives way, & the player is held back by the larger ones
+			RigidBody* playerBody = player->GetRigidBody();
+			glm::vec3 playerPush = VEC3_ZERO;
+			for (Animal* a : list)
+			{
+				const SpeciesInfo& info = Info(a->species);
+				if (playerFeet.y - a->pos.y > info.neckHeight || a->pos.y - playerFeet.y > 2.0f)
+				{
+					continue;
+				}
+				const real minDist = 0.4f + info.radius * 0.5f;
+				glm::vec2 d(a->pos.x - playerFeet.x, a->pos.z - playerFeet.z);
+				const real distSq = glm::dot(d, d);
+				if (distSq >= minDist * minDist)
+				{
+					continue;
+				}
+				const real dist = glm::sqrt(distSq);
+				d = dist > 1e-4f ? d / dist : glm::vec2(1.0f, 0.0f);
+				const real overlap = minDist - dist;
+				const real playerShare = glm::clamp(info.radius * 0.5f, 0.15f, 0.7f);
+				const bool bFixed = a->state == AnimalState::TIED;
+				ShiftAnimal(*a, glm::vec3(d.x, 0.0f, d.y) * overlap * (bFixed ? 0.0f : 1.0f - playerShare));
+				playerPush -= glm::vec3(d.x, 0.0f, d.y) * overlap * (bFixed ? 1.0f : playerShare);
+			}
+			if (playerBody != nullptr && glm::length2(playerPush) > 1e-8f)
+			{
+				playerBody->SetWorldPosition(player->GetTransform()->GetWorldPosition() + playerPush, false);
+				btRigidBody* rb = playerBody->GetRigidBodyInternal();
+				const glm::vec3 pushDir = glm::normalize(playerPush);
+				const btVector3 v = rb->getLinearVelocity();
+				const real into = -(v.x() * pushDir.x + v.z() * pushDir.z); // Velocity towards the animal
+				if (into > 0.0f)
+				{
+					rb->setLinearVelocity(btVector3(v.x() + pushDir.x * into, v.y(), v.z() + pushDir.z * into));
+				}
+			}
+		}
+
+		//
 		// Drawing
 		//
 
@@ -1011,7 +1302,16 @@ namespace flex
 
 		void DrawAnimal(AnimalRenderer* renderer, const Animal& animal, bool bDetail)
 		{
-			Builder b = { renderer, animal.pos, glm::angleAxis(animal.heading, VEC3_UP) };
+			glm::vec3 drawPos = animal.pos;
+			real drawHeading = animal.heading;
+			if (animal.petTimer > 0.0f)
+			{
+				// Happy: hops & wiggles
+				const real strength = glm::min(animal.petTimer, 1.0f);
+				drawPos.y += glm::abs(std::sin(s_World.time * 9.0f + (real)animal.id)) * 0.18f * strength;
+				drawHeading += std::sin(s_World.time * 14.0f) * 0.14f * strength;
+			}
+			Builder b = { renderer, drawPos, glm::angleAxis(drawHeading, VEC3_UP) };
 			const bool bAsleep = animal.state == AnimalState::SLEEP;
 			const bool bGrazing = animal.state == AnimalState::IDLE || (animal.state == AnimalState::TIED && animal.from == animal.to);
 			// Grazing animals lower their heads now & then
@@ -1394,6 +1694,20 @@ namespace flex
 
 	namespace Animals
 	{
+		void DrawHearts(AnimalRenderer* renderer, const glm::vec3& cameraPos)
+		{
+			for (const Heart& heart : s_World.hearts)
+			{
+				const glm::vec3 toCam = cameraPos - heart.pos;
+				Builder b = { renderer, heart.pos, glm::angleAxis(std::atan2(toCam.x, toCam.z), VEC3_UP) };
+				const real size = 0.1f * (1.0f - glm::smoothstep(1.2f, 1.8f, heart.age)) * glm::min(heart.age * 6.0f + 0.3f, 1.0f);
+				const glm::quat diamond = glm::angleAxis(PI * 0.25f, VEC3_FORWARD);
+				b.Box(RED, VEC3_ZERO, glm::vec3(size, size, size * 0.4f), diamond);
+				b.Box(RED, glm::vec3(-size * 0.7f, size * 0.7f, 0.0f), glm::vec3(size * 0.75f, size * 0.75f, size * 0.4f), diamond);
+				b.Box(RED, glm::vec3(size * 0.7f, size * 0.7f, 0.0f), glm::vec3(size * 0.75f, size * 0.75f, size * 0.4f), diamond);
+			}
+		}
+
 		void Update()
 		{
 			PROFILE_AUTO("Animals::Update");
@@ -1489,6 +1803,7 @@ namespace flex
 			}
 
 			UpdateLasso(player);
+			UpdatePet(player, dt);
 			UpdateAnimalTest(player, terrain);
 
 			// Simulate: near animals every frame, the rest of those in range round-robin
@@ -1532,6 +1847,10 @@ namespace flex
 				}
 			}
 			s_World.simulatedCount = simulated;
+			if (dt > 0.0f)
+			{
+				UpdateFlockingAndCollision(player);
+			}
 
 			// Draw those near the camera
 			BaseCamera* camera = g_CameraManager->CurrentCamera();
@@ -1565,6 +1884,7 @@ namespace flex
 					DrawRope(renderer, animal.home + VEC3_UP * 1.0f, neck, 0.3f);
 				}
 			}
+			DrawHearts(renderer, cameraPos);
 			renderer->EndFrame();
 		}
 
@@ -1575,8 +1895,10 @@ namespace flex
 			{
 				ui.Text(s_World.prompt, ui.Width() * 0.5f, ui.Height() * 0.5f + 48.0f * s, UITheme::TEXT_BODY * s, UITheme::TEXT_PRIMARY, TextAlign::CENTER);
 			}
+			static bool s_bNameFieldInit = false;
 			if (!s_World.bNaming)
 			{
+				s_bNameFieldInit = false;
 				return;
 			}
 			Animal* animal = FindAnimal(s_World.namingID);
@@ -1594,36 +1916,21 @@ namespace flex
 			const real left = panel.x + 28.0f * s;
 			ui.Text(LOCF(Animal_NameTitle, AnimalSpeciesDisplayName(animal->species)), left, panel.y + 44.0f * s, UITheme::TEXT_H2 * s, UITheme::TEXT_PRIMARY, TextAlign::LEFT, true);
 
-			// Typed straight into the field (it has the keyboard while the dialog is open)
+			// A text field: click into/out of it (it starts focused)
 			const u32 maxLength = 20;
-			for (char c : g_InputManager->GetTypedText())
+			if (!s_bNameFieldInit)
 			{
-				if (s_World.nameText.size() < maxLength && c >= 32 && c != ',' && c != ';' && c != '|')
-				{
-					s_World.nameText += c;
-				}
-			}
-			if (g_InputManager->GetKeyPressed(KeyCode::KEY_BACKSPACE, true) && !s_World.nameText.empty())
-			{
-				s_World.nameText.pop_back();
+				ui.Focus("animal_name_field");
+				s_bNameFieldInit = true;
 			}
 			const UIRect field(left, panel.y + 86.0f * s, w - 56.0f * s, UITheme::ROW_HEIGHT * s);
-			ui.FillRect(field, UITheme::RAISED, UITheme::CORNER_RADIUS * s);
-			ui.FillRect(UIRect(field.x + 6.0f * s, field.y + field.h - 3.0f * s, field.w - 12.0f * s, 3.0f * s), UITheme::EMBER, 1.5f * s);
-			const bool bCaret = std::fmod(s_World.time, 1.0f) < 0.5f;
-			if (s_World.nameText.empty())
-			{
-				ui.Text(LOC(Animal_NamePlaceholder), field.x + 16.0f * s, field.y + field.h * 0.5f, UITheme::TEXT_BODY_LARGE * s, UITheme::TEXT_DISABLED);
-			}
-			else
-			{
-				ui.Text(s_World.nameText + (bCaret ? "|" : ""), field.x + 16.0f * s, field.y + field.h * 0.5f, UITheme::TEXT_BODY_LARGE * s, UITheme::TEXT_PRIMARY);
-			}
+			const bool bFieldSubmitted = ui.TextField("animal_name_field", field, &s_World.nameText, maxLength, LOC(Animal_NamePlaceholder));
+			s_World.nameText.erase(std::remove_if(s_World.nameText.begin(), s_World.nameText.end(), [](char c) { return c < 32 || c == ',' || c == ';' || c == '|'; }), s_World.nameText.end());
 
 			const real buttonWidth = (w - 56.0f * s - 12.0f * s) * 0.5f;
 			const real buttonY = panel.y + h - (UITheme::BUTTON_HEIGHT + 24.0f) * s;
 			const bool bConfirm = ui.Button("animal_name_ok", UIRect(left, buttonY, buttonWidth, UITheme::BUTTON_HEIGHT * s), LOC(Animal_NameConfirm), true, !s_World.nameText.empty()) ||
-				(g_InputManager->GetKeyPressed(KeyCode::KEY_ENTER) && !s_World.nameText.empty());
+				(bFieldSubmitted && !s_World.nameText.empty());
 			const bool bSkip = ui.Button("animal_name_skip", UIRect(left + buttonWidth + 12.0f * s, buttonY, buttonWidth, UITheme::BUTTON_HEIGHT * s), LOC(Animal_NameSkip));
 			if (bConfirm || bSkip)
 			{

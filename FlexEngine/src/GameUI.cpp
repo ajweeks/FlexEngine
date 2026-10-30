@@ -329,8 +329,8 @@ namespace flex
 		const real pixelsPerUnit = unitScale * scale * m_Height * 0.5f;
 		const real tracking = font->GetTracking(pixelsPerUnit);
 		real advance = 0.0f;
-		char prevChar = ' ';
-		for (char c : text)
+		wchar_t prevChar = ' ';
+		for (wchar_t c : BitmapFont::DecodeUTF8(text))
 		{
 			if (BitmapFont::IsCharValid(c))
 			{
@@ -480,6 +480,11 @@ namespace flex
 			return true;
 		}
 		return false;
+	}
+
+	void GameUI::Focus(const char* id)
+	{
+		m_FocusedID = HashID(id);
 	}
 
 	bool GameUI::TextField(const char* id, const UIRect& rect, std::string* text, u32 maxLength, const std::string& placeholder /* = "" */)

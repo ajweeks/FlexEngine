@@ -489,22 +489,34 @@ namespace flex
 
 			const glm::vec3 delta = target - eye;
 			const real depth = glm::dot(delta, forward);
-			if (depth <= 0.1f)
+			real sx, sy;
+			bool bEdge = false;
+			if (depth > 0.1f)
 			{
-				continue;
+				sx = glm::dot(delta, screenRight) / (depth * tanHalfFov);
+				sy = glm::dot(delta, screenUp) / (depth * tanHalfFov);
 			}
-			const real sx = glm::dot(delta, screenRight) / (depth * tanHalfFov);
-			const real sy = glm::dot(delta, screenUp) / (depth * tanHalfFov);
-			if (glm::abs(sx) > aspectRatio * 1.1f || glm::abs(sy) > 1.1f)
+			else
 			{
-				continue;
+				sx = glm::dot(delta, screenRight);
+				sy = glm::dot(delta, screenUp);
+			}
+			if (depth <= 0.1f || glm::abs(sx) > aspectRatio * 0.95f || glm::abs(sy) > 0.95f)
+			{
+				// Off screen: the glint sits on the screen's edge in the chest's direction (so it points the way to turn)
+				glm::vec2 dir(sx, sy);
+				dir = glm::length(dir) > 1e-5f ? glm::normalize(dir) : glm::vec2(0.0f, 1.0f);
+				const real edgeScale = glm::min(aspectRatio * 0.92f / glm::max(glm::abs(dir.x), 1e-4f), 0.92f / glm::max(glm::abs(dir.y), 1e-4f));
+				sx = dir.x * edgeScale;
+				sy = dir.y * edgeScale;
+				bEdge = true;
 			}
 
 			// Twinkles: a steady faint star which flares every few seconds (out of step between chests)
 			const real phase = HashToUnit(HashU32((u32)pair.first ^ (u32)(pair.first >> 32))) * TWO_PI;
 			const real flare = std::pow(glm::max(std::sin(now * 1.6f + phase), 0.0f), 8.0f);
 			const real fade = 1.0f - glm::smoothstep(GLINT_RANGE * 0.7f, GLINT_RANGE, distance);
-			const real alpha = (0.45f + 0.55f * flare) * fade;
+			const real alpha = (0.45f + 0.55f * flare) * fade * (bEdge ? 0.7f : 1.0f);
 			const real armLength = (7.0f + 9.0f * flare) * uiScale * pixel;
 			const real armWidth = 1.2f * uiScale * pixel;
 

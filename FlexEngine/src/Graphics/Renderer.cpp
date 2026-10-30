@@ -717,6 +717,8 @@ namespace flex
 			{
 				m_SpotLightData[ID].colour = VEC4_NEG_ONE;
 				m_SpotLightData[ID].enabled = 0;
+				m_bSpotLightCastsShadow[ID] = false;
+				m_SpotLightShadowIgnoreRoot[ID] = nullptr;
 				m_NumSpotLightsEnabled--;
 				CHECK_GE(m_NumSpotLightsEnabled, 0);
 				UpdateSpotLightData(ID, nullptr);
@@ -729,8 +731,19 @@ namespace flex
 		for (i32 i = 0; i < MAX_SPOT_LIGHT_COUNT; ++i)
 		{
 			UpdateSpotLightData(i, nullptr);
+			m_bSpotLightCastsShadow[i] = false;
+			m_SpotLightShadowIgnoreRoot[i] = nullptr;
 		}
 		m_NumSpotLightsEnabled = 0;
+	}
+
+	void Renderer::SetSpotLightCastsShadow(SpotLightID ID, bool bCastsShadow, GameObject* ignoreRoot /* = nullptr */)
+	{
+		if (ID < MAX_SPOT_LIGHT_COUNT)
+		{
+			m_bSpotLightCastsShadow[ID] = bCastsShadow;
+			m_SpotLightShadowIgnoreRoot[ID] = bCastsShadow ? ignoreRoot : nullptr;
+		}
 	}
 
 	void Renderer::UpdateSpotLightData(SpotLightID ID, SpotLightData* data)
@@ -1015,24 +1028,25 @@ namespace flex
 		return m_bEnableTAA;
 	}
 
-	void Renderer::SetShadowQuality(i32 quality)
+	void Renderer::SetShadowQuality(Quality quality, bool bEnabled)
 	{
-		quality = glm::clamp(quality, 0, 4);
-		m_ShadowQuality = quality;
-		// Index: quality (off uses low's maps, which aren't rendered)
-		static const u32 s_Resolutions[] = { 1024, 1024, 2048, 4096, 4096 };
-		static const i32 s_CascadeCounts[] = { 2, 2, 3, 4, 4 };
-		static const real s_DistanceScales[] = { 1.0f, 0.4f, 0.7f, 1.0f, 1.6f };
-		static const u32 s_PointShadowResolutions[] = { 128, 128, 256, 256, 512 };
+		// Off keeps the quality's maps (& low's sizes), which aren't rendered
+		m_ShadowQuality = QualityFromInt((i32)quality);
+		quality = bEnabled ? m_ShadowQuality : Quality::LOW;
+		// One per Quality
+		static const u32 s_Resolutions[] = { 1024, 2048, 4096, 4096 };
+		static const i32 s_CascadeCounts[] = { 2, 3, 4, 4 };
+		static const real s_DistanceScales[] = { 0.4f, 0.7f, 1.0f, 1.6f };
+		static const u32 s_PointShadowResolutions[] = { 128, 256, 256, 512 };
 
-		m_bSunShadowsEnabled = quality > 0;
-		m_ShadowDistanceScale = s_DistanceScales[quality];
-		m_PointShadowSettings.bEnabled = quality >= 2;
-		const bool bRecreate = m_ShadowMapBaseResolution != s_Resolutions[quality] || m_ShadowCascadeCount != s_CascadeCounts[quality] ||
-			m_PointShadowSettings.resolution != s_PointShadowResolutions[quality];
-		m_ShadowMapBaseResolution = s_Resolutions[quality];
-		m_ShadowCascadeCount = s_CascadeCounts[quality];
-		m_PointShadowSettings.resolution = s_PointShadowResolutions[quality];
+		m_bSunShadowsEnabled = bEnabled;
+		m_ShadowDistanceScale = bEnabled ? QualitySelect(quality, s_DistanceScales) : 1.0f;
+		m_PointShadowSettings.bEnabled = bEnabled && quality >= Quality::MEDIUM;
+		const bool bRecreate = m_ShadowMapBaseResolution != QualitySelect(quality, s_Resolutions) || m_ShadowCascadeCount != QualitySelect(quality, s_CascadeCounts) ||
+			m_PointShadowSettings.resolution != QualitySelect(quality, s_PointShadowResolutions);
+		m_ShadowMapBaseResolution = QualitySelect(quality, s_Resolutions);
+		m_ShadowCascadeCount = QualitySelect(quality, s_CascadeCounts);
+		m_PointShadowSettings.resolution = QualitySelect(quality, s_PointShadowResolutions);
 		InvalidateShadowCascadeCache();
 		if (bRecreate && m_bInitialized)
 		{
@@ -1119,22 +1133,11 @@ namespace flex
 
 	void Renderer::EnqueueScreenSpaceSprites()
 	{
-		if (m_bDisplayShadowCascadePreview)
+		// FLEX_SHADOW_DEBUG=1: starts with the shadow map debug view on (for screenshots)
+		static const bool s_bShadowDebugEnv = getenv("FLEX_SHADOW_DEBUG") != nullptr;
+		if (m_bDisplayShadowCascadePreview || s_bShadowDebugEnv)
 		{
-			SpriteQuadDrawInfo drawInfo = {};
-			drawInfo.bScreenSpace = true;
-			drawInfo.bReadDepth = true;
-			drawInfo.materialID = m_SpriteArrMatID;
-			drawInfo.anchor = AnchorPoint::BOTTOM_RIGHT;
-			drawInfo.scale = glm::vec3(0.2f);
-			for (u32 i = 0; i < (u32)m_ShadowCascadeCount; ++i)
-			{
-				// TODO:
-				drawInfo.textureID = 999 + i;
-				drawInfo.textureLayer = i;
-				drawInfo.pos = glm::vec3(0.0f, i * drawInfo.scale.x * 2.1f, 0.0f);
-				EnqueueSprite(drawInfo);
-			}
+			EnqueueShadowDebugSprites();
 		}
 	}
 
@@ -3819,8 +3822,7 @@ namespace flex
 				ImGui::TextColored(g_WarningTextColour, "(overridden: %.0fm)", m_ShadowDistanceOverride);
 			}
 
-			static const char* terrainQualityNames[] = { "Low", "Medium", "High", "Ultra" };
-			ImGui::Combo("Terrain quality", &m_TerrainQuality, terrainQualityNames, (i32)ARRAY_LENGTH(terrainQualityNames));
+			ImGui::Combo("Terrain quality", (i32*)&m_TerrainQuality, QualityNames, QUALITY_COUNT);
 			SaveOnRelease();
 			if (ImGui::IsItemHovered())
 			{
@@ -3982,8 +3984,8 @@ namespace flex
 	{
 		real strWidth = 0;
 
-		char prevChar = ' ';
-		for (char c : str)
+		wchar_t prevChar = ' ';
+		for (wchar_t c : BitmapFont::DecodeUTF8(str))
 		{
 			if (BitmapFont::IsCharValid(c))
 			{
@@ -4006,7 +4008,7 @@ namespace flex
 	{
 		real strHeight = 0;
 
-		for (char c : str)
+		for (wchar_t c : BitmapFont::DecodeUTF8(str))
 		{
 			if (BitmapFont::IsCharValid(c))
 			{
@@ -4027,8 +4029,8 @@ namespace flex
 	{
 		real strWidth = 0;
 
-		char prevChar = ' ';
-		for (char c : textCache.str)
+		wchar_t prevChar = ' ';
+		for (wchar_t c : BitmapFont::DecodeUTF8(textCache.str))
 		{
 			if (BitmapFont::IsCharValid(c))
 			{
@@ -4046,7 +4048,7 @@ namespace flex
 	{
 		real strHeight = 0;
 
-		for (char c : textCache.str)
+		for (wchar_t c : BitmapFont::DecodeUTF8(textCache.str))
 		{
 			if (BitmapFont::IsCharValid(c))
 			{
@@ -4136,8 +4138,8 @@ namespace flex
 					break;
 				}
 
-				char prevChar = ' ';
-				for (char c : currentStr)
+				wchar_t prevChar = ' ';
+				for (wchar_t c : BitmapFont::DecodeUTF8(currentStr))
 				{
 					if (BitmapFont::IsCharValid(c))
 					{
@@ -4229,8 +4231,8 @@ namespace flex
 
 				real totalAdvanceX = 0;
 
-				char prevChar = ' ';
-				for (char c : textCache.str)
+				wchar_t prevChar = ' ';
+				for (wchar_t c : BitmapFont::DecodeUTF8(textCache.str))
 				{
 					if (BitmapFont::IsCharValid(c))
 					{

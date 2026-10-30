@@ -84,13 +84,14 @@ WorldStats stats;
 			real masterVolume = 0.5f;
 			real musicVolume = 0.7f; // [0, 1], applied by the music system (see GetMusicVolume)
 			bool bShowFps = false; // FPS & frame time in the corner
-			i32 terrainQuality = 1;
-			// Scalability (see Game::ApplySettings & the presets in Game::DrawSettings)
-			i32 shadowQuality = 3; // 0: off, 1: low ... 4: ultra (Renderer::SetShadowQuality)
-			i32 drawDistance = 3; // 0: near ... 3: maximum (see DRAW_DISTANCE_SCALES)
-			i32 antiAliasing = 1; // 0: off, 1: FXAA, 2: TAA
+			// Scalability: every level is a Quality (see Game::ApplySettings & the presets, s_GraphicsPresets)
+			Quality terrainQuality = Quality::MEDIUM; // Renderer::SetTerrainQuality
+			bool bShadows = true;
+			Quality shadowQuality = Quality::HIGH; // Renderer::SetShadowQuality
+			Quality drawDistance = Quality::ULTRA; // LOW: near ... ULTRA: maximum (see DRAW_DISTANCE_SCALES)
+			i32 antiAliasing = 1; // 0: off, 1: FXAA, 2: TAA (a mode, not a quality)
 			bool bAmbientOcclusion = true;
-			i32 effectsQuality = 1; // The shader quality level: 0: low, 1: high
+			Quality effectsQuality = Quality::HIGH; // The shader quality level (shader_quality_level = (i32)effectsQuality)
 			bool bVSync = false;
 			bool bShowMinimap = true;
 			std::string language = "en"; // A Language code (see Localization.hpp)
@@ -107,12 +108,12 @@ WorldStats stats;
 		void DrawWorlds();
 		void DrawNewWorld();
 		void DrawSettings();
-		// Graphics presets (low, medium, high, ultra) set all of the scalability settings at once
-		static const i32 GRAPHICS_PRESET_COUNT = 4;
-		// Scales streamed terrain's view distance, per draw distance setting
+		// Graphics presets (one per Quality) set all of the scalability settings at once
+		// Scales streamed terrain's view distance, per draw distance quality
 		static constexpr real DRAW_DISTANCE_SCALES[] = { 0.2f, 0.4f, 0.7f, 1.0f };
-		i32 GetGraphicsPreset() const; // -1: custom
-		void ApplyGraphicsPreset(i32 preset);
+		bool GetGraphicsPreset(Quality* outPreset) const; // False when the settings don't match a preset (custom)
+		void ApplyGraphicsPreset(Quality preset);
+		void MigrateSettings(); // Converts settings saved by older versions
 		void DrawControls();
 		void SaveBindings();
 		void LoadBindings();

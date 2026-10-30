@@ -151,7 +151,8 @@ struct PointShadowData
 {
 	// [2i]: xyz: render space position light i's shadow faces were rendered from, w: its first array layer (< 0: unshadowed)
 	// [2i+1]: x: shadow strength, y: near plane, z: far plane (range)
-	vec4 lights[NUM_POINT_LIGHTS * 2];
+	// (Point lights first, then spot lights at NUM_POINT_LIGHTS + i)
+	vec4 lights[(NUM_POINT_LIGHTS + NUM_SPOT_LIGHTS) * 2];
 	// x: tan of each face's half FOV, y: receiver normal offset (texels), z: depth comparison bias, w: face resolution
 	vec4 params;
 };

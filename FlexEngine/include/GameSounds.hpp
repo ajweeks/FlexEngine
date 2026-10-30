@@ -58,6 +58,7 @@ namespace flex
 		void PlaySplash(const glm::vec3& posWS, real strength);
 		void PlayUITick();
 		void PlayUIConfirm();
+		void PlayBuildDenied();
 
 		// Call every frame for each burning fire (intensity [0, 1]). A crackle loop plays at the nearest one.
 		void ReportFire(const glm::vec3& posWS, real intensity);

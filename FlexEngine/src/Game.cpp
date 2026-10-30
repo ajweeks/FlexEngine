@@ -301,7 +301,7 @@ namespace flex
 
 	Game::Game() :
 		m_ActionCallback(this, &Game::OnActionEvent),
-		m_SettingsFile("Game settings", SAVED_DIRECTORY "game_settings.json", 1)
+		m_SettingsFile("Game settings", SAVED_DIRECTORY "game_settings.json", 2) // 2: qualities saved as names
 	{
 		m_SettingsFile.RegisterProperty("field of view", &m_Settings.fov).SetRange(50.0f, 110.0f);
 		m_SettingsFile.RegisterProperty("mouse sensitivity", &m_Settings.mouseSensitivity).SetRange(0.1f, 4.0f);
@@ -310,6 +310,7 @@ namespace flex
 		m_SettingsFile.RegisterProperty("music volume", &m_Settings.musicVolume).SetRange(0.0f, 1.0f);
 		m_SettingsFile.RegisterProperty("show fps", &m_Settings.bShowFps);
 		m_SettingsFile.RegisterProperty("terrain quality", &m_Settings.terrainQuality);
+		m_SettingsFile.RegisterProperty("shadows", &m_Settings.bShadows);
 		m_SettingsFile.RegisterProperty("shadow quality", &m_Settings.shadowQuality);
 		m_SettingsFile.RegisterProperty("draw distance", &m_Settings.drawDistance);
 		m_SettingsFile.RegisterProperty("anti-aliasing", &m_Settings.antiAliasing);
@@ -331,6 +332,7 @@ namespace flex
 		{
 			m_SettingsFile.Serialize();
 		}
+		MigrateSettings();
 		LoadBindings();
 		RegisterConsoleCommands();
 
@@ -1640,35 +1642,54 @@ namespace flex
 			}
 			return false;
 		};
+		// A slider through the quality levels
+		auto SteppedQuality = [&](const char* id, const UIRect& r, const std::string& label, Quality* quality) -> bool
+		{
+			i32 value = QualityIndex(*quality);
+			if (Stepped(id, r, label, &value, QUALITY_COUNT))
+			{
+				*quality = QualityFromInt(value);
+				return true;
+			}
+			return false;
+		};
 		Row([&](const UIRect& r)
 		{
 			m_UI.Text(LOC(Settings_GraphicsHeader), r.x, r.y + r.h * 0.7f, UITheme::TEXT_BODY_LARGE * s, UITheme::EMBER, TextAlign::LEFT, true);
 		});
 		Row([&](const UIRect& r)
 		{
-			const i32 preset = GetGraphicsPreset();
+			Quality preset;
+			const bool bPreset = GetGraphicsPreset(&preset);
 			// Custom sits past the end, so dragging from it picks a preset
-			i32 presetIndex = preset >= 0 ? preset : GRAPHICS_PRESET_COUNT;
-			const std::string label = LOCF(Settings_Preset, preset >= 0 ? qualityNames[preset] : LOC(Settings_PresetCustom));
-			if (Stepped("preset", r, label, &presetIndex, GRAPHICS_PRESET_COUNT + 1) && presetIndex < GRAPHICS_PRESET_COUNT)
+			i32 presetIndex = bPreset ? QualityIndex(preset) : QUALITY_COUNT;
+			const std::string label = LOCF(Settings_Preset, bPreset ? qualityNames[presetIndex] : LOC(Settings_PresetCustom));
+			if (Stepped("preset", r, label, &presetIndex, QUALITY_COUNT + 1) && presetIndex < QUALITY_COUNT)
 			{
-				ApplyGraphicsPreset(presetIndex);
+				ApplyGraphicsPreset(QualityFromInt(presetIndex));
 				bChanged = true;
 			}
 		});
 		Row([&](const UIRect& r)
 		{
-			const char* names[] = { LOC(Settings_Off), qualityNames[0], qualityNames[1], qualityNames[2], qualityNames[3] };
-			bChanged |= Stepped("shadow_quality", r, LOCF(Settings_ShadowQuality, names[glm::clamp(m_Settings.shadowQuality, 0, 4)]), &m_Settings.shadowQuality, 5);
+			// Off, then each quality
+			i32 value = m_Settings.bShadows ? QualityIndex(m_Settings.shadowQuality) + 1 : 0;
+			if (Stepped("shadow_quality", r, LOCF(Settings_ShadowQuality, value == 0 ? LOC(Settings_Off) : qualityNames[value - 1]), &value, QUALITY_COUNT + 1))
+			{
+				m_Settings.bShadows = value > 0;
+				m_Settings.shadowQuality = value > 0 ? QualityFromInt(value - 1) : m_Settings.shadowQuality;
+				bChanged = true;
+			}
 		});
 		Row([&](const UIRect& r)
 		{
 			const char* names[] = { LOC(Settings_DrawNear), LOC(Settings_DrawMedium), LOC(Settings_DrawFar), LOC(Settings_DrawMax) };
-			bChanged |= Stepped("draw_distance", r, LOCF(Settings_DrawDistance, names[glm::clamp(m_Settings.drawDistance, 0, 3)]), &m_Settings.drawDistance, 4);
+			static_assert(ARRAY_LENGTH(names) == QUALITY_COUNT, "One draw distance name per quality");
+			bChanged |= SteppedQuality("draw_distance", r, LOCF(Settings_DrawDistance, names[QualityIndex(m_Settings.drawDistance)]), &m_Settings.drawDistance);
 		});
 		Row([&](const UIRect& r)
 		{
-			bChanged |= Stepped("quality", r, LOCF(Settings_TerrainDetail, qualityNames[glm::clamp(m_Settings.terrainQuality, 0, 3)]), &m_Settings.terrainQuality, 4);
+			bChanged |= SteppedQuality("quality", r, LOCF(Settings_TerrainDetail, qualityNames[QualityIndex(m_Settings.terrainQuality)]), &m_Settings.terrainQuality);
 		});
 		Row([&](const UIRect& r)
 		{
@@ -1677,8 +1698,7 @@ namespace flex
 		});
 		Row([&](const UIRect& r)
 		{
-			const char* names[] = { qualityNames[0], qualityNames[2] };
-			bChanged |= Stepped("effects_quality", r, LOCF(Settings_EffectsQuality, names[glm::clamp(m_Settings.effectsQuality, 0, 1)]), &m_Settings.effectsQuality, 2);
+			bChanged |= SteppedQuality("effects_quality", r, LOCF(Settings_EffectsQuality, qualityNames[QualityIndex(m_Settings.effectsQuality)]), &m_Settings.effectsQuality);
 		});
 		Row([&](const UIRect& r) { bChanged |= m_UI.Checkbox("ssao", r, LOC(Settings_AmbientOcclusion), &m_Settings.bAmbientOcclusion); });
 		Row([&](const UIRect& r) { bChanged |= m_UI.Checkbox("vsync", r, LOC(Settings_VSync), &m_Settings.bVSync); });
@@ -2093,6 +2113,7 @@ namespace flex
 				{ LOC(Controls_LightCampfire), {}, G("light campfire") },
 				{ LOC(Controls_Crafting), {}, G("crafting") },
 				{ LOC(Controls_UseStation), {}, G("use station") },
+				{ LOC(Controls_PetAnimal), {}, G("pet") },
 				{ LOC(Controls_TerrainMaterial), {}, G("terrain material") },
 				{ LOC(Controls_TrackBuild), {}, A(Action::ENTER_TRACK_BUILD_MODE) },
 			} },
@@ -2790,45 +2811,78 @@ namespace flex
 		}
 	}
 
-	// Low, medium, high, ultra
+	// One per Quality (every preset has shadows on)
 	static const struct GraphicsPreset
 	{
-		i32 shadowQuality;
-		i32 drawDistance;
-		i32 terrainQuality;
+		Quality shadowQuality;
+		Quality drawDistance;
+		Quality terrainQuality;
 		i32 antiAliasing;
 		bool bAmbientOcclusion;
-		i32 effectsQuality;
-	} s_GraphicsPresets[4] = {
-		{ 1, 1, 0, 1, false, 0 },
-		{ 2, 2, 0, 1, true, 1 },
-		{ 3, 3, 1, 1, true, 1 }, // The defaults
-		{ 4, 3, 3, 2, true, 1 },
+		Quality effectsQuality;
+	} s_GraphicsPresets[] = {
+		{ Quality::LOW, Quality::MEDIUM, Quality::LOW, 1, false, Quality::LOW },
+		{ Quality::MEDIUM, Quality::HIGH, Quality::LOW, 1, true, Quality::MEDIUM },
+		{ Quality::HIGH, Quality::ULTRA, Quality::MEDIUM, 1, true, Quality::HIGH }, // The defaults
+		{ Quality::ULTRA, Quality::ULTRA, Quality::ULTRA, 2, true, Quality::ULTRA },
 	};
+	static_assert(ARRAY_LENGTH(s_GraphicsPresets) == QUALITY_COUNT, "One graphics preset per quality");
 
-	i32 Game::GetGraphicsPreset() const
+	bool Game::GetGraphicsPreset(Quality* outPreset) const
 	{
-		for (i32 i = 0; i < GRAPHICS_PRESET_COUNT; ++i)
+		for (i32 i = 0; i < QUALITY_COUNT; ++i)
 		{
 			const GraphicsPreset& p = s_GraphicsPresets[i];
-			if (p.shadowQuality == m_Settings.shadowQuality && p.drawDistance == m_Settings.drawDistance && p.terrainQuality == m_Settings.terrainQuality &&
+			if (m_Settings.bShadows && p.shadowQuality == m_Settings.shadowQuality && p.drawDistance == m_Settings.drawDistance && p.terrainQuality == m_Settings.terrainQuality &&
 				p.antiAliasing == m_Settings.antiAliasing && p.bAmbientOcclusion == m_Settings.bAmbientOcclusion && p.effectsQuality == m_Settings.effectsQuality)
 			{
-				return i;
+				*outPreset = (Quality)i;
+				return true;
 			}
 		}
-		return -1;
+		return false;
 	}
 
-	void Game::ApplyGraphicsPreset(i32 preset)
+	void Game::ApplyGraphicsPreset(Quality preset)
 	{
-		const GraphicsPreset& p = s_GraphicsPresets[glm::clamp(preset, 0, GRAPHICS_PRESET_COUNT - 1)];
+		const GraphicsPreset& p = QualitySelect(preset, s_GraphicsPresets);
+		m_Settings.bShadows = true;
 		m_Settings.shadowQuality = p.shadowQuality;
 		m_Settings.drawDistance = p.drawDistance;
 		m_Settings.terrainQuality = p.terrainQuality;
 		m_Settings.antiAliasing = p.antiAliasing;
 		m_Settings.bAmbientOcclusion = p.bAmbientOcclusion;
 		m_Settings.effectsQuality = p.effectsQuality;
+	}
+
+	void Game::MigrateSettings()
+	{
+		if (m_SettingsFile.fileVersion < 2)
+		{
+			// Version 1 stored ints (read as is into the Quality fields): shadows were 0: off, 1: low ... 4: ultra & effects 0: low, 1: high
+			const i32 oldShadowQuality = (i32)m_Settings.shadowQuality;
+			m_Settings.bShadows = oldShadowQuality > 0;
+			m_Settings.shadowQuality = QualityFromInt(oldShadowQuality - 1);
+			m_Settings.effectsQuality = (i32)m_Settings.effectsQuality <= 0 ? Quality::LOW : Quality::HIGH;
+			// Old effects had no medium/ultra levels (the old medium & ultra presets used high), so keep those presets selected
+			Quality preset;
+			for (Quality effects : { Quality::MEDIUM, Quality::ULTRA })
+			{
+				const Quality oldEffects = m_Settings.effectsQuality;
+				m_Settings.effectsQuality = oldEffects == Quality::HIGH ? effects : oldEffects;
+				if (GetGraphicsPreset(&preset))
+				{
+					break;
+				}
+				m_Settings.effectsQuality = oldEffects;
+			}
+			m_SettingsFile.Serialize();
+		}
+		// Terrain detail & draw distance kept their indices
+		m_Settings.shadowQuality = QualityFromInt((i32)m_Settings.shadowQuality);
+		m_Settings.drawDistance = QualityFromInt((i32)m_Settings.drawDistance);
+		m_Settings.terrainQuality = QualityFromInt((i32)m_Settings.terrainQuality);
+		m_Settings.effectsQuality = QualityFromInt((i32)m_Settings.effectsQuality);
 	}
 
 	void Game::ApplySettings()
@@ -2847,15 +2901,11 @@ namespace flex
 			m_Settings.language = Loc::GetLanguage();
 		}
 		g_Renderer->SetTerrainQuality(m_Settings.terrainQuality);
-		m_Settings.drawDistance = glm::clamp(m_Settings.drawDistance, 0, (i32)ARRAY_LENGTH(DRAW_DISTANCE_SCALES) - 1);
-		g_Renderer->SetDrawDistanceScale(DRAW_DISTANCE_SCALES[m_Settings.drawDistance]);
-		g_Renderer->SetShadowQuality(m_Settings.shadowQuality);
+		g_Renderer->SetDrawDistanceScale(QualitySelect(m_Settings.drawDistance, DRAW_DISTANCE_SCALES));
+		g_Renderer->SetShadowQuality(m_Settings.shadowQuality, m_Settings.bShadows);
 		g_Renderer->SetAntiAliasing(m_Settings.antiAliasing);
 		g_Renderer->SetSSAOEnabled(m_Settings.bAmbientOcclusion);
-		if (g_Renderer->GetShaderQualityLevel() != m_Settings.effectsQuality)
-		{
-			g_Renderer->SetShaderQualityLevel(glm::clamp(m_Settings.effectsQuality, 0, 1));
-		}
+		g_Renderer->SetEffectsQuality(m_Settings.effectsQuality);
 		if (g_Renderer->IsVSyncEnabled() != m_Settings.bVSync)
 		{
 			g_Renderer->SetVSyncEnabled(m_Settings.bVSync);

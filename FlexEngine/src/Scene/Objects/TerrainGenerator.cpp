@@ -56,8 +56,7 @@ namespace flex
 	// LOD distance factor multipliers for each terrain quality level (see Renderer::GetTerrainQuality)
 	// FLEX_TERRAIN_VIEW_PRIORITY=0: chunks are generated nearest first, wherever the camera's looking (for comparisons)
 	static const bool s_bDisableViewPriority = getenv("FLEX_TERRAIN_VIEW_PRIORITY") != nullptr && atoi(getenv("FLEX_TERRAIN_VIEW_PRIORITY")) == 0;
-	static const real s_TerrainQualityLodScales[] = { 0.9f, 1.0f, 1.3f, 1.65f };
-	static const char* s_TerrainQualityNames[] = { "Low", "Medium", "High", "Ultra" };
+	static const real s_TerrainQualityLodScales[] = { 0.9f, 1.0f, 1.3f, 1.65f }; // One per Quality
 
 	TerrainGenerator::TerrainGenerator(const std::string& name, const GameObjectID& gameObjectID /* = InvalidGameObjectID */, const PrefabIDPair& sourcePrefabID /* = InvalidPrefabIDPair */, bool bIsPrefabTemplate /*= false */) :
 		GameObject(name, TerrainGeneratorSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate),
@@ -250,8 +249,7 @@ namespace flex
 	terrain::WorldParams TerrainGenerator::GetEffectiveParams() const
 	{
 		terrain::WorldParams params = m_Params;
-		const i32 quality = glm::clamp(g_Renderer->GetTerrainQuality(), 0, (i32)ARRAY_LENGTH(s_TerrainQualityLodScales) - 1);
-		params.lodDistanceFactor = glm::max(params.lodDistanceFactor * s_TerrainQualityLodScales[quality], 1.8f);
+		params.lodDistanceFactor = glm::max(params.lodDistanceFactor * QualitySelect(g_Renderer->GetTerrainQuality(), s_TerrainQualityLodScales), 1.8f);
 		// The draw distance setting (never below a few km, so the world doesn't look like a small island)
 		params.viewDistance = glm::max(params.viewDistance * g_Renderer->GetDrawDistanceScale(), glm::min(params.viewDistance, 4000.0f));
 		return params;
@@ -270,7 +268,7 @@ namespace flex
 
 	void TerrainGenerator::UpdateQuality()
 	{
-		const i32 quality = g_Renderer->GetTerrainQuality();
+		const Quality quality = g_Renderer->GetTerrainQuality();
 		if (quality != m_AppliedQuality && m_Streamer != nullptr)
 		{
 			m_AppliedQuality = quality;
@@ -1273,6 +1271,14 @@ namespace flex
 		return !m_SaveDirectory.empty() || !SceneTestRunner::IsRunning();
 	}
 
+	void TerrainGenerator::ToggleBerries(const glm::vec3& bushBase)
+	{
+		if (m_Streamer != nullptr)
+		{
+			ApplyEdit(terrain::MakeToggleBerriesEdit(bushBase));
+		}
+	}
+
 	void TerrainGenerator::RemovePlant(const terrain::PlantInfo& plant)
 	{
 		if (m_Streamer != nullptr)
@@ -1445,6 +1451,16 @@ namespace flex
 		ApplyPlaneEdits({ terrain::MakePlaneEdit(terrain::EditType::RAISE, center, normal, radius, height, material) });
 	}
 
+	void TerrainGenerator::DigBox(const glm::vec3& center, const glm::vec3& normal, real twist, real halfWidth, real halfDepth)
+	{
+		ApplyPlaneEdits({ terrain::MakeBoxEdit(terrain::EditType::BOX_DIG, center, normal, twist, halfWidth, halfDepth, terrain::Material::SOIL) });
+	}
+
+	void TerrainGenerator::FillBox(const glm::vec3& center, const glm::vec3& normal, real twist, real halfWidth, real halfDepth, terrain::Material material)
+	{
+		ApplyPlaneEdits({ terrain::MakeBoxEdit(terrain::EditType::BOX_FILL, center, normal, twist, halfWidth, halfDepth, material) });
+	}
+
 	void TerrainGenerator::FlattenPath(const std::vector<glm::vec3>& points, real radius, terrain::Material material /* = GRAVEL */, real height /* = 0.0f */)
 	{
 		if (points.empty() || radius <= 0.0f)
@@ -1555,9 +1571,9 @@ namespace flex
 		{
 			for (const terrain::Edit& edit : planeEdits)
 			{
-				if (edit.type != terrain::EditType::RAISE)
+				if (edit.type != terrain::EditType::RAISE && edit.type != terrain::EditType::BOX_FILL)
 				{
-					s_OnTerrainDug(edit.center, edit.radius);
+					s_OnTerrainDug(edit.center, terrain::IsBoxEdit(edit.type) ? glm::length(glm::vec3(edit.radius, edit.radius, edit.height)) : edit.radius);
 				}
 			}
 		}
@@ -1656,6 +1672,19 @@ namespace flex
 				if (iter->type == terrain::EditType::RAISE)
 				{
 					continue;
+				}
+				return false;
+			}
+			if (terrain::IsBoxEdit(iter->type))
+			{
+				if (terrain::BoxEditDistance(*iter, pos - iter->center) > tolerance)
+				{
+					continue;
+				}
+				if (iter->type == terrain::EditType::BOX_FILL)
+				{
+					outMaterial = iter->material;
+					return true;
 				}
 				return false;
 			}
@@ -2130,11 +2159,11 @@ bChanged = ImGui::ColorEdit3("Cliff", &biome.cliffColour.x) || bChanged;
 		ImGui::Separator();
 
 		{
-			i32 quality = g_Renderer->GetTerrainQuality();
-			if (ImGui::Combo("Quality", &quality, s_TerrainQualityNames, (i32)ARRAY_LENGTH(s_TerrainQualityNames)))
+			i32 quality = QualityIndex(g_Renderer->GetTerrainQuality());
+			if (ImGui::Combo("Quality", &quality, QualityNames, QUALITY_COUNT))
 			{
 				// Stored in the renderer settings, since it's a user preference rather than part of the scene
-				g_Renderer->SetTerrainQuality(quality);
+				g_Renderer->SetTerrainQuality(QualityFromInt(quality));
 				g_Renderer->SaveSettingsToDisk(false);
 			}
 			if (ImGui::IsItemHovered())
@@ -2593,7 +2622,8 @@ bChanged = ImGui::ColorEdit3("Cliff", &biome.cliffColour.x) || bChanged;
 		glm::vec2 offset = glm::vec2(pos.x - m_Minimap.center.x, -(pos.z - m_Minimap.center.z)) / m_Minimap.extent;
 		offset = glm::clamp(offset, glm::vec2(-0.95f), glm::vec2(0.95f));
 		const glm::vec2 markerPx = mapCenterPx + offset * mapSizePx * 0.5f;
-		const glm::vec3 look = player != nullptr ? player->GetLookDirection() : camera->forward;
+		// (Riding a vehicle, the player stays put and the camera is what turns)
+		const glm::vec3 look = (player != nullptr && !player->GetRidingVehicleID().IsValid()) ? player->GetLookDirection() : camera->forward;
 		// Waypoints (pinned to the edge of the map when they're further away)
 		const MapWaypoint* waypoints = GetMapWaypoints();
 		for (u32 i = 0; i < MAX_MAP_WAYPOINTS; ++i)

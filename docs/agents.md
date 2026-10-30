@@ -57,6 +57,14 @@ flexsvc -a NAME shots diff features    # after: only the broken feature's scene(
 Terrain needs about 300 frames to settle, and water/particles/clouds animate, so expect
 small noise there.
 
+## Tests by category
+`flexsvc -a NAME test` runs only the test categories your claimed files affect (graphics, ui, window, audio, terrain,
+track, save, gameplay, core; or the uncommitted changes if you claimed nothing). `--list` shows what it would run,
+`--cat a,b` picks categories, `--all` runs everything. A changed source file that no category lists runs everything.
+Categories, their path patterns, unit tests & scenes are in `scripts/test_categories.json`; unit tests alone:
+`--test --headless --category=core,track,save,gameplay`. Run `test` before you report; skip window/graphics scenes
+when you didn't touch that code. There's no dedicated fullscreen/resize test yet (`window` runs a smoke scene).
+
 ## When the tree is broken or you're waiting
 - Keep shared files compiling at every save. Stage a big rewrite in a copy (in your scratch dir) until it compiles, or
   bracket a multi-file edit with `flexsvc -a NAME hold` / `release`: builds wait (max 90 s, holds expire after 10 min)

@@ -932,6 +932,11 @@ namespace flex
 			PlayOneShot(Sound::UI_TICK, 0.5f, 0.02f);
 		}
 
+		void PlayBuildDenied()
+		{
+			PlayOneShot(Sound::BUILD_DENIED, 0.5f, 0.03f);
+		}
+
 		void PlayUIConfirm()
 		{
 			PlayOneShot(Sound::UI_CONFIRM, 0.45f, 0.0f);

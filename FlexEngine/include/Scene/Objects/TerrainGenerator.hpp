@@ -54,11 +54,15 @@ namespace flex
 		void FlattenArea(const glm::vec3& center, const glm::vec3& normal, real radius, terrain::Material material = terrain::Material::SOIL, real height = 0.0f);
 		void LowerArea(const glm::vec3& center, const glm::vec3& normal, real radius, real height = 0.0f);
 		void RaiseArea(const glm::vec3& center, const glm::vec3& normal, real radius, terrain::Material material, real height = 0.0f);
+		// Box brushes (see terrain::EditType::BOX_DIG): cut out / add a flat faced box (normal: its depth axis, twist: its
+		// turn about it). Applied like the plane brushes (plants, saving, re-meshing).
+		void DigBox(const glm::vec3& center, const glm::vec3& normal, real twist, real halfWidth, real halfDepth);
+		void FillBox(const glm::vec3& center, const glm::vec3& normal, real twist, real halfWidth, real halfDepth, terrain::Material material);
 		// Flattens a strip of terrain (e.g. under a road or track) along a path through points, radius to either side.
 		// Each disc's plane is tilted to follow the path's slope (but not rolled sideways), so the strip is smooth along
 		// its length. All discs are applied at once.
 		void FlattenPath(const std::vector<glm::vec3>& points, real radius, terrain::Material material = terrain::Material::GRAVEL, real height = 0.0f);
-		// Applies a plane edit made with terrain::MakePlaneEdit (see FlattenArea)
+		// Applies plane/box edits made with terrain::MakePlaneEdit/MakeBoxEdit (see FlattenArea)
 		void ApplyPlaneEdits(const std::vector<terrain::Edit>& planeEdits);
 		// Removes small pieces of terrain left floating near center (e.g. once a series of edits is finished)
 		void RemoveFloatingFragments(const glm::vec3& center, real extent);
@@ -75,6 +79,8 @@ namespace flex
 		void FellPlant(const terrain::PlantInfo& plant, const glm::vec3& fallDirection);
 		// Removes a plant for good (saved with the terrain's edits) without felling it (no falling tree or drops)
 		void RemovePlant(const terrain::PlantInfo& plant);
+		// Hides (or shows again) the berries on the bush at bushBase, regenerating its chunks (saved with the edits)
+		void ToggleBerries(const glm::vec3& bushBase);
 		// Whether edits are loaded from & saved to disk (not in scene tests, unless in a world's directory)
 		bool PersistsEdits() const;
 // A plant's (full detail, world space) mesh, as shown in the terrain
@@ -293,7 +299,7 @@ namespace flex
 		real m_ShadowDistance = 1500.0f;
 
 		// Applied quality level (see Renderer::GetTerrainQuality), scales the LOD distance factor
-		i32 m_AppliedQuality = -1;
+		Quality m_AppliedQuality = Quality::_COUNT; // _COUNT: not applied yet
 		real m_AppliedDrawDistanceScale = 1.0f;
 		ms m_InViewLoadTime = -1.0f; // Since m_LoadStartTime, < 0: not yet
 

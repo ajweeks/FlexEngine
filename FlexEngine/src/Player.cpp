@@ -238,6 +238,15 @@ namespace flex
 
 		// Chopping & campfires (before digging, which it takes the mouse buttons from while aiming at a plant)
 		m_ToolSwingTimer = glm::max(m_ToolSwingTimer - g_DeltaTime, 0.0f);
+		// Tools swing on every click, even when there's nothing to chop or dig (the chop & dig code swing with their own
+		// durations first when they do act)
+		if (m_ToolSwingTimer <= 0.0f && m_bPossessed && AbleToInteract() && !IsAnyInventoryShowing() && !IsBuilding() &&
+			!m_RidingVehicleID.IsValid() && m_TrackRidingID == InvalidTrackID && !g_EngineInstance->IsSimulationPaused() &&
+			(IsWieldingAxe() || IsWieldingPickAxe() || GetWieldedToolType() == ShovelSID) &&
+			g_InputManager->IsMouseButtonDown(MouseButton::LEFT))
+		{
+			SwingTool(0.35f);
+		}
 		// (the woodcraft & terrain tool update in OnRenderPoseUpdated, once the render pose they aim from is known)
 
 		if (TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive())

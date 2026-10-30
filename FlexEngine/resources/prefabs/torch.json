@@ -1,0 +1,20 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "15F65D9445F74BCB8746EA26DBA67715",
+	"root" : 
+	{
+		"id" : "72A984196D12485CB9EEFF17ADBC084F",
+		"name" : "torch",
+		"type" : "object",
+		"mesh" : "cylinder.glb",
+		"materials" : 
+		[
+			"wood log"
+		],
+		"transform" : 
+		{
+			"scale" : "0.050, 0.350, 0.050"
+		}
+	}
+}

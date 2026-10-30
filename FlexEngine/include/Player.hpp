@@ -439,6 +439,9 @@ namespace flex
 			real progress = 0.0f; // [0, 1] of a full stroke
 			bool bApplied = false; // Whether an edit has been made yet
 			real appliedLevel = 0.0f; // Plane of the last edit made (along the normal)
+			// Mining (dig & fill hits, each a box edit): the box's turn about the normal, & its center
+			real twist = 0.0f;
+			glm::vec3 boxCenter = VEC3_ZERO;
 		};
 		TerrainStroke m_TerrainStroke;
 		// The last stroke which made an edit: holding the button on the same spot carries on from it (deepening the same
@@ -453,6 +456,8 @@ namespace flex
 		PlacementPreview m_TerrainBrushPreview;
 		sec m_TimeSinceTerrainEdit = 0.0f; // Edits (& so chunk re-meshing) are rate limited
 		void EndTerrainStroke();
+		// Digging & filling: each hit of the tool cuts out (or adds) a flat faced box, aligned with the last one
+		void UpdateTerrainMining(TerrainToolAction action, StringID toolTypeID, const glm::vec3& hitPos, const glm::vec3& hitNormal, real looseTime, real rockTime, real fillTime);
 		// Center of the stroke's edit with its plane at level
 		glm::vec3 GetTerrainStrokeCenter(real level) const;
 		// A stable plane orientation for edits at a surface point: the surface's normal averaged over the brush, leaning

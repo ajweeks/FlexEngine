@@ -144,6 +144,73 @@ namespace flex
 			return glm::vec3(std::sin(pitch) * std::sin(yaw), std::cos(pitch), std::sin(pitch) * std::cos(yaw));
 		}
 
+		// Mining: each dig hit cuts a box this far into the surface (meters, along its normal), & each fill hit adds one
+		// this thick
+		const real MINE_DEPTH = 1.0f;
+		// Mined faces are snapped to multiples of this along their normal, so separate holes & walls line up
+		const real MINE_STEP = 0.25f;
+		// Dig boxes also clear this far out of the surface (bumps around the spot aimed at)
+		const real MINE_CLEARANCE = 0.75f;
+		// Fill boxes reach this far into the surface below them (so they're joined to it)
+		const real MINE_FILL_OVERLAP = 0.3f;
+		// A hit this soon after the last, on a face with the same orientation nearby, lines up with it
+		const real MINE_STICKY_TIME = 3.0f;
+		const real MINE_HIT_TIME_SCALE = 1.2f;
+		const real MINE_MIN_HIT_TIME = 0.3f;
+		const u64 MINE_PREVIEW_KEY = 1ull << 40;
+
+		// Half the width of the square face of the boxes each tool cuts (the terrain's finest cells are 2 m, so narrower
+		// boxes come out as V shaped notches rather than flat faced holes)
+		real MineHalfWidth(StringID toolTypeID)
+		{
+			return toolTypeID == ShovelSID ? 2.0f : 1.75f;
+		}
+
+		// Mined boxes face straight up, down, or horizontally (in 15 degree steps of heading), so repeated hits leave
+		// floors, ceilings & walls rather than slopes. Shovels prefer floors.
+		glm::vec3 SnapMineNormal(const glm::vec3& normal, bool bShovel)
+		{
+			const real length = glm::length(normal);
+			if (length < 1e-6f)
+			{
+				return VEC3_UP;
+			}
+			const glm::vec3 n = normal / length;
+			const real pitch = std::acos(glm::clamp(n.y, -1.0f, 1.0f));
+			if (pitch < (bShovel ? 1.05f : 0.7f))
+			{
+				return VEC3_UP;
+			}
+			if (pitch > PI - 0.7f)
+			{
+				return -VEC3_UP;
+			}
+			const real yawStep = PI / 12.0f;
+			const real yaw = std::round(std::atan2(n.x, n.z) / yawStep) * yawStep;
+			return glm::vec3(std::sin(yaw), 0.0f, std::cos(yaw));
+		}
+
+		// The edges of a box (local y: its depth axis), as thin bars
+		void BuildMineBoxGeometry(PlacementPreview::Geometry& geometry, const glm::vec3& halfExtents)
+		{
+			const real t = 0.025f;
+			const glm::quat identity(1.0f, 0.0f, 0.0f, 0.0f);
+			for (i32 axis = 0; axis < 3; ++axis)
+			{
+				const i32 a = (axis + 1) % 3;
+				const i32 b = (axis + 2) % 3;
+				for (i32 corner = 0; corner < 4; ++corner)
+				{
+					glm::vec3 center(0.0f);
+					center[a] = (corner & 1) ? halfExtents[a] : -halfExtents[a];
+					center[b] = (corner & 2) ? halfExtents[b] : -halfExtents[b];
+					glm::vec3 extent(t);
+					extent[axis] = halfExtents[axis] + t;
+					geometry.Box(center, extent, identity);
+				}
+			}
+		}
+
 		// A ring at the brush's radius (where it stops having any effect) & a fainter one where it's at full strength
 		void BuildBrushGeometry(PlacementPreview::Geometry& geometry)
 		{
@@ -239,6 +306,14 @@ namespace flex
 			// (a new plane is picked the next time the button is pressed)
 			m_bFlattenPlaneLocked = false;
 			m_LastFlattenCenter = glm::vec3(1e30f);
+
+			// Digging & filling take chunks out (or add them) a box at a time
+			if (m_TerrainStroke.bActive && m_TerrainStroke.action == TerrainToolAction::FLATTEN)
+			{
+				EndTerrainStroke();
+			}
+			UpdateTerrainMining(action, toolTypeID, hitPos, hitNormal, digTimes.loose, digTimes.rock, digTimes.fill);
+			return;
 		}
 
 		auto ShowBrush = [&](const glm::vec3& center, const glm::vec3& normal, const glm::vec4& colour)
@@ -434,6 +509,205 @@ namespace flex
 		m_TerrainStroke.appliedLevel = level;
 		m_TimeSinceTerrainEdit = 0.0f;
 		++m_TestTerrainEditCount;
+	}
+
+	void Player::UpdateTerrainMining(TerrainToolAction action, StringID toolTypeID, const glm::vec3& hitPos, const glm::vec3& hitNormal, real looseTime, real rockTime, real fillTime)
+	{
+		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+		BaseCamera* camera = g_CameraManager->CurrentCamera();
+		const bool bFill = action == TerrainToolAction::FILL;
+		// (with no button held, shows where a dig would go)
+		const TerrainToolAction boxAction = bFill ? TerrainToolAction::FILL : TerrainToolAction::DIG;
+		const bool bShovel = toolTypeID == ShovelSID;
+		const real halfWidth = MineHalfWidth(toolTypeID);
+
+		if (m_TerrainStroke.bActive && m_TerrainStroke.action != action)
+		{
+			EndTerrainStroke();
+		}
+
+		// Orientation: the surface's (averaged over the box, unless it's something thin) snapped to up, down or level
+		const glm::vec3 smoothNormal = terrainGenerator->SampleSmoothNormal(hitPos, halfWidth * 0.8f);
+		const glm::vec3 rawNormal = SnapMineNormal(hitNormal, bShovel);
+		glm::vec3 normal = SnapMineNormal(glm::dot(smoothNormal, hitNormal) > 0.3f ? smoothNormal : hitNormal, bShovel);
+		real twist = 0.0f;
+
+		// Lines up with the last box when working on the same face (or next to it), so repeated hits leave flat walls
+		// & floors with straight edges (aligned to each other, not to a world grid)
+		const TerrainStroke& last = m_LastTerrainStroke;
+		bool bSticky = false;
+		if (last.bApplied && last.action == boxAction && m_TimeSinceTerrainEdit < MINE_STICKY_TIME &&
+			(glm::dot(last.normal, normal) > 0.99f || glm::dot(last.normal, rawNormal) > 0.99f))
+		{
+			const glm::vec3 offset = hitPos - last.anchor;
+			const real axial = glm::dot(offset, last.normal);
+			const real lateral = glm::length(offset - last.normal * axial);
+			if (lateral < halfWidth * 3.5f && glm::abs(axial) < MINE_DEPTH * 2.5f)
+			{
+				bSticky = true;
+				normal = last.normal;
+				twist = last.twist;
+			}
+		}
+		if (!bSticky && glm::abs(normal.y) > 0.5f)
+		{
+			// Floors & ceilings are squared up with the view (in 15 degree steps)
+			const glm::vec3 forward = camera->forward;
+			const real twistStep = PI / 12.0f;
+			twist = normal.y > 0.0f ? std::atan2(-forward.z, forward.x) : std::atan2(forward.z, forward.x);
+			twist = std::round(twist / twistStep) * twistStep;
+		}
+
+		terrain::Edit frame = {};
+		frame.normal = normal;
+		frame.twist = twist;
+		glm::vec3 axisX, axisY;
+		terrain::BoxEditAxes(frame, axisX, axisY);
+
+		// Position across the face: aimed at, in half box steps from the last box
+		const real surface = glm::dot(hitPos, normal);
+		glm::vec3 face = hitPos - normal * surface;
+		if (bSticky)
+		{
+			const glm::vec3 ref = last.anchor - normal * glm::dot(last.anchor, normal);
+			const glm::vec3 offset = face - ref;
+			face = ref + axisX * (std::round(glm::dot(offset, axisX) / halfWidth) * halfWidth) + axisY * (std::round(glm::dot(offset, axisY) / halfWidth) * halfWidth);
+		}
+		else if (glm::abs(normal.y) < 0.5f)
+		{
+			// New walls start with their bottom at a whole step, so tunnels dug separately share floor heights
+			face.y = std::round((face.y - halfWidth) / MINE_STEP) * MINE_STEP + halfWidth;
+		}
+
+		// Along the normal: the new face's level, & the range the box covers
+		real level, inner, outer;
+		if (bFill)
+		{
+			const real base = std::round(surface / MINE_STEP) * MINE_STEP;
+			level = base + MINE_DEPTH;
+			inner = base - MINE_FILL_OVERLAP;
+			outer = level;
+		}
+		else
+		{
+			level = std::round((surface - MINE_DEPTH) / MINE_STEP) * MINE_STEP;
+			inner = level;
+			outer = glm::max(surface, level + MINE_DEPTH) + MINE_CLEARANCE;
+		}
+		const glm::vec3 boxCenter = face + normal * ((inner + outer) * 0.5f);
+		const real halfDepth = (outer - inner) * 0.5f;
+		// The chunk the hit takes out (or adds), as shown
+		const glm::vec3 chunkCenter = face + normal * (bFill ? level - MINE_DEPTH * 0.5f : level + MINE_DEPTH * 0.5f);
+
+		// Don't bury ourselves
+		bool bBlocked = false;
+		if (bFill)
+		{
+			const terrain::Edit box = terrain::MakeBoxEdit(terrain::EditType::BOX_FILL, boxCenter, normal, twist, halfWidth, halfDepth, terrain::Material::SOIL);
+			const glm::vec3 feet = m_Transform.GetWorldPosition() - VEC3_UP * (m_Height * 0.5f - m_Radius);
+			for (i32 i = 0; i < 3 && !bBlocked; ++i)
+			{
+				const glm::vec3 p = feet + VEC3_UP * (glm::max(m_Height - m_Radius * 2.0f, 0.0f) * 0.5f * (real)i);
+				bBlocked = terrain::BoxEditDistance(box, p - boxCenter) < m_Radius * 0.9f;
+			}
+		}
+
+		glm::vec4 colour = BRUSH_IDLE_COLOUR;
+		if (bBlocked)
+		{
+			colour = PlacementPreview::INVALID_COLOUR;
+		}
+		else if (action == TerrainToolAction::DIG)
+		{
+			colour = BRUSH_DIG_COLOUR;
+		}
+		else if (bFill)
+		{
+			colour = BRUSH_FILL_COLOUR;
+		}
+		s_LastBrushCenter = chunkCenter;
+		s_LastBrushNormal = normal;
+		const glm::vec3 previewExtents(halfWidth, MINE_DEPTH * 0.5f, halfWidth);
+		const u64 previewKey = MINE_PREVIEW_KEY + (u64)(halfWidth * 100.0f + 0.5f);
+		// (local y is the box's depth axis)
+		const glm::quat rotation = glm::quat_cast(glm::mat3(axisX, normal, -axisY));
+		m_TerrainBrushPreview.SetXRay(true);
+		m_TerrainBrushPreview.Show(previewKey, [previewExtents](PlacementPreview::Geometry& geometry) { BuildMineBoxGeometry(geometry, previewExtents); },
+			chunkCenter, rotation, VEC3_ONE, colour);
+
+		if (action == TerrainToolAction::NONE)
+		{
+			return;
+		}
+
+		if (!m_TerrainStroke.bActive)
+		{
+			m_TerrainStroke = {};
+			m_TerrainStroke.bActive = true;
+			m_TerrainStroke.action = action;
+		}
+		if (m_TerrainStroke.progress <= 0.0f)
+		{
+			// Each hit is as hard as what it's hitting
+			m_TerrainStroke.hardness = bFill ? 0.0f : SampleTerrainHardness(hitPos, hitNormal);
+		}
+		const real hitTime = glm::max(bFill ? fillTime : Lerp(looseTime, rockTime, m_TerrainStroke.hardness), MINE_MIN_HIT_TIME) * MINE_HIT_TIME_SCALE;
+		if (m_ToolSwingTimer <= 0.0f)
+		{
+			SwingTool(glm::clamp(hitTime * 0.9f, 0.25f, 0.6f));
+		}
+		// (a long frame, e.g. a hitch, doesn't make a whole hit at once)
+		m_TerrainStroke.progress = glm::min(m_TerrainStroke.progress + glm::min(g_DeltaTime, 0.1f) / hitTime, 1.0f);
+
+		// Rate limited, & waiting for the previous edit's chunks (restarting their re-meshing each frame could mean
+		// they never finish)
+		if (m_TerrainStroke.progress < 1.0f || bBlocked || m_TimeSinceTerrainEdit < 1.0f / MAX_TERRAIN_EDIT_RATE || terrainGenerator->IsApplyingEdits())
+		{
+			if (m_TerrainStroke.progress >= 1.0f)
+			{
+				m_TestTerrainWaitTime += g_DeltaTime;
+				s_BlockedFrames += bBlocked ? 1 : 0;
+				s_ApplyingFrames += terrainGenerator->IsApplyingEdits() ? 1 : 0;
+			}
+			return;
+		}
+
+		const terrain::Material fillMaterial = terrain::FILL_MATERIALS[m_TerrainFillMaterialIndex];
+		if (bFill)
+		{
+			terrainGenerator->FillBox(boxCenter, normal, twist, halfWidth, halfDepth, fillMaterial);
+			GameSounds::PlayDig(chunkCenter, normal, 0.1f);
+		}
+		else
+		{
+			terrainGenerator->DigBox(boxCenter, normal, twist, halfWidth, halfDepth);
+			// Scraps of terrain the box left floating
+			terrainGenerator->RemoveFloatingFragments(chunkCenter, halfWidth * 1.5f + 1.0f);
+			GameSounds::PlayDig(chunkCenter, normal, m_TerrainStroke.hardness);
+			if (WoodcraftEffects* effects = WoodcraftEffects::Get())
+			{
+				effects->SpawnRubble(face + normal * level, normal, halfWidth, 16, m_TerrainStroke.hardness);
+			}
+			if (m_Crafting != nullptr)
+			{
+				// Rock gives stone (& sometimes ore)
+				m_Crafting->OnDug(chunkCenter, m_TerrainStroke.hardness);
+			}
+		}
+
+		m_TerrainStroke.anchor = face + normal * level;
+		m_TerrainStroke.normal = normal;
+		m_TerrainStroke.twist = twist;
+		m_TerrainStroke.boxCenter = boxCenter;
+		m_TerrainStroke.appliedLevel = level;
+		m_TerrainStroke.bApplied = true;
+		m_LastTerrainStroke = m_TerrainStroke;
+		// (the next hit starts over; nothing is left for EndTerrainStroke to finish)
+		m_TerrainStroke.bApplied = false;
+		m_TerrainStroke.progress = 0.0f;
+		m_TimeSinceTerrainEdit = 0.0f;
+		++m_TestTerrainEditCount;
+		++m_TestTerrainStrokeCount;
 	}
 
 	void Player::EndTerrainStroke()

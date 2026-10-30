@@ -83,6 +83,11 @@ namespace flex
 			LOWER, // Removes material above the plane (a flat bottomed hole, or a terrace cut into a slope)
 			RAISE, // Adds material below the plane (a flat topped mound, or a terrace built out from a slope)
 			FLATTEN, // Both
+			// Box brushes: a solid box (slightly rounded) with flat faces. normal is its local z axis, radius the half width
+			// of its square face (along x & y), height its half depth along z & twist the angle its x axis is turned about
+			// z from BoxEditAxes' default. Mining with these leaves flat walls, floors & ceilings.
+			BOX_DIG,
+			BOX_FILL,
 
 			_COUNT
 		};
@@ -96,12 +101,27 @@ namespace flex
 			// Plane edits only
 			glm::vec3 normal = glm::vec3(0.0f, 1.0f, 0.0f);
 			real height = 0.0f;
+			// Box edits only
+			real twist = 0.0f;
 		};
 
 		inline bool IsPlaneEdit(EditType type)
 		{
 			return type == EditType::LOWER || type == EditType::RAISE || type == EditType::FLATTEN;
 		}
+
+		inline bool IsBoxEdit(EditType type)
+		{
+			return type == EditType::BOX_DIG || type == EditType::BOX_FILL;
+		}
+
+		// The box edit's local x & y axes (z is its normal). x is horizontal unless the normal is vertical, then turned by
+		// twist about the normal.
+		void BoxEditAxes(const Edit& edit, glm::vec3& outX, glm::vec3& outY);
+		// Signed distance from a box edit's surface (< 0 inside) at offset from its center
+		real BoxEditDistance(const Edit& edit, const glm::vec3& offset);
+		// A box edit (see EditType::BOX_DIG). halfDepth along normal, halfWidth across it.
+		Edit MakeBoxEdit(EditType type, const glm::vec3& center, const glm::vec3& normal, real twist, real halfWidth, real halfDepth, Material material);
 
 		// World space box containing everything the edit affects (other than the density's edit band)
 		void GetEditBounds(const Edit& edit, glm::vec3& outMin, glm::vec3& outMax);
@@ -506,6 +526,7 @@ namespace flex
 			glm::vec3 base = glm::vec3(0.0f);
 			u32 hash = 0;
 			real radius = 0.9f;
+			bool bPicked = false; // Berries hidden (see MakeToggleBerriesEdit)
 		};
 		void FindBerryBushes(const TerrainDensity& density, const EditList& edits, const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<BerryBushInfo>& outBushes);
 		// A single plant's (full detail) mesh, in world space. Trunk triangles come first, outMesh.collisionIndexCount
@@ -513,6 +534,8 @@ namespace flex
 		void BuildPlantMesh(const TerrainDensity& density, const PlantInfo& plant, ChunkMeshData& outMesh);
 		// An edit removing the given plant (so chunks are generated without it)
 		Edit MakeRemovePlantEdit(const PlantInfo& plant);
+		// Hides the berries on the bush at bushBase if they're showing, or shows them again if they're hidden
+		Edit MakeToggleBerriesEdit(const glm::vec3& bushBase);
 
 		struct SpawnSearchResult
 		{

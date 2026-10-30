@@ -94,11 +94,16 @@ namespace flex
 		void SpawnChips(const glm::vec3& pos, const glm::vec3& normal, u32 count, const glm::vec3& colour);
 		void SpawnLeaves(const glm::vec3& center, real radius, u32 count);
 		void SpawnDust(const glm::vec3& center, real radius, u32 count);
+		// Chunky clods (hardness < 0.5) or rock chunks thrown out of a mined surface (normal: out of it), spread over
+		// a square of halfWidth across the normal
+		void SpawnRubble(const glm::vec3& center, const glm::vec3& normal, real halfWidth, u32 count, real hardness);
 
 	private:
 		woodcraft::ParticleSet m_Chips;
 		woodcraft::ParticleSet m_Leaves;
 		woodcraft::ParticleSet m_Dust;
+		woodcraft::ParticleSet m_Clods;
+		woodcraft::ParticleSet m_Rocks;
 		u32 m_Seed = 1;
 
 		static WoodcraftEffects* s_Instance;

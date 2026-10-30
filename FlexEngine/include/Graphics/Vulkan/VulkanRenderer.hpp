@@ -372,9 +372,34 @@ namespace flex
 				bool bInUse = false; // Assigned to a light position
 				bool bWanted = false; // Among the lights that should have shadows this frame
 				bool bReferenced = false; // Used by the uniform data uploaded this frame (so can't be reassigned yet)
+				// Faces to render (bit per face): all six for point lights, those a spot light's cone covers for spot lights
+				u8 faceMask = 0x3F;
+				bool bSpot = false; // Used by a spot light (or a point light)
+				bool bForceRender = false; // A moving spot light's faces, re-rendered this frame whatever the budget
+				// Casters under this root don't shadow the light (a headlight's own car)
+				GameObject* ignoreRoot = nullptr;
+				bool AreFacesReady() const
+				{
+					for (u32 f = 0; f < 6; ++f)
+					{
+						if ((faceMask & (1u << f)) != 0 && !bFaceValid[f])
+						{
+							return false;
+						}
+					}
+					return true;
+				}
 				// Casters overlapping each face (shader batch, render ID), gathered every frame
 				std::vector<std::pair<const ShaderBatchPair*, RenderID>> faceCasters[6];
 			};
+			// Sprite texture IDs the shadow map debug view samples (the sun cascades & point/spot shadow faces arrays)
+			static const TextureID SHADOW_DEBUG_CASCADES_TEXTURE_ID = 0x7FFFFF00;
+			static const TextureID SHADOW_DEBUG_POINT_TEXTURE_ID = 0x7FFFFF01;
+			static bool IsShadowDebugTexture(TextureID textureID) { return textureID == SHADOW_DEBUG_CASCADES_TEXTURE_ID || textureID == SHADOW_DEBUG_POINT_TEXTURE_ID; }
+			void FreeShadowDebugDescriptorSets();
+			// The in use slot nearest a light (of the same kind), or -1
+			i32 FindPointShadowSlot(const glm::vec3& lightPos, bool bSpot, bool bUnwantedOnly) const;
+			virtual void EnqueueShadowDebugSprites() override;
 			void CreatePointShadowResources();
 			void DestroyPointShadowResources();
 			// Called before the constant uniform buffers are written: matches lights to ready slots & fades them

@@ -4533,6 +4533,7 @@ namespace flex
 
 		void VulkanRenderer::RecreateShadowFrameBuffers()
 		{
+			FreeShadowDebugDescriptorSets();
 			InvalidateShadowCascadeCache();
 
 			PROFILE_AUTO("RecreateShadowFrameBuffers");
@@ -5188,7 +5189,8 @@ namespace flex
 		VkDescriptorSet VulkanRenderer::GetSpriteDescriptorSet(TextureID textureID, MaterialID spriteMaterialID, u32 textureLayer, bool bCacheResult)
 		{
 			// The set must reference the dynamic UBO of the material the sprite's slot is allocated from (& the right layer)
-			const SpriteDescSetKey key = { textureID, spriteMaterialID, textureLayer };
+			// The shadow debug textures bind the whole array, so one set serves every layer
+			const SpriteDescSetKey key = { textureID, spriteMaterialID, IsShadowDebugTexture(textureID) ? 0u : textureLayer };
 			auto iter = m_SpriteDescSets.find(key);
 			if (iter != m_SpriteDescSets.end())
 			{
@@ -5337,6 +5339,10 @@ namespace flex
 		static const real POINT_SHADOW_MOVE_DISTANCE = 0.1f;
 		// Seconds to fade a light's shadow in or out
 		static const real POINT_SHADOW_FADE_TIME = 0.35f;
+		// How far a spot light (a headlight) can move in a frame & keep its shadow slot
+		static const real POINT_SHADOW_SPOT_MATCH_DISTANCE = 1.0f;
+		// Spot lights with shadows at once (each renders up to 3 faces every frame while it moves)
+		static const i32 MAX_SHADOWED_SPOT_LIGHTS = 4;
 		// Each face's frustum is wider than 90 degrees by this many texels on each side, so filter taps stay on one face
 		static const real POINT_SHADOW_GUARD_TEXELS = 2.0f;
 
@@ -5367,6 +5373,7 @@ namespace flex
 
 		void VulkanRenderer::DestroyPointShadowResources()
 		{
+			FreeShadowDebugDescriptorSets();
 			for (Cascade* face : m_PointShadowFaces)
 			{
 				delete face;
@@ -5377,6 +5384,91 @@ namespace flex
 			m_PointShadowImageMemory.replace();
 			m_PointShadowSlots.clear();
 			m_PointShadowFacesToRender.clear();
+		}
+
+		void VulkanRenderer::EnqueueShadowDebugSprites()
+		{
+			// Tiles along the bottom left: the sun's cascades (each its own tint), then a row of six cube faces per point
+			// or spot light shadow slot in use (blue: point, orange: spot; dim: faded/unused face; red: not rendered yet).
+			// Depth is shown brightened (reversed-Z, so near is bright) & empty texels dark blue (see vk_sprite_arr.frag).
+			SpriteQuadDrawInfo drawInfo = {};
+			drawInfo.bScreenSpace = true;
+			drawInfo.bReadDepth = false;
+			drawInfo.materialID = m_SpriteArrMatID;
+			drawInfo.anchor = AnchorPoint::BOTTOM_LEFT;
+			drawInfo.zOrder = 90;
+
+			static const glm::vec4 cascadeTints[] = {
+				glm::vec4(1.0f, 0.75f, 0.75f, 1.0f), glm::vec4(0.75f, 1.0f, 0.75f, 1.0f),
+				glm::vec4(0.75f, 0.8f, 1.0f, 1.0f), glm::vec4(1.0f, 1.0f, 0.7f, 1.0f) };
+			const real cascadeScale = 0.16f;
+			const real gap = 1.06f;
+			drawInfo.textureID = SHADOW_DEBUG_CASCADES_TEXTURE_ID;
+			drawInfo.scale = glm::vec3(cascadeScale);
+			for (u32 i = 0; i < (u32)m_ShadowCascadeCount; ++i)
+			{
+				drawInfo.textureLayer = i;
+				drawInfo.pos = glm::vec3(i * cascadeScale * 2.0f * gap, 0.0f, 0.0f);
+				drawInfo.colour = cascadeTints[i % ARRAY_LENGTH(cascadeTints)];
+				EnqueueSprite(drawInfo);
+			}
+
+			if (m_PointShadowImageView == VK_NULL_HANDLE)
+			{
+				return;
+			}
+			const real faceScale = 0.055f;
+			real y = cascadeScale * 2.0f * gap;
+			drawInfo.textureID = SHADOW_DEBUG_POINT_TEXTURE_ID;
+			drawInfo.scale = glm::vec3(faceScale);
+			for (u32 s = 0; s < (u32)m_PointShadowSlots.size(); ++s)
+			{
+				const PointShadowSlot& slot = m_PointShadowSlots[s];
+				if (!slot.bInUse)
+				{
+					continue;
+				}
+				const glm::vec4 tint = slot.bSpot ? glm::vec4(1.0f, 0.8f, 0.55f, 1.0f) : glm::vec4(0.6f, 0.85f, 1.0f, 1.0f);
+				const real brightness = slot.bWanted ? 0.45f + 0.55f * slot.fade : 0.3f;
+				for (u32 f = 0; f < 6; ++f)
+				{
+					glm::vec4 colour = tint * brightness;
+					if ((slot.faceMask & (1u << f)) == 0)
+					{
+						colour *= 0.25f; // Not used by this (spot) light
+					}
+					else if (!slot.bFaceValid[f])
+					{
+						colour = glm::vec4(1.0f, 0.25f, 0.25f, 1.0f);
+					}
+					colour.a = 1.0f;
+					drawInfo.textureLayer = s * 6 + f;
+					drawInfo.pos = glm::vec3(f * faceScale * 2.0f * gap, y, 0.0f);
+					drawInfo.colour = colour;
+					EnqueueSprite(drawInfo);
+				}
+				y += faceScale * 2.0f * gap;
+			}
+		}
+
+		void VulkanRenderer::FreeShadowDebugDescriptorSets()
+		{
+			// Their image views are about to be recreated
+			for (auto iter = m_SpriteDescSets.begin(); iter != m_SpriteDescSets.end();)
+			{
+				if (IsShadowDebugTexture(iter->first.textureID))
+				{
+					if (m_DescriptorPoolPersistent != nullptr) // (Already destroyed at shutdown)
+					{
+						m_DescriptorPoolPersistent->FreeSet(iter->second.descSet);
+					}
+					iter = m_SpriteDescSets.erase(iter);
+				}
+				else
+				{
+					++iter;
+				}
+			}
 		}
 
 		void VulkanRenderer::CreatePointShadowResources()
@@ -5474,11 +5566,7 @@ namespace flex
 			const real fadeStep = g_UnpausedDeltaTime / POINT_SHADOW_FADE_TIME;
 			for (PointShadowSlot& slot : m_PointShadowSlots)
 			{
-				bool bReady = slot.bInUse && slot.bWanted && bEnabled;
-				for (u32 f = 0; f < 6; ++f)
-				{
-					bReady = bReady && slot.bFaceValid[f];
-				}
+				const bool bReady = slot.bInUse && slot.bWanted && bEnabled && slot.AreFacesReady();
 				slot.fade = glm::clamp(slot.fade + (bReady ? fadeStep : -fadeStep), 0.0f, 1.0f);
 				slot.bReferenced = false;
 			}
@@ -5489,44 +5577,72 @@ namespace flex
 
 			const glm::vec3 camPos = g_CameraManager->CurrentCamera()->position;
 			const glm::vec3 renderOrigin = g_CameraManager->CurrentCamera()->GetRenderOrigin();
-			for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
+			// Point lights, then spot lights (at MAX_POINT_LIGHT_COUNT + i)
+			for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT + MAX_SPOT_LIGHT_COUNT; ++i)
 			{
-				const PointLightData& light = m_PointLightData[i];
-				if (light.enabled == 0 || light.colour.x == -1.0f)
+				const bool bSpot = i >= MAX_POINT_LIGHT_COUNT;
+				glm::vec3 lightPos;
+				if (bSpot)
 				{
-					continue;
+					const i32 spotIndex = i - MAX_POINT_LIGHT_COUNT;
+					const SpotLightData& light = m_SpotLightData[spotIndex];
+					if (!m_bSpotLightCastsShadow[spotIndex] || light.enabled == 0 || light.colour.x == -1.0f)
+					{
+						continue;
+					}
+					lightPos = light.pos;
+				}
+				else
+				{
+					const PointLightData& light = m_PointLightData[i];
+					if (light.enabled == 0 || light.colour.x == -1.0f)
+					{
+						continue;
+					}
+					lightPos = light.pos;
 				}
 
-				i32 bestSlot = -1;
-				real bestDistSq = POINT_SHADOW_MATCH_DISTANCE * POINT_SHADOW_MATCH_DISTANCE;
-				for (i32 s = 0; s < (i32)m_PointShadowSlots.size(); ++s)
-				{
-					const PointShadowSlot& slot = m_PointShadowSlots[s];
-					const real distSq = glm::distance2(slot.pos, light.pos);
-					if (slot.bInUse && slot.fade > 0.0f && distSq < bestDistSq)
-					{
-						bestSlot = s;
-						bestDistSq = distSq;
-					}
-				}
-				if (bestSlot == -1)
+				const i32 bestSlot = FindPointShadowSlot(lightPos, bSpot, false);
+				if (bestSlot == -1 || m_PointShadowSlots[bestSlot].fade <= 0.0f)
 				{
 					continue;
 				}
 
 				PointShadowSlot& slot = m_PointShadowSlots[bestSlot];
 				// Lights beyond the shadow distance fade to unshadowed
-				const real distanceFade = 1.0f - glm::smoothstep(settings.distance * 0.75f, settings.distance, glm::distance(light.pos, camPos));
+				const real distanceFade = 1.0f - glm::smoothstep(settings.distance * 0.75f, settings.distance, glm::distance(lightPos, camPos));
 				const real strength = slot.fade * distanceFade;
 				if (strength <= 0.001f)
 				{
 					continue;
 				}
-				m_PointShadowData.lights[i * 2] = glm::vec4(slot.pos - renderOrigin, (real)(bestSlot * 6));
+				// Moving spot lights (headlights) have their faces re-rendered from where they are now later this frame (see
+				// UpdatePointShadowSlots), so the shadows don't lag a frame behind the car
+				const glm::vec3 renderedFrom = (bSpot && glm::distance2(slot.pos, lightPos) > POINT_SHADOW_MOVE_DISTANCE * POINT_SHADOW_MOVE_DISTANCE) ? lightPos : slot.pos;
+				m_PointShadowData.lights[i * 2] = glm::vec4(renderedFrom - renderOrigin, (real)(bestSlot * 6));
 				m_PointShadowData.lights[i * 2 + 1] = glm::vec4(strength, settings.nearPlane, settings.range, 0.0f);
 				slot.bReferenced = true;
 				m_PointShadowStats.shadowedLights++;
 			}
+		}
+
+		i32 VulkanRenderer::FindPointShadowSlot(const glm::vec3& lightPos, bool bSpot, bool bUnwantedOnly) const
+		{
+			// Spot lights (headlights) move, so they match their slot from further away (the nearest one wins)
+			const real matchDistance = bSpot ? POINT_SHADOW_SPOT_MATCH_DISTANCE : POINT_SHADOW_MATCH_DISTANCE;
+			i32 bestSlot = -1;
+			real bestDistSq = matchDistance * matchDistance;
+			for (i32 s = 0; s < (i32)m_PointShadowSlots.size(); ++s)
+			{
+				const PointShadowSlot& slot = m_PointShadowSlots[s];
+				const real distSq = glm::distance2(slot.pos, lightPos);
+				if (slot.bInUse && slot.bSpot == bSpot && (!bUnwantedOnly || !slot.bWanted) && distSq < bestDistSq)
+				{
+					bestSlot = s;
+					bestDistSq = distSq;
+				}
+			}
+			return bestSlot;
 		}
 
 		void VulkanRenderer::UpdatePointShadowSlots()
@@ -5560,13 +5676,49 @@ namespace flex
 			const real range = settings.range;
 			const real nearPlane = settings.nearPlane;
 
+			// Faces' axes, & the angle from a face's axis to its frustum's corners (with the guard band)
+			const real tanHalf = GetPointShadowTanHalfFOV();
+			glm::vec3 faceForward[6], faceUp[6], faceRight[6];
+			for (u32 f = 0; f < 6; ++f)
+			{
+				GetPointShadowFaceBasis(f, faceForward[f], faceUp[f]);
+				faceRight[f] = glm::normalize(glm::cross(faceUp[f], faceForward[f]));
+				faceUp[f] = glm::cross(faceForward[f], faceRight[f]);
+			}
+			const real faceCornerAngle = glm::atan(tanHalf * glm::sqrt(2.0f));
+
 			// 1. The lights that should have shadows: those nearest the camera whose range can be seen
 			struct Candidate
 			{
 				glm::vec3 pos;
 				real score;
+				bool bSpot;
+				u8 faceMask;
+				GameObject* ignoreRoot;
 			};
 			std::vector<Candidate> candidates;
+			auto IsVisible = [&](const glm::vec3& pos)
+			{
+				const glm::vec3 posRS = pos - m_RenderOrigin;
+				for (u32 p = 0; p < 4; ++p)
+				{
+					if (glm::dot(glm::vec3(m_CameraCullPlanes[p]), posRS) + m_CameraCullPlanes[p].w < -range)
+					{
+						return false;
+					}
+				}
+				return true;
+			};
+			auto Score = [&](const glm::vec3& pos, bool bSpot)
+			{
+				real score = glm::distance(pos, camPos);
+				if (FindPointShadowSlot(pos, bSpot, false) != -1)
+				{
+					// Hysteresis: lights that already have a shadow keep it until another is clearly nearer
+					score *= 0.75f;
+				}
+				return score;
+			};
 			for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 			{
 				const PointLightData& light = m_PointLightData[i];
@@ -5574,33 +5726,48 @@ namespace flex
 				{
 					continue;
 				}
-				const real distance = glm::distance(light.pos, camPos);
-				if (distance >= settings.distance)
+				if (glm::distance(light.pos, camPos) >= settings.distance || !IsVisible(light.pos))
 				{
 					continue;
 				}
-				const glm::vec3 posRS = light.pos - m_RenderOrigin;
-				bool bVisible = true;
-				for (u32 p = 0; p < 4 && bVisible; ++p)
-				{
-					bVisible = glm::dot(glm::vec3(m_CameraCullPlanes[p]), posRS) + m_CameraCullPlanes[p].w >= -range;
-				}
-				if (!bVisible)
+				candidates.push_back({ light.pos, Score(light.pos, false), false, (u8)0x3F, nullptr });
+			}
+			std::vector<Candidate> spotCandidates;
+			// FLEX_SPOT_SHADOWS_OFF=1: no spot light (headlight) shadows, for comparisons
+			static const bool s_bSpotShadowsOff = getenv("FLEX_SPOT_SHADOWS_OFF") != nullptr;
+			for (i32 i = 0; i < (s_bSpotShadowsOff ? 0 : MAX_SPOT_LIGHT_COUNT); ++i)
+			{
+				const SpotLightData& light = m_SpotLightData[i];
+				if (!m_bSpotLightCastsShadow[i] || light.enabled == 0 || light.colour.x == -1.0f || light.brightness <= 0.0f)
 				{
 					continue;
 				}
-				real score = distance;
-				for (const PointShadowSlot& slot : m_PointShadowSlots)
+				if (glm::distance(light.pos, camPos) >= settings.distance || !IsVisible(light.pos))
 				{
-					if (slot.bInUse && glm::distance2(slot.pos, light.pos) < POINT_SHADOW_MATCH_DISTANCE * POINT_SHADOW_MATCH_DISTANCE)
+					continue;
+				}
+				// Only the faces the cone overlaps (light.dir points back towards the light; angle is the cone's cosine,
+				// plus the shaders' 0.1 blend)
+				const glm::vec3 beam = glm::length2(light.dir) > 1e-8f ? -glm::normalize(light.dir) : VEC3_FORWARD;
+				const real coneAngle = glm::acos(glm::clamp(light.angle - 0.1f, -1.0f, 1.0f));
+				const real maxAngle = glm::min(coneAngle + faceCornerAngle + 0.05f, PI);
+				u8 faceMask = 0;
+				for (u32 f = 0; f < 6; ++f)
+				{
+					if (glm::dot(beam, faceForward[f]) > glm::cos(maxAngle))
 					{
-						// Hysteresis: lights that already have a shadow keep it until another is clearly nearer
-						score *= 0.75f;
-						break;
+						faceMask |= (u8)(1u << f);
 					}
 				}
-				candidates.push_back({ light.pos, score });
+				spotCandidates.push_back({ light.pos, Score(light.pos, true), true, faceMask, m_SpotLightShadowIgnoreRoot[i] });
 			}
+			// Spot lights share the slots, but only a few at once (they're re-rendered every frame while they move)
+			std::sort(spotCandidates.begin(), spotCandidates.end(), [](const Candidate& a, const Candidate& b) { return a.score < b.score; });
+			if ((i32)spotCandidates.size() > MAX_SHADOWED_SPOT_LIGHTS)
+			{
+				spotCandidates.resize((size_t)MAX_SHADOWED_SPOT_LIGHTS);
+			}
+			candidates.insert(candidates.end(), spotCandidates.begin(), spotCandidates.end());
 			std::sort(candidates.begin(), candidates.end(), [](const Candidate& a, const Candidate& b) { return a.score < b.score; });
 			if ((i32)candidates.size() > m_PointShadowSlotCount)
 			{
@@ -5611,18 +5778,7 @@ namespace flex
 			std::vector<const Candidate*> unassigned;
 			for (const Candidate& candidate : candidates)
 			{
-				i32 bestSlot = -1;
-				real bestDistSq = POINT_SHADOW_MATCH_DISTANCE * POINT_SHADOW_MATCH_DISTANCE;
-				for (i32 s = 0; s < (i32)m_PointShadowSlots.size(); ++s)
-				{
-					const PointShadowSlot& slot = m_PointShadowSlots[s];
-					const real distSq = glm::distance2(slot.pos, candidate.pos);
-					if (slot.bInUse && !slot.bWanted && distSq < bestDistSq)
-					{
-						bestSlot = s;
-						bestDistSq = distSq;
-					}
-				}
+				const i32 bestSlot = FindPointShadowSlot(candidate.pos, candidate.bSpot, true);
 				if (bestSlot == -1)
 				{
 					unassigned.push_back(&candidate);
@@ -5631,13 +5787,28 @@ namespace flex
 				PointShadowSlot& slot = m_PointShadowSlots[bestSlot];
 				slot.bWanted = true;
 				slot.score = candidate.score;
-				if (bestDistSq > POINT_SHADOW_MOVE_DISTANCE * POINT_SHADOW_MOVE_DISTANCE)
+				slot.ignoreRoot = candidate.ignoreRoot;
+				if (slot.faceMask != candidate.faceMask)
+				{
+					// Newly covered faces aren't valid yet
+					for (u32 f = 0; f < 6; ++f)
+					{
+						if ((slot.faceMask & (1u << f)) == 0)
+						{
+							slot.bFaceValid[f] = false;
+						}
+					}
+					slot.faceMask = candidate.faceMask;
+				}
+				if (glm::distance2(slot.pos, candidate.pos) > POINT_SHADOW_MOVE_DISTANCE * POINT_SHADOW_MOVE_DISTANCE)
 				{
 					slot.pos = candidate.pos;
 					for (u32 f = 0; f < 6; ++f)
 					{
 						slot.bFaceValid[f] = false;
 					}
+					// The uniform data already points at the new position (see UpdatePointShadowUniformData)
+					slot.bForceRender = slot.bSpot;
 				}
 			}
 			for (const Candidate* candidate : unassigned)
@@ -5672,6 +5843,10 @@ namespace flex
 				slot.fade = 0.0f;
 				slot.bInUse = true;
 				slot.bWanted = true;
+				slot.bSpot = candidate->bSpot;
+				slot.faceMask = candidate->faceMask;
+				slot.ignoreRoot = candidate->ignoreRoot;
+				slot.bForceRender = false;
 				for (u32 f = 0; f < 6; ++f)
 				{
 					slot.bFaceValid[f] = false;
@@ -5698,15 +5873,7 @@ namespace flex
 			}
 
 			// 3. Gather each face's casters, hashing what could change its contents (casters appearing, moving or changing mesh)
-			const real tanHalf = GetPointShadowTanHalfFOV();
 			const real planeScale = 1.0f / glm::sqrt(1.0f + tanHalf * tanHalf);
-			glm::vec3 faceForward[6], faceUp[6], faceRight[6];
-			for (u32 f = 0; f < 6; ++f)
-			{
-				GetPointShadowFaceBasis(f, faceForward[f], faceUp[f]);
-				faceRight[f] = glm::normalize(glm::cross(faceUp[f], faceForward[f]));
-				faceUp[f] = glm::cross(faceForward[f], faceRight[f]);
-			}
 			auto HashBytes = [](u64 hash, const void* data, size_t size)
 			{
 				const u8* bytes = (const u8*)data;
@@ -5745,6 +5912,7 @@ namespace flex
 							const real radius = sphere.w;
 							u64 objectHash = 0;
 							bool bObjectHashed = false;
+							GameObject* rootObject = nullptr;
 							for (u32 s : activeSlots)
 							{
 								PointShadowSlot& slot = m_PointShadowSlots[s];
@@ -5754,8 +5922,24 @@ namespace flex
 								{
 									continue;
 								}
+								if (slot.ignoreRoot != nullptr)
+								{
+									// A headlight's own car (the lamp is inside its body)
+									if (rootObject == nullptr)
+									{
+										rootObject = renderObject->gameObject->GetRootParent();
+									}
+									if (rootObject == slot.ignoreRoot)
+									{
+										continue;
+									}
+								}
 								for (u32 f = 0; f < 6; ++f)
 								{
+									if ((slot.faceMask & (1u << f)) == 0)
+									{
+										continue;
+									}
 									const real a = glm::dot(v, faceForward[f]) * tanHalf;
 									const real b1 = glm::dot(v, faceRight[f]);
 									const real b2 = glm::dot(v, faceUp[f]);
@@ -5802,21 +5986,35 @@ namespace flex
 				real score;
 			};
 			std::vector<DirtyFace> dirtyFaces;
+			const u32 budget = (u32)glm::max(settings.faceBudget, 1);
+			u32 forcedFaces = 0;
 			for (u32 s : activeSlots)
 			{
 				PointShadowSlot& slot = m_PointShadowSlots[s];
-				bool bReady = true;
+				const bool bReady = slot.AreFacesReady();
 				for (u32 f = 0; f < 6; ++f)
 				{
-					bReady = bReady && slot.bFaceValid[f];
-				}
-				for (u32 f = 0; f < 6; ++f)
-				{
+					if ((slot.faceMask & (1u << f)) == 0)
+					{
+						continue;
+					}
+					if (slot.bForceRender)
+					{
+						// Moving spot lights: the uniform data already uses the new position, so render now (bounded by
+						// MAX_SHADOWED_SPOT_LIGHTS)
+						slot.faceHash[f] = slot.currentHash[f];
+						slot.bFaceValid[f] = true;
+						slot.faceRenderedFrame[f] = m_PointShadowFrameIndex;
+						m_PointShadowFacesToRender.emplace_back(s, f);
+						++forcedFaces;
+						continue;
+					}
 					if (!slot.bFaceValid[f] || slot.faceHash[f] != slot.currentHash[f] || IsPointShadowStressTest())
 					{
 						dirtyFaces.push_back({ s, f, bReady, slot.faceRenderedFrame[f], slot.score });
 					}
 				}
+				slot.bForceRender = false;
 			}
 			std::sort(dirtyFaces.begin(), dirtyFaces.end(), [](const DirtyFace& a, const DirtyFace& b)
 			{
@@ -5830,10 +6028,9 @@ namespace flex
 				}
 				return a.score < b.score;
 			});
-			const u32 budget = (u32)glm::max(settings.faceBudget, 1);
 			for (const DirtyFace& dirty : dirtyFaces)
 			{
-				if ((u32)m_PointShadowFacesToRender.size() >= budget)
+				if ((u32)m_PointShadowFacesToRender.size() >= budget + forcedFaces)
 				{
 					break;
 				}
@@ -5994,7 +6191,18 @@ namespace flex
 			descSetCreateInfo.descriptorSetLayout = m_DescriptorPoolPersistent->GetOrCreateLayout(spriteMat->shaderID);
 			descSetCreateInfo.shaderID = spriteMat->shaderID;
 			descSetCreateInfo.gpuBufferList = &spriteMat->gpuBufferList;
-			if (spriteShader->bTextureArr)
+			if (spriteShader->bTextureArr && IsShadowDebugTexture(textureID))
+			{
+				// The whole array, the layer is picked by the push constants
+				const bool bCascades = textureID == SHADOW_DEBUG_CASCADES_TEXTURE_ID;
+				VkImageView view = bCascades ? (VkImageView)m_ShadowImageView : (VkImageView)m_PointShadowImageView;
+				if (view == VK_NULL_HANDLE)
+				{
+					return VK_NULL_HANDLE;
+				}
+				descSetCreateInfo.imageDescriptors.SetUniform(&U_ALBEDO_SAMPLER, ImageDescriptorInfo{ view, m_SamplerNearestClampToEdge });
+			}
+			else if (spriteShader->bTextureArr)
 			{
 				if (layer >= m_ShadowCascades.size())
 				{
@@ -8463,7 +8671,8 @@ namespace flex
 				{
 					if (RenderObjectUsesStaticBuffer(renderObject, staticVertexBufferIndex))
 					{
-						requiredMemory += renderObject->vertexBufferData->VertexBufferSize;
+						// Sized by the buffer's stride, which the object's data may not match (see below)
+						requiredMemory += renderObject->vertexBufferData->VertexCount * vertexBufferPair.first;
 						usedObjects.push_back(renderObject);
 					}
 				}
@@ -8479,15 +8688,30 @@ namespace flex
 
 						u32 vertexCount = 0;
 						for (VulkanRenderObject* renderObject : usedObjects)
+						{
+							renderObject->vertexOffset = vertexCount;
+
+							VertexBufferData* objectVertexData = renderObject->vertexBufferData;
+							const u32 objectSize = objectVertexData->VertexCount * vertexBufferPair.first;
+							if (objectVertexData->VertexStride == vertexBufferPair.first && objectVertexData->vertexData != nullptr)
 							{
-								renderObject->vertexOffset = vertexCount;
-
-								memcpy(vertexBufferData, renderObject->vertexBufferData->vertexData, renderObject->vertexBufferData->VertexBufferSize);
-
-								vertexCount += renderObject->vertexBufferData->VertexCount;
-
-								vertexBufferData = (char*)vertexBufferData + renderObject->vertexBufferData->VertexBufferSize;
+								memcpy(vertexBufferData, objectVertexData->vertexData, objectSize);
 							}
+							else
+							{
+								// The data's layout doesn't match its shader's (e.g. its material changed): copying it
+								// raw would shift every later object's vertices in this buffer, garbling their meshes
+								const VertexAttributes shaderAttributes = m_Shaders[m_Materials.at(renderObject->materialID)->shaderID]->vertexAttributes;
+								PrintWarn("Render object %u (%s) has vertex stride %u but its shader expects %u, converting\n", renderObject->renderID,
+									renderObject->gameObject != nullptr ? renderObject->gameObject->GetName().c_str() : "", objectVertexData->VertexStride, vertexBufferPair.first);
+								memset(vertexBufferData, 0, objectSize);
+								objectVertexData->CopyInto((real*)vertexBufferData, shaderAttributes);
+							}
+
+							vertexCount += objectVertexData->VertexCount;
+
+							vertexBufferData = (char*)vertexBufferData + objectSize;
+						}
 
 						if (vertexBufferSize > 0 && vertexCount > 0)
 						{
@@ -8698,7 +8922,25 @@ namespace flex
 					!m_Materials.at(renderObject->materialID)->bDynamic)
 				{
 					renderObject->indexOffset = (u32)indices.size();
+					const size_t first = indices.size();
 					indices.insert(indices.end(), renderObject->indices->begin(), renderObject->indices->end());
+					// Indices past the object's own vertices would draw other objects' vertices (stretched, garbled
+					// triangles): collapse them so a bad mesh can't corrupt the rest of the frame
+					const u32 vertexCount = renderObject->vertexBufferData != nullptr ? renderObject->vertexBufferData->VertexCount : 0;
+					u32 badIndexCount = 0;
+					for (size_t i = first; i < indices.size(); ++i)
+					{
+						if (indices[i] >= vertexCount)
+						{
+							indices[i] = 0;
+							++badIndexCount;
+						}
+					}
+					if (badIndexCount > 0)
+					{
+						PrintWarn("Render object %u (%s) has %u indices past its %u vertices\n", renderObject->renderID,
+							renderObject->gameObject != nullptr ? renderObject->gameObject->GetName().c_str() : "", badIndexCount, vertexCount);
+					}
 				}
 			}
 

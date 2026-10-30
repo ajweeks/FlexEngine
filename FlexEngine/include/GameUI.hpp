@@ -145,6 +145,8 @@ namespace flex
 		bool Slider(const char* id, const UIRect& rect, const std::string& label, real* value, real min, real max, const char* format);
 		// Returns true when enter is pressed
 		bool TextField(const char* id, const UIRect& rect, std::string* text, u32 maxLength, const std::string& placeholder = "");
+		// Gives the text field with this id the keyboard
+		void Focus(const char* id);
 		// Selectable row in a list
 		bool ListItem(const char* id, const UIRect& rect, const std::string& title, const std::string& subtitle, bool bSelected);
 		// Vertical scrollbar for a list showing viewSize of contentSize (in any unit, e.g. rows). *scroll (0 to

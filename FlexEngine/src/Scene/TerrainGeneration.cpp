@@ -1984,6 +1984,17 @@ namespace flex
 					d += (target - d) * w;
 					continue;
 				}
+				if (IsBoxEdit(edit.type))
+				{
+					// (exact distance, so only points within the band are affected, like spheres)
+					const real box = BoxEditDistance(edit, glm::vec3(px - edit.center.x, py - edit.center.y, pz - edit.center.z));
+					if (box >= band)
+					{
+						continue;
+					}
+					d = edit.type == EditType::BOX_DIG ? Max(d, -box) : Min(d, box);
+					continue;
+				}
 				const real dist = Length3(px - edit.center.x, py - edit.center.y, pz - edit.center.z);
 				if (dist >= edit.radius + band || edit.type == EditType::REMOVE_PLANT)
 				{
@@ -2071,6 +2082,24 @@ namespace flex
 						return placed;
 					}
 					bDug = bDug || edit.type != EditType::RAISE;
+					continue;
+				}
+				if (IsBoxEdit(edit.type))
+				{
+					if (BoxEditDistance(edit, pos - edit.center) > m_Params.voxelSize * 0.5f + 0.05f)
+					{
+						continue;
+					}
+					if (edit.type == EditType::BOX_FILL)
+					{
+						SurfaceAttributes placed = MaterialSurface(edit.material, column);
+						const real variation = GradientNoise3(pos.x * 0.3f, pos.y * 0.3f, pos.z * 0.3f, DeriveSeed(m_Seed, SEED_COLOUR) + 1);
+						placed.colour.x *= 1.0f + variation * 0.06f;
+						placed.colour.y *= 1.0f + variation * 0.06f;
+						placed.colour.z *= 1.0f + variation * 0.06f;
+						return placed;
+					}
+					bDug = true;
 					continue;
 				}
 				const real dist = glm::distance(pos, edit.center);
@@ -2618,17 +2647,35 @@ namespace flex
 			}
 		}
 
+		// REMOVE_PLANT edits with this material don't remove the plant: each toggles whether the berries on the bush
+		// at that spot are picked (an odd count means hidden)
+		static const Material BERRIES_PICKED_MARKER = Material::CLAY;
+
 		static bool IsPlantRemoved(const EditList& edits, real x, real z)
 		{
 			for (u32 i = 0; i < edits.count; ++i)
 			{
 				const Edit& edit = edits.edits[i];
-				if (edit.type == EditType::REMOVE_PLANT && Abs(edit.center.x - x) < 0.05f && Abs(edit.center.z - z) < 0.05f)
+				if (edit.type == EditType::REMOVE_PLANT && edit.material != BERRIES_PICKED_MARKER && Abs(edit.center.x - x) < 0.05f && Abs(edit.center.z - z) < 0.05f)
 				{
 					return true;
 				}
 			}
 			return false;
+		}
+
+		static bool AreBerriesPicked(const EditList& edits, real x, real z)
+		{
+			bool bPicked = false;
+			for (u32 i = 0; i < edits.count; ++i)
+			{
+				const Edit& edit = edits.edits[i];
+				if (edit.type == EditType::REMOVE_PLANT && edit.material == BERRIES_PICKED_MARKER && Abs(edit.center.x - x) < 0.05f && Abs(edit.center.z - z) < 0.05f)
+				{
+					bPicked = !bPicked;
+				}
+			}
+			return bPicked;
 		}
 
 		// Whether a plant can grow at (x, z) within the box's height range, & if so where the ground is
@@ -3440,7 +3487,7 @@ namespace flex
 				}
 
 				// Berries dotted over the top of the bush
-				if (bDetailed && berryRadius > 0.0f && HashToUnit(HashU32(hash + 16)) < info.berryFraction)
+				if (bDetailed && berryRadius > 0.0f && HashToUnit(HashU32(hash + 16)) < info.berryFraction && !AreBerriesPicked(m_Edits, bush.base.x, bush.base.z))
 				{
 					const u32 berries = 4 + (HashU32(hash + 17) % 4);
 					const real berrySize = 0.04f;
@@ -4227,7 +4274,7 @@ namespace flex
 
 		void FindBerryBushes(const TerrainDensity& density, const EditList& edits, const glm::vec3& boxMin, const glm::vec3& boxMax, std::vector<BerryBushInfo>& outBushes)
 		{
-			ForEachBush(density, edits, boxMin, boxMax, [&outBushes](const BushInfo& bush)
+			ForEachBush(density, edits, boxMin, boxMax, [&outBushes, &edits](const BushInfo& bush)
 			{
 				const VegetationInfo& info = *bush.vegetation;
 				// (the same roll as the berries drawn on the bush, see AddBush)
@@ -4236,6 +4283,7 @@ namespace flex
 					BerryBushInfo berryBush;
 					berryBush.base = bush.base;
 					berryBush.hash = bush.hash;
+					berryBush.bPicked = AreBerriesPicked(edits, bush.base.x, bush.base.z);
 					outBushes.push_back(berryBush);
 				}
 			});
@@ -4263,6 +4311,14 @@ namespace flex
 			edit.radius = 3.0f;
 			edit.type = EditType::REMOVE_PLANT;
 			edit.material = Material::SOIL;
+			return edit;
+		}
+
+		Edit MakeToggleBerriesEdit(const glm::vec3& bushBase)
+		{
+			Edit edit = MakeRemovePlantEdit(PlantInfo());
+			edit.center = bushBase;
+			edit.material = BERRIES_PICKED_MARKER;
 			return edit;
 		}
 
@@ -4689,6 +4745,14 @@ namespace flex
 				hasher.Add(edit.normal.z);
 				hasher.Add(edit.height);
 			}
+			else if (IsBoxEdit(edit.type))
+			{
+				hasher.Add(edit.normal.x);
+				hasher.Add(edit.normal.y);
+				hasher.Add(edit.normal.z);
+				hasher.Add(edit.height);
+				hasher.Add(edit.twist);
+			}
 			hash = hasher.value;
 		}
 
@@ -4715,8 +4779,61 @@ namespace flex
 				(1.0f - Smoothstep(edit.height * PLANE_EDIT_INNER_HEIGHT, edit.height, absAxial));
 		}
 
+		// Box edits' edges & corners are rounded by this much (meters), so they mesh cleanly
+		static const real BOX_EDIT_ROUNDING = 0.12f;
+
+		void BoxEditAxes(const Edit& edit, glm::vec3& outX, glm::vec3& outY)
+		{
+			const glm::vec3 n = edit.normal;
+			glm::vec3 x = glm::cross(glm::vec3(0.0f, 1.0f, 0.0f), n);
+			const real xLength = glm::length(x);
+			x = xLength > 1e-3f ? x / xLength : glm::vec3(1.0f, 0.0f, 0.0f);
+			if (edit.twist != 0.0f)
+			{
+				x = x * std::cos(edit.twist) + glm::cross(n, x) * std::sin(edit.twist);
+			}
+			outX = x;
+			outY = glm::cross(n, x);
+		}
+
+		real BoxEditDistance(const Edit& edit, const glm::vec3& offset)
+		{
+			glm::vec3 x, y;
+			BoxEditAxes(edit, x, y);
+			const real r = Min(BOX_EDIT_ROUNDING, Min(edit.radius, edit.height) * 0.5f);
+			const glm::vec3 q(
+				Abs(glm::dot(offset, x)) - (edit.radius - r),
+				Abs(glm::dot(offset, y)) - (edit.radius - r),
+				Abs(glm::dot(offset, edit.normal)) - (edit.height - r));
+			const glm::vec3 outside = glm::max(q, glm::vec3(0.0f));
+			return glm::length(outside) + Min(Max(q.x, Max(q.y, q.z)), 0.0f) - r;
+		}
+
+		Edit MakeBoxEdit(EditType type, const glm::vec3& center, const glm::vec3& normal, real twist, real halfWidth, real halfDepth, Material material)
+		{
+			Edit edit = {};
+			edit.type = type;
+			edit.center = center;
+			const real normalLength = glm::length(normal);
+			edit.normal = normalLength > 1e-6f ? normal / normalLength : glm::vec3(0.0f, 1.0f, 0.0f);
+			edit.twist = twist;
+			edit.radius = Max(halfWidth, 0.05f);
+			edit.height = Max(halfDepth, 0.05f);
+			edit.material = material;
+			return edit;
+		}
+
 		void GetEditBounds(const Edit& edit, glm::vec3& outMin, glm::vec3& outMax)
 		{
+			if (IsBoxEdit(edit.type))
+			{
+				glm::vec3 x, y;
+				BoxEditAxes(edit, x, y);
+				const glm::vec3 extent = (glm::abs(x) + glm::abs(y)) * edit.radius + glm::abs(edit.normal) * edit.height;
+				outMin = edit.center - extent;
+				outMax = edit.center + extent;
+				return;
+			}
 			if (!IsPlaneEdit(edit.type))
 			{
 				outMin = edit.center - glm::vec3(edit.radius);
@@ -4786,7 +4903,7 @@ namespace flex
 				{
 					bReplacesLast = ContinuesPlaneEdit(edit, last);
 				}
-				else
+				else if (!IsBoxEdit(edit.type))
 				{
 					bReplacesLast = last.type == edit.type &&
 						last.material == edit.material &&
@@ -4925,7 +5042,9 @@ namespace flex
 		// center, radius, type, material
 		static const u32 EDIT_RECORD_SIZE_V2 = sizeof(glm::vec3) + sizeof(real) + 2;
 		// ... then (appended, so older readers skip them) the plane edit fields: normal, height
-		static const u32 EDIT_RECORD_SIZE = EDIT_RECORD_SIZE_V2 + sizeof(glm::vec3) + sizeof(real);
+		static const u32 EDIT_RECORD_SIZE_PLANE = EDIT_RECORD_SIZE_V2 + sizeof(glm::vec3) + sizeof(real);
+		// ... then the box edit field: twist
+		static const u32 EDIT_RECORD_SIZE = EDIT_RECORD_SIZE_PLANE + sizeof(real);
 
 		bool WriteEdits(const std::string& filePath, i32 seed, const std::vector<Edit>& edits)
 		{
@@ -4939,6 +5058,7 @@ namespace flex
 				record[17] = (u8)edit.material;
 				memcpy(record + 18, &edit.normal, sizeof(glm::vec3));
 				memcpy(record + 30, &edit.height, sizeof(real));
+				memcpy(record + 34, &edit.twist, sizeof(real));
 				record += EDIT_RECORD_SIZE;
 			}
 			// Grouping each byte of the floats together makes them much more compressible
@@ -5035,12 +5155,20 @@ namespace flex
 				memcpy(&edit.radius, record + 12, sizeof(real));
 				edit.type = record[16] < (u8)EditType::_COUNT ? (EditType)record[16] : EditType::DIG;
 				edit.material = record[17] < (u8)Material::_COUNT ? (Material)record[17] : Material::SOIL;
-				if (recordSize >= EDIT_RECORD_SIZE)
+				if (recordSize >= EDIT_RECORD_SIZE_PLANE)
 				{
 					memcpy(&edit.normal, record + 18, sizeof(glm::vec3));
 					memcpy(&edit.height, record + 30, sizeof(real));
 				}
-				if (IsPlaneEdit(edit.type))
+				if (recordSize >= EDIT_RECORD_SIZE)
+				{
+					memcpy(&edit.twist, record + 34, sizeof(real));
+					if (!(edit.twist > -100.0f && edit.twist < 100.0f))
+					{
+						edit.twist = 0.0f;
+					}
+				}
+				if (IsPlaneEdit(edit.type) || IsBoxEdit(edit.type))
 				{
 					// (Corrupt values would make the density NaN)
 					const real normalLength = glm::length(edit.normal);

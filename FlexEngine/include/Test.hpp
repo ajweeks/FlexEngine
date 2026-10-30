@@ -2537,11 +2537,23 @@ namespace flex
 		UNIT_TEST_END;
 
 	public:
-		static i32 Run()
+		// categories: comma separated list of unit test categories (core, track, save, gameplay), or null for all
+		static i32 Run(const char* categories = nullptr)
 		{
 			using TestFunc = bool(*)();
 
-			TestFunc funcs[] = {
+			struct Entry { const char* category; TestFunc func; };
+			std::vector<Entry> entries;
+			const std::string wanted = categories ? std::string(",") + categories + "," : std::string();
+			auto add = [&](const char* category, std::initializer_list<TestFunc> list)
+			{
+				if (!categories || wanted.find(std::string(",") + category + ",") != std::string::npos)
+				{
+					for (TestFunc f : list) entries.push_back({ category, f });
+				}
+			};
+
+			add("core", {
 				// JSON tests
 				EmptyFileIsParsed, MinimalFileIsParsed, OneFieldFileIsValid, MissingQuoteFailsToParse, ObjectParsedCorrectly,
 				MissingSquareBracketFailsToParse, MissingCurlyBracketFailsToParse, LineCommentIgnored, MultipleFieldsParsedCorrectly,
@@ -2590,27 +2602,26 @@ namespace flex
 
 				TestReorderItemInList0, TestReorderItemInList1,
 
+			});
+			add("track", {
 				// Track tests
 				TrackThroughNodesPassesThroughNodes, TrackThroughNodesAlignsWithForcedDir, BezierCurveFromStringKeepsFractions,
 				LoopedTracksLeadInJoinsLoop, LoopedTracksClosedLoop, SmoothTrackMirrorsHandles, RemoveInteriorNodeKeepsEnds, JunctionExitSteering, JunctionExitsSeparateParallelBranch,
 
-				// Save files (binary format, compression, corruption handling)
-				save::RunSelfTests,
+			});
+			// Save files (binary format, compression, corruption handling) & randomized robustness tests (JSON parser,
+			// string & number helpers, WAV parser, binary save files)
+			add("save", { save::RunSelfTests, FuzzTestsShort });
+			// Build mode placement (overlaps & extending pieces from the aimed edge)
+			add("gameplay", { RunBuildingSelfTests });
 
-				// Build mode placement (overlaps & extending pieces from the aimed edge)
-				RunBuildingSelfTests,
-
-				// Randomized robustness tests (JSON parser, string & number helpers, WAV parser, binary save files)
-				FuzzTestsShort,
-			};
-
-			Print("Running %u tests...\n", (u32)ARRAY_LENGTH(funcs));
+			Print("Running %u tests...\n", (u32)entries.size());
 			i32 failedTestCount = 0;
-			for (const TestFunc& func : funcs)
+			for (const Entry& entry : entries)
 			{
 				try
 				{
-					if (!func())
+					if (!entry.func())
 					{
 						++failedTestCount;
 					}
@@ -2628,7 +2639,7 @@ namespace flex
 			}
 			else
 			{
-				Print("%u/%u tests passed\n", (u32)ARRAY_LENGTH(funcs), (u32)ARRAY_LENGTH(funcs));
+				Print("%u/%u tests passed\n", (u32)entries.size(), (u32)entries.size());
 			}
 			Print("\n");
 

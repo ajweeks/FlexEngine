@@ -2485,6 +2485,10 @@ namespace flex
 					{
 						return false;
 					}
+					if (terrain::IsBoxEdit(a[i].type) && (memcmp(&a[i].normal, &b[i].normal, sizeof(glm::vec3)) != 0 || a[i].height != b[i].height || a[i].twist != b[i].twist))
+					{
+						return false;
+					}
 				}
 				return true;
 			}
@@ -2514,6 +2518,15 @@ namespace flex
 						const glm::vec3 normal(random.Float(-1.0f, 1.0f), random.Float(0.2f, 1.0f), random.Float(-1.0f, 1.0f));
 						planeEdits[i] = terrain::MakePlaneEdit(type, planeEdits[i].center, normal, random.Float(0.5f, 4.0f),
 							random.Range(2) == 0 ? 0.0f : random.Float(0.5f, 6.0f), (terrain::Material)random.Range((u32)terrain::Material::_COUNT));
+					}
+					SAVE_CHECK(terrain::WriteEdits(filePath, 42, planeEdits));
+					SAVE_CHECK(terrain::ReadEdits(filePath, 42, read) && EditsEqual(read, planeEdits));
+					// ... & box edits (mining) their normal, depth & twist
+					for (size_t i = 1; i < planeEdits.size(); i += 4)
+					{
+						const glm::vec3 normal(random.Float(-1.0f, 1.0f), random.Float(-1.0f, 1.0f), random.Float(-1.0f, 1.0f));
+						planeEdits[i] = terrain::MakeBoxEdit(random.Range(2) == 0 ? terrain::EditType::BOX_DIG : terrain::EditType::BOX_FILL, planeEdits[i].center,
+							normal, random.Float(-3.0f, 3.0f), random.Float(0.3f, 2.0f), random.Float(0.3f, 2.0f), (terrain::Material)random.Range((u32)terrain::Material::_COUNT));
 					}
 					SAVE_CHECK(terrain::WriteEdits(filePath, 42, planeEdits));
 					SAVE_CHECK(terrain::ReadEdits(filePath, 42, read) && EditsEqual(read, planeEdits));

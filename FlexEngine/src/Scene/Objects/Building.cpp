@@ -362,8 +362,11 @@ namespace flex
 		case BuildPieceType::FENCE_POST:
 			outBoxes.push_back({ glm::vec3(0.0f, 0.55f, 0.0f), glm::vec3(0.09f, 0.75f, 0.09f), QUAT_IDENTITY, 0 });
 			break;
+		case BuildPieceType::TORCH:
+			outBoxes.push_back({ glm::vec3(0.0f, 0.4f, 0.0f), glm::vec3(0.035f, 0.4f, 0.035f), QUAT_IDENTITY, 0 });
+			break;
 		default:
-			// Torches, ladders & ropes don't block movement
+			// Ladders, ladders & ropes don't block movement
 			break;
 		}
 	}
@@ -402,6 +405,13 @@ namespace flex
 				outBoxes.push_back({ glm::vec3(step.center.x, (top + slab) * 0.5f, step.center.z), glm::vec3(step.halfExtents.x, (top - slab) * 0.5f, step.halfExtents.z), QUAT_IDENTITY, 0 });
 			}
 		} break;
+		case BuildPieceType::TORCH:
+			// Wider than the pole so torches can't be packed together
+			outBoxes.push_back({ glm::vec3(0.0f, 0.4f, 0.0f), glm::vec3(0.12f, 0.4f, 0.12f), QUAT_IDENTITY, 0 });
+			break;
+		case BuildPieceType::FENCE_POST:
+			outBoxes.push_back({ glm::vec3(0.0f, 0.55f, 0.0f), glm::vec3(0.12f, 0.75f, 0.12f), QUAT_IDENTITY, 0 });
+			break;
 		default:
 			break;
 		}
@@ -426,6 +436,42 @@ namespace flex
 		return compound;
 	}
 
+	void BuildPiece::ComputeFenceLinks()
+	{
+		m_FenceLinks.clear();
+		const glm::vec3 pos = m_Transform.GetWorldPosition();
+		const glm::quat invRot = glm::inverse(m_Transform.GetWorldRotation());
+		for (BuildPiece* other : s_Pieces)
+		{
+			if (other == this || other->m_PieceType != BuildPieceType::FENCE_POST)
+			{
+				continue;
+			}
+			const glm::vec3 d = other->m_Transform.GetWorldPosition() - pos;
+			if (glm::length(glm::vec2(d.x, d.z)) <= FENCE_LINK_DISTANCE && glm::abs(d.y) < 1.0f && glm::length2(d) > 0.04f)
+			{
+				m_FenceLinks.push_back(invRot * d);
+			}
+		}
+	}
+
+	void BuildPiece::MarkFenceNeighboursDirty(BuildPiece* changed)
+	{
+		if (changed->m_PieceType != BuildPieceType::FENCE_POST)
+		{
+			return;
+		}
+		const glm::vec3 pos = changed->m_Transform.GetWorldPosition();
+		for (BuildPiece* other : s_Pieces)
+		{
+			if (other != changed && other->m_PieceType == BuildPieceType::FENCE_POST &&
+				glm::distance(other->m_Transform.GetWorldPosition(), pos) <= FENCE_LINK_DISTANCE + 1.0f)
+			{
+				other->m_bLinksDirty = true;
+			}
+		}
+	}
+
 	void BuildPiece::CreateMesh()
 	{
 		MaterialID mainMaterialID, secondaryMaterialID;
@@ -433,6 +479,21 @@ namespace flex
 
 		std::vector<Box> boxes;
 		GetBoxes(m_PieceType, m_Length, m_Size, boxes);
+		if (m_PieceType == BuildPieceType::FENCE_POST)
+		{
+			ComputeFenceLinks();
+			for (const glm::vec3& link : m_FenceLinks)
+			{
+				// Our half of each plank; the other post draws the rest
+				const real dist = glm::length(link);
+				const glm::vec3 dir = link / dist;
+				const glm::quat rot = glm::rotation(VEC3_RIGHT, dir);
+				for (real h : { 0.5f, 0.95f })
+				{
+					boxes.push_back({ link * 0.25f + glm::vec3(0.0f, h, 0.0f), glm::vec3(dist * 0.25f, 0.035f, 0.025f), rot, 1 });
+				}
+			}
+		}
 
 		Mesh* mesh = SetMesh(new Mesh(this));
 		const MaterialID materialIDs[2] = { mainMaterialID, secondaryMaterialID };
@@ -472,6 +533,7 @@ namespace flex
 		}
 
 		s_Pieces.push_back(this);
+		MarkFenceNeighboursDirty(this);
 
 		GameObject::Initialize();
 	}
@@ -479,6 +541,7 @@ namespace flex
 	void BuildPiece::Destroy(bool bDetachFromParent /* = true */)
 	{
 		s_Pieces.erase(std::remove(s_Pieces.begin(), s_Pieces.end(), this), s_Pieces.end());
+		MarkFenceNeighboursDirty(this);
 
 		bool bAnyTorches = false;
 		for (BuildPiece* piece : s_Pieces)
@@ -495,6 +558,16 @@ namespace flex
 
 	void BuildPiece::Update()
 	{
+		if (m_bLinksDirty)
+		{
+			m_bLinksDirty = false;
+			CreateMesh();
+			if (Mesh* mesh = GetMesh())
+			{
+				mesh->PostInitialize();
+			}
+		}
+
 		if (m_PieceType == BuildPieceType::TORCH)
 		{
 			UpdateTorchLights();
@@ -773,7 +846,10 @@ namespace flex
 
 	bool BuildPiecesOverlap(const BuildPlacement& a, const BuildPlacement& b)
 	{
-		if (!BuildPiece::IsGridPiece(a.type) || !BuildPiece::IsGridPiece(b.type))
+		// Torches & fence posts only conflict with each other
+		auto isSmall = [](BuildPieceType t) { return t == BuildPieceType::TORCH || t == BuildPieceType::FENCE_POST; };
+		const bool bSmallPair = isSmall(a.type) && isSmall(b.type);
+		if (!bSmallPair && (!BuildPiece::IsGridPiece(a.type) || !BuildPiece::IsGridPiece(b.type)))
 		{
 			return false;
 		}
@@ -1181,7 +1257,8 @@ namespace flex
 				m_BlockReason = BuildBlockReason::CEILING;
 				return false;
 			}
-			return true;
+			m_BlockReason = CheckGridPlacement(outPos, outRot);
+			return m_BlockReason == BuildBlockReason::NONE;
 		}
 		case BuildPieceType::FENCE_POST:
 		{
@@ -1193,7 +1270,8 @@ namespace flex
 				m_BlockReason = BuildBlockReason::NO_TARGET;
 				return false;
 			}
-			return true;
+			m_BlockReason = CheckGridPlacement(outPos, outRot);
+			return m_BlockReason == BuildBlockReason::NONE;
 		}
 		case BuildPieceType::LADDER:
 		{
@@ -1485,6 +1563,11 @@ namespace flex
 			{
 				Place();
 				m_Cooldown = 0.15f;
+			}
+			else if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT) && !m_bPlacementValid)
+			{
+				GameSounds::PlayBuildDenied();
+				m_Cooldown = 0.25f;
 			}
 			else if (g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT) && targeted != nullptr)
 			{

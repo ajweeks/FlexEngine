@@ -317,6 +317,18 @@ namespace flex
 	void WoodcraftController::UpdateHarvest(bool bCanAct)
 	{
 		m_bHasHarvestTarget = false;
+		// Berries which have regrown show again
+		if (TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive())
+		{
+			for (terrain::BerryBushInfo& bush : m_NearbyBushes)
+			{
+				if (bush.bPicked && harvest::IsReady(harvest::Kind::BERRIES, bush.hash))
+				{
+					bush.bPicked = false;
+					terrainGenerator->ToggleBerries(bush.base);
+				}
+			}
+		}
 		BaseCamera* camera = g_CameraManager->CurrentCamera();
 		if (!bCanAct || camera == nullptr)
 		{
@@ -372,6 +384,18 @@ namespace flex
 			if (itemID.IsValid())
 			{
 				harvest::MarkPicked(m_HarvestKind, m_HarvestHash);
+				if (m_HarvestKind == harvest::Kind::BERRIES)
+				{
+					// Hide the berries on the bush
+					for (terrain::BerryBushInfo& bush : m_NearbyBushes)
+					{
+						if (bush.hash == m_HarvestHash && !bush.bPicked)
+						{
+							bush.bPicked = true;
+							TerrainGenerator::GetActive()->ToggleBerries(bush.base);
+						}
+					}
+				}
 				m_Player->AddToInventory(itemID, count);
 				GameSounds::PlayPlace(m_HarvestPos);
 				m_Player->ShowNotification(LOCF(Notify_Picked, count, Loc::ItemName(prefabName)));

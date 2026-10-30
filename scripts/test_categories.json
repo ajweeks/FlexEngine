@@ -1,0 +1,12 @@
+{
+	"_doc": "Test categories for `flexsvc -a NAME test`. paths: substrings of repo-relative changed files that select the category. unit: `--test --category=` names (core, track, save, gameplay). scenes: files run with --test-scenes. frames: --frames for the scenes. A changed file matching no category's paths runs everything.",
+	"core":     { "paths": ["include/Test.hpp", "src/Helpers", "JSON", "GUID", "Hash", "Variant", "StringBuilder", "Pool", "ConfigFile", "src/main.cpp"], "unit": "core", "scenes": [] },
+	"graphics": { "paths": ["src/Graphics/", "include/Graphics/", "resources/shaders/", "Particles", "Water", "Scene/Mesh", "Cameras", "Colours"], "scenes": ["scene_ft_shadows.json", "scene_ft_lights.json", "scene_ft_pbr.json", "scene_ft_sky.json", "scene_ft_sky_dusk.json", "scene_ft_particles.json", "scene_ft_transparency.json", "scene_ft_water.json", "scene_macbeth.json"], "frames": 300 },
+	"ui":       { "paths": ["src/UI", "include/UI", "GameUI", "BitmapFont", "Localization", "resources/loc/", "GameConsole", "ImGui"], "scenes": ["scene_terminal_test.json"], "frames": 60 },
+	"window":   { "paths": ["src/Window/", "include/Window/", "src/Platform/", "include/Platform/", "FlexEngine.cpp", "InputManager", "src/main.cpp"], "scenes": ["scene_empty.json", "scene_terminal_test.json"], "frames": 60 },
+	"audio":    { "paths": ["Audio/", "GameSounds", "SoundRecipes"], "scenes": ["scene_empty.json"], "frames": 120 },
+	"terrain":  { "paths": ["TerrainGeneration", "TerrainGenerator", "PlayerTerrain", "resources/shaders/terrain"], "scenes": ["scene_ft_terrain.json", "scene_terrain_test.json"], "frames": 600 },
+	"track":    { "paths": ["src/Track/", "include/Track/", "PlayerTrackBuilding", "BezierCurve"], "unit": "track", "scenes": ["scene_track_test.json"], "frames": 300 },
+	"save":     { "paths": ["SaveFile", "src/Game.cpp", "include/Game.hpp"], "unit": "save", "scenes": [] },
+	"gameplay": { "paths": ["src/Player", "include/Player", "Traversal", "Building", "Woodcraft", "Inventory", "Crafting", "Harvest", "Animals", "Swimming", "Campfire", "Treasure", "PlacementPreview", "src/Physics/", "Scene/Objects/", "src/Game.cpp", "src/Systems/"], "unit": "gameplay", "scenes": ["scene_vehicle_test.json", "scene_spring_test.json", "scene_world.json"], "frames": 300 }
+}

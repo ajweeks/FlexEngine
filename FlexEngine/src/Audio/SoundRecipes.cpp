@@ -31,6 +31,7 @@ namespace flex
 				{ "tree_fall", 2, false, true },
 				{ "ui_tick", 1, false, false },
 				{ "ui_confirm", 1, false, false },
+				{ "build_denied", 1, false, false },
 				{ "dig_stone", 5, false, true },
 				{ "dig_sand", 4, false, true },
 				{ "dig_gravel", 5, false, true },
@@ -583,6 +584,24 @@ namespace flex
 				}
 				AddClick(out, rng, 0.0f, 0.3f, 4000.0f, 0.001f);
 				Finish(out, ONE_SHOT_PEAK * 0.8f, 0.01f);
+				return out;
+			}
+
+			Buffer BuildDenied()
+			{
+				Buffer out(0.22f);
+				const sec starts[] = { 0.0f, 0.09f };
+				for (u32 n = 0; n < 2; ++n)
+				{
+					Oscillator saw;
+					const u32 begin = out.IndexOf(starts[n]);
+					for (u32 i = 0; begin + i < out.Count(); ++i)
+					{
+						const real t = (real)i / (real)out.sampleRate;
+						out.samples[begin + i] += saw.Triangle(n == 0 ? 150.0f : 110.0f) * EnvAttackDecay(t, 0.002f, 0.04f);
+					}
+				}
+				Finish(out, ONE_SHOT_PEAK * 0.8f, 0.03f);
 				return out;
 			}
 
@@ -1247,6 +1266,7 @@ namespace flex
 			case Sound::TREE_FALL: return TreeFall(variant);
 			case Sound::UI_TICK: return UITick();
 			case Sound::UI_CONFIRM: return UIConfirm();
+			case Sound::BUILD_DENIED: return BuildDenied();
 			case Sound::DIG_STONE: return DigStone(variant);
 			case Sound::DIG_SAND: return DigSand(variant);
 			case Sound::DIG_GRAVEL: return DigGravel(variant);

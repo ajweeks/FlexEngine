@@ -88,6 +88,15 @@ namespace flex
 		return pair.first->second;
 	}
 
+	ConfigFile::ConfigValue& ConfigFile::RegisterProperty(const char* propertyName, Quality* propertyValue)
+	{
+		static_assert(sizeof(Quality) == sizeof(i32), "Quality values are accessed as ints");
+		EmplaceResult pair = values.emplace(propertyName, ConfigValue(propertyName, propertyValue, ValueType::INT));
+		pair.first->second.bQuality = 1;
+		pair.first->second.SetRange(0.0f, (real)(QUALITY_COUNT - 1));
+		return pair.first->second;
+	}
+
 	bool ConfigFile::Serialize()
 	{
 		fileVersion = currentFileVersion;
@@ -100,6 +109,11 @@ namespace flex
 		{
 			CHECK_NE(valuePair.second.valuePtr, nullptr);
 
+			if (valuePair.second.bQuality)
+			{
+				rootObject.fields.emplace_back(valuePair.first, JSONValue(QualityToString(*(Quality*)valuePair.second.valuePtr)));
+				continue;
+			}
 			rootObject.fields.emplace_back(valuePair.first, JSONValue::FromRawPtr(valuePair.second.valuePtr, valuePair.second.type));
 		}
 
@@ -135,6 +149,19 @@ namespace flex
 					{
 						CHECK_NE(valuePair.second.valuePtr, nullptr);
 
+						if (valuePair.second.bQuality)
+						{
+							// Older files stored qualities as ints, which are read unclamped so their owners can migrate them
+							std::string qualityStr;
+							if (rootObject.TryGetString(valuePair.second.label, qualityStr) && !qualityStr.empty()) // Empty for int fields
+							{
+								if (!QualityFromString(qualityStr.c_str(), (Quality*)valuePair.second.valuePtr))
+								{
+									PrintWarn("Unknown quality \"%s\" for \"%s\" in %s\n", qualityStr.c_str(), valuePair.second.label, filePath.c_str());
+								}
+								continue;
+							}
+						}
 						rootObject.TryGetValueOfType(valuePair.second.label, valuePair.second.valuePtr, valuePair.second.type);
 					}
 

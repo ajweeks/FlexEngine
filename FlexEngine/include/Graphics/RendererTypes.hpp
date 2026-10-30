@@ -139,10 +139,11 @@ namespace flex
 	{
 		// [2i]: xyz: render space position light i's shadow faces were rendered from, w: its first array layer (< 0: unshadowed)
 		// [2i+1]: x: shadow strength (fades in & out), y: near plane, z: far plane (range)
-		glm::vec4 lights[MAX_POINT_LIGHT_COUNT * 2];	// 0
+		// (Point lights first, then spot lights at MAX_POINT_LIGHT_COUNT + i)
+		glm::vec4 lights[(MAX_POINT_LIGHT_COUNT + MAX_SPOT_LIGHT_COUNT) * 2];	// 0
 		// x: tan of each face's half FOV (over 45 degrees by a guard band), y: receiver normal offset (texels),
 		// z: depth comparison bias (normalized depth), w: face resolution
-		glm::vec4 params;								// 512
+		glm::vec4 params;								// 768
 	};
 
 	// 112 bytes

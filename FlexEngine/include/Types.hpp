@@ -174,4 +174,71 @@ namespace flex
 
 		_NONE
 	};
+
+	// The one quality scale every scalable system uses (graphics settings, presets, terrain, shadows, shader effects...)
+	// Systems derive their parameters from it (usually a table indexed by QualityIndex). Saved by name (see QualityToString).
+	enum class Quality : i32
+	{
+		LOW,
+		MEDIUM,
+		HIGH,
+		ULTRA,
+
+		_COUNT
+	};
+
+	static constexpr i32 QUALITY_COUNT = (i32)Quality::_COUNT;
+
+	// Debug/tool display names (player-facing names are the Settings_Quality* loc strings)
+	static const char* QualityNames[] = { "Low", "Medium", "High", "Ultra" };
+	static_assert(ARRAY_LENGTH(QualityNames) == (u32)Quality::_COUNT, "Length of QualityNames must match length of Quality enum");
+
+	// Clamps out of range values (e.g. from old settings files)
+	inline constexpr Quality QualityFromInt(i32 value)
+	{
+		return (Quality)(value < 0 ? 0 : (value >= QUALITY_COUNT ? QUALITY_COUNT - 1 : value));
+	}
+
+	inline constexpr i32 QualityIndex(Quality quality)
+	{
+		return (i32)QualityFromInt((i32)quality);
+	}
+
+	// Lower case names, as stored in settings files
+	inline const char* QualityToString(Quality quality)
+	{
+		static const char* s_Strs[] = { "low", "medium", "high", "ultra" };
+		return s_Strs[QualityIndex(quality)];
+	}
+
+	// Case insensitive; returns false (leaving outQuality unchanged) when str isn't a quality name
+	inline bool QualityFromString(const char* str, Quality* outQuality)
+	{
+		if (str == nullptr)
+		{
+			return false;
+		}
+		for (i32 i = 0; i < QUALITY_COUNT; ++i)
+		{
+			const char* name = QualityToString((Quality)i);
+			i32 c = 0;
+			while (name[c] != 0 && (str[c] | 0x20) == name[c])
+			{
+				++c;
+			}
+			if (name[c] == 0 && str[c] == 0)
+			{
+				*outQuality = (Quality)i;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	// Picks the value for a quality level from a table with one entry per level
+	template<typename T>
+	inline const T& QualitySelect(Quality quality, const T(&values)[(u32)Quality::_COUNT])
+	{
+		return values[QualityIndex(quality)];
+	}
 } // namespace flex

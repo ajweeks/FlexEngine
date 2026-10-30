@@ -111,6 +111,13 @@ namespace flex
 		// Collision for the piece (null for pieces without any)
 		static btCollisionShape* CreateCollisionShape(BuildPieceType type, real length, real size);
 		void CreateMesh();
+		// Fence posts within FENCE_LINK_DISTANCE of each other are joined by planks (rebuilt when a neighbour appears or goes)
+		void ComputeFenceLinks();
+		static void MarkFenceNeighboursDirty(BuildPiece* changed);
+
+		static constexpr real FENCE_LINK_DISTANCE = 2.0f;
+		std::vector<glm::vec3> m_FenceLinks; // Offsets (in this piece's space) to the posts linked to
+		bool m_bLinksDirty = false;
 
 		BuildPieceType m_PieceType = BuildPieceType::FLOOR;
 		BuildMaterial m_Material = BuildMaterial::WOOD;

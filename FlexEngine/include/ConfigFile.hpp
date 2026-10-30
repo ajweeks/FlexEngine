@@ -28,6 +28,8 @@ namespace flex
 		ConfigValue& RegisterProperty(const char* propertyName, glm::quat* propertyValue);
 		ConfigValue& RegisterProperty(const char* propertyName, std::string* propertyValue);
 		ConfigValue& RegisterProperty(const char* propertyName, GUID* propertyValue);
+		// Saved by name ("low", "medium"...); integer values (older files) are read too
+		ConfigValue& RegisterProperty(const char* propertyName, Quality* propertyValue);
 
 		bool Serialize();
 		bool Deserialize();
@@ -39,7 +41,10 @@ namespace flex
 			ConfigValue(const char* label, void* valuePtr, ValueType type) :
 				label(label),
 				valuePtr(valuePtr),
-				type(type)
+				type(type),
+				valueMinSet(0),
+				valueMaxSet(0),
+				bQuality(0)
 			{}
 
 			ConfigValue& SetRange(real rangeMin, real rangeMax);
@@ -53,6 +58,7 @@ namespace flex
 			ValueType type;
 			u32 valueMinSet : 1;
 			u32 valueMaxSet : 1;
+			u32 bQuality : 1; // valuePtr is a Quality, stored as a string
 
 		};
 

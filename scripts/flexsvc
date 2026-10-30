@@ -1043,6 +1043,52 @@ def hooks():
 
 # ---------------------------------------------------------------- main
 
+def test_categories():
+	return {k: v for k, v in read_json(os.path.join(REPO, "scripts", "test_categories.json"), {}).items() if not k.startswith("_")}
+
+def affected_categories(files):
+	cats = test_categories()
+	hit = {c for c, d in cats.items() if any(p in f for f in files for p in d["paths"])}
+	# a source file that no category claims could affect anything
+	if any((f.endswith(SRC_EXTS + (".glsl", ".vert", ".frag")) or f.startswith("FlexEngine/resources/")) and not any(p in f for d in cats.values() for p in d["paths"]) for f in files):
+		hit = set(cats)
+	return hit
+
+def test(cats_arg, run_all, list_only, timeout):
+	"""Runs the test categories affected by your claimed files (or, with nothing claimed, the tree's uncommitted changes)."""
+	os.chdir(REPO)
+	cats = test_categories()
+	files = claims().get(AGENT, [])
+	if not files:
+		files = subprocess.run(["git", "diff", "--name-only", "HEAD"], capture_output=True, text=True).stdout.split()
+	files = [os.path.relpath(os.path.abspath(f), REPO).replace(os.sep, "/") for f in files]
+	if run_all:
+		chosen = set(cats)
+	elif cats_arg:
+		chosen = set(cats_arg.split(","))
+		bad = chosen - set(cats)
+		if bad:
+			die("unknown categories %s (have %s)" % (",".join(sorted(bad)), ",".join(cats)))
+	else:
+		chosen = affected_categories(files)
+	print("categories: %s" % (",".join(sorted(chosen)) or "none (no source changes that need tests)"))
+	units = sorted({cats[c]["unit"] for c in chosen if cats[c].get("unit")})
+	scenes = []
+	for c in sorted(chosen):
+		scenes += [s for s in cats[c]["scenes"] if s not in scenes]
+	frames = max([cats[c].get("frames", 10) for c in chosen if cats[c]["scenes"]] or [10])
+	if list_only:
+		return print("unit: %s\nscenes (%d frames): %s" % (",".join(units), frames, " ".join(scenes)))
+	code = 0
+	if units:
+		c, _, _ = run_flex(["--test", "--headless", "--category=" + ",".join(units)], timeout=timeout)
+		code = code or c
+	if scenes:
+		c, _, _ = run_flex(["--test-scenes", "--frames=%d" % frames] + scenes, timeout=timeout)
+		code = code or c
+	print("TEST %s" % ("PASS" if code == 0 else "FAIL"))
+	sys.exit(1 if code else 0)
+
 def main():
 	global AGENT
 	sys.stdout.reconfigure(line_buffering=True)
@@ -1073,6 +1119,11 @@ def main():
 	be.add_argument("--runs", type=int, default=1, help="report the median of N runs of each exe")
 	be.add_argument("--env", action="append", default=[], metavar="K=V", help="env for the current run")
 	be.add_argument("--baseline-env", action="append", default=None, metavar="K=V", help="env for the baseline run (--baseline same re-runs the current build, for A/B of a toggle)")
+	t = sub.add_parser("test", help="run the test categories your claimed files affect (see scripts/test_categories.json)")
+	t.add_argument("--cat", help="comma separated categories instead of the affected ones")
+	t.add_argument("--all", action="store_true", help="every category")
+	t.add_argument("--list", action="store_true", help="only print what would run")
+	t.add_argument("--timeout", type=int, default=600)
 	p = sub.add_parser("post")
 	p.add_argument("--to")
 	p.add_argument("message", nargs="+")
@@ -1172,6 +1223,8 @@ def main():
 			state = build(a.config, a.linux, quiet_cached=True)
 		print_build(state)
 		sys.exit(0 if state["ok"] else 1)
+	if a.cmd == "test":
+		return test(a.cat, a.all, a.list, a.timeout)
 	if a.cmd == "run":
 		args = a.args[1:] if a.args[:1] == ["--"] else a.args
 		env = dict(kv.split("=", 1) for kv in a.env)

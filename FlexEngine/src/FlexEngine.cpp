@@ -46,6 +46,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/SceneManager.hpp"
 #include "SceneTestRunner.hpp"
 #include "Game.hpp"
+#include "GameConsole.hpp"
 #include "GameSounds.hpp"
 #include "Systems/CartManager.hpp"
 #include "Systems/TrackManager.hpp"
@@ -1659,7 +1660,7 @@ namespace flex
 		}
 
 		bool bPreviewShadows = g_Renderer->GetDisplayShadowCascadePreview();
-		if (ImGui::Checkbox("Shadow cascade preview", &bPreviewShadows))
+		if (ImGui::Checkbox("Shadow map debug view", &bPreviewShadows))
 		{
 			g_Renderer->SetDisplayShadowCascadePreview(bPreviewShadows);
 		}
@@ -2405,7 +2406,7 @@ namespace flex
 				}
 
 				bool bPreviewShadows = g_Renderer->GetDisplayShadowCascadePreview();
-				if (ImGui::MenuItem("Shadow cascades", nullptr, &bPreviewShadows))
+				if (ImGui::MenuItem("Shadow maps", nullptr, &bPreviewShadows))
 				{
 					g_Renderer->SetDisplayShadowCascadePreview(bPreviewShadows);
 				}
@@ -3369,6 +3370,12 @@ namespace flex
 		const bool bAltDown = (modifiers & (i32)InputModifier::ALT) > 0;
 		const bool bShiftDown = (modifiers & (i32)InputModifier::SHIFT) > 0;
 
+		// The game's console (tilde) is a text box: typing must not trigger debug hotkeys (P toggles physics, ...)
+		if (m_bGameMode && keyCode != KeyCode::KEY_GRAVE_ACCENT && GameConsole::Get().IsOpen())
+		{
+			return EventReply::CONSUMED;
+		}
+
 		if (action == KeyAction::KEY_PRESS)
 		{
 			if (keyCode == KeyCode::KEY_GRAVE_ACCENT)
@@ -3443,12 +3450,6 @@ namespace flex
 
 			// (Number keys select the player's quick access slots, see PlayerController. The test tones they used to
 			// play are in the debug window's Audio tab)
-
-			if (keyCode == KeyCode::KEY_O)
-			{
-				AudioManager::PlaySource(s_AudioSourceIDs[bShiftDown ? (i32)SoundEffect::melody_0_fast : (i32)SoundEffect::melody_0]);
-				return EventReply::CONSUMED;
-			}
 
 			if (keyCode == KeyCode::KEY_K)
 			{

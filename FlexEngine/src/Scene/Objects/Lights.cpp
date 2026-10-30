@@ -342,10 +342,11 @@ namespace flex
 		GameObjectID newGameObjectID = optionalGameObjectID;
 		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 
+		// Copy it anyway (Initialize disables lights over the limit): callers such as prefab instancing expect every
+		// child to be copied, & a missing child (e.g. a vehicle's headlight) broke the copied object
 		if (g_Renderer->GetNumPointLights() >= MAX_POINT_LIGHT_COUNT)
 		{
-			PrintError("Failed to duplicate point light, max number already in scene (%i)\n", MAX_POINT_LIGHT_COUNT);
-			return nullptr;
+			PrintWarn("Duplicating point light past the limit (%i), it will be disabled\n", MAX_POINT_LIGHT_COUNT);
 		}
 
 		PointLight* newGameObject = new PointLight(newObjectName, newGameObjectID);
@@ -573,10 +574,11 @@ namespace flex
 		GameObjectID newGameObjectID = optionalGameObjectID;
 		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 
+		// Copy it anyway (Initialize disables lights over the limit): callers such as prefab instancing expect every
+		// child to be copied, & a missing child (e.g. a vehicle's headlight) broke the copied object
 		if (g_Renderer->GetNumSpotLights() >= MAX_SPOT_LIGHT_COUNT)
 		{
-			PrintError("Failed to duplicate spot light, max number already in scene (%i)\n", MAX_SPOT_LIGHT_COUNT);
-			return nullptr;
+			PrintWarn("Duplicating spot light past the limit (%i), it will be disabled\n", MAX_SPOT_LIGHT_COUNT);
 		}
 
 		SpotLight* newGameObject = new SpotLight(newObjectName, newGameObjectID);
@@ -611,9 +613,11 @@ namespace flex
 		{
 			g_Renderer->RemoveSpotLight(spotLightID);
 			spotLightID = InvalidSpotLightID;
-
-			GameObject::Destroy(bDetachFromParent);
 		}
+
+		// (Also for lights disabled for being over the limit: skipping this left them attached to their parent, which
+		// then destroyed the deleted child again, crashing when a vehicle was picked up)
+		GameObject::Destroy(bDetachFromParent);
 	}
 
 	void SpotLight::Update()
@@ -801,10 +805,11 @@ namespace flex
 		GameObjectID newGameObjectID = optionalGameObjectID;
 		GetNewObjectNameAndID(copyFlags, optionalName, parent, newObjectName, newGameObjectID);
 
+		// Copy it anyway (Initialize disables lights over the limit): callers such as prefab instancing expect every
+		// child to be copied, & a missing child (e.g. a vehicle's headlight) broke the copied object
 		if (g_Renderer->GetNumAreaLights() >= MAX_AREA_LIGHT_COUNT)
 		{
-			PrintError("Failed to duplicate area light, max number already in scene (%i)\n", MAX_AREA_LIGHT_COUNT);
-			return nullptr;
+			PrintWarn("Duplicating area light past the limit (%i), it will be disabled\n", MAX_AREA_LIGHT_COUNT);
 		}
 
 		AreaLight* newGameObject = new AreaLight(newObjectName, newGameObjectID);

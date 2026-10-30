@@ -443,6 +443,8 @@ namespace flex
 		m_Chips.Create(this, "Wood chips", GetOrCreateMaterial("Woodcraft chips", glm::vec4(0.72f, 0.56f, 0.36f, 1.0f), 0.85f, true), false);
 		m_Leaves.Create(this, "Leaves", GetOrCreateMaterial("Woodcraft leaves", glm::vec4(0.25f, 0.4f, 0.14f, 1.0f), 0.8f, true), false);
 		m_Dust.Create(this, "Dust", GetOrCreateMaterial("Woodcraft dust", glm::vec4(0.42f, 0.36f, 0.28f, 1.0f), 1.0f, true), true);
+		m_Clods.Create(this, "Clods", GetOrCreateMaterial("Terrain clods", glm::vec4(0.47f, 0.33f, 0.2f, 1.0f), 0.95f, true), false);
+		m_Rocks.Create(this, "Rocks", GetOrCreateMaterial("Terrain rocks", glm::vec4(0.55f, 0.53f, 0.5f, 1.0f), 0.8f, true), true);
 
 		GameObject::Initialize();
 	}
@@ -472,6 +474,8 @@ namespace flex
 		m_Chips.Update(dt, 9.8f, 0.6f, 1.0f);
 		m_Leaves.Update(dt, 2.5f, 2.2f, 1.0f);
 		m_Dust.Update(dt, -0.3f, 1.8f, 1.7f);
+		m_Clods.Update(dt, 12.0f, 0.4f, 0.85f);
+		m_Rocks.Update(dt, 12.0f, 0.4f, 0.9f);
 
 		GameObject::Update();
 	}
@@ -505,6 +509,25 @@ namespace flex
 			p.life = RandomRange(m_Seed, 1.5f, 3.0f);
 			m_Leaves.Spawn(p);
 		}
+	}
+
+	void WoodcraftEffects::SpawnRubble(const glm::vec3& center, const glm::vec3& normal, real halfWidth, u32 count, real hardness)
+	{
+		woodcraft::ParticleSet& set = hardness < 0.5f ? m_Clods : m_Rocks;
+		const glm::vec3 side = NormalizeOr(glm::cross(normal, glm::abs(normal.y) < 0.9f ? VEC3_UP : VEC3_RIGHT), VEC3_RIGHT);
+		const glm::vec3 up = glm::cross(side, normal);
+		for (u32 i = 0; i < count; ++i)
+		{
+			woodcraft::Particle p = {};
+			p.pos = center + (side * RandomRange(m_Seed, -1.0f, 1.0f) + up * RandomRange(m_Seed, -1.0f, 1.0f)) * halfWidth * 0.8f + normal * 0.15f;
+			p.vel = NormalizeOr(normal * 1.6f + RandomUnitVector(m_Seed) * 0.8f + VEC3_UP * 0.8f, VEC3_UP) * RandomRange(m_Seed, 1.5f, 4.5f);
+			p.rot = glm::angleAxis(RandomRange(m_Seed, 0.0f, TWO_PI), RandomUnitVector(m_Seed));
+			p.spin = RandomUnitVector(m_Seed) * RandomRange(m_Seed, 3.0f, 10.0f);
+			p.size = RandomRange(m_Seed, 0.06f, 0.16f);
+			p.life = RandomRange(m_Seed, 0.8f, 1.4f);
+			set.Spawn(p);
+		}
+		SpawnDust(center + normal * 0.3f, halfWidth * 0.6f, count / 4 + 1);
 	}
 
 	void WoodcraftEffects::SpawnDust(const glm::vec3& center, real radius, u32 count)

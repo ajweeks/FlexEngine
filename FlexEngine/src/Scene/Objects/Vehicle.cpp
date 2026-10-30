@@ -199,6 +199,19 @@ namespace flex
 	{
 		GameObject::Initialize();
 
+		// Headlights cast shadows (spot light shadows, see Renderer::SetSpotLightCastsShadow), but not of the car itself
+		for (GameObject* child : m_Children)
+		{
+			if (child != nullptr && child->GetTypeID() == SpotLightSID && StartsWith(child->GetName(), "HeadLight"))
+			{
+				SpotLight* headlight = (SpotLight*)child;
+				if (headlight->spotLightID != InvalidSpotLightID)
+				{
+					g_Renderer->SetSpotLightCastsShadow(headlight->spotLightID, true, GetRootParent());
+				}
+			}
+		}
+
 		m_pLinearVelocity = ToBtVec3(VEC3_ZERO);
 
 		BaseScene* scene = g_SceneManager->CurrentScene();

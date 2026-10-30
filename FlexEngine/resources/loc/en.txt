@@ -114,6 +114,7 @@ Controls_FlattenTerrain = Flatten terrain (hold)
 Controls_SelectItem = Select item
 Controls_Inventory = Inventory
 Controls_Interact = Interact
+Controls_PetAnimal = Pet animal
 Controls_PickUp = Pick up
 Controls_Drop = Drop item
 Controls_BuildMode = Build mode
@@ -278,9 +279,9 @@ Track_Piece_Freeform = Freeform
 Input_Unbound = Unbound
 
 # Item names (see Loc::ItemName)
-Item_Pickaxe = Pickaxe
-Item_Axe = Axe
-Item_Shovel = Shovel
+Item_Pickaxe = Stone pickaxe
+Item_Axe = Stone axe
+Item_Shovel = Stone shovel
 Item_Wood = Wood
 Item_Berries = Berries
 Item_Coconut = Coconut
@@ -300,6 +301,7 @@ Item_Olivine = Olivine
 Item_Iron = Iron
 Item_Silicon = Silicon
 Item_Stone = Stone
+Item_Torch = Torch
 
 # Traversal HUD (paraglider, wingsuit, climbing, skiing, grappling hook)
 Traversal_GliderTitle = PARAGLIDER
@@ -356,6 +358,7 @@ Animal_PromptLasso = [Click] Lasso the %s
 Animal_PromptTie = [Click] Tie %s to the post
 Animal_PromptLetGo = [Click] Let %s go (it'll stay here)
 Animal_PromptLead = [Click] Lead %s
+Animal_PromptPet = [E] Pet %s
 Animal_NameTitle = Name your %s
 Animal_NamePlaceholder = Type a name...
 Animal_NameConfirm = Name it

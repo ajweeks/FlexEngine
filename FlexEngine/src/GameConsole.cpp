@@ -19,6 +19,40 @@ namespace flex
 
 		bool IsSeparator(char c) { return c == ' ' || c == ',' || c == '\t'; }
 
+		// Primary name, then the synonyms in grey brackets (\x01...\x02 mark the grey part of a log line)
+		template<class C>
+		std::string HelpName(const C& command)
+		{
+			std::string result = command.names[0];
+			if (command.names.size() > 1)
+			{
+				result += "\x01 (";
+				for (size_t i = 1; i < command.names.size(); ++i) { result += (i > 1 ? ", " : "") + command.names[i]; }
+				result += ")\x02";
+			}
+			return result;
+		}
+
+		// Draws a log line, with any \x01..\x02 span in grey
+		void DrawLogLine(GameUI& ui, const std::string& text, real x, real y, real size, const glm::vec4& colour, real alpha)
+		{
+			const size_t a = text.find('\x01');
+			const size_t b = text.find('\x02');
+			if (a == std::string::npos || b == std::string::npos || b < a)
+			{
+				ui.Text(text, x, y, size, UITheme::WithAlpha(colour, alpha));
+				return;
+			}
+			const std::string head = text.substr(0, a);
+			const std::string grey = text.substr(a + 1, b - a - 1);
+			const std::string tail = text.substr(b + 1);
+			ui.Text(head, x, y, size, UITheme::WithAlpha(colour, alpha));
+			x += ui.MeasureText(head, size);
+			ui.Text(grey, x, y, size, UITheme::WithAlpha(UITheme::TEXT_DISABLED, alpha));
+			x += ui.MeasureText(grey, size);
+			ui.Text(tail, x, y, size, UITheme::WithAlpha(colour, alpha));
+		}
+
 		std::string Lower(const std::string& str)
 		{
 			std::string result = str;
@@ -377,15 +411,12 @@ namespace flex
 						return std::string("!") + LOCF(Console_Unknown, args[0].c_str());
 					}
 					std::string names;
-					for (const std::string& name : command->names) { names += (names.empty() ? "" : ", ") + name; }
-					return names + " " + command->usage + "\n" + command->description;
+					return HelpName(*command) + " " + command->usage + "\n" + command->description;
 				}
 				std::string text;
 				for (const Command& command : m_Commands)
 				{
-					std::string names;
-					for (const std::string& name : command.names) { names += (names.empty() ? "" : "/") + name; }
-					text += names + (command.usage.empty() ? "" : " " + command.usage) + " - " + command.description + "\n";
+					text += HelpName(command) + (command.usage.empty() ? "" : " " + command.usage) + " - " + command.description + "\n";
 				}
 				text += LOC(Console_HelpFooter);
 				return text;
@@ -413,7 +444,7 @@ namespace flex
 				if (age < RECENT_LOG_SECONDS)
 				{
 					const real alpha = glm::clamp((RECENT_LOG_SECONDS - age) * 0.5f, 0.0f, 1.0f);
-					ui.Text(line.text, margin, y + lineHeight * 0.5f, textSize, UITheme::WithAlpha(line.bError ? UITheme::CLAY : UITheme::TEXT_PRIMARY, alpha));
+					DrawLogLine(ui, line.text, margin, y + lineHeight * 0.5f, textSize, line.bError ? UITheme::CLAY : UITheme::TEXT_PRIMARY, alpha);
 					y += lineHeight;
 				}
 			}
@@ -508,7 +539,7 @@ namespace flex
 		{
 			const Line& line = m_Log[i];
 			const glm::vec4 colour = line.bError ? UITheme::CLAY : (line.text.compare(0, 2, "> ") == 0 ? UITheme::TEXT_SECONDARY : UITheme::TEXT_PRIMARY);
-			ui.Text(line.text, x, y + lineHeight * 0.5f, textSize, colour);
+			DrawLogLine(ui, line.text, x, y + lineHeight * 0.5f, textSize, colour, 1.0f);
 			y += lineHeight;
 		}
 

@@ -1844,18 +1844,7 @@ namespace flex
 		const glm::vec3 toHold = holdPos - pos;
 		velocity = axisDir * alongSpeed + (toHold - axisDir * glm::dot(toHold, axisDir)) * 12.0f;
 
-		if (bRope)
-		{
-			// Ropes are harder work than ladders
-			m_Stamina -= (glm::abs(forward) > 0.1f ? m_Settings.climbMoveStaminaDrain : m_Settings.climbStaminaDrain) * 0.5f * dt;
-			if (m_Stamina <= 0.0f)
-			{
-				m_Stamina = 0.0f;
-				m_bStaminaExhausted = true;
-				SetMode(Mode::NONE);
-				return false;
-			}
-		}
+		// (Climbing ropes & ladders doesn't use stamina)
 		return true;
 	}
 

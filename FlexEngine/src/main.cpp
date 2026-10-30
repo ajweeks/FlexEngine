@@ -83,7 +83,13 @@ int main(int argc, char *argv[])
 
 	if (bRunUnitTests)
 	{
-		i32 result = flex::FlexTest::Run();
+		// Usage: Flex --test [--headless] [--category=core,track,save,gameplay]
+		const char* unitCategories = nullptr;
+		for (i32 i = 2; i < argc; ++i)
+		{
+			if (strncmp(argv[i], "--category=", 11) == 0) unitCategories = argv[i] + 11;
+		}
+		i32 result = flex::FlexTest::Run(unitCategories);
 		// (Release builds print to their own console window, so the results are also kept in saved/flex.log)
 		flex::SaveLogBufferToFile();
 

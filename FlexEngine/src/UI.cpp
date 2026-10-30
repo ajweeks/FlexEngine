@@ -4,6 +4,7 @@
 
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
+#include "Crafting.hpp"
 #include "Game.hpp"
 #include "GameUI.hpp"
 #include "Graphics/Renderer.hpp"
@@ -585,6 +586,26 @@ namespace flex
 
 					g_Renderer->SetFont(textElement->fontID);
 					g_Renderer->DrawStringSS(textElement->text, VEC4_ONE, AnchorPoint::CENTER, pos, spacing, scale);
+				}
+
+				// Tooltip with the item's name under the cursor
+				if (imageElement != nullptr && player->IsInventoryShowing() && !ImGui::GetIO().WantCaptureMouse)
+				{
+					InventoryType tipInventoryType;
+					GameObjectStack* tipStack = player->GetGameObjectStackFromInventory(stackID, tipInventoryType);
+					if (tipStack != nullptr && tipStack->count > 0 && tipStack->prefabID.IsValid())
+					{
+						const glm::vec2i windowSize = g_Window->GetSize();
+						const glm::vec2 mousePos = g_InputManager->GetMousePosition();
+						const glm::vec2 mousePosN(mousePos.x / windowSize.x * 2.0f - 1.0f, -(mousePos.y / windowSize.y * 2.0f - 1.0f));
+						if (lastCutRect.Overlaps(mousePosN))
+						{
+							const std::string name = crafting::ItemDisplayName(tipStack->prefabID);
+							g_Renderer->SetFont(textElement != nullptr ? textElement->fontID : SID("editor-01"));
+							g_Renderer->DrawStringSS(name, glm::vec4(1.0f, 1.0f, 0.8f, 1.0f), AnchorPoint::BOTTOM_LEFT,
+								glm::vec2(mousePosN.x + 0.02f, mousePosN.y - 0.04f), 0.1f, 0.5f);
+						}
+					}
 				}
 			}
 		}

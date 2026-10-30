@@ -1793,6 +1793,30 @@ namespace flex
 					const glm::vec3 viewOffsets[] = { glm::vec3(0.0f, 2.5f, -11.0f), glm::vec3(0.0f, 2.5f, 11.0f), glm::vec3(-3.0f, 9.0f, -6.0f), glm::vec3(0.0f, 1.2f, 8.0f) };
 					// One view after another, each shown for some frames (time can jump when the camera moves far)
 					const i32 viewIndex = m_LineupShots;
+					// Pick every object up & place it again a few times, previewing it as a hologram like the player
+					// does (meshes created & destroyed at runtime once corrupted others' vertex/index offsets)
+					if (Crossed(1.0f) || Crossed(1.5f) || Crossed(2.0f))
+					{
+						for (GameObjectID& id : m_LineupIDs)
+						{
+							GameObject* object = id.Get();
+							if (object == nullptr || object->GetParent() != nullptr)
+							{
+								continue;
+							}
+							const glm::vec3 pos = object->GetTransform()->GetWorldPosition();
+							const glm::quat rot = object->GetTransform()->GetWorldRotation();
+							GameObjectStack::UserData userData = {};
+							const PrefabID prefabID = object->Itemize(userData);
+							g_Renderer->QueueHologramMesh(prefabID, pos + VEC3_UP * 2.0f, rot, VEC3_ONE, glm::vec4(2.0f, 4.0f, 2.5f, 0.4f));
+							GameObject* placed = GameObject::Deitemize(prefabID, pos + VEC3_UP * 0.2f, rot, userData);
+							if (placed != nullptr)
+							{
+								g_SceneManager->CurrentScene()->AddRootObject(placed);
+								id = placed->ID;
+							}
+						}
+					}
 					if (Crossed(4.0f))
 					{
 						for (const GameObjectID& id : m_LineupIDs)
@@ -2019,7 +2043,7 @@ namespace flex
 			// Every vehicle & a battery in a row along +x (placed the way the inventory places items)
 			void SpawnLineup(TerrainGenerator* terrainGenerator)
 			{
-				const char* prefabNames[] = { "vehicle", "dune buggy", "row boat", "battery", "axe", "pickaxe", "shovel" };
+				const char* prefabNames[] = { "vehicle", "dune buggy", "row boat", "battery", "axe", "pickaxe", "shovel", "wood" };
 				for (i32 i = 0; i < (i32)ARRAY_LENGTH(prefabNames); ++i)
 				{
 					const PrefabID prefabID = g_ResourceManager->GetPrefabID(prefabNames[i]);

@@ -102,15 +102,18 @@ namespace flex
 		// Used by scenes with large view distances (e.g. streamed terrain).
 		void SetShadowDistanceOverride(real distance) { m_ShadowDistanceOverride = distance; }
 
-		// Streamed terrain detail: 0: low, 1: medium, 2: high, 3: ultra
-		i32 GetTerrainQuality() const { return m_TerrainQuality; }
-		void SetTerrainQuality(i32 quality) { m_TerrainQuality = glm::clamp(quality, 0, 3); }
+		// Streamed terrain detail (TerrainGenerator's LOD distance factor)
+		Quality GetTerrainQuality() const { return QualityFromInt((i32)m_TerrainQuality); }
+		void SetTerrainQuality(Quality quality) { m_TerrainQuality = QualityFromInt((i32)quality); }
 		real GetEffectiveShadowDistance() const { return (m_ShadowDistanceOverride > 0.0f ? m_ShadowDistanceOverride : m_ShadowDistance) * m_ShadowDistanceScale; }
 
 		// Scalability settings (set by the game's settings screen, not saved in the renderer settings)
-		// Sun & torch shadows: 0: off, 1: low, 2: medium, 3: high, 4: ultra (resolution, cascades, distance & point shadows)
-		void SetShadowQuality(i32 quality);
-		i32 GetShadowQuality() const { return m_ShadowQuality; }
+		// Sun & torch shadows (resolution, cascades, distance & point shadows), or none at all
+		void SetShadowQuality(Quality quality, bool bEnabled = true);
+		Quality GetShadowQuality() const { return m_ShadowQuality; }
+		bool AreShadowsEnabled() const { return m_bSunShadowsEnabled; }
+		// Shader effects: sets the shader_quality_level specialization constant to the quality's index (shaders' QUALITY_LEVEL)
+		void SetEffectsQuality(Quality quality) { if (m_ShaderQualityLevel != QualityIndex(quality)) { SetShaderQualityLevel(QualityIndex(quality)); } }
 		// 0: off, 1: FXAA, 2: TAA
 		void SetAntiAliasing(i32 mode);
 		i32 GetAntiAliasing() const;
@@ -299,6 +302,9 @@ namespace flex
 		void RemoveAllSpotLights();
 		void UpdateSpotLightData(SpotLightID ID, SpotLightData* data);
 		i32 GetNumSpotLights();
+		// Gives a spot light a shadow (from the point light shadow slots, rendering only the cube faces its cone covers).
+		// Casters under ignoreRoot (e.g. the car a headlight belongs to) don't shadow it. Cleared when the light is removed.
+		void SetSpotLightCastsShadow(SpotLightID ID, bool bCastsShadow, GameObject* ignoreRoot = nullptr);
 
 		AreaLightID RegisterAreaLight(AreaLightData* areaLightData);
 		void RemoveAreaLight(AreaLightID ID);
@@ -445,6 +451,8 @@ namespace flex
 		void LoadShaders();
 
 		void EnqueueScreenSpaceSprites();
+		// The shadow map debug view's tiles (sun cascades, then point/spot shadow slots), drawn as screen space sprites
+		virtual void EnqueueShadowDebugSprites() {}
 		void EnqueueWorldSpaceSprites();
 
 		// Fits cascades to the camera's frustum out to m_ShadowDistance
@@ -484,6 +492,8 @@ namespace flex
 		AreaLightData* m_AreaLightData = nullptr; // Points into m_LightData buffer
 		i32 m_NumPointLightsEnabled = 0;
 		i32 m_NumSpotLightsEnabled = 0;
+		bool m_bSpotLightCastsShadow[MAX_SPOT_LIGHT_COUNT] = {};
+		GameObject* m_SpotLightShadowIgnoreRoot[MAX_SPOT_LIGHT_COUNT] = {};
 		i32 m_NumAreaLightsEnabled = 0;
 		DirectionalLight* m_DirectionalLight = nullptr;
 
@@ -530,10 +540,10 @@ namespace flex
 		real m_ShadowDistance = 200.0f;
 		real m_ShadowDistanceOverride = 0.0f;
 		real m_ShadowDistanceScale = 1.0f; // See SetShadowQuality
-		i32 m_ShadowQuality = 3;
+		Quality m_ShadowQuality = Quality::HIGH;
 		bool m_bSunShadowsEnabled = true;
 		real m_DrawDistanceScale = 1.0f;
-		i32 m_TerrainQuality = 1;
+		Quality m_TerrainQuality = Quality::MEDIUM;
 		// Blend between uniform (0) and logarithmic (1) cascade split distances
 		real m_ShadowCascadeSplitLambda = 0.75f;
 		// The furthest the first cascade reaches (in meters), so shadows near the camera stay sharp with long shadow distances

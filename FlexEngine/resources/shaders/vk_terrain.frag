@@ -340,6 +340,11 @@ void main()
 		{
 			radiance *= clamp(inCone / blendThreshold, 0.001, 1.0);
 		}
+		if (inCone >= 0.0 && NoL > 0.0)
+		{
+			// Spot lights with shadows (headlights) use the point light shadow slots, after the point lights
+			radiance *= PointLightShadow(uboConstant.pointShadowData, NUM_POINT_LIGHTS + i, posWS, normalize(ex_NormalWS), pointShadowSampler);
+		}
 
 		localLight += radiance * NoL;
 	}

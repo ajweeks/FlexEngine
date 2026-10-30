@@ -113,6 +113,18 @@ void main()
 		alpha = 1.0;
 	}
 
+	// A NaN/inf from one bad frame (e.g. a broken mesh) would otherwise live in the history forever & spread through
+	// the reprojection, so drop non-finite samples
+	if (any(isnan(sceneCol)) || any(isinf(sceneCol)))
+	{
+		sceneCol = vec3(0.0);
+	}
+	if (any(isnan(historyCol)) || any(isinf(historyCol)) || isnan(alpha))
+	{
+		alpha = 1.0;
+		historyCol = sceneCol;
+	}
+
 	// vec3 wk = abs((cTL+cTR+cBL+cBR)*0.25-sceneCol);
 
 	out_Colour = vec4(mix(historyCol, sceneCol, alpha), 1.0);

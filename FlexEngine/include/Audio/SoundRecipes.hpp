@@ -43,6 +43,7 @@ namespace flex
 			TREE_FALL,
 			UI_TICK,
 			UI_CONFIRM,
+			BUILD_DENIED, // Low double thud
 			DIG_STONE, // Pickaxe clink
 			DIG_SAND, // Swoosh
 			DIG_GRAVEL, // Crunch
