@@ -1516,7 +1516,7 @@ namespace flex
 				descSetCreateInfo.descriptorSetLayout = descSetLayout;
 				descSetCreateInfo.shaderID = gammaCorrectShaderID;
 				descSetCreateInfo.gpuBufferList = &gammaCorrectMaterial->gpuBufferList;
-				descSetCreateInfo.imageDescriptors.SetUniform(&U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB1ColourAttachment0->view, m_SamplerLinearRepeat });
+				descSetCreateInfo.imageDescriptors.SetUniform(&U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB1ColourAttachment0->view, m_SamplerLinearClampToEdge });
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
 				m_GammaCorrectDescriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 			}
@@ -1533,8 +1533,8 @@ namespace flex
 				descSetCreateInfo.shaderID = taaResolveShaderID;
 				descSetCreateInfo.gpuBufferList = &taaResolveMaterial->gpuBufferList;
 				descSetCreateInfo.imageDescriptors.SetUniform(&U_DEPTH_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB0DepthAttachment->view, m_SamplerDepth });
-				descSetCreateInfo.imageDescriptors.SetUniform(&U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB0ColourAttachment0->view, m_SamplerLinearRepeat });
-				descSetCreateInfo.imageDescriptors.SetUniform(&U_HISTORY_SAMPLER, ImageDescriptorInfo{ m_HistoryBuffer->imageView, m_SamplerLinearRepeat });
+				descSetCreateInfo.imageDescriptors.SetUniform(&U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB0ColourAttachment0->view, m_SamplerLinearClampToEdge });
+				descSetCreateInfo.imageDescriptors.SetUniform(&U_HISTORY_SAMPLER, ImageDescriptorInfo{ m_HistoryBuffer->imageView, m_SamplerLinearClampToEdge });
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
 				m_TAAResolveDescriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 			}
@@ -1582,6 +1582,12 @@ namespace flex
 			// Gamma Correct pipeline
 			{
 				VulkanMaterial* gammaCorrectMat = (VulkanMaterial*)m_Materials.at(m_GammaCorrectMaterialID);
+				VulkanShader* gammaCorrectShader = (VulkanShader*)m_Shaders[gammaCorrectMat->shaderID];
+
+				std::array<VkPushConstantRange, 1> pushConstantRanges = {};
+				pushConstantRanges[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+				pushConstantRanges[0].offset = 0;
+				pushConstantRanges[0].size = gammaCorrectShader->pushConstantBlockSize;
 
 				GraphicsPipelineCreateInfo createInfo = {};
 				createInfo.DBG_Name = "Gamma Correct pipeline";
@@ -1591,6 +1597,9 @@ namespace flex
 				createInfo.bSetDynamicStates = true;
 				createInfo.depthTestEnable = VK_FALSE;
 				createInfo.depthWriteEnable = VK_FALSE;
+				createInfo.fragSpecializationInfo = gammaCorrectShader->fragSpecializationInfo;
+				createInfo.pushConstantRangeCount = (u32)pushConstantRanges.size();
+				createInfo.pushConstants = pushConstantRanges.data();
 				createInfo.bPersistent = true;
 				CreateGraphicsPipeline(&createInfo, m_GammaCorrectGraphicsPipelineID);
 			}
@@ -1931,12 +1940,19 @@ namespace flex
 				CreateDescriptorSets();
 			}
 
+			const bool bTAAStateChanged = m_bTAAStateChanged;
 			if (m_bTAAStateChanged)
 			{
 				m_bTAAStateChanged = false;
 
 				CreatePostProcessingResources();
 				CreateFullscreenBlitResources();
+			}
+
+			// The jitter changes every frame, even while the camera (or the simulation) is still
+			if ((m_bEnableTAA || bTAAStateChanged) && g_CameraManager->CurrentCamera() != nullptr)
+			{
+				g_CameraManager->CurrentCamera()->RecalculateViewProjection();
 			}
 
 			m_DebugRenderer->UpdateDebugMode();
@@ -1972,7 +1988,8 @@ namespace flex
 				m_TimestampQueryNames.clear();
 			}
 
-			m_LastFrameViewProj = cam->GetViewProjectionRelative();
+			// Unjittered, so TAA's reprojection maps a static view onto itself
+			m_LastFrameViewProj = cam->GetViewProjectionRelativeUnjittered();
 			m_LastFrameRenderOrigin = cam->GetRenderOrigin();
 		}
 
@@ -8110,6 +8127,7 @@ namespace flex
 
 			m_HistoryBuffer->width = m_SwapChainExtent.width;
 			m_HistoryBuffer->height = m_SwapChainExtent.height;
+			m_bTAAHistoryInvalid = true;
 
 			m_SSAORes = glm::vec2u(m_SwapChainExtent.width / 2, m_SwapChainExtent.height / 2);
 
@@ -8594,6 +8612,8 @@ namespace flex
 
 		void VulkanRenderer::SaveScreenshot()
 		{
+			const bool bMemoryOnly = m_bCaptureToMemoryOnly;
+			m_bCaptureToMemoryOnly = false;
 			PROFILE_AUTO("SaveScreenshot");
 
 			const u32 width = m_ScreenshotExtent.width;
@@ -8628,6 +8648,16 @@ namespace flex
 				}
 				pixels[i * 4 + 3] = 255;
 			}
+
+			m_CapturedFrameSize = glm::vec2u(width, height);
+			if (bMemoryOnly)
+			{
+				m_CapturedFramePixels = std::move(pixels);
+				++m_CapturedFrameSerial;
+				return;
+			}
+			m_CapturedFramePixels = pixels;
+			++m_CapturedFrameSerial;
 
 			if (SaveImage(m_ScreenshotFilePath, ImageFormat::PNG, (i32)width, (i32)height, 4, pixels.data()))
 			{
@@ -10696,6 +10726,9 @@ namespace flex
 				BeginDebugMarkerRegion(commandBuffer, "Gamma Correct");
 
 				GraphicsPipeline* pipeline = GetGraphicsPipeline(m_GammaCorrectGraphicsPipelineID)->pipeline;
+				// FXAA (TAA resolves edges itself)
+				const glm::vec4 fxaaParams((m_PostProcessSettings.bEnableFXAA && !m_bEnableTAA) ? 1.0f : 0.0f, 0.75f, 0.0f, 0.0f);
+				vkCmdPushConstants(commandBuffer, pipeline->layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(glm::vec4), &fxaaParams);
 				RenderFullscreenTri(commandBuffer, m_GammaCorrectRenderPass, m_GammaCorrectMaterialID,
 					pipeline->layout, pipeline->pipeline, m_GammaCorrectDescriptorSet, true);
 
@@ -10710,7 +10743,10 @@ namespace flex
 				BeginDebugMarkerRegion(commandBuffer, "TAA Resolve");
 
 				VulkanMaterial* TAAMat = (VulkanMaterial*)m_Materials.at(m_TAAResolveMaterialID);
-				TAAMat->pushConstantBlock->SetData(m_TAA_ks, sizeof(real) * 2);
+				// History weight range (fast change .. static), discard history, weight lost per pixel of motion
+				glm::vec4 taaParams(0.8f, 0.95f, m_bTAAHistoryInvalid ? 1.0f : 0.0f, 0.02f);
+				m_bTAAHistoryInvalid = false;
+				TAAMat->pushConstantBlock->SetData(&taaParams.x, sizeof(glm::vec4));
 
 				GraphicsPipeline* pipeline = GetGraphicsPipeline(m_TAAResolveGraphicsPipelineID)->pipeline;
 				VkShaderStageFlags stages = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;

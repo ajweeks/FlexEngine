@@ -15,6 +15,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
 #include "GameControls.hpp"
+#include "GameSounds.hpp"
 #include "GameUI.hpp"
 #include "Graphics/Renderer.hpp"
 #include "Graphics/VertexBufferData.hpp"
@@ -128,6 +129,9 @@ namespace flex
 			glm::vec3 leaderPos = VEC3_ZERO;
 			real leaderHeading = 0.0f;
 			real flockSpacing = 2.0f;
+			real callTimer = 0.0f; // Time until it next calls out (0: not set yet)
+			real eggTimer = 0.0f; // Hens: time until the next egg (0: not set yet)
+			real mountSpeed = 0.0f; // While ridden
 		};
 
 		struct Heart
@@ -149,6 +153,7 @@ namespace flex
 			real forgetTimer = 0.0f;
 			u32 farCursor = 0;
 			u32 simulatedCount = 0;
+			u32 mountedID = 0; // The horse being ridden
 
 			// Naming dialog
 			bool bNaming = false;
@@ -880,6 +885,7 @@ namespace flex
 				animal.pos.y = glm::max(GroundHeight(terrain, animal.pos, true, nullptr, &waterLevel), waterLevel);
 			}
 			StartStep(animal, animal.pos, 0.3f);
+			GameSounds::PlayAnimalVoice((u32)animal.species, animal.pos + VEC3_UP * Info(animal.species).neckHeight);
 			if (player != nullptr)
 			{
 				player->ShowNotification(LOCF(Animal_Tamed, AnimalSpeciesDisplayName(animal.species)));
@@ -973,6 +979,7 @@ namespace flex
 		{
 			animal.petTimer = 3.0f;
 			animal.calmTimer = 30.0f;
+			GameSounds::PlayAnimalVoice((u32)animal.species, animal.pos + VEC3_UP * Info(animal.species).neckHeight);
 			animal.heartTimer = 0.0f;
 			animal.stepTime = animal.stepDuration; // Reacts on the next frame
 		}
@@ -1049,6 +1056,226 @@ namespace flex
 		}
 
 		//
+		// Voices & eggs
+		//
+
+		void UpdateVoicesAndEggs(real dt, const glm::vec3& playerFeet)
+		{
+			static PrefabID s_EggID = InvalidPrefabID;
+			if (!s_EggID.IsValid())
+			{
+				s_EggID = g_ResourceManager->GetPrefabID("egg");
+			}
+			const real hearSq = 50.0f * 50.0f;
+			for (Animal& animal : s_World.animals)
+			{
+				if (animal.state == AnimalState::SLEEP || glm::distance2(animal.pos, playerFeet) > hearSq)
+				{
+					continue;
+				}
+				const bool bTamed = (animal.flags & TAMED) != 0;
+				Rng rng(Hash(animal.id, (u32)(s_World.time * 10.0f)));
+				if (animal.callTimer == 0.0f)
+				{
+					animal.callTimer = rng.Range(2.0f, 25.0f);
+				}
+				animal.callTimer -= dt;
+				if (animal.callTimer <= 0.0f)
+				{
+					animal.callTimer = rng.Range(bTamed ? 10.0f : 15.0f, bTamed ? 30.0f : 50.0f);
+					GameSounds::PlayAnimalVoice((u32)animal.species, animal.pos + VEC3_UP * Info(animal.species).neckHeight);
+				}
+
+				// Hens lay eggs (tamed ones twice as often)
+				if (animal.species == AnimalSpecies::CHICKEN && (animal.flags & AIRBORNE) == 0)
+				{
+					if (animal.eggTimer == 0.0f)
+					{
+						animal.eggTimer = rng.Range(30.0f, bTamed ? 120.0f : 240.0f);
+					}
+					animal.eggTimer -= dt;
+					if (animal.eggTimer <= 0.0f)
+					{
+						animal.eggTimer = rng.Range(bTamed ? 90.0f : 180.0f, bTamed ? 180.0f : 360.0f);
+						BaseScene* scene = g_SceneManager->CurrentScene();
+						if (scene != nullptr && s_EggID.IsValid())
+						{
+							const glm::vec3 behind = animal.pos - HeadingDir(animal.heading) * 0.3f;
+							scene->CreateDroppedItem(s_EggID, 1, behind + VEC3_UP * 0.15f, VEC3_ZERO);
+							GameSounds::PlayEggLay(behind);
+						}
+					}
+				}
+			}
+		}
+
+		//
+		// Riding
+		//
+
+		const real MOUNT_RANGE = 5.0f;
+
+		void Dismount(Player* player)
+		{
+			Animal* horse = FindAnimal(s_World.mountedID);
+			s_World.mountedID = 0;
+			if (player != nullptr)
+			{
+				player->SetMounted(false);
+				if (horse != nullptr)
+				{
+					// Step off beside the horse
+					const glm::vec3 side = glm::normalize(glm::cross(HeadingDir(horse->heading), VEC3_UP));
+					const glm::vec3 pos = horse->pos + side * 1.6f + VEC3_UP * (player->GetHeight() * 0.5f + 0.3f);
+					player->GetRigidBody()->SetWorldPosition(pos);
+					player->GetTransform()->SetWorldPosition(pos);
+				}
+			}
+			if (horse != nullptr)
+			{
+				horse->state = AnimalState::IDLE;
+				horse->flags = (u8)(horse->flags | STAY);
+				horse->home = horse->goal = horse->pos;
+				horse->mountSpeed = 0.0f;
+				StartStep(*horse, horse->pos, 1.0f);
+			}
+		}
+
+		void Mount(Animal& horse, Player* player)
+		{
+			s_World.mountedID = horse.id;
+			horse.state = AnimalState::IDLE;
+			horse.mountSpeed = 0.0f;
+			horse.petTimer = 0.0f;
+			player->SetMounted(true);
+			StartStep(horse, horse.pos, 0.1f);
+		}
+
+		real DeltaAngle(real from, real to)
+		{
+			real d = std::fmod(to - from + PI, TWO_PI);
+			if (d < 0.0f)
+			{
+				d += TWO_PI;
+			}
+			return d - PI;
+		}
+
+		// While riding: steers the horse from the movement keys (relative to where the camera looks)
+		void DriveMount(TerrainGenerator* terrain, Animal& horse, Player* player, real dt)
+		{
+			BaseCamera* camera = g_CameraManager->CurrentCamera();
+			glm::vec3 fwd(camera->forward.x, 0.0f, camera->forward.z);
+			fwd = glm::length2(fwd) > 1e-6f ? glm::normalize(fwd) : HeadingDir(horse.heading);
+			const glm::vec3 right = glm::cross(fwd, VEC3_UP);
+			const real fb = g_InputManager->GetActionAxisValue(Action::MOVE_FORWARD) - g_InputManager->GetActionAxisValue(Action::MOVE_BACKWARD);
+			const real lr = g_InputManager->GetActionAxisValue(Action::MOVE_RIGHT) - g_InputManager->GetActionAxisValue(Action::MOVE_LEFT);
+			glm::vec3 desired = fwd * fb + right * lr;
+			const bool bInputActive = glm::length2(desired) > 0.01f && !player->IsAnyInventoryShowing() && !s_World.bNaming;
+			real targetSpeed = 0.0f;
+			if (bInputActive)
+			{
+				desired = glm::normalize(desired);
+				const real targetHeading = std::atan2(desired.x, desired.z);
+				const real delta = DeltaAngle(horse.heading, targetHeading);
+				horse.heading += glm::clamp(delta, -2.8f * dt, 2.8f * dt);
+				// Slow right down for sharp turns
+				targetSpeed = (g_InputManager->GetKeyDown(GameKeys::SPRINT) ? 12.0f : 6.5f) * glm::clamp(1.2f - glm::abs(delta) / PI, 0.25f, 1.0f);
+			}
+			horse.mountSpeed += (targetSpeed - horse.mountSpeed) * glm::min(1.0f, (targetSpeed > horse.mountSpeed ? 1.5f : 4.0f) * dt);
+
+			const SpeciesInfo& info = Info(horse.species);
+			if (horse.mountSpeed > 0.05f)
+			{
+				// Move in short sub steps so the ground is followed
+				const u32 steps = (u32)glm::ceil(horse.mountSpeed * dt / 0.5f);
+				for (u32 i = 0; i < steps; ++i)
+				{
+					const real length = horse.mountSpeed * dt / (real)steps;
+					glm::vec3 target = horse.pos + HeadingDir(horse.heading) * length;
+					bool bUnderWater = false;
+					target.y = GroundHeight(terrain, target, true, &bUnderWater);
+					const real slope = (target.y - horse.pos.y) / glm::max(length, 1e-3f);
+					if (bUnderWater || slope > info.maxSlope * 1.3f || slope < -info.maxSlope * 2.0f ||
+						IsBlockedByStructure(horse.pos + VEC3_UP * 0.6f, target + VEC3_UP * 0.6f + HeadingDir(horse.heading) * 0.8f))
+					{
+						horse.mountSpeed *= 0.5f;
+						break;
+					}
+					horse.walkPhase += glm::length(glm::vec2(target.x - horse.pos.x, target.z - horse.pos.z)) * 4.0f;
+					horse.pos = target;
+				}
+			}
+			horse.from = horse.to = horse.pos;
+			horse.stepTime = 0.0f;
+			horse.stepDuration = 30.0f;
+			horse.state = horse.mountSpeed > 0.3f ? AnimalState::WANDER : AnimalState::IDLE;
+			horse.lastUpdate = s_World.time;
+
+			// The rider sits on its back
+			const glm::vec3 seat = horse.pos + VEC3_UP * (info.neckHeight * 0.8f + player->GetHeight() * 0.5f + 0.1f);
+			player->GetRigidBody()->SetWorldPosition(seat, false);
+			player->GetRigidBody()->GetRigidBodyInternal()->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+
+			// Hooves & snorts
+			static real s_SnortTimer = 0.0f;
+			s_SnortTimer -= dt;
+			if (s_SnortTimer <= 0.0f && horse.mountSpeed > 8.0f)
+			{
+				s_SnortTimer = 12.0f;
+				GameSounds::PlayAnimalVoice((u32)horse.species, horse.pos);
+			}
+		}
+
+		void UpdateMount(TerrainGenerator* terrain, Player* player, real dt)
+		{
+			if (s_World.mountedID != 0)
+			{
+				Animal* horse = FindAnimal(s_World.mountedID);
+				if (horse == nullptr || player == nullptr || player->GetRidingVehicleID().IsValid())
+				{
+					Dismount(player);
+					return;
+				}
+				if (g_EngineInstance->IsSimulationPaused())
+				{
+					return;
+				}
+				if (!s_World.bNaming && g_InputManager->GetKeyPressed(GameKeys::RIDE))
+				{
+					Dismount(player);
+					return;
+				}
+				DriveMount(terrain, *horse, player, dt);
+				s_World.prompt = LOC(Animal_PromptDismount);
+				return;
+			}
+			if (player == nullptr || s_World.bNaming || player->IsAnyInventoryShowing() || player->GetBuildMode().IsActive() ||
+				g_EngineInstance->IsSimulationPaused() || player->GetRidingVehicleID().IsValid())
+			{
+				return;
+			}
+			BaseCamera* camera = g_CameraManager->CurrentCamera();
+			Animal* aimed = FindAimedAnimal(camera->position, camera->forward, MOUNT_RANGE + 1.5f);
+			if (aimed == nullptr || aimed->species != AnimalSpecies::HORSE || (aimed->flags & TAMED) == 0 || aimed->state == AnimalState::SLEEP)
+			{
+				return;
+			}
+			if (glm::distance(glm::vec2(aimed->pos.x, aimed->pos.z), glm::vec2(player->GetTransform()->GetWorldPosition().x, player->GetTransform()->GetWorldPosition().z)) > MOUNT_RANGE)
+			{
+				return;
+			}
+			if (s_World.prompt.empty())
+			{
+				s_World.prompt = LOCF(Animal_PromptRide, DisplayName(*aimed).c_str());
+			}
+			if (g_InputManager->GetKeyPressed(GameKeys::RIDE))
+			{
+				Mount(*aimed, player);
+			}
+		}
+
+		//
 		// Flocking & collision
 		//
 
@@ -1067,7 +1294,7 @@ namespace flex
 			const glm::vec3 playerFeet = PlayerFeet(player);
 			for (Animal& animal : s_World.animals)
 			{
-				if ((animal.flags & AIRBORNE) == 0 && glm::distance2(animal.pos, playerFeet) < 120.0f * 120.0f)
+				if ((animal.flags & AIRBORNE) == 0 && animal.id != s_World.mountedID && glm::distance2(animal.pos, playerFeet) < 120.0f * 120.0f)
 				{
 					list.push_back(&animal);
 				}
@@ -1229,6 +1456,17 @@ namespace flex
 			{
 				return;
 			}
+			// Face: eyes, ears & a darker muzzle
+			{
+				const real hx = headHalf.x, hy = headHalf.y, hz = headHalf.z;
+				const glm::vec3 headCentre(0.0f, hy * 0.6f, hz * 0.9f);
+				for (real side : { -1.0f, 1.0f })
+				{
+					b.PivotBox(BLACK, neck, nod, headCentre + glm::vec3(side * hx, hy * 0.35f, hz * 0.45f), glm::vec3(0.012f + hx * 0.05f, 0.012f + hy * 0.12f, 0.012f + hz * 0.1f));
+					b.PivotBox(headColour, neck, nod, headCentre + glm::vec3(side * hx * 0.7f, hy * 1.2f, -hz * 0.4f), glm::vec3(hx * 0.28f, hy * 0.45f, hx * 0.14f));
+				}
+				b.PivotBox(DARK_GREY, neck, nod, headCentre + glm::vec3(0.0f, -hy * 0.2f, hz * 1.0f), glm::vec3(hx * 0.85f, hy * 0.7f, hz * 0.14f));
+			}
 			if (!bAsleep)
 			{
 				const real swing = std::sin(animal.walkPhase) * 0.5f;
@@ -1240,6 +1478,11 @@ namespace flex
 					const real angle = ((i == 0 || i == 3) ? swing : -swing);
 					const glm::vec3 hip(side * (bodyHalf.x - legWidth), legLength, end * (bodyHalf.z - legWidth * 1.5f));
 					b.PivotBox(legColour, hip, glm::angleAxis(angle, VEC3_RIGHT), glm::vec3(0.0f, -legLength * 0.5f, 0.0f), legHalf);
+					if (legLength > 0.3f)
+					{
+						// Dark hooves
+						b.PivotBox(BLACK, hip, glm::angleAxis(angle, VEC3_RIGHT), glm::vec3(0.0f, -legLength + 0.05f, 0.0f), glm::vec3(legWidth * 1.15f, 0.05f, legWidth * 1.15f));
+					}
 				}
 			}
 		}
@@ -1260,6 +1503,10 @@ namespace flex
 			if (!bDetail)
 			{
 				return;
+			}
+			for (real side : { -1.0f, 1.0f })
+			{
+				b.PivotBox(BLACK, neck, nod, headOffset + glm::vec3(side * headHalf.x * 0.95f, headHalf.y * 0.25f, headHalf.z * 0.35f), glm::vec3(0.025f, 0.03f, 0.03f) * size * 1.6f);
 			}
 			b.PivotBox(beakColour, neck, nod, headOffset + glm::vec3(0.0f, -0.05f * size, headHalf.z + 0.12f * size), glm::vec3(0.08f, 0.06f, 0.14f) * size);
 			if (bComb)
@@ -1344,6 +1591,13 @@ namespace flex
 					// Mane & tail
 					b.Box(hair, glm::vec3(0.0f, bodyY + 0.45f, 0.75f), glm::vec3(0.05f, 0.25f, 0.18f), glm::angleAxis(-0.5f, VEC3_RIGHT));
 					b.Box(hair, glm::vec3(0.0f, bodyY - 0.05f, -0.92f), glm::vec3(0.06f, 0.38f, 0.06f), glm::angleAxis(0.3f, VEC3_RIGHT));
+					if (!bAsleep && (animal.flags & TAMED) != 0)
+					{
+						// Saddle blanket & saddle
+						b.Box(RED, glm::vec3(0.0f, bodyY + 0.31f, -0.1f), glm::vec3(0.31f, 0.02f, 0.3f));
+						b.Box(DARK_BROWN, glm::vec3(0.0f, bodyY + 0.36f, -0.1f), glm::vec3(0.22f, 0.04f, 0.24f));
+						b.Box(DARK_BROWN, glm::vec3(0.0f, bodyY + 0.42f, -0.3f), glm::vec3(0.2f, 0.07f, 0.04f));
+					}
 				}
 			} break;
 			case AnimalSpecies::GOAT:
@@ -1803,7 +2057,9 @@ namespace flex
 			}
 
 			UpdateLasso(player);
+			UpdateMount(terrain, player, dt);
 			UpdatePet(player, dt);
+			UpdateVoicesAndEggs(dt, playerFeet);
 			UpdateAnimalTest(player, terrain);
 
 			// Simulate: near animals every frame, the rest of those in range round-robin
@@ -1817,6 +2073,10 @@ namespace flex
 				for (u32 i = 0; i < (u32)s_World.animals.size(); ++i)
 				{
 					Animal& animal = s_World.animals[i];
+					if (animal.id == s_World.mountedID)
+					{
+						continue;
+					}
 					if (bCheckPosts && animal.state == AnimalState::TIED && glm::distance2(animal.pos, playerFeet) < nearSq && !FencePostExistsAt(animal.home))
 					{
 						animal.state = AnimalState::IDLE;
@@ -2045,6 +2305,14 @@ namespace flex
 
 		void Clear()
 		{
+			if (s_World.mountedID != 0)
+			{
+				s_World.mountedID = 0;
+				if (Player* player = GetPlayer())
+				{
+					player->SetMounted(false);
+				}
+			}
 			s_World.animals.clear();
 			s_World.cells.clear();
 			s_World.nextID = 1;

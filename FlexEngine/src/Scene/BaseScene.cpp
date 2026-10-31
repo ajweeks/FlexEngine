@@ -1432,6 +1432,47 @@ namespace flex
 		m_SkyboxData.weather = glm::vec4(glm::clamp(cloudiness, 0.0f, 1.0f), m_WeatherRegionalVariation, 0.0f, 0.0f);
 	}
 
+	// How open to the sky the camera is [0: enclosed underground, 1: outside], from rays fanning out upwards through the
+	// terrain (like the terrain's per vertex sky visibility, see ComputeSkyVisibility in TerrainGeneration.cpp).
+	// Only re-sampled now & then, & smoothed so walking under an overhang doesn't change it abruptly.
+	static real CameraSkyVisibility()
+	{
+		static real s_Visibility = 1.0f;
+		static real s_Target = 1.0f;
+		static i32 s_Frame = 0;
+
+		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+		BaseCamera* cam = g_CameraManager != nullptr ? g_CameraManager->CurrentCamera() : nullptr;
+		if (terrainGenerator == nullptr || cam == nullptr || terrainGenerator->IsWorldChangePending())
+		{
+			s_Visibility = s_Target = 1.0f;
+			return 1.0f;
+		}
+
+		if ((s_Frame++ % 6) == 0)
+		{
+			const glm::vec3 pos = cam->position;
+			const glm::vec3 dirs[5] = { glm::vec3(0.0f, 1.0f, 0.0f), glm::normalize(glm::vec3(0.8f, 1.0f, 0.0f)),
+				glm::normalize(glm::vec3(-0.8f, 1.0f, 0.0f)), glm::normalize(glm::vec3(0.0f, 1.0f, 0.8f)), glm::normalize(glm::vec3(0.0f, 1.0f, -0.8f)) };
+			u32 blockedCount = 0;
+			for (const glm::vec3& dir : dirs)
+			{
+				for (real distance : { 4.0f, 12.0f, 30.0f })
+				{
+					if (terrainGenerator->SampleDensity(pos + dir * distance) < 0.0f)
+					{
+						++blockedCount;
+						break;
+					}
+				}
+			}
+			const real blocked = (real)blockedCount / 5.0f;
+			s_Target = 1.0f - blocked * blocked;
+		}
+		s_Visibility += (s_Target - s_Visibility) * (1.0f - std::exp(-glm::clamp(g_DeltaTime, 0.0f, 0.25f) / 0.5f));
+		return s_Visibility;
+	}
+
 	void BaseScene::UpdateExposure(DirectionalLight* dirLight, const glm::vec3& zenithDisplay)
 	{
 		// Eye adaptation (see LinearToDisplay in vk_misc.glsl): estimates how brightly lit the scene is from the sun or
@@ -1439,7 +1480,7 @@ namespace flex
 		// reasonably light out, so day scenes are unchanged, & only partially adapts so nights still look like night.
 		static const real EXPOSURE_KEY = 0.8f; // Scene light level (relative to a clear midday) below which exposure rises
 		static const real ADAPTATION_STRENGTH = 0.65f; // [0, 1], 1: fully compensates for the light level
-		static const real MAX_EXPOSURE = 3.5f;
+		static const real MAX_EXPOSURE = 5.0f;
 
 		const glm::vec3 luminanceWeights(0.2126f, 0.7152f, 0.0722f);
 		real targetExposure = 1.0f;
@@ -1450,7 +1491,8 @@ namespace flex
 			const real directLuminance = glm::dot(dirLight->data.colour, luminanceWeights) * dirLight->data.brightness / m_DirLightBaseBrightness;
 			const real direct = dirLight->data.enabled != 0 ? directLuminance * (0.15f + 0.85f * glm::max(dirLight->data.dir.y, 0.0f)) : 0.0f;
 			const real sky = glm::dot(glm::pow(glm::max(zenithDisplay, VEC3_ZERO), glm::vec3(2.2f)), luminanceWeights) / 0.22f;
-			const real lightLevel = direct + 0.5f * sky;
+			// Caves: the sun & sky barely reach them, so eyes adapt as they would at night
+			const real lightLevel = (direct + 0.5f * sky) * glm::mix(0.02f, 1.0f, CameraSkyVisibility());
 			targetExposure = glm::clamp(std::pow(glm::max(EXPOSURE_KEY / glm::max(lightLevel, 1e-4f), 1.0f), ADAPTATION_STRENGTH), 1.0f, MAX_EXPOSURE);
 		}
 

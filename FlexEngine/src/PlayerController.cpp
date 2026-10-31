@@ -564,7 +564,7 @@ namespace flex
 				m_Player->m_pDTrackMovement = m_Player->m_DistAlongTrack - pDist;
 				pCurveDir = newCurveDir;
 			}
-			else if (!m_Player->m_RidingVehicleID.IsValid())
+			else if (!m_Player->m_RidingVehicleID.IsValid() && !m_Player->m_bMounted)
 			{
 				glm::vec3 moveDir = VEC3_ZERO;
 				if (m_Player->AbleToInteract() && !m_Player->IsAnyInventoryShowing())

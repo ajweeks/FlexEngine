@@ -107,7 +107,11 @@ vec3 Stars(vec3 dir, float pixelAngle)
 	vec3 rotated = dir * c + cross(axis, dir) * s + axis * dot(axis, dir) * (1.0 - c);
 
 	vec3 stars = StarLayer(rotated, 60.0, 0.12, pixelAngle, 0u);
-	stars += StarLayer(rotated, 160.0, 0.05, pixelAngle, 17u) * 0.35;
+	// The faint layer (27 more cells per pixel) only from medium shader quality up
+	if (QUALITY_LEVEL >= 1)
+	{
+		stars += StarLayer(rotated, 160.0, 0.05, pixelAngle, 17u) * 0.35;
+	}
 
 	// The Milky Way: a faint band of light along a great circle
 	vec3 galacticPole = normalize(vec3(0.3, 0.4, 0.86));
@@ -162,12 +166,15 @@ void main()
 	vec3 radiance = vec3(0.0);
 	if (skyboxData.sun.y > -0.3)
 	{
-		radiance += AtmosphereRadiance(dir, skyboxData.sun.xyz, ATMOS_SUN_INTENSITY, altitude, 16, 6);
+		// Fewer scattering samples at lower shader quality levels (QUALITY_LEVEL)
+		int sunSamples = QUALITY_LEVEL <= 0 ? 8 : (QUALITY_LEVEL == 1 ? 12 : (QUALITY_LEVEL == 2 ? 16 : 24));
+		int sunLightSamples = QUALITY_LEVEL <= 0 ? 3 : (QUALITY_LEVEL == 1 ? 4 : (QUALITY_LEVEL == 2 ? 6 : 8));
+		radiance += AtmosphereRadiance(dir, skyboxData.sun.xyz, ATMOS_SUN_INTENSITY, altitude, sunSamples, sunLightSamples);
 	}
 	// Moonlight is far dimmer, but is scattered the same way
 	if (skyboxData.moon.y > -0.2 && skyboxData.moon.w > 0.0)
 	{
-		radiance += AtmosphereRadiance(dir, skyboxData.moon.xyz, ATMOS_SUN_INTENSITY * 0.012 * skyboxData.moon.w, altitude, 8, 3);
+		radiance += AtmosphereRadiance(dir, skyboxData.moon.xyz, ATMOS_SUN_INTENSITY * 0.012 * skyboxData.moon.w, altitude, QUALITY_LEVEL <= 0 ? 6 : 8, QUALITY_LEVEL <= 0 ? 2 : 3);
 	}
 	vec3 colour = AtmosphereToDisplay(radiance);
 	// Airglow & scattered starlight keep the night sky from being pure black

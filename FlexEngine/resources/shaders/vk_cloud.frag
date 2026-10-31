@@ -109,7 +109,7 @@ vec4 raymarch(vec3 rayOrigin, vec3 rayDir, out float depth)
 
 	vec3 lightDir = normalize(vec3(1.0, -0.9, -0.2));
 
-	const int stepCount = 256;
+	int stepCount = QUALITY_LEVEL <= 0 ? 64 : (QUALITY_LEVEL == 1 ? 128 : 256); // Per shader quality level
 	float tmin = 0.0;
 	float tmax = 10000.0;
 	float t = tmin;

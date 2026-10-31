@@ -1,5 +1,5 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+# Normalize to LF in the repo; check out as CRLF (the project standard). Agents must not change a file's line endings (flexsvc done checks)
+* text=auto eol=crlf
 
 # Custom for Visual Studio
 *.cs    diff=csharp
@@ -23,3 +23,9 @@ FlexEngine/src/ThirdParty/* linguist-vendored
 
 # Save file test fixtures must stay byte for byte
 FlexEngine/resources/tests/save_files/** -text
+
+# Scripts run from WSL/Linux need LF (a CRLF shebang breaks them)
+*.sh text eol=lf
+*.py text eol=lf
+scripts/flexsvc text eol=lf
+scripts/genie -text

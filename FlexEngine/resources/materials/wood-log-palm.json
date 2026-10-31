@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "wood log palm",
+		"shader" : "pbr",
+		"const albedo" : "0.450,0.380,0.280",
+		"const roughness" : 0.850000
+	}
+}

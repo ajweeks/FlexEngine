@@ -321,7 +321,22 @@ float SampleShadowLayer(mat4 viewProj, float layer, float texelSize, float depth
 	float refDepth = shadowPos.z + depthBias;
 
 	float lit;
-	if (QUALITY_LEVEL >= 1)
+	if (QUALITY_LEVEL >= 3)
+	{
+		// Ultra: 4x4 bilinear-filtered taps (softer, steadier penumbrae)
+		vec2 shadowMapTexelSize = 1.0 / vec2(textureSize(shadowMaps, 0).xy);
+		lit = 0.0;
+		for (int x = 0; x < 4; ++x)
+		{
+			for (int y = 0; y < 4; ++y)
+			{
+				vec2 uv = shadowPos.xy + (vec2(x, y) - 1.5) * shadowMapTexelSize;
+				lit += texture(shadowMaps, vec4(uv, layer, refDepth));
+			}
+		}
+		lit /= 16.0;
+	}
+	else if (QUALITY_LEVEL >= 1)
 	{
 		// 3x3 bilinear-filtered taps (each tap is itself a 2x2 hardware PCF), covering a 4x4 texel footprint
 		vec2 shadowMapTexelSize = 1.0 / vec2(textureSize(shadowMaps, 0).xy);
@@ -757,7 +772,8 @@ float CloudShadow(vec3 posWS, vec3 camPos, SkyboxData skyboxData)
 	// Follow the sun's direction up to the cloud layer
 	float t = (cloudAltitude - posWS.y) / skyboxData.sun.y;
 	vec2 cloudPos = posWS.xz + skyboxData.sun.xz * t + (skyboxData.clouds.zw - camPos.xz);
-	float density = CloudDensity(cloudPos, coverage, 4, skyboxData);
+	// Fewer octaves at lower shader quality levels (QUALITY_LEVEL)
+	float density = CloudDensity(cloudPos, coverage, QUALITY_LEVEL <= 0 ? 2 : (QUALITY_LEVEL == 1 ? 3 : 4), skyboxData);
 	return 1.0 - density * 0.8;
 }
 
@@ -779,15 +795,16 @@ vec4 CloudLayer(vec3 dir, float maxDistance, SkyboxData skyboxData)
 		return vec4(0.0);
 	}
 	vec2 cloudPos = dir.xz * t + skyboxData.clouds.zw;
-	float density = CloudDensity(cloudPos, coverage, 5, skyboxData);
+	// Fewer octaves at lower shader quality levels (QUALITY_LEVEL)
+	float density = CloudDensity(cloudPos, coverage, QUALITY_LEVEL <= 0 ? 3 : (QUALITY_LEVEL == 1 ? 4 : (QUALITY_LEVEL == 2 ? 5 : 6)), skyboxData);
 	if (density <= 0.001)
 	{
 		return vec4(0.0);
 	}
 
-	// Self shadowing: denser cloud towards the sun blocks more light
+	// Self shadowing: denser cloud towards the sun blocks more light (approximated by the density here at low quality)
 	vec2 sunStep = normalize(skyboxData.sun.xz + vec2(1e-4)) * 350.0;
-	float towardsSun = CloudDensity(cloudPos + sunStep, coverage, 3, skyboxData);
+	float towardsSun = QUALITY_LEVEL <= 0 ? density : CloudDensity(cloudPos + sunStep, coverage, QUALITY_LEVEL == 1 ? 2 : 3, skyboxData);
 	float lit = mix(1.0, 0.35, towardsSun * 0.8 + density * 0.2);
 
 	vec3 sunColour = SunColour(skyboxData);

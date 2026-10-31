@@ -34,6 +34,7 @@ IGNORE_WARNINGS_POP
 #include "Systems/TrackManager.hpp"
 #include "Time.hpp"
 #include "ResourceManager.hpp"
+#include "Scene/Objects/Props.hpp"
 #include "Traversal.hpp"
 #include "Window/Window.hpp"
 
@@ -247,6 +248,283 @@ namespace flex
 		};
 		PlayBenchmark s_PlayBenchmark;
 
+		// The "Performance test" button on the main menu: teleports the player to a few places (a spot in each of several
+		// biomes & some caves, found from the world seed so runs are comparable), each at another time of day, walks
+		// & turns there for a while, and records every frame time. Reports average FPS / ms and hitches on screen,
+		// in the log and in saved/perf_tests/ (see also PlayBenchmark, which is for scripted runs).
+		class PerfTest
+		{
+		public:
+			static constexpr const char* WORLD_NAME = "Performance test";
+			static constexpr i32 WORLD_SEED = 20240611;
+
+			bool IsActive() const { return m_bActive; }
+			bool IsFinished() const { return m_bFinished; }
+			const std::vector<std::string>& GetReport() const { return m_Report; }
+			const std::string& GetReportPath() const { return m_ReportPath; }
+
+			void Start()
+			{
+				*this = PerfTest();
+				m_bActive = true;
+			}
+
+			// Stops early (e.g. the player paused)
+			void Abort()
+			{
+				if (m_bActive)
+				{
+					Finish(true);
+				}
+			}
+
+			// Call every frame while playing
+			void Update(Player* player, BaseScene* scene)
+			{
+				TerrainGenerator* terrain = TerrainGenerator::GetActive();
+				if (!m_bActive || player == nullptr || terrain == nullptr || (m_StopIndex < 0 && player->IsAwaitingTerrainCollision()))
+				{
+					return;
+				}
+				if (m_StopIndex < 0)
+				{
+					FindStops(terrain);
+					m_bTimePaused = scene->GetTimeOfDayPaused();
+					scene->SetTimeOfDayPaused(true);
+					g_InputManager->SetIgnoreWindowFocus(true);
+					m_StartedAt = Time::NowTicks();
+					BeginStop(0, player, scene);
+				}
+
+				const ms frameMs = (ms)(g_UnpausedDeltaTime * 1000.0f);
+				m_StopTime += g_UnpausedDeltaTime;
+				m_Stops[m_StopIndex].frames.push_back(frameMs);
+
+				// Walks in a slow circle, so the camera sweeps over the terrain
+				m_Yaw += (real)g_UnpausedDeltaTime * 0.35f;
+				const glm::vec3 dir(std::cos(m_Yaw), 0.0f, std::sin(m_Yaw));
+				const real yaw = std::atan2(glm::cross(VEC3_FORWARD, dir).y, glm::dot(VEC3_FORWARD, dir));
+				player->GetTransform()->SetWorldRotation(glm::angleAxis(yaw, VEC3_UP));
+				player->AddToPitch(-player->GetPitch() + 0.1f);
+				player->AddToPitch(-player->GetPitch() + glm::radians(-5.0f));
+
+				if (m_StopTime > STOP_SECONDS)
+				{
+					if (m_StopIndex + 1 < (i32)m_Stops.size())
+					{
+						BeginStop(m_StopIndex + 1, player, scene);
+					}
+					else
+					{
+						scene->SetTimeOfDayPaused(m_bTimePaused);
+						Finish(false);
+					}
+				}
+			}
+
+		private:
+			static constexpr sec STOP_SECONDS = 12.0f;
+
+			struct Stop
+			{
+				std::string name;
+				glm::vec3 pos;
+				bool bExact; // Don't snap to the ground (caves)
+				real timeOfDay;
+				std::vector<ms> frames;
+			};
+
+			static void Press(KeyCode key) { g_InputManager->KeyCallback(key, KeyAction::KEY_PRESS, 0); }
+			static void Release(KeyCode key) { g_InputManager->KeyCallback(key, KeyAction::KEY_RELEASE, 0); }
+
+			void FindStops(TerrainGenerator* terrain)
+			{
+				// 0 is noon, 0.5 midnight
+				const real times[] = { 0.0f, 0.3f, 0.5f, 0.8f };
+				const char* timeNames[] = { "noon", "dusk", "midnight", "dawn" };
+				std::set<i32> seenBiomes;
+				// Rings around the origin, with the first dry column of each biome becoming a stop
+				for (real radius = 300.0f; radius <= 14000.0f && seenBiomes.size() < 5; radius *= 1.25f)
+				{
+					const i32 count = glm::max((i32)(radius / 150.0f), 8);
+					for (i32 i = 0; i < count && seenBiomes.size() < 5; ++i)
+					{
+						const real angle = (real)i / (real)count * TWO_PI;
+						const real x = std::cos(angle) * radius;
+						const real z = std::sin(angle) * radius;
+						const terrain::ColumnSample column = terrain->SampleColumn(x, z);
+						if (column.lakeID != 0 || column.primaryBiomeWeight < 0.7f || seenBiomes.count(column.primaryBiome) != 0)
+						{
+							continue;
+						}
+						seenBiomes.insert(column.primaryBiome);
+						const real y = terrain->SampleHeight(glm::vec2(x, z));
+						AddStop(std::string("biome ") + IntToString(column.primaryBiome), glm::vec3(x, y + 2.0f, z), false, times, timeNames);
+					}
+				}
+				// Caves: an air pocket with floor below it, somewhere under the ground near the origin
+				u32 caves = 0;
+				for (real radius = 100.0f; radius <= 3000.0f && caves < 2; radius += 100.0f)
+				{
+					for (i32 i = 0; i < 12 && caves < 2; ++i)
+					{
+						const real angle = (real)i / 12.0f * TWO_PI + radius;
+						const real x = std::cos(angle) * radius;
+						const real z = std::sin(angle) * radius;
+						const real top = terrain->SampleHeight(glm::vec2(x, z));
+						for (real y = top - 12.0f; y > top - 70.0f; y -= 3.0f)
+						{
+							if (terrain->SampleDensity(glm::vec3(x, y, z)) > 2.0f && terrain->SampleDensity(glm::vec3(x, y + 3.0f, z)) > 2.0f &&
+								terrain->SampleDensity(glm::vec3(x, y - 3.0f, z)) < 0.0f)
+							{
+								AddStop("cave", glm::vec3(x, y, z), true, times, timeNames);
+								++caves;
+								break;
+							}
+						}
+					}
+				}
+				if (m_Stops.empty())
+				{
+					const glm::vec3 spawn = terrain->FindSpawnPoint();
+					AddStop("spawn", spawn, false, times, timeNames);
+				}
+			}
+
+			void AddStop(const std::string& name, const glm::vec3& pos, bool bExact, const real* times, const char* const* timeNames)
+			{
+				const size_t i = m_Stops.size() % 4;
+				m_Stops.push_back({ name + " @ " + timeNames[i], pos, bExact, times[i], {} });
+			}
+
+			void BeginStop(i32 index, Player* player, BaseScene* scene)
+			{
+				m_StopIndex = index;
+				m_StopTime = 0.0f;
+				m_Yaw = (real)index * 1.3f;
+				const Stop& stop = m_Stops[index];
+				scene->SetTimeOfDay(stop.timeOfDay);
+				player->TeleportOnTerrain(stop.pos, stop.bExact, false);
+				if (index == 0)
+				{
+					Press(KeyCode::KEY_W);
+				}
+				Print("Perf test: stop %d/%d: %s at (%.0f, %.0f, %.0f)\n", index + 1, (i32)m_Stops.size(), stop.name.c_str(), stop.pos.x, stop.pos.y, stop.pos.z);
+			}
+
+			static real Percentile(const std::vector<ms>& sortedFrames, real p)
+			{
+				return sortedFrames.empty() ? 0.0f : sortedFrames[glm::min((size_t)(p * (real)sortedFrames.size()), sortedFrames.size() - 1)];
+			}
+
+			void Finish(bool bAborted)
+			{
+				m_bActive = false;
+				m_bFinished = true;
+				Release(KeyCode::KEY_W);
+				if (m_StopIndex < 0)
+				{
+					m_Report.push_back("Performance test cancelled before it started");
+					return;
+				}
+				char line[256];
+				m_Report.push_back(bAborted ? "Performance test (cancelled early)" : "Performance test");
+				snprintf(line, sizeof(line), "World seed %d, %dx%d, %s build", WORLD_SEED, g_Window->GetFrameBufferSize().x, g_Window->GetFrameBufferSize().y,
+#if defined(_DEBUG) || defined(DEBUG)
+					"debug");
+#else
+					"release");
+#endif
+				m_Report.push_back(line);
+				m_Report.push_back("");
+				std::vector<ms> all;
+				struct Hitch { ms time; i32 stop; real at; };
+				std::vector<Hitch> hitches;
+				i32 hitchCount = 0;
+				m_Report.push_back("stop | avg ms (FPS) | p50 | p99 | max | hitches");
+				for (i32 i = 0; i < (i32)m_Stops.size(); ++i)
+				{
+					Stop& stop = m_Stops[i];
+					if (stop.frames.empty())
+					{
+						continue;
+					}
+					std::vector<ms> sorted = stop.frames;
+					std::sort(sorted.begin(), sorted.end());
+					ms total = 0.0f;
+					for (ms f : sorted) total += f;
+					const ms avg = total / (ms)sorted.size();
+					const ms median = Percentile(sorted, 0.5f);
+					i32 stopHitches = 0;
+					real at = 0.0f;
+					for (ms f : stop.frames)
+					{
+						at += f / 1000.0f;
+						// A hitch is a frame both well over the usual time here & noticeable (over 25ms)
+						if (f > median * 2.0f && f > 25.0f)
+						{
+							++stopHitches;
+							hitches.push_back({ f, i, at });
+						}
+					}
+					hitchCount += stopHitches;
+					all.insert(all.end(), stop.frames.begin(), stop.frames.end());
+					snprintf(line, sizeof(line), "%s | %.2f ms (%.0f FPS) | %.2f | %.2f | %.1f | %d", stop.name.c_str(), avg, 1000.0f / avg, median,
+						Percentile(sorted, 0.99f), sorted.back(), stopHitches);
+					m_Report.push_back(line);
+				}
+				std::sort(all.begin(), all.end());
+				ms total = 0.0f;
+				for (ms f : all) total += f;
+				const ms avg = all.empty() ? 0.0f : total / (ms)all.size();
+				m_Report.push_back("");
+				snprintf(line, sizeof(line), "Overall: %u frames, average %.2f ms (%.0f FPS), p50 %.2f, p95 %.2f, p99 %.2f, max %.1f ms",
+					(u32)all.size(), avg, avg > 0.0f ? 1000.0f / avg : 0.0f, Percentile(all, 0.5f), Percentile(all, 0.95f), Percentile(all, 0.99f), all.empty() ? 0.0f : all.back());
+				m_Report.push_back(line);
+				snprintf(line, sizeof(line), "1%% low: %.0f FPS, %d hitch(es), %u frame(s) over 33 ms", Percentile(all, 0.99f) > 0.0f ? 1000.0f / Percentile(all, 0.99f) : 0.0f,
+					hitchCount, (u32)std::count_if(all.begin(), all.end(), [](ms f) { return f > 33.3f; }));
+				m_Report.push_back(line);
+				std::sort(hitches.begin(), hitches.end(), [](const Hitch& a, const Hitch& b) { return a.time > b.time; });
+				for (u32 i = 0; i < hitches.size() && i < 8; ++i)
+				{
+					snprintf(line, sizeof(line), "  hitch %.1f ms at %.1fs into %s", hitches[i].time, hitches[i].at, m_Stops[hitches[i].stop].name.c_str());
+					m_Report.push_back(line);
+				}
+
+				for (const std::string& l : m_Report)
+				{
+					Print("PERF TEST: %s\n", l.c_str());
+				}
+				const std::string directory = RelativePathToAbsolute(SAVED_DIRECTORY "perf_tests/");
+				Platform::CreateDirectoryRecursive(directory);
+				m_ReportPath = directory + "perf_" + IntToString((i32)time(nullptr)) + ".txt";
+				for (const std::string& path : { m_ReportPath, directory + "perf_latest.txt" })
+				{
+					if (FILE* f = fopen(path.c_str(), "wb"))
+					{
+						for (const std::string& l : m_Report)
+						{
+							fprintf(f, "%s\r\n", l.c_str());
+						}
+						fclose(f);
+					}
+				}
+				Print("Perf test report saved to %s\n", m_ReportPath.c_str());
+			}
+
+			bool m_bActive = false;
+			bool m_bFinished = false;
+			bool m_bTimePaused = false;
+			i32 m_StopIndex = -1;
+			sec m_StopTime = 0.0f;
+			real m_Yaw = 0.0f;
+			u64 m_StartedAt = 0;
+			std::vector<Stop> m_Stops;
+			std::vector<std::string> m_Report;
+			std::string m_ReportPath;
+		};
+		PerfTest s_PerfTest;
+
 		// Untextured quad drawn after the UI (so it's on top of sprites like the map), centered on a pixel position
 		void EnqueueOverlayQuad(const glm::vec2& centerPx, const glm::vec2& halfSizePx, const glm::vec4& colour, const glm::vec2& screenSize, u32 zOrder = 90)
 		{
@@ -279,6 +557,7 @@ namespace flex
 		statsObj.fields.emplace_back("distance travelled", JSONValue(distanceTravelled, 0));
 		statsObj.fields.emplace_back("chests opened", JSONValue(chestsOpened));
 		statsObj.fields.emplace_back("explored cells", JSONValue(exploredCells));
+		statsObj.fields.emplace_back("summits reached", JSONValue(summitsReached));
 		parentObject.fields.emplace_back("stats", JSONValue(statsObj));
 	}
 
@@ -297,6 +576,7 @@ namespace flex
 		statsObj.TryGetFloat("distance travelled", distanceTravelled);
 		statsObj.TryGetUInt("chests opened", chestsOpened);
 		statsObj.TryGetUInt("explored cells", exploredCells);
+		statsObj.TryGetUInt("summits reached", summitsReached);
 	}
 
 	Game::Game() :
@@ -579,8 +859,10 @@ namespace flex
 			// menu after each), logging "WINDOW TEST" lines & checking the swap chain follows the window size
 			static i32 s_WindowStage = 0;
 			static sec s_WindowStageTime = 0.0f;
+			static i32 s_WindowFailures = 0;
 			static bool bWindowTest = getenv("FLEX_TOUR_WINDOW") != nullptr;
-			if (bWindowTest && s_WindowStage < 8)
+			const i32 windowStageCount = 18;
+			if (bWindowTest && s_WindowStage < windowStageCount)
 			{
 				s_WindowStageTime += g_UnpausedDeltaTime;
 				auto Log = [](const char* what)
@@ -589,19 +871,59 @@ namespace flex
 					Print("WINDOW TEST: %s -> %dx%d iconified=%d maximized=%d mode=%s\n", what, (i32)size.x, (i32)size.y,
 						(i32)g_Window->IsIconified(), (i32)g_Window->IsMaximized(), g_Window->WindowModeToStr(g_Window->GetWindowMode()));
 				};
+				auto Check = [&](bool bOk, const char* what)
+				{
+					if (!bOk)
+					{
+						++s_WindowFailures;
+						PrintError("WINDOW TEST FAIL: %s\n", what);
+					}
+				};
+				// The framebuffer (swap chain) must follow the window size (allowing for a DPI scale)
+				auto CheckFrameBuffer = [&](const char* what)
+				{
+					const glm::vec2i size = g_Window->GetSize();
+					const glm::vec2i fb = g_Window->GetFrameBufferSize();
+					Check(fb.x > 0 && fb.y > 0 && fb.x >= size.x && fb.y >= size.y && fb.x <= size.x * 3 && fb.y <= size.y * 3, what);
+				};
+				auto CheckSize = [&](i32 w, i32 h, const char* what)
+				{
+					const glm::vec2i size = g_Window->GetSize();
+					Check(size.x == w && size.y == h, what);
+					CheckFrameBuffer(what);
+				};
 				auto StageNext = [&]() { ++s_WindowStage; s_WindowStageTime = 0.0f; };
 				if (m_TourTime > 2.0f && s_WindowStageTime > 1.0f)
 				{
 					switch (s_WindowStage)
 					{
-					case 0: g_Window->SetSize(1000, 600); Log("resized"); StageNext(); break;
-					case 1: Screenshot("window_resized"); g_Window->Iconify(); StageNext(); break;
-					case 2: Log("minimized"); g_Window->Restore(); StageNext(); break;
-					case 3: Log("restored"); g_Window->SetWindowMode(WindowMode::FULLSCREEN); StageNext(); break;
-					case 4: Log("fullscreen"); Screenshot("window_fullscreen"); StageNext(); break;
-					case 5: g_Window->ToggleFullscreen(); StageNext(); break;
-					case 6: Log("left fullscreen"); Screenshot("window_windowed"); g_Window->Maximize(); StageNext(); break;
-					case 7: Log("maximized"); Screenshot("window_maximized"); StageNext(); break;
+					case 0: g_Window->SetWindowMode(WindowMode::WINDOWED); g_Window->SetSize(1000, 600); Log("resized"); // (settings may have saved another mode)
+						 StageNext(); break;
+					case 1: CheckSize(1000, 600, "resize to 1000x600"); Screenshot("window_resized"); g_Window->SetSize(1400, 900); StageNext(); break;
+					case 2: CheckSize(1400, 900, "grow to 1400x900"); g_Window->SetSize(640, 360); StageNext(); break;
+					case 3: CheckSize(640, 360, "shrink to 640x360"); Screenshot("window_small"); g_Window->SetSize(1000, 600); StageNext(); break;
+					case 4: g_Window->Iconify(); StageNext(); break;
+					case 5: Log("minimized"); Check(g_Window->IsIconified(), "iconified"); g_Window->Restore(); StageNext(); break;
+					case 6: Log("restored"); Check(!g_Window->IsIconified(), "restored from minimized"); CheckSize(1000, 600, "size kept over minimize");
+						g_Window->SetWindowMode(WindowMode::FULLSCREEN); StageNext(); break;
+					case 7: Log("fullscreen"); Check(g_Window->GetWindowMode() == WindowMode::FULLSCREEN, "enter fullscreen"); CheckFrameBuffer("fullscreen framebuffer");
+						Screenshot("window_fullscreen"); StageNext(); break;
+					case 8: g_Window->SetSize(800, 600); StageNext(); break; // must not crash or leave a stale swap chain
+					case 9: Log("resize in fullscreen"); CheckFrameBuffer("framebuffer after resize in fullscreen"); g_Window->ToggleFullscreen(); StageNext(); break;
+					case 10: Log("left fullscreen"); Check(g_Window->GetWindowMode() != WindowMode::FULLSCREEN, "leave fullscreen"); CheckFrameBuffer("framebuffer after leaving fullscreen");
+						Screenshot("window_windowed"); g_Window->SetWindowMode(WindowMode::WINDOWED_FULLSCREEN); StageNext(); break;
+					case 11: Log("windowed fullscreen"); Check(g_Window->GetWindowMode() == WindowMode::WINDOWED_FULLSCREEN, "enter windowed fullscreen");
+						CheckFrameBuffer("windowed fullscreen framebuffer"); g_Window->SetWindowMode(WindowMode::WINDOWED); StageNext(); break;
+					case 12: Log("left windowed fullscreen"); Check(g_Window->GetWindowMode() == WindowMode::WINDOWED, "leave windowed fullscreen");
+						g_Window->SetSize(1000, 600); StageNext(); break;
+					case 13: CheckSize(1000, 600, "resize after fullscreen round trip"); g_Window->Maximize(); StageNext(); break;
+					case 14: Log("maximized"); Check(g_Window->IsMaximized(), "maximize"); CheckFrameBuffer("maximized framebuffer");
+						Screenshot("window_maximized"); g_Window->Restore(); StageNext(); break;
+					case 15: Log("restored from maximized"); Check(!g_Window->IsMaximized(), "restore from maximized"); CheckFrameBuffer("restored framebuffer");
+						for (i32 i = 0; i < 10; ++i) g_Window->SetSize(700 + i * 60, 500 + i * 30); // rapid resizes
+						StageNext(); break;
+					case 16: CheckSize(700 + 9 * 60, 500 + 9 * 30, "rapid resizes settle on the last size"); StageNext(); break;
+					case 17: Print("WINDOW TEST %s (%d failure(s))\n", s_WindowFailures == 0 ? "PASS" : "FAIL", s_WindowFailures); StageNext(); break;
 					}
 				}
 				return;
@@ -938,7 +1260,15 @@ namespace flex
 		switch (m_Screen)
 		{
 		case Screen::PLAYING:
+			if (s_PerfTest.IsActive())
+			{
+				s_PerfTest.Abort();
+				break;
+			}
 			SetScreen(Screen::PAUSED);
+			break;
+		case Screen::PERF_RESULTS:
+			SetScreen(Screen::MAIN_MENU);
 			break;
 		case Screen::PAUSED:
 		case Screen::MAP:
@@ -1062,6 +1392,7 @@ namespace flex
 		case Screen::NEW_WORLD: DrawNewWorld(); break;
 		case Screen::SETTINGS: DrawSettings(); break;
 		case Screen::CONTROLS: DrawControls(); break;
+		case Screen::PERF_RESULTS: DrawPerfResults(); break;
 		case Screen::LOADING: DrawLoading(); break;
 		case Screen::PAUSED: DrawPauseMenu(); break;
 		case Screen::MAP: DrawMap(); break;
@@ -1102,6 +1433,20 @@ namespace flex
 				}
 			}
 			Player* player = scene->GetPlayer(0);
+			if (s_PerfTest.IsActive())
+			{
+				s_PerfTest.Update(player, scene);
+				if (s_PerfTest.IsFinished())
+				{
+					LeaveWorld();
+					SetScreen(Screen::PERF_RESULTS);
+					if (getenv("FLEX_PERF_TEST") != nullptr)
+					{
+						g_EngineInstance->Stop();
+					}
+					return;
+				}
+			}
 			if (getenv("FLEX_PLAY_BENCHMARK") != nullptr || getenv("FLEX_HITCH_LOG") != nullptr)
 			{
 				s_PlayBenchmark.Update(player);
@@ -1303,6 +1648,51 @@ namespace flex
 		}
 		m_LastPlayerPos = pos;
 		m_bHaveLastPlayerPos = true;
+		UpdateSummits(player);
+	}
+
+	void Game::UpdateSummits(Player* player)
+	{
+		m_SummitCheckTimer -= g_DeltaTime;
+		TerrainGenerator* terrain = TerrainGenerator::GetActive();
+		if (m_SummitCheckTimer > 0.0f || terrain == nullptr || !player->IsGrounded())
+		{
+			return;
+		}
+		m_SummitCheckTimer = 0.75f;
+		const glm::vec3 pos = player->GetTransform()->GetWorldPosition();
+		const glm::vec2 xz(pos.x, pos.z);
+		const real height = terrain->SampleHeight(xz);
+		const real SUMMIT_MIN_HEIGHT = 60.0f;
+		if (pos.y < height - 3.0f || pos.y > height + 4.0f || height < SUMMIT_MIN_HEIGHT)
+		{
+			return;
+		}
+		// A summit: nothing nearby is higher, & most of the ground 150m around is well below (so ridges & slopes don't count)
+		i32 lowerCount = 0;
+		for (i32 i = 0; i < 8; ++i)
+		{
+			const real angle = (real)i / 8.0f * TWO_PI;
+			const glm::vec2 nearPos = xz + glm::vec2(std::cos(angle), std::sin(angle)) * 20.0f;
+			if (terrain->SampleHeight(nearPos) > height + 0.5f)
+			{
+				return;
+			}
+			lowerCount += terrain->SampleHeight(xz + glm::vec2(std::cos(angle), std::sin(angle)) * 150.0f) < height - 15.0f ? 1 : 0;
+		}
+		if (lowerCount < 6)
+		{
+			return;
+		}
+		const real CELL = 160.0f;
+		const i32 cellX = (i32)glm::floor(pos.x / CELL);
+		const i32 cellZ = (i32)glm::floor(pos.z / CELL);
+		const u32 key = ((u32)(u16)(i16)cellX << 16) | (u32)(u16)(i16)cellZ;
+		if (m_SummitCells.insert(key).second)
+		{
+			++m_CurrentWorld.stats.summitsReached;
+			player->ShowNotification(LOCF(Notify_SummitReached, (i32)height, (i32)m_CurrentWorld.stats.summitsReached));
+		}
 	}
 
 	void Game::DrawBackground(real opacity)
@@ -1367,6 +1757,11 @@ namespace flex
 			m_ScreenBeforeSettings = Screen::MAIN_MENU;
 			SetScreen(Screen::CONTROLS);
 		}
+		if (m_UI.Button("perftest", column.CutTop(buttonHeight, gap), LOC(MainMenu_PerfTest)))
+		{
+			StartPerfTest();
+			return;
+		}
 		if (m_UI.Button("editor", column.CutTop(buttonHeight, gap), LOC(MainMenu_Editor)))
 		{
 			EnterEditor();
@@ -1380,6 +1775,42 @@ namespace flex
 		// The version, subtly in the bottom right corner
 		m_UI.Text(LOCF(MainMenu_Version, GAME_NAME, GAME_VERSION), m_UI.Width() - UITheme::SPACE_XL * s, m_UI.Height() - UITheme::SPACE_XL * s,
 			UITheme::TEXT_CAPTION * s, UITheme::WithAlpha(UITheme::TEXT_SECONDARY, 0.7f), TextAlign::RIGHT);
+	}
+
+	void Game::StartPerfTest()
+	{
+		// A dedicated world with a fixed seed, so results are comparable between runs & machines
+		s_PerfTest.Start();
+		for (const WorldInfo& world : m_Worlds)
+		{
+			if (world.name == PerfTest::WORLD_NAME)
+			{
+				PlayWorld(world);
+				return;
+			}
+		}
+		CreateWorld(PerfTest::WORLD_NAME, PerfTest::WORLD_SEED);
+	}
+
+	void Game::DrawPerfResults()
+	{
+		const real s = m_UI.Scale();
+		DrawBackground(1.0f);
+		DrawTitle(LOC(PerfTest_Title), LOC(PerfTest_Subtitle));
+		const UIRect panel(120.0f * s, 300.0f * s, 1500.0f * s, 700.0f * s);
+		m_UI.Panel(panel);
+		UIRect content = panel.Inset(24.0f * s);
+		real y = content.y + 8.0f * s;
+		for (const std::string& line : s_PerfTest.GetReport())
+		{
+			m_UI.Text(line, content.x, y, UITheme::TEXT_BODY * s, UITheme::TEXT_PRIMARY);
+			y += 26.0f * s;
+		}
+		m_UI.Text(LOCF(PerfTest_Saved, s_PerfTest.GetReportPath().c_str()), content.x, content.y + content.h - 60.0f * s, UITheme::TEXT_CAPTION * s, UITheme::TEXT_SECONDARY);
+		if (m_UI.Button("perfback", UIRect(content.x, content.y + content.h - 44.0f * s, 260.0f * s, UITheme::BUTTON_HEIGHT * s * 0.8f), LOC(PerfTest_Back), true))
+		{
+			SetScreen(Screen::MAIN_MENU);
+		}
 	}
 
 	void Game::DrawWorlds()
@@ -1499,6 +1930,7 @@ namespace flex
 		Row(LOC(Stats_TorchesPlaced), IntToString((i32)stats.torchesPlaced));
 		Row(LOC(Stats_PiecesBuilt), IntToString((i32)stats.piecesBuilt));
 		Row(LOC(Stats_ChestsOpened), IntToString((i32)stats.chestsOpened));
+		Row(LOC(Stats_SummitsReached), IntToString((i32)stats.summitsReached));
 		Row(LOC(Stats_Seed), IntToString(world.seed));
 	}
 
@@ -2114,6 +2546,7 @@ namespace flex
 				{ LOC(Controls_Crafting), {}, G("crafting") },
 				{ LOC(Controls_UseStation), {}, G("use station") },
 				{ LOC(Controls_PetAnimal), {}, G("pet") },
+				{ LOC(Controls_RideAnimal), {}, G("ride") },
 				{ LOC(Controls_TerrainMaterial), {}, G("terrain material") },
 				{ LOC(Controls_TrackBuild), {}, A(Action::ENTER_TRACK_BUILD_MODE) },
 			} },
@@ -2823,7 +3256,7 @@ namespace flex
 	} s_GraphicsPresets[] = {
 		{ Quality::LOW, Quality::MEDIUM, Quality::LOW, 1, false, Quality::LOW },
 		{ Quality::MEDIUM, Quality::HIGH, Quality::LOW, 1, true, Quality::MEDIUM },
-		{ Quality::HIGH, Quality::ULTRA, Quality::MEDIUM, 1, true, Quality::HIGH }, // The defaults
+		{ Quality::HIGH, Quality::ULTRA, Quality::MEDIUM, 2, true, Quality::HIGH }, // The defaults (anti-aliasing: 1 FXAA, 2 TAA)
 		{ Quality::ULTRA, Quality::ULTRA, Quality::ULTRA, 2, true, Quality::ULTRA },
 	};
 	static_assert(ARRAY_LENGTH(s_GraphicsPresets) == QUALITY_COUNT, "One graphics preset per quality");
@@ -2934,6 +3367,12 @@ namespace flex
 	void Game::AutoPlay()
 	{
 		s_bAutoPlay = false;
+		// FLEX_PERF_TEST=1 (with --play): runs the main menu's performance test, then quits
+		if (getenv("FLEX_PERF_TEST") != nullptr)
+		{
+			StartPerfTest();
+			return;
+		}
 
 		// Matches world names or folder names, ignoring case
 		auto Lower = [](std::string str) { return ToLower(str); };
@@ -3134,6 +3573,35 @@ namespace flex
 			worldObj.TryGetString("harvested", harvested);
 			harvest::Deserialize(harvested);
 		}
+		{
+			std::string drops;
+			worldObj.TryGetString("death drops", drops);
+			size_t start = 0;
+			while (start < drops.size())
+			{
+				size_t end = drops.find(';', start);
+				if (end == std::string::npos)
+				{
+					break;
+				}
+				const std::string entry = drops.substr(start, end - start);
+				start = end + 1;
+				glm::vec3 p;
+				i32 count = 0;
+				char name[128];
+				if (sscanf(entry.c_str(), "%f,%f,%f,%127[^,],%d", &p.x, &p.y, &p.z, name, &count) == 5 && count > 0)
+				{
+					const PrefabID prefabID = g_ResourceManager->GetPrefabID(name);
+					if (prefabID.IsValid())
+					{
+						if (DroppedItem* item = scene->CreateDroppedItem(prefabID, count, p, VEC3_ZERO))
+						{
+							item->bSaved = true;
+						}
+					}
+				}
+			}
+		}
 
 		// Chests already looted
 		std::set<u64>& openedChests = TreasureChest::GetOpenedChests();
@@ -3173,7 +3641,16 @@ namespace flex
 		// Stats (parsed again, the list's copy may be older)
 		m_CurrentWorld.stats.Parse(worldObj);
 		m_ExploredCells.clear();
+		m_SummitCells.clear();
 		m_bHaveLastPlayerPos = false;
+		std::string summits;
+		if (worldObj.TryGetString("summits", summits))
+		{
+			for (size_t i = 0; i + 8 <= summits.size(); i += 8)
+			{
+				m_SummitCells.insert((u32)strtoul(summits.substr(i, 8).c_str(), nullptr, 16));
+			}
+		}
 		std::string explored;
 		if (worldObj.TryGetString("explored", explored))
 		{
@@ -3349,6 +3826,27 @@ namespace flex
 		}
 		worldObj.fields.emplace_back("opened chests", JSONValue(chestFields));
 		worldObj.fields.emplace_back("harvested", JSONValue(harvest::Serialize()));
+		{
+			// Items dropped when the player died, as "x,y,z,prefab,count;"
+			std::string drops;
+			std::vector<DroppedItem*> droppedItems;
+			scene->GetDroppedItemsInRadius(VEC3_ZERO, 1e9f, droppedItems);
+			for (DroppedItem* item : droppedItems)
+			{
+				if (item->bSaved && item->stackSize > 0)
+				{
+					GameObject* prefab = g_ResourceManager->GetPrefabTemplate(item->prefabID);
+					const glm::vec3 p = item->GetTransform()->GetWorldPosition();
+					if (prefab != nullptr)
+					{
+						char buffer[256];
+						snprintf(buffer, ARRAY_LENGTH(buffer), "%.2f,%.2f,%.2f,%s,%d;", p.x, p.y, p.z, prefab->GetName().c_str(), item->stackSize);
+						drops += buffer;
+					}
+				}
+			}
+			worldObj.fields.emplace_back("death drops", JSONValue(drops));
+		}
 		Animals::Serialize(worldObj);
 		{
 			// Waypoints, as "slot,x,z;" for each one placed
@@ -3380,6 +3878,13 @@ namespace flex
 				explored += cellStr;
 			}
 			worldObj.fields.emplace_back("explored", JSONValue(explored));
+			std::string summits;
+			for (u32 cell : m_SummitCells)
+			{
+				snprintf(cellStr, ARRAY_LENGTH(cellStr), "%08X", cell);
+				summits += cellStr;
+			}
+			worldObj.fields.emplace_back("summits", JSONValue(summits));
 		}
 
 		save::WorldFileStats fileStats;

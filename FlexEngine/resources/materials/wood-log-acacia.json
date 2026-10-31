@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "wood log acacia",
+		"shader" : "pbr",
+		"const albedo" : "0.360,0.280,0.200",
+		"const roughness" : 0.850000
+	}
+}

@@ -1157,13 +1157,13 @@ namespace flex
 		return GameObject::BuildPropertyCollection();
 	}
 
-	void RowBoat::CreateMeshes()
+	void RowBoat::BuildVisual(GameObject* owner, GameObject** oars)
 	{
 		const MaterialID paintMaterialID = GetOrCreateBoatMaterial("Row boat paint", glm::vec3(0.16f, 0.4f, 0.44f), 0.55f);
 		const MaterialID woodMaterialID = GetOrCreateBoatMaterial("Row boat wood", glm::vec3(0.6f, 0.4f, 0.22f), 0.8f);
 		const MaterialID trimMaterialID = GetOrCreateBoatMaterial("Row boat trim", glm::vec3(0.36f, 0.21f, 0.1f), 0.7f);
 
-		Mesh* mesh = SetMesh(new Mesh(this));
+		Mesh* mesh = owner->SetMesh(new Mesh(owner));
 
 		const u32 segmentCount = 48;
 		const u32 ringCount = 7;
@@ -1293,9 +1293,14 @@ namespace flex
 			oar->SetVisibleInSceneExplorer(false);
 			BuildOarMesh(oar, trimMaterialID, side);
 			oar->GetTransform()->SetLocalPosition(glm::vec3(oarlockX * side, HULL_TOP + 0.07f, OARLOCK_Z));
-			AddChild(oar);
-			m_Oars[i] = oar;
+			owner->AddChild(oar);
+			if (oars != nullptr) { oars[i] = oar; }
 		}
+	}
+
+	void RowBoat::CreateMeshes()
+	{
+		BuildVisual(this, m_Oars);
 		UpdateOars();
 	}
 
@@ -1379,7 +1384,12 @@ namespace flex
 		if (terrainGenerator != nullptr && !terrainGenerator->IsWorldChangePending())
 		{
 			const terrain::ColumnSample column = terrainGenerator->SampleColumn(posWS.x, posWS.z);
-			if (column.lakeID != 0 && column.lakeT < 1.0f && column.height < column.waterLevel)
+			// Water fills the lake/sea's shore field wherever the terrain (including edits) is air at the water level, like
+			// the water surface is drawn (see ChunkMesher::GenerateWater): holes dug below the water level near a shore
+			// flood & can be swum in, & filled in water is gone. (Undug terrain below the level skips the density sample)
+			if (column.lakeID != 0 && column.lakeT < 1.0f &&
+				((column.height < column.waterLevel && terrainGenerator->GetEditCount() == 0) ||
+				terrainGenerator->SampleDensity(glm::vec3(posWS.x, column.waterLevel, posWS.z)) > 0.0f))
 			{
 				outHeight = column.waterLevel;
 				return true;

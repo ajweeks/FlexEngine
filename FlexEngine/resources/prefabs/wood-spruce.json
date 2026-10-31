@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "EEFF1928C7854E739DA54C48BDBFB80A",
+	"root" : 
+	{
+		"id" : "8FE5EBFBB8684A60A52E6B67FB007C20",
+		"name" : "wood spruce",
+		"type" : "object",
+		"mesh" : "cylinder.glb",
+		"materials" : 
+		[
+			"wood log spruce"
+		]
+	}
+}

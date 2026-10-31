@@ -351,6 +351,7 @@ namespace flex
 		const glm::dmat4 viewRelative = glm::lookAt(eyeRelative, eyeRelative + glm::dvec3(forward), glm::dvec3(up));
 		m_ViewRelative = glm::mat4(viewRelative);
 		m_ViewProjectionRelative = glm::mat4(glm::dmat4(m_Proj) * viewRelative);
+		m_ViewProjectionRelativeUnjittered = m_ViewProjectionRelative;
 
 		if (g_Renderer->IsTAAEnabled())
 		{
@@ -359,68 +360,30 @@ namespace flex
 		}
 	}
 
+	static real Halton(u32 index, u32 base)
+	{
+		real f = 1.0f;
+		real result = 0.0f;
+		while (index > 0)
+		{
+			f /= (real)base;
+			result += f * (real)(index % base);
+			index /= base;
+		}
+		return result;
+	}
+
 	void BaseCamera::JitterMatrix(glm::mat4& matrix)
 	{
-		// [-1.0f, 1.0f]
-		static const glm::vec2 SAMPLE_LOCS_16[16] =
-		{
-			glm::vec2(-8.0f, 0.0f) / 8.0f,
-			glm::vec2(-6.0f, -4.0f) / 8.0f,
-			glm::vec2(-3.0f, -2.0f) / 8.0f,
-			glm::vec2(-2.0f, -6.0f) / 8.0f,
-			glm::vec2(1.0f, -1.0f) / 8.0f,
-			glm::vec2(2.0f, -5.0f) / 8.0f,
-			glm::vec2(6.0f, -7.0f) / 8.0f,
-			glm::vec2(5.0f, -3.0f) / 8.0f,
-			glm::vec2(4.0f, 1.0f) / 8.0f,
-			glm::vec2(7.0f, 4.0f) / 8.0f,
-			glm::vec2(3.0f, 5.0f) / 8.0f,
-			glm::vec2(0.0f, 7.0f) / 8.0f,
-			glm::vec2(-1.0f, 3.0f) / 8.0f,
-			glm::vec2(-4.0f, 6.0f) / 8.0f,
-			glm::vec2(-7.0f, 8.0f) / 8.0f,
-			glm::vec2(-5.0f, 2.0f) / 8.0f
-		};
+		// Halton (2, 3) points spread evenly over the pixel, so TAA's history converges to each pixel's coverage
+		const i32 sampleCount = glm::clamp(g_Renderer->GetTAASampleCount(), 1, 64);
+		const u32 subsampleIdx = (u32)g_Renderer->GetFramesRenderedCount() % (u32)sampleCount;
+		// [-0.5, 0.5] pixels (index 0 is skipped since it's (0, 0) in both bases)
+		const glm::vec2 offsetPixels(Halton(subsampleIdx + 1, 2) - 0.5f, Halton(subsampleIdx + 1, 3) - 0.5f);
 
-		static const glm::vec2 SAMPLE_LOCS_8[8] =
-		{
-			glm::vec2(-7.0f, 1.0f) / 8.0f,
-			glm::vec2(-5.0f, -5.0f) / 8.0f,
-			glm::vec2(-1.0f, -3.0f) / 8.0f,
-			glm::vec2(3.0f, -7.0f) / 8.0f,
-			glm::vec2(5.0f, -1.0f) / 8.0f,
-			glm::vec2(7.0f, 7.0f) / 8.0f,
-			glm::vec2(1.0f, 3.0f) / 8.0f,
-			glm::vec2(-3.0f, 5.0f) / 8.0f
-		};
-
-		static const glm::vec2 SAMPLE_LOCS_4[4] =
-		{
-			glm::vec2(-7.0f, 1.0f) / 8.0f,
-			glm::vec2(-1.0f, -3.0f) / 8.0f,
-			glm::vec2(5.0f, -1.0f) / 8.0f,
-			glm::vec2(1.0f, 3.0f) / 8.0f,
-		};
-
-		static const glm::vec2 SAMPLE_LOCS_2[2] =
-		{
-			glm::vec2(-7.0f, 1.0f) / 8.0f,
-			glm::vec2(5.0f, -7.0f) / 8.0f,
-		};
-
-		const i32 sampleCount = g_Renderer->GetTAASampleCount();
-		if (sampleCount <= 0)
-		{
-			return;
-		}
-
-		const glm::vec2* samples = (sampleCount == 16 ? SAMPLE_LOCS_16 : (sampleCount == 8 ? SAMPLE_LOCS_8 : (sampleCount == 4 ? SAMPLE_LOCS_4 : SAMPLE_LOCS_2)));
-
+		// A pixel is 2/size in NDC
 		const glm::vec2i swapChainSize = g_Window->GetFrameBufferSize();
-		const unsigned subsampleIdx = g_Renderer->GetFramesRenderedCount() % sampleCount;
-
-		// [-halfPix, halfPix] (in NDC)
-		glm::vec2 subsample = (samples[subsampleIdx] / 4.0f) / (glm::vec2)swapChainSize;
+		const glm::vec2 subsample = offsetPixels * 2.0f / glm::max((glm::vec2)swapChainSize, glm::vec2(1.0f));
 
 		glm::mat4 jitterMat = glm::translate(MAT4_IDENTITY, glm::vec3(subsample.x, subsample.y, 0.0f));
 		matrix = jitterMat * matrix;

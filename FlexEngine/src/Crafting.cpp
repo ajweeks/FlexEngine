@@ -26,6 +26,7 @@ IGNORE_WARNINGS_POP
 #include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObjectTypes.hpp"
+#include "Scene/Objects/Campfire.hpp"
 #include "Scene/Objects/Stations.hpp"
 #include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/SceneManager.hpp"
@@ -210,7 +211,7 @@ namespace flex
 		{
 			for (const Recipe& recipe : GetRecipes())
 			{
-				if (recipe.station == Station::FURNACE && recipe.inputs[0].prefabID == input)
+				if (recipe.station == Station::FURNACE && woodcraft::ItemMatches(recipe.inputs[0].prefabID, input))
 				{
 					return &recipe;
 				}
@@ -223,7 +224,7 @@ namespace flex
 			GetRecipes();
 			for (const auto& fuel : s_Fuels)
 			{
-				if (fuel.first == prefabID)
+				if (woodcraft::ItemMatches(fuel.first, prefabID))
 				{
 					return fuel.second;
 				}
@@ -436,11 +437,11 @@ namespace flex
 		i32 count = 0;
 		for (const GameObjectStack& stack : m_Player->m_Inventory)
 		{
-			count += (stack.count > 0 && stack.prefabID == prefabID) ? stack.count : 0;
+			count += (stack.count > 0 && woodcraft::ItemMatches(prefabID, stack.prefabID)) ? stack.count : 0;
 		}
 		for (const GameObjectStack& stack : m_Player->m_QuickAccessInventory)
 		{
-			count += (stack.count > 0 && stack.prefabID == prefabID) ? stack.count : 0;
+			count += (stack.count > 0 && woodcraft::ItemMatches(prefabID, stack.prefabID)) ? stack.count : 0;
 		}
 		return count;
 	}
@@ -458,7 +459,7 @@ namespace flex
 			for (u32 i = 0; i < size && count > 0; ++i)
 			{
 				GameObjectStack& stack = stacks[i];
-				if (stack.count > 0 && stack.prefabID == prefabID)
+				if (stack.count > 0 && woodcraft::ItemMatches(prefabID, stack.prefabID))
 				{
 					const i32 taken = glm::min(stack.count, count);
 					stack.count -= taken;
@@ -529,6 +530,11 @@ namespace flex
 	void CraftingController::Discover(const PrefabID& prefabID)
 	{
 		const std::string name = PrefabName(prefabID);
+		if (name.compare(0, 5, "wood ") == 0)
+		{
+			// Every kind of wood counts as wood for the recipes
+			Discover(woodcraft::GetWoodPrefabID());
+		}
 		if (name.empty() || m_Discovered.count(name) != 0)
 		{
 			return;

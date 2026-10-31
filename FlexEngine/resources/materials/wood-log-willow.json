@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "wood log willow",
+		"shader" : "pbr",
+		"const albedo" : "0.300,0.260,0.200",
+		"const roughness" : 0.850000
+	}
+}

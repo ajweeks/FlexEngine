@@ -13,6 +13,7 @@ layout (location = 0) out vec3 ex_PositionWS;
 layout (location = 1) out vec2 ex_TexCoord;
 layout (location = 2) out vec4 ex_Colour;
 layout (location = 3) out mat3 ex_TBN;
+layout (location = 6) out float ex_WaveHeight; // Height of the surface above its rest level (m)
 
 struct DirectionalLight 
 {
@@ -39,7 +40,7 @@ layout (binding = 0) uniform UBOConstant
 	vec4 camPos;
 	vec4 renderOrigin; // xyz: see Renderer::RenderOriginFor
 	mat4 view;
-	mat4 projection;
+	mat4 viewProjection; // (jittered while TAA is on)
 	DirectionalLight dirLight;
 	OceanColours oceanColours;
 } uboConstant;
@@ -63,6 +64,8 @@ void main()
     vec4 posWS = uboDynamic.model * vec4(in_Position, 0.0);
     posWS.xyz -= uboConstant.renderOrigin.xyz;
     ex_PositionWS = posWS.xyz;
-    gl_Position = (uboConstant.projection * uboConstant.view) * vec4(posWS.xyz, 1.0);
+    gl_Position = uboConstant.viewProjection * vec4(posWS.xyz, 1.0);
     ex_Colour = in_Colour;
+    // (posWS is only rotated & scaled, & the render origin's y is 0)
+    ex_WaveHeight = posWS.y;
 }

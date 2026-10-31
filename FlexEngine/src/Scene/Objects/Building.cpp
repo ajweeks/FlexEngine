@@ -53,6 +53,8 @@ namespace flex
 		const glm::vec3 FLAME_OFFSET(0.0f, 0.85f, 0.0f);
 		const u32 MAX_TORCH_LIGHTS = 12;
 		const real TORCH_LIGHT_RANGE = 160.0f;
+		// Inverse square falloff (was 16, which barely lit a cave around the torch; eye adaptation also brightens caves)
+		const real TORCH_LIGHT_BRIGHTNESS = 26.0f;
 
 		struct TorchLight
 		{
@@ -623,7 +625,7 @@ namespace flex
 				// added, while a saturated orange turns wooden interiors entirely orange
 				data.colour = glm::vec3(1.0f, 0.8f, 0.6f);
 				// Fade out with distance so lights being reassigned isn't noticeable
-				data.brightness = 16.0f * flicker * (1.0f - glm::smoothstep(TORCH_LIGHT_RANGE * 0.7f, TORCH_LIGHT_RANGE, glm::sqrt(torches[i].first)));
+				data.brightness = TORCH_LIGHT_BRIGHTNESS * flicker * (1.0f - glm::smoothstep(TORCH_LIGHT_RANGE * 0.7f, TORCH_LIGHT_RANGE, glm::sqrt(torches[i].first)));
 				if (light.lightID == InvalidPointLightID)
 				{
 					light.lightID = g_Renderer->RegisterPointLight(&data);
@@ -1085,6 +1087,28 @@ namespace flex
 		}
 	}
 
+	void BuildMode::SetHoldingTorch(bool bHolding)
+	{
+		if (bHolding == m_bHoldingTorch)
+		{
+			return;
+		}
+		m_bHoldingTorch = bHolding;
+		if (bHolding)
+		{
+			m_SelectedType = BuildPieceType::TORCH;
+			m_bPlacementValid = false;
+			m_bPlacementHasPosition = false;
+			m_BlockReason = BuildBlockReason::NONE;
+		}
+		else if (!m_bActive)
+		{
+			m_bPlacementValid = false;
+			m_bPlacementHasPosition = false;
+			DestroyPreview();
+		}
+	}
+
 	void BuildMode::DestroyPreview()
 	{
 		GameObject* preview = m_PreviewID.Get();
@@ -1492,10 +1516,12 @@ namespace flex
 
 	void BuildMode::Update()
 	{
-		if (!m_bActive)
+		if (!m_bActive && !m_bHoldingTorch)
 		{
 			return;
 		}
+		// (Only torches are placed while one is held)
+		const bool bTorchOnly = !m_bActive;
 
 		m_Cooldown -= g_DeltaTime;
 
@@ -1512,26 +1538,34 @@ namespace flex
 		// Choose the piece with the scroll wheel (or number keys), rotate with R & switch materials with N
 		const real scroll = g_InputManager->GetVerticalScrollDistance();
 		const i32 typeCount = (i32)BuildPieceType::_COUNT;
-		if (scroll > 0.0f)
+		if (bTorchOnly)
 		{
-			m_SelectedType = (BuildPieceType)(((i32)m_SelectedType + typeCount - 1) % typeCount);
+			m_SelectedType = BuildPieceType::TORCH;
 		}
-		else if (scroll < 0.0f)
+		else
 		{
-			m_SelectedType = (BuildPieceType)(((i32)m_SelectedType + 1) % typeCount);
-		}
-		for (i32 i = 0; i < typeCount; ++i)
-		{
-			if (g_InputManager->GetKeyPressed((KeyCode)((i32)KeyCode::KEY_1 + i)))
+			// (Torches are items, so they're skipped)
+			if (scroll > 0.0f)
 			{
-				m_SelectedType = (BuildPieceType)i;
+				do { m_SelectedType = (BuildPieceType)(((i32)m_SelectedType + typeCount - 1) % typeCount); } while (m_SelectedType == BuildPieceType::TORCH);
+			}
+			else if (scroll < 0.0f)
+			{
+				do { m_SelectedType = (BuildPieceType)(((i32)m_SelectedType + 1) % typeCount); } while (m_SelectedType == BuildPieceType::TORCH);
+			}
+			for (i32 i = 0; i < typeCount; ++i)
+			{
+				if (i != (i32)BuildPieceType::TORCH && g_InputManager->GetKeyPressed((KeyCode)((i32)KeyCode::KEY_1 + i)))
+				{
+					m_SelectedType = (BuildPieceType)i;
+				}
 			}
 		}
 		if (g_InputManager->GetKeyPressed(GameKeys::BUILD_ROTATE))
 		{
 			m_Rotation = (m_Rotation + 1) % 4;
 		}
-		if (g_InputManager->GetKeyPressed(GameKeys::BUILD_MATERIAL))
+		if (!bTorchOnly && g_InputManager->GetKeyPressed(GameKeys::BUILD_MATERIAL))
 		{
 			m_SelectedMaterial = (BuildMaterial)(((i32)m_SelectedMaterial + 1) % (i32)BuildMaterial::_COUNT);
 		}
@@ -1544,6 +1578,10 @@ namespace flex
 		}
 		// Ropes are tossed rather than placed (see Traversal::TossRope)
 		const bool bTossing = m_SelectedType == BuildPieceType::ROPE;
+		if (bTorchOnly && !m_Player->ConsumeHeldTorch(false))
+		{
+			m_bPlacementValid = false;
+		}
 		UpdatePreview(m_bPlacementHasPosition && !bTossing);
 
 		BuildPiece* targeted = GetTargetedPiece();
@@ -1569,8 +1607,17 @@ namespace flex
 				GameSounds::PlayBuildDenied();
 				m_Cooldown = 0.25f;
 			}
-			else if (g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT) && targeted != nullptr)
+			else if (g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT) && targeted != nullptr && (!bTorchOnly || targeted->GetPieceType() == BuildPieceType::TORCH))
 			{
+				if (targeted->GetPieceType() == BuildPieceType::TORCH)
+				{
+					// Back into the inventory
+					const PrefabID torchID = g_ResourceManager->GetPrefabID("torch");
+					if (torchID.IsValid())
+					{
+						m_Player->AddToInventory(torchID, 1);
+					}
+				}
 				g_SceneManager->CurrentScene()->RemoveObject(targeted, true);
 				AudioManager::PlaySource(m_RemoveSoundID);
 				m_Cooldown = 0.15f;
@@ -1586,6 +1633,10 @@ namespace flex
 		piece->GetTransform()->SetWorldPosition(m_PlacementPos);
 		piece->GetTransform()->SetWorldRotation(m_PlacementRot);
 		scene->AddRootObject(piece);
+		if (!m_bActive && m_bHoldingTorch)
+		{
+			m_Player->ConsumeHeldTorch(true);
+		}
 		AudioManager::PlaySource(m_PlaceSoundID);
 		if (WorldStats* stats = GetCurrentWorldStats())
 		{
@@ -1609,6 +1660,16 @@ namespace flex
 
 	void BuildMode::DrawHUD() const
 	{
+		if (!m_bActive && m_bHoldingTorch)
+		{
+			g_Renderer->SetFont(SID("editor-02"));
+			g_Renderer->DrawStringSS(LOC(Torch_Controls), glm::vec4(0.95f, 0.95f, 0.95f, 1.0f), AnchorPoint::BOTTOM, glm::vec2(0.0f, 0.18f), 1.5f, 0.6f);
+			if (!m_bPlacementValid && m_BlockReason == BuildBlockReason::CEILING)
+			{
+				g_Renderer->DrawStringSS(LOC(Build_Blocked_Ceiling), glm::vec4(1.0f, 0.45f, 0.35f, 1.0f), AnchorPoint::BOTTOM, glm::vec2(0.0f, 0.23f), 1.5f, 0.6f);
+			}
+			return;
+		}
 		if (!m_bActive)
 		{
 			return;
@@ -1621,6 +1682,10 @@ namespace flex
 		std::string pieces;
 		for (i32 i = 0; i < (i32)BuildPieceType::_COUNT; ++i)
 		{
+			if (i == (i32)BuildPieceType::TORCH)
+			{
+				continue; // (an item)
+			}
 			const bool bSelected = i == (i32)m_SelectedType;
 			pieces += bSelected ? "[" : " ";
 			pieces += IntToString(i + 1) + " " + BuildPieceDisplayName((BuildPieceType)i);

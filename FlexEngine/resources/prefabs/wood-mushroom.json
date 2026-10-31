@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "99A16725A2CD4431A8DAB11AA85A94A0",
+	"root" : 
+	{
+		"id" : "B110A7B84A0344ACBFD91D71CCB3ECAE",
+		"name" : "wood mushroom",
+		"type" : "object",
+		"mesh" : "cylinder.glb",
+		"materials" : 
+		[
+			"wood log mushroom"
+		]
+	}
+}

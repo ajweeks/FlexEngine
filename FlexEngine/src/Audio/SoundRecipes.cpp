@@ -37,6 +37,15 @@ namespace flex
 				{ "dig_gravel", 5, false, true },
 				{ "rope_throw", 3, false, false },
 				{ "gasp", 2, false, false },
+				{ "animal_goat", 3, false, true },
+				{ "animal_cow", 3, false, true },
+				{ "animal_chicken", 4, false, true },
+				{ "animal_crow", 3, false, true },
+				{ "animal_seagull", 3, false, true },
+				{ "animal_rooster", 2, false, true },
+				{ "animal_squirrel", 3, false, true },
+				{ "animal_horse", 3, false, true },
+				{ "egg_lay", 2, false, true },
 				{ "loop_engine", 1, true, false },
 				{ "loop_skid", 1, true, false },
 				{ "loop_wind", 1, true, false },
@@ -1192,6 +1201,248 @@ namespace flex
 				return out;
 			}
 
+			// One voiced note: harmonics of a gliding pitch (start -> peak at peakAt -> end) with vibrato, shaped by two
+			// formants, plus breath noise
+			struct VoiceNote
+			{
+				sec start = 0.0f, dur = 0.3f;
+				real f0 = 200.0f, fPeak = 200.0f, f1 = 200.0f; // Start, peak & end pitch
+				real peakAt = 0.4f; // Fraction of dur
+				real vibRate = 0.0f, vibDepth = 0.0f; // Pitch vibrato (fraction of pitch)
+				real tremRate = 0.0f, tremDepth = 0.0f; // Amplitude wobble (bleat)
+				real formantA = 700.0f, formantB = 1800.0f, q = 4.0f;
+				real harmonicTilt = 1.0f; // Harmonic k has gain 1/k^tilt (lower: buzzier)
+				real noise = 0.1f; // Breath / rasp
+				real attack = 0.02f, decay = 0.1f;
+				real gain = 1.0f;
+			};
+
+			void AddVoiceNote(Buffer& out, Rng& rng, const VoiceNote& n)
+			{
+				WhiteNoise white(rng.NextU32());
+				Biquad fa, fb;
+				fa.Set(BQ::BANDPASS, n.formantA, n.q);
+				fb.Set(BQ::BANDPASS, n.formantB, n.q);
+				const u32 begin = out.IndexOf(n.start);
+				const u32 count = glm::min((u32)(n.dur * (real)out.sampleRate), out.Count() - begin);
+				real phase = 0.0f;
+				const real vibPhase = rng.Range(0.0f, SYNTH_TWO_PI);
+				for (u32 i = 0; i < count; ++i)
+				{
+					const real t = (real)i / (real)out.sampleRate;
+					const real u = t / n.dur;
+					real f = u < n.peakAt ? Lerp(n.f0, n.fPeak, SmoothStep(0.0f, n.peakAt, u)) : Lerp(n.fPeak, n.f1, SmoothStep(n.peakAt, 1.0f, u));
+					f *= 1.0f + n.vibDepth * std::sin(SYNTH_TWO_PI * n.vibRate * t + vibPhase);
+					phase += f / (real)out.sampleRate;
+					phase -= std::floor(phase);
+					real src = 0.0f;
+					const u32 harmonics = glm::min(24u, (u32)(9000.0f / glm::max(f, 50.0f)));
+					for (u32 k = 1; k <= harmonics; ++k)
+					{
+						src += std::sin(SYNTH_TWO_PI * phase * (real)k) / std::pow((real)k, n.harmonicTilt);
+					}
+					const real w = white.Next();
+					src = src * 0.5f + w * n.noise;
+					real env = EnvAttackDecay(t, n.attack, n.decay) * (1.0f - SmoothStep(n.dur * 0.8f, n.dur, t));
+					env = glm::max(env, 0.0f);
+					const real trem = 1.0f - n.tremDepth * (0.5f + 0.5f * std::sin(SYNTH_TWO_PI * n.tremRate * t));
+					out.samples[begin + i] += (fa.Process(src) * 1.4f + fb.Process(src) * 0.9f + src * 0.05f) * env * trem * n.gain;
+				}
+			}
+
+			Buffer AnimalGoat(u32 variant)
+			{
+				Rng rng(HashSeed("animal_goat", variant));
+				Buffer out(1.2f);
+				VoiceNote n;
+				n.start = 0.02f; n.dur = rng.Range(0.7f, 1.0f);
+				n.f0 = rng.Range(360.0f, 440.0f); n.fPeak = n.f0 * 1.12f; n.f1 = n.f0 * 0.8f; n.peakAt = 0.25f;
+				n.vibRate = rng.Range(24.0f, 32.0f); n.vibDepth = 0.05f; // The characteristic ragged bleat
+				n.tremRate = n.vibRate; n.tremDepth = 0.45f;
+				n.formantA = 850.0f; n.formantB = 1900.0f; n.q = 5.0f; n.harmonicTilt = 0.8f; n.noise = 0.2f;
+				n.attack = 0.04f; n.decay = 0.5f;
+				AddVoiceNote(out, rng, n);
+				Finish(out, ONE_SHOT_PEAK * 0.85f, 0.1f);
+				return out;
+			}
+
+			Buffer AnimalCow(u32 variant)
+			{
+				Rng rng(HashSeed("animal_cow", variant));
+				Buffer out(2.0f);
+				VoiceNote n;
+				n.start = 0.02f; n.dur = rng.Range(1.3f, 1.7f);
+				n.f0 = rng.Range(85.0f, 105.0f); n.fPeak = n.f0 * 1.25f; n.f1 = n.f0 * 0.85f; n.peakAt = 0.55f;
+				n.vibRate = 5.0f; n.vibDepth = 0.015f;
+				n.formantA = 420.0f; n.formantB = 850.0f; n.q = 3.5f; n.harmonicTilt = 0.9f; n.noise = 0.05f;
+				n.attack = 0.15f; n.decay = 0.9f;
+				AddVoiceNote(out, rng, n);
+				// A nasal "mmm" overtone as the mouth closes
+				n.start += n.dur * 0.55f; n.dur *= 0.45f; n.formantA = 260.0f; n.formantB = 520.0f; n.gain = 0.5f; n.fPeak = n.f1 = n.f0;
+				AddVoiceNote(out, rng, n);
+				Finish(out, ONE_SHOT_PEAK * 0.9f, 0.2f);
+				return out;
+			}
+
+			Buffer AnimalChicken(u32 variant)
+			{
+				Rng rng(HashSeed("animal_chicken", variant));
+				Buffer out(1.0f);
+				const u32 clucks = 2 + variant % 3;
+				sec t = 0.02f;
+				for (u32 i = 0; i < clucks; ++i)
+				{
+					VoiceNote n;
+					n.start = t; n.dur = rng.Range(0.07f, 0.11f);
+					n.f0 = rng.Range(520.0f, 700.0f); n.fPeak = n.f0 * 1.15f; n.f1 = n.f0 * 0.6f; n.peakAt = 0.3f;
+					n.formantA = 1100.0f; n.formantB = 2600.0f; n.q = 4.0f; n.harmonicTilt = 0.7f; n.noise = 0.25f;
+					n.attack = 0.005f; n.decay = 0.04f; n.gain = rng.Range(0.7f, 1.0f);
+					AddVoiceNote(out, rng, n);
+					t += rng.Range(0.12f, 0.2f);
+				}
+				Finish(out, ONE_SHOT_PEAK * 0.7f, 0.08f);
+				return out;
+			}
+
+			Buffer AnimalCrow(u32 variant)
+			{
+				Rng rng(HashSeed("animal_crow", variant));
+				Buffer out(1.2f);
+				const u32 caws = 2 + variant % 2;
+				sec t = 0.02f;
+				for (u32 i = 0; i < caws; ++i)
+				{
+					VoiceNote n;
+					n.start = t; n.dur = rng.Range(0.2f, 0.28f);
+					n.f0 = rng.Range(380.0f, 470.0f); n.fPeak = n.f0 * 1.1f; n.f1 = n.f0 * 0.85f; n.peakAt = 0.3f;
+					n.vibRate = 70.0f; n.vibDepth = 0.06f; // Rasp
+					n.formantA = 1000.0f; n.formantB = 2100.0f; n.q = 2.5f; n.harmonicTilt = 0.5f; n.noise = 0.35f;
+					n.attack = 0.015f; n.decay = 0.12f;
+					AddVoiceNote(out, rng, n);
+					t += n.dur + rng.Range(0.1f, 0.2f);
+				}
+				Finish(out, ONE_SHOT_PEAK * 0.8f, 0.1f);
+				return out;
+			}
+
+			Buffer AnimalSeagull(u32 variant)
+			{
+				Rng rng(HashSeed("animal_seagull", variant));
+				Buffer out(1.6f);
+				sec t = 0.02f;
+				const u32 cries = 2 + variant % 2;
+				for (u32 i = 0; i < cries; ++i)
+				{
+					VoiceNote n;
+					n.start = t; n.dur = rng.Range(0.3f, 0.45f);
+					n.f0 = rng.Range(1100.0f, 1300.0f); n.fPeak = rng.Range(2000.0f, 2400.0f); n.f1 = rng.Range(900.0f, 1100.0f); n.peakAt = 0.35f;
+					n.vibRate = 14.0f; n.vibDepth = 0.03f;
+					n.formantA = 1900.0f; n.formantB = 3400.0f; n.q = 6.0f; n.harmonicTilt = 1.3f; n.noise = 0.06f;
+					n.attack = 0.03f; n.decay = 0.2f;
+					AddVoiceNote(out, rng, n);
+					t += n.dur + rng.Range(0.05f, 0.15f);
+				}
+				Finish(out, ONE_SHOT_PEAK * 0.75f, 0.15f);
+				return out;
+			}
+
+			Buffer AnimalRooster(u32 variant)
+			{
+				Rng rng(HashSeed("animal_rooster", variant));
+				Buffer out(2.0f);
+				// Cock-a-doodle-doo: a short rise, a pause, then a long falling strain
+				const real base = rng.Range(520.0f, 600.0f);
+				const real startTimes[] = { 0.02f, 0.28f, 0.55f, 0.95f };
+				const real durs[] = { 0.2f, 0.22f, 0.3f, 0.7f };
+				const real peaks[] = { 1.5f, 1.7f, 2.0f, 2.2f };
+				for (u32 i = 0; i < 4; ++i)
+				{
+					VoiceNote n;
+					n.start = startTimes[i]; n.dur = durs[i];
+					n.f0 = base * 0.9f; n.fPeak = base * peaks[i]; n.f1 = base * (i == 3 ? 1.0f : 1.4f); n.peakAt = i == 3 ? 0.3f : 0.7f;
+					n.vibRate = i == 3 ? 22.0f : 0.0f; n.vibDepth = 0.025f;
+					n.formantA = 1300.0f; n.formantB = 2800.0f; n.q = 4.0f; n.harmonicTilt = 0.8f; n.noise = 0.18f;
+					n.attack = 0.02f; n.decay = i == 3 ? 0.5f : 0.15f;
+					AddVoiceNote(out, rng, n);
+				}
+				Finish(out, ONE_SHOT_PEAK * 0.8f, 0.15f);
+				return out;
+			}
+
+			Buffer AnimalSquirrel(u32 variant)
+			{
+				Rng rng(HashSeed("animal_squirrel", variant));
+				Buffer out(1.0f);
+				// A fast chatter of tiny chirps
+				sec t = 0.02f;
+				const u32 chirps = 6 + variant * 2;
+				const real base = rng.Range(2600.0f, 3200.0f);
+				for (u32 i = 0; i < chirps; ++i)
+				{
+					VoiceNote n;
+					n.start = t; n.dur = 0.045f;
+					n.f0 = base; n.fPeak = base * 1.3f; n.f1 = base * 0.9f; n.peakAt = 0.4f;
+					n.formantA = 3000.0f; n.formantB = 4800.0f; n.q = 5.0f; n.harmonicTilt = 1.5f; n.noise = 0.1f;
+					n.attack = 0.004f; n.decay = 0.02f; n.gain = rng.Range(0.6f, 1.0f);
+					AddVoiceNote(out, rng, n);
+					t += rng.Range(0.07f, 0.1f);
+				}
+				Finish(out, ONE_SHOT_PEAK * 0.55f, 0.05f);
+				return out;
+			}
+
+			Buffer AnimalHorse(u32 variant)
+			{
+				Rng rng(HashSeed("animal_horse", variant));
+				Buffer out(2.2f);
+				VoiceNote n;
+				if (variant == 2)
+				{
+					// A low nicker
+					n.start = 0.02f; n.dur = 0.8f;
+					n.f0 = 180.0f; n.fPeak = 230.0f; n.f1 = 150.0f; n.peakAt = 0.3f;
+					n.vibRate = 18.0f; n.vibDepth = 0.04f;
+					n.formantA = 600.0f; n.formantB = 1400.0f; n.q = 3.0f; n.harmonicTilt = 0.9f; n.noise = 0.2f; n.attack = 0.08f; n.decay = 0.4f;
+					AddVoiceNote(out, rng, n);
+				}
+				else
+				{
+					// A whinny: a squeal that rises, then falls off in a shuddering run of lower notes
+					n.start = 0.02f; n.dur = 1.0f;
+					n.f0 = rng.Range(500.0f, 600.0f); n.fPeak = rng.Range(1500.0f, 1800.0f); n.f1 = 700.0f; n.peakAt = 0.3f;
+					n.vibRate = 9.0f; n.vibDepth = 0.04f;
+					n.formantA = 1100.0f; n.formantB = 2600.0f; n.q = 3.5f; n.harmonicTilt = 0.9f; n.noise = 0.22f; n.attack = 0.08f; n.decay = 0.6f;
+					AddVoiceNote(out, rng, n);
+					for (u32 i = 0; i < 3; ++i)
+					{
+						VoiceNote m = n;
+						m.start = 1.0f + (real)i * 0.2f; m.dur = 0.18f;
+						m.f0 = 650.0f - (real)i * 90.0f; m.fPeak = m.f0 * 1.1f; m.f1 = m.f0 * 0.8f; m.peakAt = 0.3f;
+						m.attack = 0.01f; m.decay = 0.1f; m.vibDepth = 0.0f; m.gain = 0.8f - (real)i * 0.15f;
+						AddVoiceNote(out, rng, m);
+					}
+				}
+				Finish(out, ONE_SHOT_PEAK * 0.85f, 0.2f);
+				return out;
+			}
+
+			Buffer EggLay(u32 variant)
+			{
+				Rng rng(HashSeed("egg_lay", variant));
+				Buffer out(0.9f);
+				// A short cluck, then a soft plop
+				VoiceNote n;
+				n.start = 0.02f; n.dur = 0.14f;
+				n.f0 = 600.0f; n.fPeak = 780.0f; n.f1 = 480.0f; n.peakAt = 0.3f;
+				n.formantA = 1100.0f; n.formantB = 2600.0f; n.q = 4.0f; n.harmonicTilt = 0.7f; n.noise = 0.25f;
+				n.attack = 0.005f; n.decay = 0.05f;
+				AddVoiceNote(out, rng, n);
+				AddThump(out, rng, 0.3f, 0.5f, rng.Range(190.0f, 230.0f), 0.04f);
+				AddClick(out, rng, 0.3f, 0.15f, 1800.0f, 0.01f);
+				Finish(out, ONE_SHOT_PEAK * 0.6f, 0.1f);
+				return out;
+			}
+
 			// Underwater: a deep muffled rumble with slow swells & the odd faint bubble
 			Buffer UnderwaterLoop()
 			{
@@ -1272,6 +1523,15 @@ namespace flex
 			case Sound::DIG_GRAVEL: return DigGravel(variant);
 			case Sound::ROPE_THROW: return RopeThrow(variant);
 			case Sound::GASP: return Gasp(variant);
+			case Sound::ANIMAL_GOAT: return AnimalGoat(variant);
+			case Sound::ANIMAL_COW: return AnimalCow(variant);
+			case Sound::ANIMAL_CHICKEN: return AnimalChicken(variant);
+			case Sound::ANIMAL_CROW: return AnimalCrow(variant);
+			case Sound::ANIMAL_SEAGULL: return AnimalSeagull(variant);
+			case Sound::ANIMAL_ROOSTER: return AnimalRooster(variant);
+			case Sound::ANIMAL_SQUIRREL: return AnimalSquirrel(variant);
+			case Sound::ANIMAL_HORSE: return AnimalHorse(variant);
+			case Sound::EGG_LAY: return EggLay(variant);
 			case Sound::LOOP_UNDERWATER: return UnderwaterLoop();
 			case Sound::LOOP_WAVES: return WavesLoop();
 			case Sound::MUSIC_CALM: return MusicCalm(variant);

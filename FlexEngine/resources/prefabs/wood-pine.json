@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "BB973F496DEA4731BC6A39AD1568228E",
+	"root" : 
+	{
+		"id" : "810D2F6A67E04CA88D065020D83A515E",
+		"name" : "wood pine",
+		"type" : "object",
+		"mesh" : "cylinder.glb",
+		"materials" : 
+		[
+			"wood log pine"
+		]
+	}
+}

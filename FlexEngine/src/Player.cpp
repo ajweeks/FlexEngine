@@ -230,6 +230,7 @@ namespace flex
 		{
 			m_BuildMode.SetActive(false);
 		}
+		m_BuildMode.SetHoldingTorch(m_bPossessed && AbleToInteract() && !IsAnyInventoryShowing() && IsHoldingTorch());
 		m_BuildMode.Update();
 		// Crafting panel ([I]), chests & furnaces ([E]) & placing them
 		m_Crafting->Update();
@@ -312,7 +313,7 @@ namespace flex
 		if (m_Transform.GetWorldPosition().y < minHeight)
 		{
 			PrintWarn("Player fell below the world (y = %.1f), respawning\n", m_Transform.GetWorldPosition().y);
-			Reset();
+			Die(m_LastGroundedPos.y > minHeight ? m_LastGroundedPos : glm::vec3(0.0f, 0.0f, 0.0f));
 		}
 
 		std::vector<DroppedItem*> nearbyItems;
@@ -690,6 +691,10 @@ namespace flex
 
 		// Touching (or very nearly touching) ground which isn't too steep to stand on
 		m_bGrounded = m_bGroundHit && m_GroundGap < 0.12f && m_GroundNormal.y > WALKABLE_NORMAL_Y;
+		if (m_bGrounded)
+		{
+			m_LastGroundedPos = m_Transform.GetWorldPosition();
+		}
 	}
 
 	void Player::LateUpdateHints()
@@ -869,6 +874,28 @@ namespace flex
 		}
 	}
 
+	void Player::SetMounted(bool bMounted)
+	{
+		if (m_bMounted == bMounted || m_RigidBody == nullptr)
+		{
+			return;
+		}
+		m_bMounted = bMounted;
+		btRigidBody* rbInternal = m_RigidBody->GetRigidBodyInternal();
+		if (bMounted)
+		{
+			rbInternal->setCollisionFlags(rbInternal->getCollisionFlags() | btCollisionObject::CF_NO_CONTACT_RESPONSE);
+			rbInternal->setGravity(btVector3(0.0f, 0.0f, 0.0f));
+			m_Traversal->Reset();
+		}
+		else
+		{
+			rbInternal->setCollisionFlags(rbInternal->getCollisionFlags() & ~btCollisionObject::CF_NO_CONTACT_RESPONSE);
+			rbInternal->setGravity(g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld()->getGravity());
+		}
+		rbInternal->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+	}
+
 	void Player::SetRidingVehicle(GameObject* vehicle)
 	{
 		if (vehicle != nullptr)
@@ -1018,6 +1045,7 @@ namespace flex
 	{
 		return m_bPossessed  &&
 			!m_RidingVehicleID.IsValid() &&
+			!m_bMounted &&
 			!m_TerminalInteractingWithID.IsValid();
 	}
 

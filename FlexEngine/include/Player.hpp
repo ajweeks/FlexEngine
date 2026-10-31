@@ -197,6 +197,10 @@ namespace flex
 		// Notifications & prompts for nearby things that can be interacted with
 		void DrawNotifications() const;
 		bool IsGrounded() const { return m_bGrounded; }
+		// The player dies: everything they carry is dropped at deathPos (pickups) & they respawn with nothing
+		void Die(const glm::vec3& deathPos);
+		// Where they last stood on the ground (where they drop things if they fall out of the world)
+		const glm::vec3& GetLastGroundedPos() const { return m_LastGroundedPos; }
 		const glm::vec3& GetGroundNormal() const { return m_GroundNormal; }
 		// The one entry point for teleporting the player (respawning, loading worlds, map & debug teleports).
 		// Moves the player to the ground near pos (in streamed terrain), waiting there until collision has loaded.
@@ -220,6 +224,9 @@ namespace flex
 		void UpdateHeldJitterTest();
 
 		GameObjectID GetRidingVehicleID() const { return m_RidingVehicleID; }
+		// Riding a horse (see Animals.cpp): the capsule is carried by the animal, walking & traversal are disabled
+		bool IsMounted() const { return m_bMounted; }
+		void SetMounted(bool bMounted);
 
 		GameObjectID GetHeldItem(Hand hand) { if (hand == Hand::LEFT) return m_HeldItemLeftHand; return m_HeldItemRightHand; }
 		void SetHeldItem(Hand hand, GameObjectID gameObjectID);
@@ -238,6 +245,9 @@ namespace flex
 		GameObject* GetObjectPointedAt() const;
 		// Type of the hand tool (pickaxe, axe or shovel) in the selected quick access slot, or InvalidStringID
 		StringID GetWieldedToolType() const;
+		// Whether a torch item is in the selected quick access slot. ConsumeHeldTorch removes one if bConsume.
+		bool IsHoldingTorch() const;
+		bool ConsumeHeldTorch(bool bConsume);
 		bool IsWieldingPickAxe() const;
 		bool IsWieldingAxe() const;
 		// Swings the wielded tool once (duration in seconds), unless it's already swinging
@@ -366,6 +376,7 @@ namespace flex
 		TrackBuildingContext m_TrackBuildingContext;
 
 		bool m_bGrounded = false;
+		glm::vec3 m_LastGroundedPos = VEC3_ZERO;
 		bool m_bCrawling = false;
 		// Test hooks (FLEX_TEST_CRAWL): forces crawling & replaces the walking input while non-zero
 		bool m_bTestForceCrawl = false;
@@ -512,6 +523,7 @@ namespace flex
 		GameObjectID m_HeldItemRightHand = InvalidGameObjectID;
 
 		GameObjectID m_RidingVehicleID = InvalidGameObjectID;
+		bool m_bMounted = false;
 		// TODO: Merge these two?
 		GameObjectID m_TerminalInteractingWithID = InvalidGameObjectID;
 		GameObjectID m_ObjectInteractingWithID = InvalidGameObjectID;

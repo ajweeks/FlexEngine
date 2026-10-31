@@ -72,7 +72,12 @@ namespace flex
 		MaterialID GetOrCreateGlowMaterial(const char* name, const glm::vec4& colour);
 
 		// Wood item (prefab "wood")
+		// The generic wood item: recipes & fuel asking for it accept every kind of wood
 		PrefabID GetWoodPrefabID();
+		// The wood a felled tree of that species gives (named & coloured to match the tree)
+		PrefabID GetWoodPrefabID(terrain::PlantSpecies species);
+		// Whether wanted can be filled by have (identical, or wanted is the generic wood & have is any kind of wood)
+		bool ItemMatches(const PrefabID& wanted, const PrefabID& have);
 		// Wood dropped by a felled plant
 		i32 WoodYield(const terrain::PlantInfo& plant);
 	} // namespace woodcraft

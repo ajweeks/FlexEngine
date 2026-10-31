@@ -1973,13 +1973,15 @@ namespace flex
 					}
 					const real plane = offset.x * edit.normal.x + offset.y * edit.normal.y + offset.z * edit.normal.z;
 					real target = plane;
+					// (a smooth max/min, so the rim where the plane meets the terrain, & the ridges left between
+					// neighbouring holes or tilted cuts, are rounded instead of meeting in sharp creases & spikes)
 					if (edit.type == EditType::LOWER)
 					{
-						target = Max(d, plane);
+						target = SmoothMax(d, plane, PlaneEditSmoothing(edit));
 					}
 					else if (edit.type == EditType::RAISE)
 					{
-						target = Min(d, plane);
+						target = SmoothMin(d, plane, PlaneEditSmoothing(edit));
 					}
 					d += (target - d) * w;
 					continue;
@@ -4758,8 +4760,15 @@ namespace flex
 
 		// Plane edits are full strength within this fraction of their radius, & fade out beyond it
 		static const real PLANE_EDIT_INNER_RADIUS = 0.45f;
+		// (LOWER & RAISE)
+		static const real PLANE_EDIT_INNER_RADIUS_DIG = 0.25f;
 		// ... & fade out over the last part of their height
 		static const real PLANE_EDIT_INNER_HEIGHT = 0.7f;
+
+		real PlaneEditSmoothing(const Edit& edit)
+		{
+			return glm::clamp(edit.radius * 0.4f, 0.4f, 1.5f);
+		}
 
 		real PlaneEditWeight(const Edit& edit, const glm::vec3& offset)
 		{
@@ -4775,7 +4784,10 @@ namespace flex
 				return 0.0f;
 			}
 			const real radial = std::sqrt(radialSq);
-			return (1.0f - Smoothstep(edit.radius * PLANE_EDIT_INNER_RADIUS, edit.radius, radial)) *
+			// (LOWER & RAISE fade out over more of the disc: their walls are gentler, & strokes made next to each other
+			// blend together rather than leaving steep steps between them)
+			const real inner = edit.type == EditType::FLATTEN ? PLANE_EDIT_INNER_RADIUS : PLANE_EDIT_INNER_RADIUS_DIG;
+			return (1.0f - Smoothstep(edit.radius * inner, edit.radius, radial)) *
 				(1.0f - Smoothstep(edit.height * PLANE_EDIT_INNER_HEIGHT, edit.height, absAxial));
 		}
 

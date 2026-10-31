@@ -171,6 +171,10 @@ namespace flex
 		void SetActive(bool bActive);
 		bool IsActive() const { return m_bActive; }
 		void SetSelectedType(BuildPieceType type) { m_SelectedType = type; }
+		// Torches are items rather than build pieces: while one is held (& build mode is off), the build code
+		// places it where it's aimed (using up the item) & right click picks placed ones back up
+		void SetHoldingTorch(bool bHolding);
+		bool IsHoldingTorch() const { return m_bHoldingTorch; }
 
 		// Input & placement preview, called every frame
 		void Update();
@@ -193,6 +197,7 @@ namespace flex
 
 		Player* m_Player = nullptr;
 		bool m_bActive = false;
+		bool m_bHoldingTorch = false;
 		BuildPieceType m_SelectedType = BuildPieceType::FLOOR;
 		BuildMaterial m_SelectedMaterial = BuildMaterial::WOOD;
 		i32 m_Rotation = 0; // Quarter turns

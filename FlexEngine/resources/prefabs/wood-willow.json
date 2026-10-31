@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "C493F2F192D34D928B7F8964A546E9D0",
+	"root" : 
+	{
+		"id" : "4E5B9B97C598477CB12823213C1F355A",
+		"name" : "wood willow",
+		"type" : "object",
+		"mesh" : "cylinder.glb",
+		"materials" : 
+		[
+			"wood log willow"
+		]
+	}
+}

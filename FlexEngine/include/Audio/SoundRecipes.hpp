@@ -49,6 +49,16 @@ namespace flex
 			DIG_GRAVEL, // Crunch
 			ROPE_THROW,
 			GASP, // Breathing in after surfacing
+			// Animal voices (positional)
+			ANIMAL_GOAT, // Bleat
+			ANIMAL_COW, // Moo
+			ANIMAL_CHICKEN, // Clucks
+			ANIMAL_CROW, // Caws
+			ANIMAL_SEAGULL, // Keening cry
+			ANIMAL_ROOSTER, // Crow
+			ANIMAL_SQUIRREL, // Chatter
+			ANIMAL_HORSE, // Whinny
+			EGG_LAY, // A soft plop & a proud cluck
 
 			// Seamless loops
 			LOOP_ENGINE,

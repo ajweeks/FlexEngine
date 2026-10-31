@@ -12,21 +12,37 @@
 	],
 	"taa_resolve" : 
 	[
+		"shader_quality_level",
 		"taa_sample_count"
 	],
 	"terrain_water" : 
 	[
+		"shader_quality_level",
 		"debug_overlay_index",
 		"enable_fog",
 		"enable_water_clip"
 	],
 	"terrain" : 
 	[
+		"shader_quality_level",
 		"debug_overlay_index",
 		"enable_fog"
 	],
+	"water" : 
+	[
+		"shader_quality_level"
+	],
 	"cloud" : 
 	[
+		"shader_quality_level",
 		"enable_fog"
+	],
+	"gamma_correct" : 
+	[
+		"shader_quality_level"
+	],
+	"skybox" : 
+	[
+		"shader_quality_level"
 	]
 }

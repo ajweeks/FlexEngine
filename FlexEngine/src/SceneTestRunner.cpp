@@ -2174,6 +2174,272 @@ namespace flex
 		VehicleTestScript* s_VehicleTest = nullptr;
 		// See BeginTrackTest
 		bool s_bTrackTest = false;
+
+		// scene_ft_aa_motion: checks that edges stay smooth while the camera moves. The camera looks down at a dark square
+		// (rotated a few degrees, so its edges are nearly axis aligned: the worst case for stair steps & crawling) on a
+		// white backdrop, drifting sideways at a sub-pixel speed. Each anti-aliasing mode (off, FXAA, TAA) gets a phase;
+		// near its end one frame is read back & every edge crossing is measured:
+		// - smoothness: 1 - (largest step between adjacent pixels / the edge's whole step). Aliased edges are 0, exact
+		//   coverage averages 0.25 (a pixel's coverage c gives min(c, 1 - c)).
+		// - stepped: crossings with no intermediate pixel (a visible stair step).
+		// - sharpness: the edge's step within 4 pixels / within 8 (TAA must not smear moving edges).
+		// - stairs: how far the edge's sub-pixel position (from the pixel values) strays from a straight line: the mean
+		//   distance (in pixels) from the average of its positions over the 13 lines around it. Stair steps are ~0.25,
+		//   exact coverage ~0.
+		// Run with --frames=240 or more (4 phases of 56 frames).
+		static const u32 MODE_COUNT = 3;
+		static const i32 MODES[MODE_COUNT] = { 0, 1, 2 }; // Renderer::SetAntiAliasing modes
+		static const char* const MODE_NAMES[MODE_COUNT] = { "off", "FXAA", "TAA" };
+
+		class AAMotionTest
+		{
+		public:
+			static constexpr u32 PHASE_FRAMES = 56;
+			static constexpr u32 CAPTURE_FRAME = 44;
+
+			// bSaveImages: also saves each measured frame (test_aa_motion_<mode>.png)
+			explicit AAMotionTest(bool bSaveImages) :
+				m_bSaveImages(bSaveImages)
+			{
+				m_PrevMode = g_Renderer->GetAntiAliasing();
+				BaseCamera* camera = g_CameraManager->CurrentCamera();
+				m_StartPos = camera->position;
+				m_Yaw = camera->yaw;
+				m_Pitch = camera->pitch;
+				g_EngineInstance->SetRenderImGui(false);
+				g_EngineInstance->SetRenderingEditorObjects(false);
+				g_Renderer->GetPhysicsDebuggingSettings().bDrawWireframe = false;
+			}
+
+			void Update()
+			{
+				const u32 phase = m_Frame / PHASE_FRAMES;
+				const u32 phaseFrame = m_Frame % PHASE_FRAMES;
+				++m_Frame;
+				if (phase >= MODE_COUNT)
+				{
+					return;
+				}
+
+				if (phaseFrame == 0)
+				{
+					g_Renderer->SetAntiAliasing(MODES[phase], true);
+					g_Renderer->ResetTAAHistory();
+				}
+
+				// About 0.6 pixels per frame at 1080p (the backdrop spans ~18m), diagonally so both edge directions move
+				BaseCamera* camera = g_CameraManager->CurrentCamera();
+				// FLEX_AA_MOTION_SPEED=<scale>: scales the AA motion test's camera speed (0: static, for comparison)
+				static const real s_SpeedScale = getenv("FLEX_AA_MOTION_SPEED") != nullptr ? (real)atof(getenv("FLEX_AA_MOTION_SPEED")) : 1.0f;
+				camera->position = m_StartPos + glm::vec3(1.0f, 0.0f, 0.37f) * (0.01f * s_SpeedScale * (real)phaseFrame);
+				camera->SetViewDirection(m_Yaw, m_Pitch);
+
+				if (phaseFrame == CAPTURE_FRAME)
+				{
+					m_CaptureSerial = g_Renderer->GetCapturedFrameSerial();
+					if (m_bSaveImages)
+					{
+						const std::string directory = RelativePathToAbsolute(SCREENSHOT_DIRECTORY);
+						Platform::CreateDirectoryRecursive(directory);
+						g_Renderer->RequestScreenshot(directory + "test_aa_motion_" + MODE_NAMES[phase] + ".png");
+					}
+					else
+					{
+						g_Renderer->RequestFrameCapture();
+					}
+					m_bWaitingForCapture = true;
+				}
+				else if (m_bWaitingForCapture && g_Renderer->GetCapturedFrameSerial() != m_CaptureSerial)
+				{
+					m_bWaitingForCapture = false;
+					Measure(phase);
+				}
+			}
+
+			// Prints the results & errors for any mode that isn't smooth enough
+			void Finish()
+			{
+				g_Renderer->SetAntiAliasing(m_PrevMode, true);
+				g_EngineInstance->SetRenderingEditorObjects(true);
+
+				for (u32 i = 0; i < MODE_COUNT; ++i)
+				{
+					if (!m_bMeasured[i])
+					{
+						PrintError("AA motion test: mode %s wasn't measured, run with --frames=%u or more\n", MODE_NAMES[i], PHASE_FRAMES * MODE_COUNT + 16);
+						return;
+					}
+				}
+				const Result& fxaa = m_Results[1];
+				const Result& taa = m_Results[2];
+				if (fxaa.smoothness < 0.06f || fxaa.stepped > 0.75f)
+				{
+					PrintError("AA motion test: FXAA edges aren't smooth (smoothness %.3f, stepped %.2f)\n", fxaa.smoothness, fxaa.stepped);
+				}
+				if (taa.smoothness < 0.15f || taa.stepped > 0.35f || taa.sharpness < 0.85f)
+				{
+					PrintError("AA motion test: TAA edges aren't smooth under motion (smoothness %.3f, stepped %.2f, sharpness %.3f)\n", taa.smoothness, taa.stepped, taa.sharpness);
+				}
+				if (taa.stairs > m_Results[0].stairs * 0.5f || fxaa.stairs > m_Results[0].stairs * 0.9f)
+				{
+					PrintError("AA motion test: edges are still stair stepped (stairs: off %.4f, FXAA %.4f, TAA %.4f)\n", m_Results[0].stairs, fxaa.stairs, taa.stairs);
+				}
+				if (taa.smoothness <= m_Results[0].smoothness + 0.05f)
+				{
+					PrintError("AA motion test: TAA is no smoother than no anti-aliasing (%.3f vs %.3f)\n", taa.smoothness, m_Results[0].smoothness);
+				}
+			}
+
+		private:
+			struct Result
+			{
+				real smoothness = 0.0f;
+				real stepped = 1.0f;
+				real sharpness = 0.0f;
+				real stairs = 1.0f;
+				u32 crossings = 0;
+			};
+
+			void Measure(u32 phase)
+			{
+				u32 width, height;
+				const std::vector<u8>& pixels = g_Renderer->GetCapturedFrame(&width, &height);
+				if (pixels.size() < (size_t)width * height * 4 || width < 16 || height < 16)
+				{
+					PrintError("AA motion test: frame capture failed\n");
+					return;
+				}
+
+				std::vector<real> luma((size_t)width * height);
+				real lo = 1.0f;
+				real hi = 0.0f;
+				for (size_t i = 0; i < luma.size(); ++i)
+				{
+					luma[i] = (0.299f * pixels[i * 4] + 0.587f * pixels[i * 4 + 1] + 0.114f * pixels[i * 4 + 2]) / 255.0f;
+					lo = glm::min(lo, luma[i]);
+					hi = glm::max(hi, luma[i]);
+				}
+				const real range = hi - lo;
+				const real mid = (hi + lo) * 0.5f;
+
+				real smoothnessSum = 0.0f;
+				real sharpnessSum = 0.0f;
+				u32 steppedCount = 0;
+				u32 crossings = 0;
+				real stairSum = 0.0f;
+				u32 stairCount = 0;
+				// Sub-pixel edge positions in each line (of the current pass)
+				std::vector<std::vector<real>> positions;
+				// Columns (across near horizontal edges), then rows (across near vertical edges)
+				for (u32 pass = 0; pass < 2; ++pass)
+				{
+					const u32 lineCount = pass == 0 ? width : height;
+					const u32 lineLength = pass == 0 ? height : width;
+					positions.assign(lineCount, {});
+					for (u32 line = 8; line + 8 < lineCount; ++line)
+					{
+						auto L = [&](u32 i) { return pass == 0 ? luma[(size_t)i * width + line] : luma[(size_t)line * width + i]; };
+						for (u32 i = 4; i + 5 < lineLength; ++i)
+						{
+							if ((L(i) - mid) * (L(i + 1) - mid) >= 0.0f)
+							{
+								continue;
+							}
+							const real total = glm::abs(L(i + 2) - L(i - 1));
+							if (total < range * 0.6f)
+							{
+								continue; // Not a clean edge (e.g. a corner)
+							}
+							real maxStep = 0.0f;
+							for (u32 j = i - 1; j < i + 2; ++j)
+							{
+								maxStep = glm::max(maxStep, glm::abs(L(j + 1) - L(j)));
+							}
+							const real smoothness = 1.0f - maxStep / total;
+							smoothnessSum += smoothness;
+							steppedCount += smoothness < 0.05f ? 1 : 0;
+							sharpnessSum += glm::min(total / glm::max(glm::abs(L(i + 4) - L(i - 3)), 1e-4f), 1.0f);
+							++crossings;
+
+							// Where the edge is: the window start plus how much of the window is still on the first side
+							const real a = L(i - 3);
+							const real b = L(i + 4);
+							real pos = (real)i - 3.0f;
+							for (u32 j = i - 3; j <= i + 4; ++j)
+							{
+								pos += glm::clamp((L(j) - b) / (a - b), 0.0f, 1.0f);
+							}
+							positions[line].push_back(pos - 0.5f);
+						}
+					}
+
+					auto Nearest = [&](u32 line, real pos, real* outPos) -> bool
+					{
+						for (real p : positions[line])
+						{
+							if (glm::abs(p - pos) < 1.6f)
+							{
+								*outPos = p;
+								return true;
+							}
+						}
+						return false;
+					};
+					// Follow the edge STAIR_RADIUS lines each way: on a straight edge the mean of those positions is the
+					// position at the centre
+					const u32 STAIR_RADIUS = 6;
+					for (u32 line = 8 + STAIR_RADIUS; line + 8 + STAIR_RADIUS < lineCount; ++line)
+					{
+						for (real pos : positions[line])
+						{
+							real sum = pos;
+							bool bFollowed = true;
+							for (i32 dir = -1; dir <= 1 && bFollowed; dir += 2)
+							{
+								real p = pos;
+								for (u32 k = 1; k <= STAIR_RADIUS && bFollowed; ++k)
+								{
+									bFollowed = Nearest((u32)((i32)line + dir * (i32)k), p, &p);
+									sum += p;
+								}
+							}
+							if (bFollowed)
+							{
+								stairSum += glm::abs(pos - sum / (real)(2 * STAIR_RADIUS + 1));
+								++stairCount;
+							}
+						}
+					}
+				}
+
+				Result& result = m_Results[phase];
+				m_bMeasured[phase] = true;
+				if (crossings < 32)
+				{
+					PrintError("AA motion test (%s): only %u edge crossings found (contrast %.2f), is the scene visible?\n", MODE_NAMES[phase], crossings, range);
+					return;
+				}
+				result.crossings = crossings;
+				result.smoothness = smoothnessSum / crossings;
+				result.stepped = (real)steppedCount / crossings;
+				result.sharpness = sharpnessSum / crossings;
+				result.stairs = stairSum / glm::max(stairCount, 1u);
+				Print("AA motion test (%s, %ux%u): smoothness %.3f, stepped %.2f, sharpness %.3f, stairs %.4f (%u edge crossings)\n",
+					MODE_NAMES[phase], width, height, result.smoothness, result.stepped, result.sharpness, result.stairs, crossings);
+			}
+
+			bool m_bSaveImages = false;
+			u32 m_Frame = 0;
+			i32 m_PrevMode = 1;
+			glm::vec3 m_StartPos = VEC3_ZERO;
+			real m_Yaw = 0.0f;
+			real m_Pitch = 0.0f;
+			u32 m_CaptureSerial = 0;
+			bool m_bWaitingForCapture = false;
+			Result m_Results[MODE_COUNT];
+			bool m_bMeasured[MODE_COUNT] = {};
+		};
+		AAMotionTest* s_AAMotionTest = nullptr;
 	} // anonymous namespace
 
 	SceneTestRunner* SceneTestRunner::s_Instance = nullptr;
@@ -2234,6 +2500,10 @@ namespace flex
 			if (s_VehicleTest != nullptr)
 			{
 				s_VehicleTest->Update();
+			}
+			if (s_AAMotionTest != nullptr)
+			{
+				s_AAMotionTest->Update();
 			}
 			if (s_bTrackTest)
 			{
@@ -2492,6 +2762,11 @@ namespace flex
 			g_Renderer->SetDebugOverlayID(atoi(overlay));
 		}
 
+		if (m_CurrentEntryName.find("scene_ft_aa_motion") != std::string::npos && !m_bProfile)
+		{
+			s_AAMotionTest = new AAMotionTest(m_bCaptureScreenshots);
+		}
+
 		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
 		if (terrainGenerator != nullptr)
 		{
@@ -2585,6 +2860,13 @@ namespace flex
 		}
 
 		g_Renderer->GetPhysicsDebuggingSettings().bDrawWireframe = m_bPrevDrawPhysicsWireframe;
+
+		if (s_AAMotionTest != nullptr)
+		{
+			s_AAMotionTest->Finish();
+			delete s_AAMotionTest;
+			s_AAMotionTest = nullptr;
+		}
 
 		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
 		if (terrainGenerator == nullptr)

@@ -1,6 +1,7 @@
 #version 450
 
 #include "vk_misc.glsl"
+#include "vk_water_common.glsl"
 
 layout (constant_id = 6) const int ENABLE_WATER_CLIP = 0;
 
@@ -15,6 +16,7 @@ layout (binding = 0) uniform UBOConstant
 	SpotLight spotLights[NUM_SPOT_LIGHTS];
 	AreaLight areaLights[NUM_AREA_LIGHTS];
 	SkyboxData skyboxData;
+	vec4 time; // x: seconds (wrapped, see AnimationTime), y: time of day
 	ShadowSamplingData shadowSamplingData;
 	WaterClipData waterClipData;
 	float zNear;
@@ -142,25 +144,38 @@ void main()
 		N = -N;
 	}
 
-	// Fade out high frequency detail with distance to avoid aliasing
-	float fineDetail = 1.0 - smoothstep(30.0, 250.0, dist);
-	float midDetail = 1.0 - smoothstep(150.0, 1500.0, dist);
+	// Fade out high frequency detail with distance to avoid aliasing (sooner at lower shader quality levels, where
+	// the faded out noise isn't evaluated)
+	float detailRange = QUALITY_LEVEL <= 0 ? 0.35 : (QUALITY_LEVEL == 1 ? 0.65 : 1.0);
+	float fineDetail = 1.0 - smoothstep(30.0 * detailRange, 250.0 * detailRange, dist);
+	float midDetail = 1.0 - smoothstep(150.0 * detailRange, 1500.0 * detailRange, dist);
 	float coarseDetail = 1.0 - smoothstep(1500.0, 8000.0, dist);
 
 	vec3 albedo;
 	float roughness = 1.0;
 	float specularStrength = 0.0;
+	// Water: how high the waves are [0, 1], foam [0, 1] (see vk_water_common.glsl)
+	float waterCrest = 0.0;
+	float waterFoam = 0.0;
 
 	if (bWater)
 	{
 		albedo = pow(ex_Colour.rgb, vec3(2.2));
-		// Gentle ripples
+		// Wind waves, flattening out in the distance, with irregular ripples on top
+		N = WaterWaveNormal(renderOrigin.xz, posWS.xz, uboConstant.time.x, mix(0.2, 1.0, midDetail), fineDetail, waterCrest);
 		vec4 ripple0 = Noise(0.5);
-		vec4 ripple1 = NoiseOffset(2.0, vec3(17.3, 0.0, 5.1));
-		vec3 rippleGradient = (ripple0.yzw * 0.3 + ripple1.yzw * 0.08) * midDetail;
-		N = normalize(vec3(-rippleGradient.x, 1.0, -rippleGradient.z));
+		if (QUALITY_LEVEL >= 1)
+		{
+			vec4 ripple1 = NoiseOffset(2.0, vec3(17.3, 0.0, 5.1));
+			N = normalize(N - vec3(ripple1.y, 0.0, ripple1.w) * 0.05 * fineDetail);
+		}
+		N = normalize(N - vec3(ripple0.y, 0.0, ripple0.w) * 0.12 * midDetail);
+		if (QUALITY_LEVEL >= 1)
+		{
+			waterFoam = WaterFoam(waterCrest * 0.92, 1.0 - N.y, ripple0.x * 2.0 - 1.0, fineDetail);
+		}
 		roughness = 0.1;
-		specularStrength = 1.0;
+		specularStrength = 0.6;
 	}
 	else
 	{
@@ -390,6 +405,15 @@ void main()
 	groundCol += albedo * skyIrradiance * skyLight * (0.65 + 0.35 * max(N.y, 0.0));
 	groundCol += albedo * localLight;
 	groundCol += specular;
+	if (bWater && uboConstant.dirLight.enabled != 0)
+	{
+		// Sunlight scattered through the crests (in the water's own colour, brightened), & foam
+		vec3 L = normalize(uboConstant.dirLight.direction);
+		vec3 sunRadiance = uboConstant.dirLight.colour.rgb * uboConstant.dirLight.brightness * dirLightShadowOpacity;
+		groundCol += albedo * 2.5 * sunRadiance * WaterCrestScatter(V, L, N, waterCrest) * 0.6;
+		vec3 foamLit = vec3(0.85, 0.9, 0.92) * (skyIrradiance * skyLight + sunRadiance * (0.3 + 0.7 * max(dot(N, L), 0.0)));
+		groundCol = mix(groundCol, foamLit, waterFoam);
+	}
 
 	fragmentColour.w = 1.0;
 	fragmentColour.xyz = groundCol;
@@ -405,8 +429,14 @@ void main()
 		// Reflect the sky (in the same space the skybox is drawn in)
 		vec3 R = reflect(viewDir, N);
 		R.y = abs(R.y);
-		float waterFresnel = 0.03 + 0.97 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
+		float waterFresnel = WaterFresnel(dot(N, V)) * (1.0 - waterFoam);
 		fragmentColour.rgb = mix(fragmentColour.rgb, SkyColour(R, uboConstant.skyboxData) * mix(0.6, 1.0, dirLightShadowOpacity), waterFresnel);
+		if (uboConstant.dirLight.enabled != 0)
+		{
+			vec3 L = normalize(uboConstant.dirLight.direction);
+			float sunUp = smoothstep(-0.05, 0.08, L.y);
+			fragmentColour.rgb += WaterSunGlint(N, V, L, sunUp, uboConstant.skyboxData) * dirLightShadowOpacity * (1.0 - waterFoam);
+		}
 	}
 
 	ApplyDistanceFog(dist, viewDir, uboConstant.skyboxData, /* inout */ fragmentColour.rgb);

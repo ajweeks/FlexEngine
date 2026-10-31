@@ -1,5 +1,14 @@
 #version 420
 
+// Temporal anti-aliasing resolve (runs on the graded, display space scene; see Renderer::SetAntiAliasing)
+// - The camera's projection is jittered every frame (BaseCamera::JitterMatrix, a Halton sequence within a pixel), so
+//   accumulating frames averages each pixel's coverage.
+// - Motion vectors come from the depth buffer: each pixel's position is reprojected with last frame's (unjittered)
+//   view projection. The closest depth in a 3x3 neighbourhood is used so edges move with the foreground object.
+// - Objects which move on their own (and transparents, which don't write depth) have no motion vectors, so the
+//   history is clipped to the current neighbourhood's colour distribution (variance clipping in YCoCg) to stop them
+//   ghosting. Pixels whose history was rejected get more of the current frame.
+
 #include "vk_misc.glsl"
 
 layout (location = 0) in vec2 ex_TexCoord;
@@ -15,132 +24,166 @@ layout (binding = 0) uniform UBOConstant
 
 layout (push_constant) uniform PushConstants
 {
-	float kl;
-	float kh;
+	// x: minimum history weight (fast change), y: maximum history weight (static), z: 1 to discard the history (first
+	// frame, resize, camera cut), w: history weight lost per pixel of motion
+	vec4 params;
 } pushConstants;
 
 layout (binding = 1) uniform sampler2D in_DepthBuffer;
 layout (binding = 2) uniform sampler2D in_SceneTexture;
 layout (binding = 3) uniform sampler2D in_HistoryTexture;
 
-vec3 ReconstructWSPosFromDepth(vec2 uv, float depth)
+vec3 ReconstructRSPosFromDepth(vec2 uv, float depth)
 {
 	float x = uv.x * 2.0 - 1.0;
 	float y = (1.0 - uv.y) * 2.0 - 1.0;
-	vec4 pos = vec4(x, y, depth, 1.0);
-	vec4 posVS = uboConstant.invProj * pos;
-	vec3 posNDC = posVS.xyz / posVS.w;
-	return (uboConstant.invView * vec4(posNDC, 1)).xyz;
+	vec4 posVS = uboConstant.invProj * vec4(x, y, depth, 1.0);
+	return (uboConstant.invView * vec4(posVS.xyz / posVS.w, 1.0)).xyz;
 }
 
-// vec4 DetectEdges_Colour(vec2 uv)
-// {
-// 	// TODO: Define elsewhere
-// 	const float PIXEL_SIZE = 0.01f;
-// 	const float threshold = 0.01f;
+vec3 RGBToYCoCg(vec3 c)
+{
+	return vec3(
+		 0.25 * c.r + 0.5 * c.g + 0.25 * c.b,
+		 0.5  * c.r             - 0.5  * c.b,
+		-0.25 * c.r + 0.5 * c.g - 0.25 * c.b);
+}
 
-// 	vec3 weights = vec3(0.2126, 0.7152, 0.0722);
-// 	// NOTE: in_HistoryTexture must be gamma-corrected! (non-sRGB)
-// 	float center = dot(texture(in_HistoryTexture, uv).rgb, weights);
-// 	float f = texelFetchOffset(in_HistoryTexture, ivec2(uv), 0, 1);
-// 	float left = dot(.rgb, weights);
-// 	float top = dot(texelFetchOffset(in_HistoryTexture, ivec2(uv), 0, 1).rgb, weights);
-// 	float right = dot(texelFetchOffset(in_HistoryTexture, uv, 0, 2).rgb, weights);
-// 	float bottom = dot(texelFetchOffset(in_HistoryTexture, uv, 0, 3).rgb, weights);
+vec3 YCoCgToRGB(vec3 c)
+{
+	return vec3(c.x + c.y - c.z, c.x + c.z, c.x - c.y - c.z);
+}
 
+vec3 SafeColour(vec3 c)
+{
+	// A NaN/inf from one bad frame (e.g. a broken mesh) would otherwise live in the history forever & spread through
+	// the reprojection
+	return (any(isnan(c)) || any(isinf(c))) ? vec3(0.0) : max(c, vec3(0.0));
+}
 
-// 	vec4 delta = abs(center.xxxx - vec4(left, top, right, bottom));
-// 	vec4 edges = step(threshold.xxxx, delta);
+// 5 tap Catmull-Rom filter (bilinear taps at the corners skipped), which keeps the history sharp when it's resampled
+// under motion (a bilinear history blurs a little more every frame)
+vec3 SampleHistoryCatmullRom(vec2 uv, vec2 texSize)
+{
+	vec2 samplePos = uv * texSize;
+	vec2 texPos1 = floor(samplePos - 0.5) + 0.5;
+	vec2 f = samplePos - texPos1;
 
-// 	if (dot(edges, vec4(1.0)) == 0.0) discard;
+	vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f));
+	vec2 w1 = 1.0 + f * f * (-2.5 + 1.5 * f);
+	vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f));
+	vec2 w3 = f * f * (-0.5 + 0.5 * f);
 
-// 	return edges;
-// }
+	vec2 w12 = w1 + w2;
+	vec2 offset12 = w2 / w12;
+
+	vec2 texPos0 = (texPos1 - 1.0) / texSize;
+	vec2 texPos3 = (texPos1 + 2.0) / texSize;
+	vec2 texPos12 = (texPos1 + offset12) / texSize;
+
+	vec3 result =
+		texture(in_HistoryTexture, vec2(texPos12.x, texPos0.y)).rgb * (w12.x * w0.y) +
+		texture(in_HistoryTexture, vec2(texPos0.x, texPos12.y)).rgb * (w0.x * w12.y) +
+		texture(in_HistoryTexture, vec2(texPos12.x, texPos12.y)).rgb * (w12.x * w12.y) +
+		texture(in_HistoryTexture, vec2(texPos3.x, texPos12.y)).rgb * (w3.x * w12.y) +
+		texture(in_HistoryTexture, vec2(texPos12.x, texPos3.y)).rgb * (w12.x * w3.y);
+	float weightSum = w12.x * w0.y + w0.x * w12.y + w12.x * w12.y + w3.x * w12.y + w12.x * w3.y;
+	return max(result / weightSum, vec3(0.0));
+}
+
+// Clips colour towards the centre of the box (rather than clamping each channel), which keeps its hue
+vec3 ClipToAABB(vec3 colour, vec3 boxMin, vec3 boxMax)
+{
+	vec3 centre = 0.5 * (boxMax + boxMin);
+	vec3 extents = max(0.5 * (boxMax - boxMin), vec3(1e-5));
+	vec3 offset = colour - centre;
+	vec3 ts = abs(extents / max(abs(offset), vec3(1e-5)));
+	float t = clamp(min(ts.x, min(ts.y, ts.z)), 0.0, 1.0);
+	return centre + offset * t;
+}
 
 void main()
 {
-	ivec2 texSize = textureSize(in_SceneTexture, 0);
-	vec2 pixelSize = 1.0 / texSize;
+	vec2 texSize = vec2(textureSize(in_SceneTexture, 0));
+	vec2 texelSize = 1.0 / texSize;
+	ivec2 pixel = ivec2(ex_TexCoord * texSize);
+	ivec2 maxPixel = ivec2(texSize) - 1;
+	vec2 uv = (vec2(pixel) + 0.5) * texelSize;
 
-	vec2 uv = ex_TexCoord;
-
-	float nonLinearDepth = texture(in_DepthBuffer, uv).r;
-	vec3 posWS = ReconstructWSPosFromDepth(uv, nonLinearDepth);
-
-	vec4 lastFrameHCPos = uboConstant.lastFrameViewProj * vec4(posWS, 1.0);
-	lastFrameHCPos.xyz /= lastFrameHCPos.w;
-	lastFrameHCPos.y = -lastFrameHCPos.y;
-	vec2 historyUV = lastFrameHCPos.xy * 0.5 + 0.5;
-
-	float alpha = 1.0 / TAA_SAMPLE_COUNT;
-
-	vec3 sceneCol = texture(in_SceneTexture, uv).rgb;
-	vec3 historyCol = texture(in_HistoryTexture, historyUV).rgb;
-
-	float nonLinearDepthP = texture(in_DepthBuffer, historyUV).r;
-
-	if (nonLinearDepthP < nonLinearDepth || // Disocclusion
-		(nonLinearDepth < 1e-7) || (nonLinearDepthP < 1e-7)) // Hit skybox
+	// Neighbourhood: colour moments for the history clip, & the closest depth (reversed-Z: the largest) for motion
+	vec3 m1 = vec3(0.0);
+	vec3 m2 = vec3(0.0);
+	vec3 boxMin = vec3(1e9);
+	vec3 boxMax = vec3(-1e9);
+	vec3 current = vec3(0.0);
+	float closestDepth = -1.0;
+	ivec2 closestOffset = ivec2(0);
+	for (int y = -1; y <= 1; ++y)
 	{
-		alpha = 1.0;
+		for (int x = -1; x <= 1; ++x)
+		{
+			ivec2 p = clamp(pixel + ivec2(x, y), ivec2(0), maxPixel);
+			vec3 c = SafeColour(texelFetch(in_SceneTexture, p, 0).rgb);
+			if (x == 0 && y == 0)
+			{
+				current = c;
+			}
+			vec3 cy = RGBToYCoCg(c);
+			m1 += cy;
+			m2 += cy * cy;
+			boxMin = min(boxMin, cy);
+			boxMax = max(boxMax, cy);
+
+			// Low quality only dilates over the cross
+			if (QUALITY_LEVEL >= 1 || x == 0 || y == 0)
+			{
+				float d = texelFetch(in_DepthBuffer, p, 0).r;
+				if (d > closestDepth)
+				{
+					closestDepth = d;
+					closestOffset = ivec2(x, y);
+				}
+			}
+		}
 	}
 
-#if 0
-	if ((nonLinearDepth < 1e-7 && nonLinearDepthP > 1e-7))
+	// Reproject (the matrices are unjittered, so a static camera maps every pixel onto itself)
+	vec2 closestUV = uv + vec2(closestOffset) * texelSize;
+	vec3 posRS = ReconstructRSPosFromDepth(closestUV, closestDepth);
+	vec4 lastHC = uboConstant.lastFrameViewProj * vec4(posRS, 1.0);
+	vec2 lastNDC = lastHC.xy / lastHC.w;
+	vec2 velocity = vec2(lastNDC.x * 0.5 + 0.5, -lastNDC.y * 0.5 + 0.5) - closestUV;
+	vec2 historyUV = uv + velocity;
+
+	bool bHistoryValid = pushConstants.params.z < 0.5 && lastHC.w > 0.0 &&
+		all(greaterThanEqual(historyUV, vec2(0.0))) && all(lessThanEqual(historyUV, vec2(1.0)));
+	if (!bHistoryValid)
 	{
-		out_Colour = vec4(1.0, 0.0, 0.0, 1.0);
+		out_Colour = vec4(current, 1.0);
 		return;
 	}
 
-	if ((nonLinearDepth > 1e-7 && nonLinearDepthP < 1e-7))
-	{
-		out_Colour = vec4(0.0, 1.0, 0.0, 1.0);
-		return;
-	}
-#endif
+	vec3 history = (QUALITY_LEVEL >= 1) ? SampleHistoryCatmullRom(historyUV, texSize) : texture(in_HistoryTexture, historyUV).rgb;
+	history = SafeColour(history);
 
-	// vec3 cTL = texture(in_SceneTexture, ex_TexCoord + vec2(0, pixelSize.y)).rgb;
-	// vec3 cTR = texture(in_SceneTexture, ex_TexCoord + vec2(pixelSize.x, pixelSize.y)).rgb;
-	// vec3 cBL = texture(in_SceneTexture, ex_TexCoord + vec2(0, 0)).rgb;
-	// vec3 cBR = texture(in_SceneTexture, ex_TexCoord + vec2(pixelSize.x, 0)).rgb;
+	// Variance clip (the box of mean +- stddev, limited to the min/max box)
+	// (1.5: a tighter box clipped the history of jittered edge pixels, whose 3x3 holds both sides, so they never converged)
+	const float gamma = 1.5;
+	vec3 mean = m1 / 9.0;
+	vec3 stddev = sqrt(max(m2 / 9.0 - mean * mean, vec3(0.0)));
+	vec3 clipMin = max(boxMin, mean - gamma * stddev);
+	vec3 clipMax = min(boxMax, mean + gamma * stddev);
+	vec3 historyYCoCg = RGBToYCoCg(history);
+	vec3 clippedYCoCg = ClipToAABB(historyYCoCg, clipMin, clipMax);
+	history = YCoCgToRGB(clippedYCoCg);
 
-	// vec3 cMin = min(cTL, min(cTR, min(cBL, cBR)));
-	// vec3 cMax = max(cTL, max(cTR, max(cBL, cBR)));
+	// History weight: high while the history agrees with the neighbourhood (static & anti-aliased edges), lower as it's
+	// rejected (clipped far) or as the pixel moves (each resample blurs a little). (Weighting by the current pixel's
+	// luminance difference, as some TAAs do, kept jittered edges from converging: they always differ.)
+	float rejection = length(historyYCoCg - clippedYCoCg) / max(clippedYCoCg.x, 0.05);
+	float weight = mix(pushConstants.params.y, pushConstants.params.x, clamp(rejection * 2.0, 0.0, 1.0));
+	float motionPixels = length(velocity * texSize);
+	weight = clamp(weight - motionPixels * pushConstants.params.w, pushConstants.params.x, pushConstants.params.y);
 
-	// Ignore samples outside the frame buffer
-	if (historyUV.x > 1.0 || historyUV.x < 0.0 || historyUV.y > 1.0 || historyUV.y < 0.0)
-	{
-		alpha = 1.0;
-	}
-
-	// A NaN/inf from one bad frame (e.g. a broken mesh) would otherwise live in the history forever & spread through
-	// the reprojection, so drop non-finite samples
-	if (any(isnan(sceneCol)) || any(isinf(sceneCol)))
-	{
-		sceneCol = vec3(0.0);
-	}
-	if (any(isnan(historyCol)) || any(isinf(historyCol)) || isnan(alpha))
-	{
-		alpha = 1.0;
-		historyCol = sceneCol;
-	}
-
-	// vec3 wk = abs((cTL+cTR+cBL+cBR)*0.25-sceneCol);
-
-	out_Colour = vec4(mix(historyCol, sceneCol, alpha), 1.0);
-	
-	// vec3 w = clamp(1.0/(mix(vec3(pushConstants.kl), vec3(pushConstants.kh), wk)), 0.0, 1.0);
-	// out_Colour = vec4(mix(clamp(historyCol, cMin, cMax), sceneCol, w), 1.0);
-	//out_Colour = vec4(w, 1.0);
-	
-	//out_Colour = vec4(mix(clamp(historyCol, cMin, cMax), sceneCol, alpha), 1.0);
-	// out_Colour = vec4(vec3(alpha), 1.0);
-	
-	// float range = (1.0 - initialWeight);
-	// out_Colour = mix(out_Colour, vec4(1.0, 0.0, 0.0, 1.0), (alpha - initialWeight) / range);
-
-	// vec3 diff = abs(newSceneCol - sceneCol);
-	// out_Colour = mix(out_Colour, vec4(1.0, 0.0, 0.0, 1.0), diff.x+diff.y+diff.z);
-
-	// out_Colour = mix(out_Colour, vec4(1, 0, 0, 1), clamp(length(w), 0, 1));
+	out_Colour = vec4(mix(current, history, weight), 1.0);
 }

@@ -100,6 +100,13 @@ namespace flex
 			Platform::CreateDirectoryRecursive(directory);
 			m_ScreenshotFilePath = directory + "flex_" + Platform::GetDateString_YMDHMS() + ".png";
 		}
+		m_bCaptureToMemoryOnly = false;
+	}
+
+	void Renderer::RequestFrameCapture()
+	{
+		m_bCaptureScreenshot = true;
+		m_bCaptureToMemoryOnly = true;
 	}
 
 	void Renderer::Initialize()
@@ -137,15 +144,7 @@ namespace flex
 
 		// TODO: Move these defaults to config file
 
-		for (u32 i = 0; i < MAX_SSAO_KERNEL_SIZE; ++i)
-		{
-			glm::vec3 sample(RandomFloat(-0.9f, 0.9f), RandomFloat(-0.9f, 0.9f), RandomFloat(0.0f, 1.0f));
-			sample = glm::normalize(sample); // Snap to surface of hemisphere
-			sample *= RandomFloat(0.0f, 1.0f); // Space out linearly
-			real scale = (real)i / (real)MAX_SSAO_KERNEL_SIZE;
-			scale = Lerp(0.1f, 1.0f, scale * scale); // Bring distribution of samples closer to origin
-			m_SSAOGenData.samples[i] = glm::vec4(sample * scale, 0.0f);
-		}
+		GenerateSSAOKernel(MAX_SSAO_KERNEL_SIZE);
 		m_SSAOGenData.radius = 1.0f;
 
 		m_SSAOBlurDataConstant.radius = 3;
@@ -170,6 +169,11 @@ namespace flex
 		PROFILE_AUTO("Renderer PostInitialize");
 
 		InitializeFreeType();
+
+		if (getenv("FLEX_AA") != nullptr)
+		{
+			SetAntiAliasing(GetAntiAliasing());
+		}
 
 		// TODO: Use MeshComponent for these objects?
 		m_UIMesh->Initialize();
@@ -396,14 +400,45 @@ namespace flex
 		}
 	}
 
+	void Renderer::GenerateSSAOKernel(u32 kernelSize)
+	{
+		kernelSize = glm::clamp(kernelSize, 1u, (u32)MAX_SSAO_KERNEL_SIZE);
+		for (u32 i = 0; i < MAX_SSAO_KERNEL_SIZE; ++i)
+		{
+			glm::vec3 sample(RandomFloat(-0.9f, 0.9f), RandomFloat(-0.9f, 0.9f), RandomFloat(0.0f, 1.0f));
+			sample = glm::normalize(sample); // Snap to surface of hemisphere
+			sample *= RandomFloat(0.0f, 1.0f); // Space out linearly
+			// The shader only reads the first kernelSize samples, so they span the whole radius
+			real scale = (real)(i % kernelSize) / (real)kernelSize;
+			scale = Lerp(0.1f, 1.0f, scale * scale); // Bring distribution of samples closer to origin
+			m_SSAOGenData.samples[i] = glm::vec4(sample * scale, 0.0f);
+		}
+	}
+
 	void Renderer::SetShaderQualityLevel(i32 newQualityLevel)
 	{
 		newQualityLevel = glm::clamp(newQualityLevel, 0, MAX_SHADER_QUALITY_LEVEL);
 		m_ShaderQualityLevel = newQualityLevel;
+		bool bRecreate = false;
 		SpecializationConstantMetaData& specializationConstantMetaData = m_SpecializationConstants[SID("shader_quality_level")];
 		if (newQualityLevel != specializationConstantMetaData.value)
 		{
 			specializationConstantMetaData.value = newQualityLevel;
+			bRecreate = true;
+		}
+		// SSAO samples per pixel follow the shader quality level too (one per level)
+		static const i32 s_SSAOKernelSizes[] = { 16, 32, 64, 64 };
+		const i32 ssaoKernelSize = s_SSAOKernelSizes[newQualityLevel];
+		SpecializationConstantMetaData& ssaoKernelSizeConstant = m_SpecializationConstants[SID("ssao_kernel_size")];
+		if (ssaoKernelSizeConstant.value != ssaoKernelSize)
+		{
+			ssaoKernelSizeConstant.value = ssaoKernelSize;
+			GenerateSSAOKernel((u32)ssaoKernelSize);
+			m_bSSAOStateChanged = true;
+			bRecreate = true;
+		}
+		if (bRecreate)
+		{
 			RecreateEverything();
 		}
 	}
@@ -1020,6 +1055,7 @@ namespace flex
 		{
 			m_bEnableTAA = bEnabled;
 			m_bTAAStateChanged = true;
+			m_bTAAHistoryInvalid = true;
 		}
 	}
 
@@ -1054,8 +1090,13 @@ namespace flex
 		}
 	}
 
-	void Renderer::SetAntiAliasing(i32 mode)
+	void Renderer::SetAntiAliasing(i32 mode, bool bIgnoreOverride /* = false */)
 	{
+		static const char* s_ForcedMode = getenv("FLEX_AA");
+		if (s_ForcedMode != nullptr && !bIgnoreOverride)
+		{
+			mode = atoi(s_ForcedMode);
+		}
 		mode = glm::clamp(mode, 0, 2);
 		m_PostProcessSettings.bEnableFXAA = mode == 1;
 		SetTAAEnabled(mode == 2);
@@ -2738,7 +2779,7 @@ namespace flex
 		m_Shaders[shaderID]->renderPassType = RenderPassType::TAA_RESOLVE;
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
 		m_Shaders[shaderID]->bNeedPushConstantBlock = true;
-		m_Shaders[shaderID]->pushConstantBlockSize = 8;
+		m_Shaders[shaderID]->pushConstantBlockSize = 16; // vec4 params
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION | // TODO: POS2
 			(u32)VertexAttribute::UV;
@@ -2755,9 +2796,11 @@ namespace flex
 		m_Shaders[shaderID]->dynamicBufferUniforms = {};
 		++shaderID;
 
-		// Gamma Correct
+		// Gamma Correct (& FXAA)
 		m_Shaders[shaderID]->renderPassType = RenderPassType::GAMMA_CORRECT;
 		m_Shaders[shaderID]->bDepthWriteEnable = false;
+		m_Shaders[shaderID]->bNeedPushConstantBlock = true;
+		m_Shaders[shaderID]->pushConstantBlockSize = 16; // vec4 params
 		m_Shaders[shaderID]->vertexAttributes =
 			(u32)VertexAttribute::POSITION | // TODO: POS2
 			(u32)VertexAttribute::UV;
@@ -2836,6 +2879,7 @@ namespace flex
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SPOT_LIGHTS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_AREA_LIGHTS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SKYBOX_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TIME);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SHADOW_SAMPLING_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_WATER_CLIP_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_NEAR_FAR_PLANES);
@@ -2868,6 +2912,7 @@ namespace flex
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SPOT_LIGHTS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_AREA_LIGHTS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SKYBOX_DATA);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_TIME);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SHADOW_SAMPLING_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_WATER_CLIP_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_NEAR_FAR_PLANES);
@@ -2891,7 +2936,7 @@ namespace flex
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_CAM_POS);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_RENDER_ORIGIN);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW);
-		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_PROJECTION);
+		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_VIEW_PROJECTION);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_DIR_LIGHT);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_OCEAN_DATA);
 		m_Shaders[shaderID]->constantBufferUniforms.AddUniform(&U_SKYBOX_DATA);

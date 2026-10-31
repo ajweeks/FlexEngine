@@ -379,6 +379,7 @@ namespace flex
 		return m_Player->m_bPossessed &&
 			!m_Player->IsAnyInventoryShowing() &&
 			!m_Player->m_RidingVehicleID.IsValid() &&
+			!m_Player->m_bMounted &&
 			m_Player->m_TrackRidingID == InvalidTrackID &&
 			!m_Player->m_bAwaitingTerrainCollision &&
 			!g_EngineInstance->IsSimulationPaused();

@@ -386,6 +386,7 @@ namespace flex
 				{ "charcoal", LOC_ID(Item_Charcoal) },
 				{ "berries", LOC_ID(Item_Berries) },
 				{ "coconut", LOC_ID(Item_Coconut) },
+				{ "egg", LOC_ID(Item_Egg) },
 				{ "dune buggy", LOC_ID(Item_DuneBuggy) },
 				{ "row boat", LOC_ID(Item_RowBoat) },
 				{ "headlamp", LOC_ID(Item_Headlamp) },

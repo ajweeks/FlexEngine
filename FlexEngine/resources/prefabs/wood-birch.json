@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "43179EE271AC40278F0D57E86B7E09C6",
+	"root" : 
+	{
+		"id" : "4358AA6A5D3F49A4B72B8589771D7E76",
+		"name" : "wood birch",
+		"type" : "object",
+		"mesh" : "cylinder.glb",
+		"materials" : 
+		[
+			"wood log birch"
+		]
+	}
+}

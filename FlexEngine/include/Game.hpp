@@ -60,6 +60,7 @@ namespace flex
 			PAUSED,
 			MAP,
 			CONSOLE, // The console is open while playing (the game is paused)
+			PERF_RESULTS, // Report of the main menu's performance test
 		};
 
 		struct WorldInfo
@@ -89,7 +90,7 @@ WorldStats stats;
 			bool bShadows = true;
 			Quality shadowQuality = Quality::HIGH; // Renderer::SetShadowQuality
 			Quality drawDistance = Quality::ULTRA; // LOW: near ... ULTRA: maximum (see DRAW_DISTANCE_SCALES)
-			i32 antiAliasing = 1; // 0: off, 1: FXAA, 2: TAA (a mode, not a quality)
+			i32 antiAliasing = 2; // 0: off, 1: FXAA, 2: TAA (a mode, not a quality; the high preset's)
 			bool bAmbientOcclusion = true;
 			Quality effectsQuality = Quality::HIGH; // The shader quality level (shader_quality_level = (i32)effectsQuality)
 			bool bVSync = false;
@@ -129,6 +130,8 @@ WorldStats stats;
 
 		// Counts the explored area & distance travelled around the player (while playing)
 		void UpdateExplored();
+		// Notifies & counts when the player stands on a new peak (a local high point which towers over its surroundings)
+		void UpdateSummits(class Player* player);
 
 		void RefreshWorlds();
 		void CreateWorld(const std::string& name, i32 seed);
@@ -178,6 +181,8 @@ WorldStats stats;
 		friend WorldStats* GetCurrentWorldStats();
 		// Packed cell coordinates (see UpdateExplored) of the current world's explored area
 		std::unordered_set<u32> m_ExploredCells;
+		std::unordered_set<u32> m_SummitCells; // Packed 160m cells of the summits reached (same packing)
+		sec m_SummitCheckTimer = 0.0f;
 		glm::vec3 m_LastPlayerPos = glm::vec3(0.0f);
 		bool m_bHaveLastPlayerPos = false;
 		// The view direction restored when loading (kept while the loading screen is up)
@@ -210,6 +215,8 @@ WorldStats stats;
 		std::string m_TourWorldDirectory; // Deleted at the end of the tour
 		// FLEX_BUILD_TEST: after the tour builds its hut, views it from several angles & shows placement previews
 		void UpdateBuildTest();
+		void StartPerfTest();
+		void DrawPerfResults();
 		// A small hut with one of every build piece
 		void BuildTourHut(const glm::vec3& base, real yaw);
 		bool m_bBuildTest = false;

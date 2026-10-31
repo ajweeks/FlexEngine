@@ -710,14 +710,54 @@ namespace flex
 		}
 	}
 
+	void Player::Die(const glm::vec3& deathPos)
+	{
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		u32 stackIndex = 0;
+		auto Drop = [&](GameObjectStack& stack)
+		{
+			if (stack.count > 0 && stack.prefabID.IsValid() && scene != nullptr)
+			{
+				// Spread out in a ring so the stacks don't sit on top of each other
+				const real angle = (real)stackIndex++ * 2.39996f;
+				const real radius = 0.4f + 0.12f * glm::sqrt((real)stackIndex);
+				const glm::vec3 pos = deathPos + glm::vec3(std::cos(angle) * radius, 1.0f, std::sin(angle) * radius);
+				if (DroppedItem* item = scene->CreateDroppedItem(stack.prefabID, stack.count, pos, VEC3_ZERO))
+				{
+					item->pickupDelay = 4.0f;
+					item->bSaved = true;
+				}
+			}
+		};
+		for (GameObjectStack& stack : m_WearablesInventory)
+		{
+			if (stack.count > 0)
+			{
+				OnWearableUnequipped(&stack);
+			}
+			Drop(stack);
+		}
+		for (GameObjectStack& stack : m_QuickAccessInventory)
+		{
+			Drop(stack);
+		}
+		for (GameObjectStack& stack : m_Inventory)
+		{
+			Drop(stack);
+		}
+		ClearInventory();
+		Print("Player died at (%.1f, %.1f, %.1f), dropped %u stacks\n", deathPos.x, deathPos.y, deathPos.z, stackIndex);
+		Reset();
+	}
+
 	void Player::AddStarterKit()
 	{
-		for (const char* toolName : { "pickaxe", "axe", "shovel", "bed", "lasso" })
+		for (const char* toolName : { "pickaxe", "axe", "shovel", "bed", "lasso", "torch" })
 		{
 			const PrefabID toolID = g_ResourceManager->GetPrefabID(toolName);
 			if (toolID.IsValid())
 			{
-				AddToInventory(toolID, 1);
+				AddToInventory(toolID, toolName[0] == 't' ? 4 : 1);
 			}
 		}
 	}

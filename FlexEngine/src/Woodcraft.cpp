@@ -593,14 +593,14 @@ namespace flex
 		i32 count = 0;
 		for (const GameObjectStack& stack : m_Player->m_Inventory)
 		{
-			if (stack.count > 0 && stack.prefabID == prefabID)
+			if (stack.count > 0 && woodcraft::ItemMatches(prefabID, stack.prefabID))
 			{
 				count += stack.count;
 			}
 		}
 		for (const GameObjectStack& stack : m_Player->m_QuickAccessInventory)
 		{
-			if (stack.count > 0 && stack.prefabID == prefabID)
+			if (stack.count > 0 && woodcraft::ItemMatches(prefabID, stack.prefabID))
 			{
 				count += stack.count;
 			}
@@ -621,7 +621,7 @@ namespace flex
 			for (u32 i = 0; i < stackCount && count > 0; ++i)
 			{
 				GameObjectStack& stack = stacks[i];
-				if (stack.count > 0 && stack.prefabID == prefabID)
+				if (stack.count > 0 && woodcraft::ItemMatches(prefabID, stack.prefabID))
 				{
 					const i32 taken = glm::min(stack.count, count);
 					stack.count -= taken;

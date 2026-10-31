@@ -1,0 +1,10 @@
+{
+	"version" : 2,
+	"material" : 
+	{
+		"name" : "wood log birch",
+		"shader" : "pbr",
+		"const albedo" : "0.780,0.760,0.700",
+		"const roughness" : 0.850000
+	}
+}

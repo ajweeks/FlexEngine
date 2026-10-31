@@ -48,6 +48,8 @@ namespace flex
 		real density = 800.0f;
 		bool bSettled = false;
 		bool bInWater = false;
+		// Saved with the world (items dropped when the player died)
+		bool bSaved = false;
 
 		static const real MIN_TIME_BEFORE_PICKUP;
 

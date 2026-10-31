@@ -43,7 +43,7 @@ namespace flex
 		// Bump whenever generation output changes to invalidate cached chunks. Worlds record the version they were
 		// created with ("terrain version" in world.bin's META section, 0: before it was recorded), so generation
 		// changes can later be made conditional on it to keep old worlds intact.
-		static const u32 GENERATOR_VERSION = 18; // 18: material classification filtered at coarse LODs
+		static const u32 GENERATOR_VERSION = 19; // 19: LOWER/RAISE edits use a smooth max/min & a wider fade (18: material classification filtered at coarse LODs)
 
 		enum class Material : u8
 		{
@@ -79,7 +79,8 @@ namespace flex
 			REMOVE_PLANT,
 			// Plane brushes: a disc (center, normal, radius) which moves the surface onto the plane through center, within
 			// height of it (along the normal). The effect fades out smoothly towards the disc's rim (see PlaneEditWeight),
-			// so results have gentle, walkable slopes instead of the creases left by spheres.
+			// & LOWER/RAISE join the plane to the terrain with a smooth max/min (PlaneEditSmoothing), so results have
+			// gentle, walkable slopes & rounded rims instead of the creases & spikes left by spheres & hard max/min.
 			LOWER, // Removes material above the plane (a flat bottomed hole, or a terrace cut into a slope)
 			RAISE, // Adds material below the plane (a flat topped mound, or a terrace built out from a slope)
 			FLATTEN, // Both
@@ -128,6 +129,8 @@ namespace flex
 		// [0, 1] strength of a plane edit at offset (from its center): 1 within the inner part of the disc, fading to 0
 		// at its rim & at height from the plane
 		real PlaneEditWeight(const Edit& edit, const glm::vec3& offset);
+		// LOWER & RAISE: radius (meters) of the smooth max/min joining the plane to the terrain
+		real PlaneEditSmoothing(const Edit& edit);
 		// A plane edit (see EditType). height <= 0 picks a default which reaches past the surface of most slopes.
 		Edit MakePlaneEdit(EditType type, const glm::vec3& center, const glm::vec3& normal, real radius, real height, Material material);
 

@@ -1406,6 +1406,29 @@ namespace flex
 		return prefabTemplate != nullptr && IsHandToolType(prefabTemplate->GetTypeID()) ? prefabTemplate->GetTypeID() : InvalidStringID;
 	}
 
+	bool Player::IsHoldingTorch() const
+	{
+		const GameObjectStack& stack = m_QuickAccessInventory[m_SelectedQuickAccessItemSlot];
+		return stack.count > 0 && stack.prefabID.IsValid() && stack.prefabID == g_ResourceManager->GetPrefabID("torch");
+	}
+
+	bool Player::ConsumeHeldTorch(bool bConsume)
+	{
+		if (!IsHoldingTorch())
+		{
+			return false;
+		}
+		if (bConsume)
+		{
+			GameObjectStack& stack = m_QuickAccessInventory[m_SelectedQuickAccessItemSlot];
+			if (--stack.count <= 0)
+			{
+				stack.Clear();
+			}
+		}
+		return true;
+	}
+
 	bool Player::IsWieldingPickAxe() const
 	{
 		return GetWieldedToolType() == PickAxeSID;

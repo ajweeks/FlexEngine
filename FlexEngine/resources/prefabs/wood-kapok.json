@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "6A49721F02644DD89B0D4C3F14A7BCCC",
+	"root" : 
+	{
+		"id" : "8982297B5D584443816BD9102FCF36D0",
+		"name" : "wood kapok",
+		"type" : "object",
+		"mesh" : "cylinder.glb",
+		"materials" : 
+		[
+			"wood log kapok"
+		]
+	}
+}

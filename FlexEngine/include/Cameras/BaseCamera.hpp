@@ -46,6 +46,8 @@ namespace flex
 		glm::vec3 GetRenderOrigin() const { return m_RenderOrigin; }
 		glm::mat4 GetViewRelative() const { return m_ViewRelative; }
 		glm::mat4 GetViewProjectionRelative() const { return m_ViewProjectionRelative; }
+		// Without TAA's sub-pixel jitter (identical when TAA is off)
+		glm::mat4 GetViewProjectionRelativeUnjittered() const { return m_ViewProjectionRelativeUnjittered; }
 
 		// speed: Lerp amount to new rotation
 		void LookAt(glm::vec3 point, real speed = 1.0f);
@@ -140,5 +142,6 @@ namespace flex
 		glm::vec3 m_RenderOrigin = VEC3_ZERO;
 		glm::mat4 m_ViewRelative = MAT4_IDENTITY;
 		glm::mat4 m_ViewProjectionRelative = MAT4_IDENTITY;
+		glm::mat4 m_ViewProjectionRelativeUnjittered = MAT4_IDENTITY;
 	};
 } // namespace flex

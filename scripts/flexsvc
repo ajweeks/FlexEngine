@@ -159,6 +159,30 @@ def claims():
 	return read_json(os.path.join(HOME, "claims.json"), {})
 
 
+def eol_style(path):
+	"""'crlf' | 'lf' | 'mixed' | 'none' (no line breaks) | None (binary or missing)."""
+	try:
+		b = open(path, "rb").read()
+	except OSError:
+		return None
+	if b"\0" in b[:8192]:
+		return None
+	crlf = b.count(b"\r\n")
+	lf = b.count(b"\n") - crlf
+	return "mixed" if crlf and lf else "crlf" if crlf else "lf" if lf else "none"
+
+
+def expand_files(paths):
+	out = []
+	for p in paths:
+		if os.path.isdir(p):
+			for root, _, fs in os.walk(p):
+				out += [os.path.join(root, f) for f in fs]
+		else:
+			out.append(p)
+	return out
+
+
 def post(msg, to=None, sender=None):
 	os.makedirs(HOME, exist_ok=True)
 	msg = " ".join(msg.split("\n"))
@@ -936,6 +960,29 @@ def done():
 				dbg += [l.strip() for l in f if "DBG:" in l]
 		if dbg:
 			problems.append("%d DBG: line(s) left in your files, e.g. %s" % (len(dbg), dbg[0][:120]))
+	snap = read_json(os.path.join(HOME, "eol_%s.json" % AGENT), {})
+	bad_eol = []
+	files = expand_files(mine)
+	in_head = set(subprocess.run(["git", "ls-tree", "-r", "--name-only", "HEAD", "--"] + (mine or ["."]), capture_output=True, text=True).stdout.split())
+
+	def head_has_mixed(f):  # raw blob bytes (not an eol-converted view)
+		blob = subprocess.run(["git", "cat-file", "blob", "HEAD:" + f], capture_output=True).stdout
+		crlf = blob.count(b"\r\n")
+		return crlf > 0 and blob.count(b"\n") > crlf
+	for f in files:
+		now = eol_style(f)
+		if now is None or now == "none":
+			continue
+		before = snap.get(f)  # style when claimed (the repo stores LF, so HEAD can't say what the working file was)
+		if now == "mixed":
+			if f not in in_head or not head_has_mixed(f):
+				bad_eol.append("%s has mixed line endings" % f)
+		elif before in ("crlf", "lf") and before != now:
+			bad_eol.append("%s changed from %s to %s" % (f, before.upper(), now.upper()))
+		elif f not in in_head and now != "crlf":
+			bad_eol.append("%s is new but %s (new files must be CRLF)" % (f, now.upper()))
+	if bad_eol:
+		problems.append("line endings (repo uses CRLF; keep each file's existing style, new files CRLF): " + "; ".join(bad_eol[:6]))
 	good = read_json(os.path.join(HOME, "builds", "Release-good.json"))
 	last = read_json(os.path.join(HOME, "builds", "Release.json"))
 	if not last or not last.get("ok"):
@@ -1077,14 +1124,21 @@ def test(cats_arg, run_all, list_only, timeout):
 	for c in sorted(chosen):
 		scenes += [s for s in cats[c]["scenes"] if s not in scenes]
 	frames = max([cats[c].get("frames", 10) for c in chosen if cats[c]["scenes"]] or [10])
+	tours = [t for c in sorted(chosen) for t in cats[c].get("tours", [])]  # game runs driven by env vars, that must print "pass"
 	if list_only:
-		return print("unit: %s\nscenes (%d frames): %s" % (",".join(units), frames, " ".join(scenes)))
+		return print("unit: %s\nscenes (%d frames): %s\ntours: %s" % (",".join(units), frames, " ".join(scenes), " ".join(t["pass"] for t in tours)))
 	code = 0
 	if units:
 		c, _, _ = run_flex(["--test", "--headless", "--category=" + ",".join(units)], timeout=timeout)
 		code = code or c
 	if scenes:
 		c, _, _ = run_flex(["--test-scenes", "--frames=%d" % frames] + scenes, timeout=timeout)
+		code = code or c
+	for t in tours:
+		c, out, _ = run_flex([], env=t["env"], timeout=timeout)
+		if t["pass"] not in out:
+			print("TOUR FAIL: no '%s' line" % t["pass"])
+			c = c or 1
 		code = code or c
 	print("TEST %s" % ("PASS" if code == 0 else "FAIL"))
 	sys.exit(1 if code else 0)
@@ -1197,6 +1251,13 @@ def main():
 				allc.pop(AGENT, None)
 			else:
 				allc[AGENT] = a.paths if a.set else sorted(set(allc.get(AGENT, []) + a.paths))
+			# remember each file's line ending style, so `done` can tell if you changed it (repo policy: CRLF)
+			ef = os.path.join(HOME, "eol_%s.json" % AGENT)
+			snap = read_json(ef, {})
+			os.chdir(REPO)
+			for f in expand_files(a.paths):
+				snap.setdefault(f, eol_style(f) or "missing")
+			write_json(ef, snap)
 			write_json(os.path.join(HOME, "claims.json"), allc)
 		return
 	if a.cmd == "scratch":

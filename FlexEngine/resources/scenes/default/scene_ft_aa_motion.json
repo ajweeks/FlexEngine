@@ -1,0 +1,80 @@
+{
+	"version": 7,
+	"name": "ft_aa_motion",
+	"spawn player": false,
+	"cloud coverage": 0.0,
+	"fog distance": 0.0,
+	"time of day": 0.0,
+	"pause time of day": true,
+	"camera": {
+		"type": "debug",
+		"near plane": 0.5,
+		"far plane": 1000.0,
+		"fov": 0.785398,
+		"aperture": 1.0,
+		"shutter speed": 0.125,
+		"light sensitivity": 800.0,
+		"exposure": 1.2,
+		"move speed": 18.0,
+		"transform": {
+			"position": "0.000, 22.000, 0.000",
+			"pitch": -1.570000,
+			"yaw": 0.000000
+		}
+	},
+	"objects": [
+		{
+			"id": "5B0C1E7A2F9D4E8B9A3C6D1F0E2A4B71",
+			"name": "Skybox",
+			"type": "skybox",
+			"casts shadow": false,
+			"materials": [
+				"skybox 01"
+			]
+		},
+		{
+			"id": "5B0C1E7A2F9D4E8B9A3C6D1F0E2A4B72",
+			"name": "Backdrop",
+			"type": "object",
+			"transform": {
+				"pos": "0.000, 0.000, 0.000",
+				"scale": "60.000, 1.000, 60.000"
+			},
+			"casts shadow": false,
+			"mesh": "unit-plane.glb",
+			"materials": [
+				"macbeth unlit 19"
+			]
+		},
+		{
+			"id": "5B0C1E7A2F9D4E8B9A3C6D1F0E2A4B73",
+			"name": "Tilted square",
+			"type": "object",
+			"transform": {
+				"pos": "0.000, 0.200, 0.000",
+				"rot": "0.000, 0.050, 0.000",
+				"scale": "8.000, 1.000, 8.000"
+			},
+			"casts shadow": false,
+			"mesh": "unit-plane.glb",
+			"materials": [
+				"macbeth unlit 24"
+			]
+		},
+		{
+			"id": "5B0C1E7A2F9D4E8B9A3C6D1F0E2A4B74",
+			"name": "Thin bar",
+			"type": "object",
+			"transform": {
+				"pos": "0.000, 0.300, 6.000",
+				"rot": "0.000, -0.030, 0.000",
+				"scale": "12.000, 1.000, 0.150"
+			},
+			"casts shadow": false,
+			"mesh": "unit-plane.glb",
+			"materials": [
+				"macbeth unlit 24"
+			]
+		}
+	]
+}

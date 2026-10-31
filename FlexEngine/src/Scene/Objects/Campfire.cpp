@@ -244,6 +244,71 @@ namespace flex
 			return g_ResourceManager->GetPrefabID("wood");
 		}
 
+		namespace
+		{
+			struct WoodKind
+			{
+				terrain::PlantSpecies species;
+				const char* prefabName;
+			};
+			const WoodKind s_WoodKinds[] =
+			{
+				{ terrain::PlantSpecies::SPRUCE, "wood spruce" },
+				{ terrain::PlantSpecies::PINE, "wood pine" },
+				{ terrain::PlantSpecies::BIRCH, "wood birch" },
+				{ terrain::PlantSpecies::OAK, "wood oak" },
+				{ terrain::PlantSpecies::WILLOW, "wood willow" },
+				{ terrain::PlantSpecies::ACACIA, "wood acacia" },
+				{ terrain::PlantSpecies::KAPOK, "wood kapok" },
+				{ terrain::PlantSpecies::PALM, "wood palm" },
+				{ terrain::PlantSpecies::GIANT_MUSHROOM, "wood mushroom" },
+			};
+		} // anonymous namespace
+
+		PrefabID GetWoodPrefabID(terrain::PlantSpecies species)
+		{
+			for (const WoodKind& kind : s_WoodKinds)
+			{
+				if (kind.species == species)
+				{
+					const PrefabID id = g_ResourceManager->GetPrefabID(kind.prefabName);
+					return id.IsValid() ? id : GetWoodPrefabID();
+				}
+			}
+			return GetWoodPrefabID();
+		}
+
+		bool ItemMatches(const PrefabID& wanted, const PrefabID& have)
+		{
+			if (wanted == have)
+			{
+				return true;
+			}
+			static std::vector<PrefabID> s_WoodIDs;
+			static PrefabID s_GenericID;
+			if (s_WoodIDs.empty() || !(s_GenericID == GetWoodPrefabID()))
+			{
+				s_GenericID = GetWoodPrefabID();
+				s_WoodIDs.clear();
+				for (const WoodKind& kind : s_WoodKinds)
+				{
+					s_WoodIDs.push_back(g_ResourceManager->GetPrefabID(kind.prefabName));
+				}
+			}
+			if (!(wanted == s_GenericID))
+			{
+				return false;
+			}
+			for (const PrefabID& id : s_WoodIDs)
+			{
+				if (id == have)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
 		i32 WoodYield(const terrain::PlantInfo& plant)
 		{
 			switch (plant.kind)
@@ -733,7 +798,7 @@ namespace flex
 
 		// Cacti drop pieces of cactus & burnt trees charcoal, rather than wood
 		const PrefabID woodID = m_Plant.kind == terrain::PlantKind::CACTUS ? g_ResourceManager->GetPrefabID("cactus") :
-			m_Plant.kind == terrain::PlantKind::SNAG ? g_ResourceManager->GetPrefabID("charcoal") : woodcraft::GetWoodPrefabID();
+			m_Plant.kind == terrain::PlantKind::SNAG ? g_ResourceManager->GetPrefabID("charcoal") : woodcraft::GetWoodPrefabID(m_Plant.species);
 		const i32 count = woodcraft::WoodYield(m_Plant);
 		if (!woodID.IsValid() || count <= 0)
 		{

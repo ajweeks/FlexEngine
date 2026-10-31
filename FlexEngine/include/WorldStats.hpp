@@ -21,6 +21,7 @@ namespace flex
 		u32 chestsOpened = 0;
 		// Explored area: the number of EXPLORED_CELL_SIZE square cells the player has been near (see Game::UpdateExplored)
 		u32 exploredCells = 0;
+		u32 summitsReached = 0; // Distinct peaks stood on (see Game::UpdateSummits)
 
 		real ExploredAreaKm2() const { return (real)exploredCells * EXPLORED_CELL_SIZE * EXPLORED_CELL_SIZE / 1e6f; }
 

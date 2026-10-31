@@ -114,8 +114,10 @@ namespace flex
 		bool AreShadowsEnabled() const { return m_bSunShadowsEnabled; }
 		// Shader effects: sets the shader_quality_level specialization constant to the quality's index (shaders' QUALITY_LEVEL)
 		void SetEffectsQuality(Quality quality) { if (m_ShaderQualityLevel != QualityIndex(quality)) { SetShaderQualityLevel(QualityIndex(quality)); } }
-		// 0: off, 1: FXAA, 2: TAA
-		void SetAntiAliasing(i32 mode);
+		// 0: off, 1: FXAA (in the final copy pass, cheap), 2: TAA (jittered projection, depth reprojected history with
+		// variance clipping; see vk_taa_resolve.frag). (A deferred renderer can't use MSAA cheaply, so FXAA is the basic mode.)
+		// FLEX_AA=<0|1|2>: forces the anti-aliasing mode (overrides settings)
+		void SetAntiAliasing(i32 mode, bool bIgnoreOverride = false);
 		i32 GetAntiAliasing() const;
 		void SetSSAOEnabled(bool bEnabled);
 		bool IsSSAOEnabled() const { return m_SSAOSamplingData.enabled != 0; }
@@ -152,6 +154,13 @@ namespace flex
 
 		// Saves the next presented frame as a PNG (to the screenshots directory when no path is given)
 		void RequestScreenshot(const std::string& absoluteFilePath = "");
+		// Copies the next presented frame into memory only (for image checks in tests): once GetCapturedFrameSerial
+		// changes, GetCapturedFrame holds its RGBA8 pixels
+		void RequestFrameCapture();
+		u32 GetCapturedFrameSerial() const { return m_CapturedFrameSerial; }
+		const std::vector<u8>& GetCapturedFrame(u32* outWidth, u32* outHeight) const { *outWidth = m_CapturedFrameSize.x; *outHeight = m_CapturedFrameSize.y; return m_CapturedFramePixels; }
+		// Drops TAA's history (call on camera cuts, so the old view doesn't smear into the new one)
+		void ResetTAAHistory() { m_bTAAHistoryInvalid = true; }
 
 		virtual void DrawStringSS(const std::string& str,
 			const glm::vec4& colour,
@@ -257,6 +266,8 @@ namespace flex
 		void LoadSettingsFromDisk();
 
 		void SetShaderQualityLevel(i32 newQualityLevel);
+		// Fills SSAOGenData's samples, spread over the radius within the first kernelSize (the shader's SSAO_KERNEL_SIZE)
+		void GenerateSSAOKernel(u32 kernelSize);
 
 		MaterialID GetMaterialID(const std::string& materialName);
 
@@ -692,12 +703,17 @@ namespace flex
 		bool m_bRenderGrid = true;
 
 		bool m_bCaptureScreenshot = false;
+		bool m_bCaptureToMemoryOnly = false;
 		std::string m_ScreenshotFilePath;
+		std::vector<u8> m_CapturedFramePixels;
+		glm::vec2u m_CapturedFrameSize = glm::vec2u(0);
+		u32 m_CapturedFrameSerial = 0;
 		bool m_bCaptureReflectionProbes = false;
 
 		bool m_bEnableTAA = false;
-		i32 m_TAASampleCount = 2;
+		i32 m_TAASampleCount = 16; // Jitter sequence length (8 left visible 2 pixel steps along nearly horizontal edges)
 		bool m_bTAAStateChanged = false;
+		bool m_bTAAHistoryInvalid = true;
 
 		// Persisted in renderer settings & applied to the shader_quality_level specialization constant (-1 = use its default)
 		i32 m_ShaderQualityLevel = -1;

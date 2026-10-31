@@ -204,6 +204,10 @@ namespace flex
 
 	private:
 		void CreateMeshes();
+public:
+		// Builds the hull (& oars, if oars is non-null) onto owner; also used for the dropped item
+		static void BuildVisual(GameObject* owner, GameObject** oars);
+private:
 		void UpdateOars();
 
 		GameObject* m_Oars[2] = { nullptr, nullptr };

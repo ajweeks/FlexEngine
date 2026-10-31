@@ -22,6 +22,7 @@ IGNORE_WARNINGS_PUSH
 IGNORE_WARNINGS_POP
 
 #include "Scene/Objects/Props.hpp"
+#include "Scene/Objects/Vehicle.hpp"
 #include "Editor.hpp"
 #include "Graphics/DebugRenderer.hpp"
 #include "Graphics/Renderer.hpp"
@@ -702,6 +703,11 @@ namespace flex
 		else if (BuildHandToolMesh(child, prefabTemplate->GetTypeID()))
 		{
 			// Procedural tool mesh
+		}
+		else if (prefabTemplate->GetTypeID() == RowBoatSID)
+		{
+			RowBoat::BuildVisual(child, nullptr);
+			child->GetTransform()->SetLocalScale(glm::vec3(0.4f));
 		}
 		else
 		{

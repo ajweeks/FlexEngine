@@ -287,7 +287,7 @@ namespace flex
 		++m_DrownCount;
 		Print("Player drowned (%u)\n", m_DrownCount);
 		// Respawns (resetting traversal, & this, on the way)
-		m_Player->Reset();
+		m_Player->Die(m_Player->GetTransform()->GetWorldPosition());
 		Reset();
 		m_Player->ShowNotification(LOC(Swim_Drowned));
 	}

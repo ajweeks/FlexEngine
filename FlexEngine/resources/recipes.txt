@@ -15,6 +15,8 @@ hand: axe = wood x3, mineral deposit stone x2
 hand: shovel = wood x3, mineral deposit stone x1
 hand: lasso = cactus x2, wood x1
 
+hand: torch x2 = wood x1, charcoal x1
+
 # Things to make from what's smelted
 hand: lamp = iron ingot x1, glass x1, charcoal x1
 hand: headlamp = iron ingot x1, glass x1, tin ingot x1

@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "337D5B7A34C9473EA6C410DCF1B8B42A",
+	"root" : 
+	{
+		"id" : "407198F376C94EDC998C861852CDCF30",
+		"name" : "wood palm",
+		"type" : "object",
+		"mesh" : "cylinder.glb",
+		"materials" : 
+		[
+			"wood log palm"
+		]
+	}
+}

@@ -363,6 +363,8 @@ namespace flex
 	{
 		if (pointLightID == InvalidPointLightID)
 		{
+			// (data's position isn't serialized, see SpotLight::Initialize)
+			data.pos = m_Transform.GetWorldPosition();
 			pointLightID = g_Renderer->RegisterPointLight(&data);
 			if (pointLightID == InvalidPointLightID)
 			{
@@ -490,6 +492,8 @@ namespace flex
 
 		if (pointLightID != InvalidPointLightID)
 		{
+			// (its position isn't kept up to date while disabled, see Update)
+			data.pos = m_Transform.GetWorldPosition();
 			g_Renderer->UpdatePointLightData(pointLightID, &data);
 		}
 	}
@@ -595,6 +599,10 @@ namespace flex
 	{
 		if (spotLightID == InvalidSpotLightID)
 		{
+			// Data's position isn't serialized: without this, a light registered before its first Update (or one that
+			// isn't updated, e.g. while the game is paused) is drawn at the world origin
+			data.pos = m_Transform.GetWorldPosition();
+			data.dir = glm::rotate(m_Transform.GetWorldRotation(), -VEC3_FORWARD);
 			spotLightID = g_Renderer->RegisterSpotLight(&data);
 			if (spotLightID == InvalidSpotLightID)
 			{
@@ -726,6 +734,9 @@ namespace flex
 
 		if (spotLightID != InvalidSpotLightID)
 		{
+			// (its position isn't kept up to date while disabled, see Update)
+			data.pos = m_Transform.GetWorldPosition();
+			data.dir = glm::rotate(m_Transform.GetWorldRotation(), -VEC3_FORWARD);
 			g_Renderer->UpdateSpotLightData(spotLightID, &data);
 		}
 	}

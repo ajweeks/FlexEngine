@@ -431,7 +431,8 @@ void main()
 			radiance *= PointLightShadow(uboConstant.pointShadowData, NUM_POINT_LIGHTS + i, posWS, N, pointShadowSampler);
 		}
 
-		Lo += DoLighting(radiance, N, V, L, NoV, LoPointToLight, roughness, metallic, F0, albedo);
+		// (lit from the light's position like a point light: L is the cone's axis, which only shapes the cone)
+		Lo += DoLighting(radiance, N, V, pointToLight, NoV, NoL, roughness, metallic, F0, albedo);
 	}
 
 	for (int i = 0; i < NUM_AREA_LIGHTS; ++i)

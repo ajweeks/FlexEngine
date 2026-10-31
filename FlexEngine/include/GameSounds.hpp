@@ -49,6 +49,9 @@ namespace flex
 		// hardness: [0, 1] (1: rock). Rate limited, so it can be called for every terrain edit.
 		void PlayDig(const glm::vec3& posWS, const glm::vec3& normal, real hardness);
 		void PlayRopeThrow();
+		// An animal's call (speciesIndex is an AnimalSpecies) & a hen laying an egg
+		void PlayAnimalVoice(u32 speciesIndex, const glm::vec3& posWS);
+		void PlayEggLay(const glm::vec3& posWS);
 		// A breath in after surfacing
 		void PlayGasp();
 		// Call every frame while the camera is underwater (amount [0, 1], 0 when not): fades in a muffled ambience loop

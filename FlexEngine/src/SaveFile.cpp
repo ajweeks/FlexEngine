@@ -2,6 +2,7 @@
 
 #include "SaveFile.hpp"
 
+#include "Harvest.hpp"
 #include "Helpers.hpp"
 #include "JSONParser.hpp"
 #include "Platform/Platform.hpp"
@@ -2383,6 +2384,26 @@ namespace flex
 				if (!difference.empty())
 				{
 					PrintError("  %s\n", difference.c_str());
+				}
+
+				// Berry regrow timers survive a save & load
+				{
+					harvest::Reset();
+					harvest::Tick(100.0f);
+					harvest::MarkPicked(harvest::Kind::BERRIES, 1234u);
+					harvest::Tick(50.0f);
+					JSONObject harvestWorld = world;
+					harvestWorld.fields.emplace_back("harvested", JSONValue(harvest::Serialize()));
+					SAVE_CHECK(WriteWorldFile(directory, harvestWorld));
+					JSONObject harvestRead;
+					SAVE_CHECK(ReadWorldFile(directory, harvestRead, false) == WorldFileSource::BINARY);
+					std::string harvested;
+					harvestRead.TryGetString("harvested", harvested);
+					harvest::Reset();
+					harvest::Deserialize(harvested);
+					const sec left = harvest::TimeUntilReady(harvest::Kind::BERRIES, 1234u);
+					SAVE_CHECK(left > harvest::REGROW_TIME - 51.0f && left < harvest::REGROW_TIME - 49.0f);
+					harvest::Reset();
 				}
 
 				// Listing only reads the small fields

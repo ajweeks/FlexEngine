@@ -1,0 +1,16 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "E021DF26ED13461FA33DEF06A58D60DA",
+	"root" : 
+	{
+		"id" : "8B6C409824454942983B5C81085A6DFC",
+		"name" : "wood acacia",
+		"type" : "object",
+		"mesh" : "cylinder.glb",
+		"materials" : 
+		[
+			"wood log acacia"
+		]
+	}
+}

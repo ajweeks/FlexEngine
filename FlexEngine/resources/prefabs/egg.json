@@ -1,0 +1,20 @@
+{
+	"version" : 3,
+	"scene version" : 7,
+	"prefab id" : "7C1B5E0A93D44F2E8A6B0D2C41E7F9A3",
+	"root" : 
+	{
+		"id" : "5E2A9C3B71F84D06B8C1A4E7D09F2B63",
+		"name" : "egg",
+		"type" : "object",
+		"mesh" : "sphere.glb",
+		"materials" : 
+		[
+			"egg"
+		],
+		"transform" : 
+		{
+			"scale" : "0.050, 0.065, 0.050"
+		}
+	}
+}

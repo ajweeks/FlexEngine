@@ -876,6 +876,22 @@ namespace flex
 			PlayOneShot(Sound::ROPE_THROW, 0.7f, 0.06f);
 		}
 
+		void PlayAnimalVoice(u32 speciesIndex, const glm::vec3& posWS)
+		{
+			// Same order as AnimalSpecies
+			if (speciesIndex >= 8)
+			{
+				return;
+			}
+			static const real gains[] = { 0.8f, 1.0f, 0.6f, 0.8f, 0.8f, 0.9f, 0.5f, 0.95f };
+			PlayOneShotAt((Sound)((u32)Sound::ANIMAL_GOAT + speciesIndex), posWS, gains[speciesIndex], 0.08f);
+		}
+
+		void PlayEggLay(const glm::vec3& posWS)
+		{
+			PlayOneShotAt(Sound::EGG_LAY, posWS, 0.7f, 0.05f);
+		}
+
 		void PlayFootstep(Surface surface, real gain /* = 1.0f */)
 		{
 			static const real surfaceGains[] = { 0.7f, 0.75f, 0.65f, 0.7f, 0.8f, 0.75f, 0.7f };
