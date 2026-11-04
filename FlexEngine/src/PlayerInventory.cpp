@@ -336,7 +336,8 @@ namespace flex
 			}
 			else
 			{
-				sourceStack->count = itemsNotMoved;
+				// Only the items which were actually moved leave the source stack
+				sourceStack->count -= (countToMove - (i32)itemsNotMoved);
 				return itemsNotMoved;
 			}
 		}
@@ -394,19 +395,41 @@ namespace flex
 	void Player::AddToInventory(DroppedItem* droppedItem)
 	{
 		GameObjectStack::UserData userData = {};
-		AddToInventory(droppedItem->prefabID, droppedItem->stackSize, userData);
+		const i32 remainder = (i32)AddToInventory(droppedItem->prefabID, droppedItem->stackSize, userData);
+		if (remainder == droppedItem->stackSize)
+		{
+			// Nothing fit (inventory full), leave the item lying there rather than destroying it
+			return;
+		}
 
 		droppedItem->OnPickedUp();
+
+		if (remainder > 0)
+		{
+			// Partial pickup, the rest stays on the ground
+			droppedItem->stackSize = remainder;
+			return;
+		}
 
 		g_SceneManager->CurrentScene()->RemoveObject(droppedItem, true);
 	}
 
-	void Player::AddToInventory(const PrefabID& prefabID, i32 count)
+	u32 Player::AddToInventory(const PrefabID& prefabID, i32 count)
 	{
-		AddToInventory(prefabID, count, {});
+		return AddToInventory(prefabID, count, {});
 	}
 
-	void Player::AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData)
+	void Player::AddToInventoryOrDrop(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData, const glm::vec3& dropPosWS)
+	{
+		const i32 remainder = (i32)AddToInventory(prefabID, count, userData);
+		if (remainder > 0)
+		{
+			// No room left: drop the rest rather than losing it
+			g_SceneManager->CurrentScene()->CreateDroppedItem(prefabID, remainder, dropPosWS, VEC3_ZERO);
+		}
+	}
+
+	u32 Player::AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData)
 	{
 		i32 maxStackSize = g_ResourceManager->GetMaxStackSize(prefabID);
 
@@ -423,7 +446,7 @@ namespace flex
 
 			if (count == 0)
 			{
-				return;
+				return 0;
 			}
 		}
 
@@ -440,7 +463,7 @@ namespace flex
 
 			if (count == 0)
 			{
-				return;
+				return 0;
 			}
 		}
 
@@ -458,7 +481,7 @@ namespace flex
 
 			if (count == 0)
 			{
-				return;
+				return 0;
 			}
 		}
 
@@ -476,9 +499,10 @@ namespace flex
 
 			if (count == 0)
 			{
-				return;
+				return 0;
 			}
 		}
+		return (u32)count;
 	}
 
 	u32 Player::AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData, InventoryType inventoryType)
@@ -606,7 +630,8 @@ namespace flex
 				PrefabID prefabID = slot.GetPrefabID("prefab id");
 				i32 maxStackSize = (i32)g_ResourceManager->GetMaxStackSize(prefabID);
 
-				bool bIndexValid = index >= 0 && index < INVENTORY_ITEM_COUNT;
+				const i32 slotCount = (slotListIndex == 0) ? (i32)m_Inventory.size() : (slotListIndex == 1) ? (i32)m_QuickAccessInventory.size() : (i32)m_WearablesInventory.size();
+				bool bIndexValid = index >= 0 && index < slotCount;
 				bool bCountValid = count >= 0 && count <= maxStackSize;
 				bool bPrefabIDValid = g_ResourceManager->IsPrefabIDValid(prefabID);
 
@@ -713,6 +738,10 @@ namespace flex
 	void Player::Die(const glm::vec3& deathPos)
 	{
 		BaseScene* scene = g_SceneManager->CurrentScene();
+		if (m_RidingVehicleID.IsValid())
+		{
+			SetRidingVehicle(nullptr);
+		}
 		u32 stackIndex = 0;
 		auto Drop = [&](GameObjectStack& stack)
 		{

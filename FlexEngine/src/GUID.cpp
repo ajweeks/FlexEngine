@@ -60,7 +60,7 @@ namespace flex
 
 	bool GUID::operator!=(const GUID& rhs) const
 	{
-		return Data1 != rhs.Data1 && Data2 != rhs.Data2;
+		return !(*this == rhs);
 	}
 
 	bool GUID::operator==(const GUID& rhs) const

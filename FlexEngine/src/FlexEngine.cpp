@@ -2942,6 +2942,11 @@ namespace flex
 				return 1;
 			}
 
+			if (strlen(m_CmdLineStrBuf) >= MAX_CHARS_CMD_LINE_STR - 1)
+			{
+				// Buffer full, reject the character
+				return 1;
+			}
 			char eventChar = (char)data->EventChar;
 			// TODO: Insert at data->CursorPos
 			char* cmdLine = strncat(m_CmdLineStrBuf, &eventChar, 1);
@@ -2962,7 +2967,7 @@ namespace flex
 		}
 		else if (data->EventFlag == ImGuiInputTextFlags_DeleteCallback)
 		{
-			char cmdLine[128];
+			char cmdLine[MAX_CHARS_CMD_LINE_STR];
 			strncpy(cmdLine, m_CmdLineStrBuf, ARRAY_LENGTH(cmdLine) - 1);
 			cmdLine[ARRAY_LENGTH(cmdLine) - 1] = '\0';
 
@@ -2973,7 +2978,12 @@ namespace flex
 			}
 			else
 			{
-				memmove(&cmdLine[data->CursorPos + 1], &cmdLine[data->CursorPos + 2], strlen(m_CmdLineStrBuf) - data->CursorPos);
+				const i32 len = (i32)strlen(cmdLine);
+				if (data->CursorPos >= 0 && data->CursorPos + 2 <= len)
+				{
+					// (Moves the terminator too)
+					memmove(&cmdLine[data->CursorPos + 1], &cmdLine[data->CursorPos + 2], (size_t)(len - data->CursorPos - 1));
+				}
 			}
 
 			FillOutAutoCompletions(cmdLine);

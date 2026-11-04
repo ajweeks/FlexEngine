@@ -503,7 +503,7 @@ namespace flex
 		{
 			RemoveItems(input.prefabID, input.count);
 		}
-		m_Player->AddToInventory(recipe.output.prefabID, recipe.output.count);
+		m_Player->AddToInventoryOrDrop(recipe.output.prefabID, recipe.output.count, {}, m_Player->GetTransform()->GetWorldPosition());
 		Discover(recipe.output.prefabID);
 		m_Message = LOCF(Crafting_Crafted, RecipeOutputLabel(recipe).c_str());
 		m_MessageTime = 3.0f;
@@ -988,7 +988,7 @@ namespace flex
 		{
 			for (const ItemCount& input : recipe->inputs)
 			{
-				m_Player->AddToInventory(input.prefabID, input.count);
+				m_Player->AddToInventoryOrDrop(input.prefabID, input.count, {}, m_Player->GetTransform()->GetWorldPosition());
 			}
 		}
 		ClosePanel();

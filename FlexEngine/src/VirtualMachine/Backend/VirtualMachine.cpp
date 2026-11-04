@@ -201,6 +201,12 @@ namespace flex
 					irStr = m_IR->ToString();
 
 					GenerateFromIR(m_IR, m_FunctionBindings);
+
+					// (Codegen errors, e.g. invalid terminal output indices, must also stop the script from running)
+					for (const Diagnostic& diagnostic : state->diagnosticContainer->diagnostics)
+					{
+						diagnosticContainer->diagnostics.push_back(diagnostic);
+					}
 				}
 
 				for (const Diagnostic& diagnostic : m_IR->state->diagnosticContainer->diagnostics)
@@ -669,6 +675,8 @@ namespace flex
 						{
 							std::string message = "Used invalid terminal output var, range is between 0 & " + IntToString(Terminal::MAX_OUTPUT_COUNT);
 							state->diagnosticContainer->AddDiagnostic(assignment->origin, message);
+							// (Keeps the wrapper in bounds if execution is attempted anyway)
+							terminalOutputVarIndex = 0;
 						}
 						outputVal = VariantWrapper(VariantWrapper::Type::TERMINAL_OUTPUT, Variant(terminalOutputVarIndex));
 					}
@@ -1036,6 +1044,13 @@ namespace flex
 			bool bBreak = false;
 			while (!m_RunningState.terminated && !bBreak)
 			{
+				if (m_RunningState.instructionIdx < 0 || m_RunningState.instructionIdx >= (i32)instructions.size())
+				{
+					// (e.g. a function whose last block has no terminator)
+					diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), "Execution ran past the end of the program (missing return?)");
+					m_RunningState.terminated = true;
+					break;
+				}
 				Instruction& inst = instructions[m_RunningState.instructionIdx];
 
 				i32 pInstIdx = m_RunningState.instructionIdx;

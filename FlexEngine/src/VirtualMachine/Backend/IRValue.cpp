@@ -310,6 +310,12 @@ namespace flex
 			switch (result.type)
 			{
 			case Value::Type::INT:
+				if (rhs.AsInt() == 0)
+				{
+					lhs.irState->diagnosticContainer->AddDiagnostic(result.origin, "Division by zero");
+					result.valInt = 0;
+					break;
+				}
 				result.valInt = lhs.AsInt() / rhs.AsInt();
 				break;
 			case Value::Type::FLOAT:
@@ -329,6 +335,12 @@ namespace flex
 			switch (result.type)
 			{
 			case Value::Type::INT:
+				if (rhs.AsInt() == 0)
+				{
+					lhs.irState->diagnosticContainer->AddDiagnostic(result.origin, "Modulo by zero");
+					result.valInt = 0;
+					break;
+				}
 				result.valInt = lhs.AsInt() % rhs.AsInt();
 				break;
 			case Value::Type::FLOAT:

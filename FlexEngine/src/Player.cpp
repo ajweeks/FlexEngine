@@ -298,12 +298,19 @@ namespace flex
 		if (m_RidingVehicleID.IsValid())
 		{
 			GameObject* vehicle = m_RidingVehicleID.Get();
+			if (vehicle == nullptr)
+			{
+				// The vehicle was destroyed under the player (e.g. despawned after falling out of the world)
+				SetRidingVehicle(nullptr);
+			}
+			else
+			{
+				const glm::vec3 posOffset = glm::vec3(0.0f, 1.5f, 0.0f);
 
-			const glm::vec3 posOffset = glm::vec3(0.0f, 1.5f, 0.0f);
-
-			// Not a teleport for interpolation purposes, the vehicle moves continuously
-			m_RigidBody->SetWorldPosition(vehicle->GetTransform()->GetWorldPosition() + posOffset, false);
-			m_RigidBody->GetRigidBodyInternal()->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+				// Not a teleport for interpolation purposes, the vehicle moves continuously
+				m_RigidBody->SetWorldPosition(vehicle->GetTransform()->GetWorldPosition() + posOffset, false);
+				m_RigidBody->GetRigidBodyInternal()->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+			}
 		}
 
 		// Terrain can extend far below the scene's minimum height (UpdateTerrainSafety handles falling out of it)
@@ -410,7 +417,7 @@ namespace flex
 			{
 				GameObjectStack::UserData itemUserData = {};
 				PrefabID itemID = m_ItemPickingUp->Itemize(itemUserData);
-				AddToInventory(itemID, 1, itemUserData);
+				AddToInventoryOrDrop(itemID, 1, itemUserData, m_Transform.GetWorldPosition());
 
 				SetItemPickingUp(nullptr);
 			}
@@ -937,10 +944,11 @@ namespace flex
 			rbInternal->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
 
 			// Step out beside the vehicle (boats find somewhere dry, or stand up in the boat)
-			const glm::vec3 exitPos = Rideable::GetExitPosition(ridingVehicle);
+			// (The vehicle may already have been destroyed)
+			const glm::vec3 exitPos = (ridingVehicle != nullptr) ? Rideable::GetExitPosition(ridingVehicle) : m_Transform.GetWorldPosition();
 			m_RigidBody->SetWorldPosition(exitPos);
 			m_Transform.SetWorldPosition(exitPos);
-			if (TerrainGenerator::GetActive() != nullptr && ridingVehicle->GetTypeID() != RowBoatSID)
+			if (TerrainGenerator::GetActive() != nullptr && (ridingVehicle == nullptr || ridingVehicle->GetTypeID() != RowBoatSID))
 			{
 				// Make sure that's not inside a hill
 				m_bTerrainPlacementPending = true;

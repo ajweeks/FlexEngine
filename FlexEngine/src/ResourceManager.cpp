@@ -1532,7 +1532,9 @@ namespace flex
 
 		for (Texture* texture : loadedTextures)
 		{
+			// (A loading texture's fileName is still being written by its load job)
 			if (texture != nullptr &&
+				!texture->IsLoading() &&
 				fileName.compare(texture->fileName) == 0)
 			{
 				return texture;
@@ -2367,16 +2369,17 @@ namespace flex
 	{
 		if (ImGui::TreeNode("Templates"))
 		{
-			for (auto iter = m_ParticleTemplates.begin(); iter != m_ParticleTemplates.end(); ++iter)
+			for (auto iter = m_ParticleTemplates.begin(); iter != m_ParticleTemplates.end();)
 			{
 				ParticleSystemTemplate::ImGuiResult result = iter->second.DrawImGuiObjects();
-				switch (result)
-				{
-				case ParticleSystemTemplate::ImGuiResult::REMOVED:
+				if (result == ParticleSystemTemplate::ImGuiResult::REMOVED)
 				{
 					Platform::DeleteFile(iter->second.filePath);
-					m_ParticleTemplates.erase(iter);
-				} break;
+					iter = m_ParticleTemplates.erase(iter);
+				}
+				else
+				{
+					++iter;
 				}
 			}
 			ImGui::TreePop();
@@ -2828,6 +2831,8 @@ namespace flex
 					// Remove trailing \0 characters
 					matName = std::string(matName.c_str());
 					material->name = matName;
+					// Keep the buffer large enough for the next edit
+					matName.resize(MAX_NAME_LEN);
 				}
 				ImGui::PopItemWidth();
 
@@ -3386,14 +3391,20 @@ namespace flex
 
 				ImGui::EndChild();
 
+				if (!prefabTemplates.empty() && selectedPrefabIndex >= (u32)prefabTemplates.size())
+				{
+					// (The list shrank, e.g. the selected prefab was deleted)
+					selectedPrefabIndex = (u32)prefabTemplates.size() - 1;
+				}
 				PrefabTemplateInfo& selectedPrefabTemplate = prefabTemplates[selectedPrefabIndex];
 				GameObject* prefabTemplateObject = selectedPrefabTemplate.templateObject;
 				std::string prefabNameStr = prefabTemplateObject->GetName() + (selectedPrefabTemplate.bDirty ? "*" : "") + " (" + selectedPrefabTemplate.prefabID.ToString() + ")";
 				ImGui::Text("%s", prefabNameStr.c_str());
 
 				const char* contextMenuID = "game object context window";
-				static std::string newObjectName = selectedPrefabTemplate.templateObject->GetName();
 				const size_t maxStrLen = 256;
+				// Always maxStrLen long so ImGui can write into it (see IsWindowAppearing below)
+				static std::string newObjectName(maxStrLen, '\0');
 
 				if (ImGui::Button("Rename") || g_Editor->GetWantRenameActiveElement())
 				{
@@ -3492,6 +3503,7 @@ namespace flex
 					{
 						ImGui::SetKeyboardFocusHere();
 						newObjectName = selectedPrefabTemplate.templateObject->GetName();
+						newObjectName.resize(maxStrLen);
 					}
 
 					bool bRename = ImGui::InputText("##rename-game-object",
@@ -3508,12 +3520,12 @@ namespace flex
 					if (bRename && !bInvalidName)
 					{
 						// Remove excess trailing \0 chars
-						newObjectName = std::string(newObjectName.c_str());
+						const std::string newName(newObjectName.c_str());
 
 						std::string prevName = selectedPrefabTemplate.templateObject->GetName();
 						std::string prevFilePath = PREFAB_DIRECTORY + selectedPrefabTemplate.fileName;
 
-						selectedPrefabTemplate.templateObject->SetName(newObjectName);
+						selectedPrefabTemplate.templateObject->SetName(newName);
 						if (selectedPrefabTemplate.templateObject->SaveAsPrefab())
 						{
 							// NOTE: At this point selectedPrefabTemplate is invalid because DiscoverPrefabs has been called

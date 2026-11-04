@@ -3611,7 +3611,13 @@ namespace flex
 		{
 			for (const JSONField& field : chestFields)
 			{
-				openedChests.insert((u64)std::stoull(field.value.AsString()));
+				const std::string str = field.value.AsString();
+				char* end = nullptr;
+				const u64 id = (u64)strtoull(str.c_str(), &end, 10);
+				if (end != str.c_str()) // (std::stoull throws on malformed saves)
+				{
+					openedChests.insert(id);
+				}
 			}
 		}
 

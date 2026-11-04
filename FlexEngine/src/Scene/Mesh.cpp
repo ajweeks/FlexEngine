@@ -595,8 +595,12 @@ namespace flex
 						{
 							bAnyPropertyChanged = true;
 							selectedMeshIndex = i;
+							// Destroy clears the submeshes & owner, so read them first
+							const MaterialID matID = GetMaterialID(0);
+							GameObject* owner = m_OwningGameObject;
 							Destroy();
-							LoadPrefabShape((PrefabShape)i, GetMaterialID(0));
+							SetOwner(owner);
+							LoadPrefabShape((PrefabShape)i, matID);
 						}
 					}
 				}

@@ -112,7 +112,11 @@ namespace flex
 						PrefabIDPair idPair;
 						idPair.m_PrefabID = sourcePrefabIDPair.m_PrefabID;
 						idPair.m_SubGameObjectID = child.GetGUID("id");
-						newPrefabInstance->AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, sceneFileVersion, idPair, bIsPrefabTemplate, copyFlags));
+						GameObject* newChild = GameObject::CreateObjectFromJSON(child, scene, sceneFileVersion, idPair, bIsPrefabTemplate, copyFlags);
+						if (newChild != nullptr) // (e.g. unknown prefab, already logged)
+						{
+							newPrefabInstance->AddChildImmediate(newChild);
+						}
 					}
 				}
 
@@ -319,7 +323,11 @@ namespace flex
 				PrefabIDPair idPair;
 				idPair.m_PrefabID = m_SourcePrefabID.m_PrefabID;
 				idPair.m_SubGameObjectID = child.GetGUID("id");
-				AddChildImmediate(GameObject::CreateObjectFromJSON(child, scene, fileVersion, idPair, m_bIsTemplate, copyFlags));
+				GameObject* newChild = GameObject::CreateObjectFromJSON(child, scene, fileVersion, idPair, m_bIsTemplate, copyFlags);
+				if (newChild != nullptr) // (e.g. unknown prefab, already logged)
+				{
+					AddChildImmediate(newChild);
+				}
 			}
 		}
 	}

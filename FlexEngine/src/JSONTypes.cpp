@@ -794,14 +794,11 @@ namespace flex
 		{
 			if (field.label == label)
 			{
-				// A float might be written without a decimal, making the system think it's an int
-				if (field.value.floatValue != 0.0f)
-				{
-					ENSURE(!IsNanOrInf(field.value.floatValue));
-					return field.value.floatValue;
-				}
-				ENSURE(!IsNanOrInf((real)field.value.intValue));
-				return (real)field.value.intValue;
+				// A float might be written without a decimal, making the parser store it as an int
+				// (AsFloat switches on the type; testing floatValue != 0 read the int's bits as a denormal)
+				const real value = field.value.AsFloat();
+				ENSURE(!IsNanOrInf(value));
+				return value;
 			}
 		}
 		return 0.0f;

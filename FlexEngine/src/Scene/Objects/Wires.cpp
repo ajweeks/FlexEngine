@@ -564,6 +564,13 @@ namespace flex
 	{
 		if (!m_bIsTemplate)
 		{
+			// Don't leave the plug pointing at a destroyed socket
+			WirePlug* connectedPlug = (WirePlug*)connectedPlugID.Get();
+			if (connectedPlug != nullptr)
+			{
+				OnUnPlug();
+				connectedPlug->Unplug();
+			}
 			GetSystem<PluggablesSystem>(SystemType::PLUGGABLES)->UnregisterSocket(this);
 		}
 

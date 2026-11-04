@@ -1580,9 +1580,16 @@ namespace flex
 
 											if (trackIndex == -1)
 											{
-												junc.trackIndices[junc.trackCount] = j;
-												junc.curveIndices[junc.trackCount] = curveIndexB;
-												junc.trackCount++;
+												if (junc.trackCount >= Junction::MAX_TRACKS)
+												{
+													PrintWarn("Junction already has %i tracks, ignoring track %i\n", Junction::MAX_TRACKS, j);
+												}
+												else
+												{
+													junc.trackIndices[junc.trackCount] = j;
+													junc.curveIndices[junc.trackCount] = curveIndexB;
+													junc.trackCount++;
+												}
 											}
 
 											break;

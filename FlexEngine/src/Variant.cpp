@@ -504,16 +504,16 @@ namespace flex
 		switch (result.type)
 		{
 		case Type::INT:
-			result.valInt = lhs.valInt / rhs.valInt;
+			result.valInt = (rhs.valInt != 0) ? (lhs.valInt / rhs.valInt) : 0; // (Scripts can divide by zero)
 			break;
 		case Type::UINT:
-			result.valUInt = lhs.valUInt / rhs.valUInt;
+			result.valUInt = (rhs.valUInt != 0) ? (lhs.valUInt / rhs.valUInt) : 0; // (Scripts can divide by zero)
 			break;
 		case Type::LONG:
-			result.valLong = lhs.valLong / rhs.valLong;
+			result.valLong = (rhs.valLong != 0) ? (lhs.valLong / rhs.valLong) : 0; // (Scripts can divide by zero)
 			break;
 		case Type::ULONG:
-			result.valULong = lhs.valULong / rhs.valULong;
+			result.valULong = (rhs.valULong != 0) ? (lhs.valULong / rhs.valULong) : 0; // (Scripts can divide by zero)
 			break;
 		case Type::FLOAT:
 			result.valFloat = lhs.valFloat / rhs.valFloat;
@@ -533,16 +533,16 @@ namespace flex
 		switch (result.type)
 		{
 		case Type::INT:
-			result.valInt = lhs.valInt % rhs.valInt;
+			result.valInt = (rhs.valInt != 0) ? (lhs.valInt % rhs.valInt) : 0; // (Scripts can divide by zero)
 			break;
 		case Type::UINT:
-			result.valUInt = lhs.valUInt % rhs.valUInt;
+			result.valUInt = (rhs.valUInt != 0) ? (lhs.valUInt % rhs.valUInt) : 0; // (Scripts can divide by zero)
 			break;
 		case Type::LONG:
-			result.valLong = lhs.valLong % rhs.valLong;
+			result.valLong = (rhs.valLong != 0) ? (lhs.valLong % rhs.valLong) : 0; // (Scripts can divide by zero)
 			break;
 		case Type::ULONG:
-			result.valULong = lhs.valULong % rhs.valULong;
+			result.valULong = (rhs.valULong != 0) ? (lhs.valULong % rhs.valULong) : 0; // (Scripts can divide by zero)
 			break;
 		case Type::FLOAT:
 			result.valFloat = fmod(lhs.valFloat, rhs.valFloat);

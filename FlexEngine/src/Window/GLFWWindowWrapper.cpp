@@ -825,7 +825,7 @@ namespace flex
 
 	void GLFWJoystickCallback(i32 JID, i32 event)
 	{
-		if (JID > MAX_JOYSTICK_COUNT)
+		if (JID < 0 || JID >= MAX_JOYSTICK_COUNT)
 		{
 			PrintWarn("Unhandled joystick connection event, JID out of range: %i\n", JID);
 			return;

@@ -396,7 +396,7 @@ namespace flex
 						}
 					}
 				}
-				m_Player->AddToInventory(itemID, count);
+				m_Player->AddToInventoryOrDrop(itemID, count, {}, m_HarvestPos);
 				GameSounds::PlayPlace(m_HarvestPos);
 				m_Player->ShowNotification(LOCF(Notify_Picked, count, Loc::ItemName(prefabName)));
 			}

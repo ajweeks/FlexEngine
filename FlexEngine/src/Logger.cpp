@@ -168,10 +168,7 @@ namespace flex
 
 	void PrintFatal(const char* file, int line, const char* str, ...)
 	{
-		if (!g_bEnableLogToConsole)
-		{
-			return;
-		}
+		// (Always printed & aborts, even when console logging is disabled: CHECK() relies on this)
 
 		std::lock_guard<std::recursive_mutex> lock(g_LogMutex);
 

@@ -639,7 +639,9 @@ namespace flex
 		glm::vec3 matRow2 = glm::vec3(mat[2]) / outScale.z;
 
 		// Extract quaternion (taken from glm/gtx/matrix_decompose.inl)
-		real trace = mat[0].x + mat[1].y + mat[2].z;
+		// NOTE: Only the scale-free rows may be used here, using mat directly gives a non-unit quaternion for any scaled matrix
+		const glm::vec3 rows[3] = { matRow0, matRow1, matRow2 };
+		real trace = matRow0.x + matRow1.y + matRow2.z;
 		if (trace > 0.0f)
 		{
 			real root = glm::sqrt(trace + 1.0f);
@@ -654,17 +656,17 @@ namespace flex
 			static i32 next[3] = { 1, 2, 0 };
 			i32 i = 0;
 			if (matRow1.y > matRow0.x) i = 1;
-			if (matRow2.z > mat[i][i]) i = 2;
+			if (matRow2.z > rows[i][i]) i = 2;
 			i32 j = next[i];
 			i32 k = next[j];
 
-			real root = glm::sqrt(mat[i][i] - mat[j][j] - mat[k][k] + 1.0f);
+			real root = glm::sqrt(rows[i][i] - rows[j][j] - rows[k][k] + 1.0f);
 
 			outRot[i] = 0.5f * root;
 			root = 0.5f / root;
-			outRot[j] = root * (mat[i][j] + mat[j][i]);
-			outRot[k] = root * (mat[i][k] + mat[k][i]);
-			outRot.w = root * (mat[j][k] - mat[k][j]);
+			outRot[j] = root * (rows[i][j] + rows[j][i]);
+			outRot[k] = root * (rows[i][k] + rows[k][i]);
+			outRot.w = root * (rows[j][k] - rows[k][j]);
 		}
 	}
 

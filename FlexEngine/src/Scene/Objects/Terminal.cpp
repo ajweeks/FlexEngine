@@ -1148,7 +1148,7 @@ namespace flex
 						i32 pCursorPosX = cursor.x;
 						cursor.x = 0;
 						std::string strippedLine = TrimLeadingWhitespace(lines[cursor.y]);
-						i32 leadingWhitespaceCount = (i32)(strippedLine.size() - lines[cursor.y].size());
+						i32 leadingWhitespaceCount = (i32)(lines[cursor.y].size() - strippedLine.size());
 						if (strippedLine.size() < 2)
 						{
 							TypeChar('/');

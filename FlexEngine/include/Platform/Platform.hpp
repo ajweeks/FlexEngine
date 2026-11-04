@@ -85,8 +85,9 @@ namespace flex
 		static bool DirectoryExists(const std::string& absoluteDirectoryPath);
 		static bool CopyFile(const std::string& filePathFrom, const std::string& filePathTo)
 		{
-			std::ifstream src(filePathFrom);
-			std::ofstream dst(filePathTo);
+			// (Binary, this copies meshes & textures too)
+			std::ifstream src(filePathFrom, std::ios::binary);
+			std::ofstream dst(filePathTo, std::ios::binary);
 
 			if (src.is_open() && dst.is_open())
 			{

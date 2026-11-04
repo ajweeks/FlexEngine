@@ -362,6 +362,11 @@ namespace flex
 		CopyGenericFields(newGameObject, parent, CopyFlags::ADD_TO_SCENE);
 
 		newGameObject->roadSegments = roadSegments;
+		// The mesh components belong to this road, the copy generates its own
+		for (RoadSegment& segment : newGameObject->roadSegments)
+		{
+			segment.mesh = nullptr;
+		}
 		newGameObject->m_RoadMaterialID = m_RoadMaterialID;
 		newGameObject->m_QuadCountPerSegment = m_QuadCountPerSegment;
 

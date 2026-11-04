@@ -389,9 +389,13 @@ namespace flex
 
 		void Return::Destroy()
 		{
-			returnValue->Destroy();
-			delete returnValue;
-			returnValue = nullptr;
+			// (Void returns have no value)
+			if (returnValue != nullptr)
+			{
+				returnValue->Destroy();
+				delete returnValue;
+				returnValue = nullptr;
+			}
 		}
 
 		std::string Return::ToString() const
@@ -409,9 +413,12 @@ namespace flex
 
 		void YieldReturn::Destroy()
 		{
-			yieldValue->Destroy();
-			delete yieldValue;
-			yieldValue = nullptr;
+			if (yieldValue != nullptr)
+			{
+				yieldValue->Destroy();
+				delete yieldValue;
+				yieldValue = nullptr;
+			}
 		}
 
 		std::string YieldReturn::ToString() const
@@ -778,9 +785,13 @@ namespace flex
 			}
 			blocks.clear();
 
-			g_EmptyIRValue->Destroy();
-			delete g_EmptyIRValue;
-			g_EmptyIRValue = nullptr;
+			// (Shared by every VM, so another VM's Destroy may already have freed it)
+			if (g_EmptyIRValue != nullptr)
+			{
+				g_EmptyIRValue->Destroy();
+				delete g_EmptyIRValue;
+				g_EmptyIRValue = nullptr;
+			}
 		}
 
 		std::string IntermediateRepresentation::ToString() const
@@ -984,8 +995,11 @@ namespace flex
 						delete ifTrueBlock;
 						mergeBlock->Destroy();
 						delete mergeBlock;
-						ifFalseBlock->Destroy();
-						delete ifFalseBlock;
+						if (ifFalseBlock != nullptr) // (no else clause)
+						{
+							ifFalseBlock->Destroy();
+							delete ifFalseBlock;
+						}
 						return;
 					}
 
@@ -1018,9 +1032,12 @@ namespace flex
 						conditionExpr->Destroy();
 						delete conditionExpr;
 						conditionExpr = nullptr;
-						ifFalseBlock->Destroy();
-						delete ifFalseBlock;
-						ifFalseBlock = nullptr;
+						if (ifFalseBlock != nullptr) // (no else clause)
+						{
+							ifFalseBlock->Destroy();
+							delete ifFalseBlock;
+							ifFalseBlock = nullptr;
+						}
 
 						state->InsertionBlock()->AddBranch(ifStatement->span, ifTrueBlock);
 						state->PushInstructionBlock(ifTrueBlock);
@@ -1261,7 +1278,18 @@ namespace flex
 
 					*/
 
+					if (state->variableTypes.find(compoundAssignment->lhs) == state->variableTypes.end())
+					{
+						// (Otherwise the assignment below silently declares it, e.g. out_100 += 1 would index past the terminal outputs)
+						state->diagnosticContainer->AddDiagnostic(compoundAssignment->span, "Undeclared identifier \"" + compoundAssignment->lhs + "\"");
+						return;
+					}
+
 					IR::Value* rhs = LowerExpression(compoundAssignment->rhs);
+					if (rhs == nullptr)
+					{
+						return;
+					}
 
 					IR::Identifier* lhsIdentVal = new IR::Identifier(state, compoundAssignment->span, compoundAssignment->lhs);
 					BinaryOperatorType opType = IRBinaryOperatorTypeFromASTBinaryOperatorType(GetNonCompoundType(compoundAssignment->operatorType));

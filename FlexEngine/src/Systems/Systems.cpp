@@ -236,6 +236,11 @@ namespace flex
 		{
 			WirePlug* plug0 = (WirePlug*)wire->plug0ID.Get();
 			WirePlug* plug1 = (WirePlug*)wire->plug1ID.Get();
+			if (plug0 == nullptr || plug1 == nullptr)
+			{
+				// Plugs aren't registered until the frame after the wire
+				continue;
+			}
 
 			if (plug0->socketID == socket->ID)
 			{
@@ -248,7 +253,7 @@ namespace flex
 			}
 			else if (plug1->socketID == socket->ID)
 			{
-				if (plug1->socketID.IsValid())
+				if (plug0->socketID.IsValid())
 				{
 					Socket* socket0 = (Socket*)plug0->socketID.Get();
 					i32 sendSignal = pluggablesSystem->GetGameObjectOutputSignal(socket0->GetParent()->ID, socket0->slotIdx);
@@ -758,10 +763,9 @@ namespace flex
 
 				if (bNameIsValid)
 				{
-					newScriptPath = SCRIPTS_DIRECTORY + newScriptPath;
-
+					// (SaveScript & LoadScript prepend SCRIPTS_DIRECTORY themselves)
 					Terminal* terminal = (Terminal*)g_SceneManager->CurrentScene()->GetGameObject(m_TerminalSavingID);
-					bool bSaved = SaveScript(newScriptPath, terminal->lines);
+					bool bSaved = terminal != nullptr && SaveScript(newScriptPath, terminal->lines);
 
 					if (bSaved)
 					{

@@ -133,7 +133,8 @@ namespace flex
 			}
 			else
 			{
-				if (m_HoveringAxisIndex != ALL_AXES_IDX)
+				// (Plane handles (YZ/XZ/XY_AXIS_IDX) have no single axis to draw)
+				if (m_HoveringAxisIndex >= X_AXIS_IDX && m_HoveringAxisIndex <= Z_AXIS_IDX)
 				{
 					Transform* gizmoTransform = m_TransformGizmo->GetTransform();
 					glm::vec3 axes[] = { gizmoTransform->GetRight(), gizmoTransform->GetUp(), gizmoTransform->GetForward() };

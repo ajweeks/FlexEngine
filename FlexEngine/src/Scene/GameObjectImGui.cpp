@@ -428,7 +428,7 @@ namespace flex
 							radius *= scale.x;
 							halfHeight *= scale.x;
 							bAnyPropertyChanged = true;
-							btCollisionShape* collisionShape = CreateCollisionShape(SPHERE_SHAPE_PROXYTYPE, radius, halfHeight * 2.0f);
+							btCollisionShape* collisionShape = CreateCollisionShape(CAPSULE_SHAPE_PROXYTYPE, radius, halfHeight * 2.0f);
 							SetCollisionShape(collisionShape);
 						}
 					} break;
@@ -443,7 +443,7 @@ namespace flex
 						{
 							halfExtentsG *= scale;
 							bAnyPropertyChanged = true;
-							btCollisionShape* collisionShape = CreateCollisionShape(SPHERE_SHAPE_PROXYTYPE, halfExtentsG.x, halfExtentsG.y, halfExtentsG.z);
+							btCollisionShape* collisionShape = CreateCollisionShape(CYLINDER_SHAPE_PROXYTYPE, halfExtentsG.x, halfExtentsG.y, halfExtentsG.z);
 							SetCollisionShape(collisionShape);
 						}
 					} break;
@@ -683,7 +683,12 @@ namespace flex
 
 				g_Editor->SetSelectedObjects(selectedObjectIDs);
 
-				bDeletedOrDuplicated = true;
+				// This object has been deleted, nothing below may touch its members
+				ImGui::CloseCurrentPopup();
+				ImGui::EndPopup();
+				ImGui::PopID(); // ID.Data2
+				ImGui::PopID(); // ID.Data1
+				return true;
 			}
 
 			if (DrawImGuiDuplicateGameObjectButton())

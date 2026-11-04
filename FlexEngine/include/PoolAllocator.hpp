@@ -53,7 +53,11 @@ namespace flex
 		{
 			for (auto& pair : data)
 			{
-				((T*)pair.first)->~T();
+				// (Every allocated element, not just the first)
+				for (u32 i = 0; i < pair.second; ++i)
+				{
+					((T*)pair.first + i)->~T();
+				}
 				free(pair.first);
 			}
 			data.clear();

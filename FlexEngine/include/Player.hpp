@@ -108,10 +108,12 @@ namespace flex
 		static GameObjectStackID GetGameObjectStackIDForWearablesInventory(u32 slotIndex);
 		static GameObjectStackID GetGameObjectStackIDForMinerInventory(u32 slotIndex);
 
-		// Adds the specified items to any inventory with space
+		// Adds the specified items to any inventory with space, returns the number of items that didn't fit
 		void AddToInventory(DroppedItem* droppedItem);
-		void AddToInventory(const PrefabID& prefabID, i32 count);
-		void AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData);
+		u32 AddToInventory(const PrefabID& prefabID, i32 count);
+		u32 AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData);
+		// Adds what fits & drops the rest at dropPosWS as a DroppedItem (so nothing is lost when the inventory is full)
+		void AddToInventoryOrDrop(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData, const glm::vec3& dropPosWS);
 		// Adds the given items to the specified inventory, returns number of items that weren't added
 		u32 AddToInventory(const PrefabID& prefabID, i32 count, const GameObjectStack::UserData& userData, InventoryType inventoryType);
 

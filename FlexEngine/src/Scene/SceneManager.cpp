@@ -318,6 +318,10 @@ namespace flex
 		{
 			m_CurrentSceneIndex = (newSceneIndex == 0) ? 0 : (newSceneIndex - 1);
 		}
+		else
+		{
+			m_CurrentSceneIndex = newSceneIndex;
+		}
 	}
 
 	void SceneManager::DrawImGuiObjects()

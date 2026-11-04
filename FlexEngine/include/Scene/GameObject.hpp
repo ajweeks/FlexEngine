@@ -280,7 +280,8 @@ namespace flex
 			{
 				for (GameObject* child : m_Children)
 				{
-					child->GetChildrenOfType(objTypeID, bRecurse, children);
+					// (Not GetChildrenOfType, which would skip the child itself)
+					child->GetChildrenOfTypeInternal(objTypeID, bRecurse, children);
 				}
 			}
 		}

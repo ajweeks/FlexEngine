@@ -53,7 +53,6 @@ namespace flex
 		newUIContainer->bRelative = bRelative;
 		newUIContainer->tagSourceStr = tagSourceStr;
 		newUIContainer->tag = tag;
-		newUIContainer->children = children;
 
 		for (UIContainer* child : children)
 		{

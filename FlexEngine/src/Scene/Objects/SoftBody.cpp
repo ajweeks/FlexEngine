@@ -954,7 +954,7 @@ namespace flex
 				{
 					delete constraint;
 				}
-				triangles.clear();
+				constraints.clear();
 
 				for (Triangle* triangle : triangles)
 				{
