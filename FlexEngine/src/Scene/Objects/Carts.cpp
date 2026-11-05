@@ -75,7 +75,7 @@ namespace flex
 
 	void BaseCart::Initialize()
 	{
-		GetSystem<CartManager>(SystemType::CART_MANAGER)->RegisterCart(this);
+		cartID = GetSystem<CartManager>(SystemType::CART_MANAGER)->RegisterCart(this);
 
 		GameObject::Initialize();
 	}
@@ -108,6 +108,8 @@ namespace flex
 	void BaseCart::Destroy(bool bDetachFromParent)
 	{
 		GetSystem<CartManager>(SystemType::CART_MANAGER)->DeregisterCart(this);
+		cartID = InvalidCartID;
+		chainID = InvalidCartChainID;
 
 		GameObject::Destroy(bDetachFromParent);
 	}

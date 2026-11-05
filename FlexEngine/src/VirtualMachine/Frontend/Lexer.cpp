@@ -41,6 +41,13 @@ namespace flex
 
 	Token Lexer::Next()
 	{
+		Token token = NextToken();
+		m_LastTokenKind = token.kind;
+		return token;
+	}
+
+	Token Lexer::NextToken()
+	{
 		EatWhitespaceAndComments();
 		m_CurrentSpan = m_CurrentSpan.Clip();
 
@@ -151,7 +158,18 @@ namespace flex
 		case '-':
 			if (sourceIter.Has(1))
 			{
-				if (IsDigit(sourceIter.Peek(1)))
+				// A '-' straight after an operand is a binary minus ("x-10" is "x - 10", not "x" "-10")
+				const bool bAfterOperand =
+					m_LastTokenKind == TokenKind::IDENTIFIER ||
+					m_LastTokenKind == TokenKind::INT_LITERAL ||
+					m_LastTokenKind == TokenKind::FLOAT_LITERAL ||
+					m_LastTokenKind == TokenKind::STRING_LITERAL ||
+					m_LastTokenKind == TokenKind::CHAR_LITERAL ||
+					m_LastTokenKind == TokenKind::TRUE ||
+					m_LastTokenKind == TokenKind::FALSE ||
+					m_LastTokenKind == TokenKind::CLOSE_PAREN ||
+					m_LastTokenKind == TokenKind::CLOSE_SQUARE;
+				if (IsDigit(sourceIter.Peek(1)) && !bAfterOperand)
 				{
 					return NextNumericLiteral();
 				}
@@ -355,6 +373,13 @@ namespace flex
 
 		while (sourceIter.Current() != '"')
 		{
+			if (sourceIter.EndOfFileReached())
+			{
+				diagnosticContainer->AddDiagnostic(GetSpan(), "Unexpected termination of string literal");
+				return g_EmptyToken;
+			}
+
+
 			if (IsNewLine(sourceIter.Current()))
 			{
 				diagnosticContainer->AddDiagnostic(GetSpan(), "Unexpected termination of string literal");

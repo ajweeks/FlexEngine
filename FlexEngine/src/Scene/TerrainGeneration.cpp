@@ -5422,7 +5422,7 @@ namespace flex
 		};
 
 		static const u32 SNAPSHOT_FILE_MAGIC = 0x4E535446; // "FTSN"
-		static const u32 SNAPSHOT_FILE_VERSION = 1;
+		static const u32 SNAPSHOT_FILE_VERSION = 2; // 2: crc32 after each chunk's data
 
 		TerrainStreamer::TerrainStreamer()
 		{
@@ -6561,12 +6561,16 @@ namespace flex
 						writer.Write(entry.key.index.z);
 						writer.Write(entry.mask);
 						writer.Write((u32)entry.packed->size());
+						writer.Write(save::Crc32(entry.packed->data(), entry.packed->size()));
 						file.write((const char*)header.data(), (std::streamsize)header.size());
 						file.write((const char*)entry.packed->data(), (std::streamsize)entry.packed->size());
 					}
 
+					// (checked after the close so a failed flush is caught before the rename)
+					file.close();
 					if (!file)
 					{
+						std::remove(tempPath.c_str());
 						return;
 					}
 				}
@@ -6620,16 +6624,22 @@ namespace flex
 				return snapshot;
 			}
 
-			std::vector<std::pair<const u8*, u32>> chunkData;
+			struct ChunkData
+			{
+				const u8* data;
+				u32 size;
+				u32 crc;
+			};
+			std::vector<ChunkData> chunkData;
 			chunkData.reserve(chunkCount);
 			snapshot.keys.reserve(chunkCount);
 			for (u32 i = 0; i < chunkCount; ++i)
 			{
 				ChunkKey key;
 				TransitionMask mask;
-				u32 size;
+				u32 size, crc;
 				if (!reader.Read(key.level) || !reader.Read(key.index.x) || !reader.Read(key.index.y) || !reader.Read(key.index.z) ||
-					!reader.Read(mask) || !reader.Read(size))
+					!reader.Read(mask) || !reader.Read(size) || !reader.Read(crc))
 				{
 					return Snapshot{};
 				}
@@ -6646,7 +6656,7 @@ namespace flex
 				}
 
 				snapshot.keys.emplace_back(key, mask);
-				chunkData.emplace_back(data, size);
+				chunkData.push_back(ChunkData{ data, size, crc });
 			}
 
 			// Unpacking is most of the work, so it's spread over the job system's workers
@@ -6655,13 +6665,14 @@ namespace flex
 			std::atomic<bool> bFailed{ false };
 			auto Unpack = [&](u32 i)
 			{
-				const u8* data = chunkData[i].first;
-				const u32 size = chunkData[i].second;
+				const u8* data = chunkData[i].data;
+				const u32 size = chunkData[i].size;
 				if (bFailed.load(std::memory_order_relaxed) || cancelled->load(std::memory_order_relaxed))
 				{
 					return;
 				}
-				if (!UnpackChunkMesh(data, size, snapshot.meshes[i]))
+				// (per chunk, so the check is spread over the workers too)
+				if (save::Crc32(data, size) != chunkData[i].crc || !UnpackChunkMesh(data, size, snapshot.meshes[i]))
 				{
 					bFailed = true;
 					return;

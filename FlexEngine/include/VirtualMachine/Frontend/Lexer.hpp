@@ -114,5 +114,10 @@ namespace flex
 
 		Span m_CurrentSpan;
 
+	private:
+		Token NextToken();
+
+		// Kind of the last token returned by Next (a '-' after an operand is a minus, not part of a number)
+		TokenKind m_LastTokenKind = TokenKind::_NONE;
 	};
 } // namespace flex

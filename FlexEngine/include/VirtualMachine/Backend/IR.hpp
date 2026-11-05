@@ -193,7 +193,7 @@ namespace flex
 
 			virtual std::string ToString() const override;
 
-			//Block * target = nullptr;
+			Block* target = nullptr; // Where execution resumes
 			IR::Value* yieldValue = nullptr;
 		};
 
@@ -467,7 +467,19 @@ namespace flex
 			//VariantWrapper GetValueWrapperFromExpression(AST::Expression* expression);
 
 			bool AddFunctionType(Span origin, const std::string& funcName, Value::Type returnType, const std::vector<Value::Type>& argumentTypes);
-			void CheckReturnTypesMatch(Value::Type returnType, Span origin, Block* block);
+			// Checks the return types of (& adds missing terminators to) the blocks from firstBlockIndex on, which belong to
+			// one function (or the main program when bIsFunction is false)
+			void FinishBlocks(u32 firstBlockIndex, bool bIsFunction, Value::Type returnType, Span origin);
+
+			// Returns value, or an identifier of a new temporary holding it if it isn't simple
+			IR::Value* SplitIntoTemporary(IR::Value* value);
+			// Returns a bool typed version of value (for && & ||)
+			IR::Value* ToBoolOperand(IR::Value* value);
+			// Terminates the insertion block with a branch to then or otherwise depending on condition. Returns false on error.
+			bool LowerConditionalBranch(AST::Expression* condition, Span origin, Block* then, Block* otherwise);
+
+			// Exit blocks of the loops being lowered (targets of break statements)
+			std::vector<Block*> m_BreakTargets;
 
 			void SetBlockIndices();
 		};

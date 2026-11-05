@@ -228,24 +228,26 @@ namespace flex
 			case Value::Type::UNARY:
 			{
 				UnaryValue* unary = (UnaryValue*)value;
+				// (The operand's value type, not its node type: it's usually an identifier)
+				Value::Type operandType = GetValueType(unary->operand);
 				switch (unary->opType)
 				{
 				case UnaryOperatorType::NOT:
-					if (unary->operand->type == Value::Type::BOOL)
+					if (operandType == Value::Type::BOOL)
 					{
 						return Value::Type::BOOL;
 					}
 					diagnosticContainer->AddDiagnostic(unary->origin, "Not operator can only be applied to boolean types");
 					return Value::Type::_NONE;
 				case UnaryOperatorType::NEGATE:
-					if (!IR::Value::IsLiteral(unary->operand->type) || IR::Value::IsNumeric(unary->operand->type))
+					if (IR::Value::IsNumeric(operandType))
 					{
-						return GetValueType(unary->operand);
+						return operandType;
 					}
 					diagnosticContainer->AddDiagnostic(unary->origin, "Negate operator can only be applied to numeric types");
 					return Value::Type::_NONE;
 				case UnaryOperatorType::BIN_INVERT:
-					if (unary->operand->type == Value::Type::INT)
+					if (operandType == Value::Type::INT)
 					{
 						return Value::Type::INT;
 					}
@@ -336,9 +338,10 @@ namespace flex
 			}
 			else
 			{
-				if (iter->second != value->type)
+				Value::Type valueType = GetValueType(value);
+				if (iter->second != valueType)
 				{
-					std::string message = "Type mismatch (" + std::string(Value::TypeToString(value->type)) + " vs. " + std::string(Value::TypeToString(iter->second)) + ")";
+					std::string message = "Type mismatch (" + std::string(Value::TypeToString(valueType)) + " vs. " + std::string(Value::TypeToString(iter->second)) + ")";
 					diagnosticContainer->AddDiagnostic(value->origin, message);
 				}
 			}
@@ -426,7 +429,10 @@ namespace flex
 			StringBuilder builder;
 
 			builder.Append("yield ");
-			builder.Append(yieldValue->ToString());
+			if (yieldValue != nullptr)
+			{
+				builder.Append(yieldValue->ToString());
+			}
 
 			return builder.ToString();
 		}
@@ -763,6 +769,7 @@ namespace flex
 				{
 					LowerStatement(ast->rootBlock);
 					state->InsertionBlock()->AddHalt();
+					FinishBlocks(0, false, Value::Type::VOID_, ast->rootBlock->span);
 					LowerFunctionDefinitions(ast->rootBlock);
 					blocks = state->blocks;
 					SetBlockIndices();
@@ -775,15 +782,13 @@ namespace flex
 
 		void IntermediateRepresentation::Destroy()
 		{
+			// (The state owns the blocks, blocks is either empty or a copy of them. Failed lowering leaves them only in
+			// the state.)
+			state->Clear();
+			blocks.clear();
 			state->Destroy();
 			delete state;
-
-			for (u32 i = 0; i < (u32)blocks.size(); ++i)
-			{
-				blocks[i]->Destroy();
-				delete blocks[i];
-			}
-			blocks.clear();
+			state = nullptr;
 
 			// (Shared by every VM, so another VM's Destroy may already have freed it)
 			if (g_EmptyIRValue != nullptr)
@@ -833,55 +838,192 @@ namespace flex
 			}
 		}
 
-		void IntermediateRepresentation::CheckReturnTypesMatch(Value::Type returnType, Span origin, Block* block)
+		void IntermediateRepresentation::FinishBlocks(u32 firstBlockIndex, bool bIsFunction, Value::Type returnType, Span origin)
 		{
-			if (block == nullptr)
+			if (firstBlockIndex >= (u32)state->blocks.size())
 			{
 				return;
 			}
 
-			if (block->terminator != nullptr)
+			// Find the blocks reachable from the entry block
+			std::set<Block*> reachable;
+			std::vector<Block*> toVisit = { state->blocks[firstBlockIndex] };
+			while (!toVisit.empty())
 			{
+				Block* block = toVisit.back();
+				toVisit.pop_back();
+				if (block == nullptr || !reachable.insert(block).second || block->terminator == nullptr)
+				{
+					continue;
+				}
+
 				switch (block->terminator->type)
 				{
-				case TerminatorType::RETURN:
-				{
-					Return* returnVal = (Return*)block->terminator;
-					Value::Type returnValType = returnVal->returnValue != nullptr ? state->GetValueType(returnVal->returnValue) : Value::Type::_NONE;
-					if (returnValType != returnType)
-					{
-						std::string message = "Returned type doesn't match function's return type (" + std::string(Value::TypeToString(returnValType)) + " vs. " + std::string(Value::TypeToString(returnType)) + ")";
-						state->diagnosticContainer->AddDiagnostic(origin, message);
-					}
-				} break;
-				case TerminatorType::YIELD:
-				{
-					YieldReturn* yieldVal = (YieldReturn*)block->terminator;
-					Value::Type yieldValType = yieldVal->yieldValue != nullptr ? state->GetValueType(yieldVal->yieldValue) : Value::Type::_NONE;
-					if (yieldValType != returnType)
-					{
-						std::string message = "Yielded type doesn't match function's return type (" + std::string(Value::TypeToString(yieldValType)) + " vs. " + std::string(Value::TypeToString(returnType)) + ")";
-						state->diagnosticContainer->AddDiagnostic(origin, message);
-					}
-				} break;
-				case TerminatorType::BREAK:
-				{
-					Break* breakVal = (Break*)block->terminator;
-					CheckReturnTypesMatch(returnType, origin, breakVal->target);
-				} break;
 				case TerminatorType::BRANCH:
-				{
-					Branch* branch = (Branch*)block->terminator;
-					CheckReturnTypesMatch(returnType, origin, branch->target);
-				} break;
+					toVisit.push_back(((Branch*)block->terminator)->target);
+					break;
+				case TerminatorType::BREAK:
+					toVisit.push_back(((Break*)block->terminator)->target);
+					break;
+				case TerminatorType::YIELD:
+					toVisit.push_back(((YieldReturn*)block->terminator)->target);
+					break;
 				case TerminatorType::CONDITIONAL_BRANCH:
-				{
-					ConditionalBranch* branch = (ConditionalBranch*)block->terminator;
-					CheckReturnTypesMatch(returnType, origin, branch->then);
-					CheckReturnTypesMatch(returnType, origin, branch->otherwise);
-				} break;
+					toVisit.push_back(((ConditionalBranch*)block->terminator)->then);
+					toVisit.push_back(((ConditionalBranch*)block->terminator)->otherwise);
+					break;
 				}
 			}
+
+			bool bMissingReturn = false;
+			for (u32 i = firstBlockIndex; i < (u32)state->blocks.size(); ++i)
+			{
+				Block* block = state->blocks[i];
+				if (block->terminator != nullptr)
+				{
+					if (block->terminator->type == TerminatorType::RETURN)
+					{
+						Return* returnVal = (Return*)block->terminator;
+						if (!bIsFunction)
+						{
+							state->diagnosticContainer->AddDiagnostic(returnVal->origin, "Return statement outside of a function");
+							continue;
+						}
+
+						// (Checked in unreachable blocks too)
+						Value::Type returnValType = returnVal->returnValue != nullptr ? state->GetValueType(returnVal->returnValue) : Value::Type::VOID_;
+						if (returnValType != returnType)
+						{
+							std::string message = "Returned type doesn't match function's return type (" + std::string(Value::TypeToString(returnValType)) + " vs. " + std::string(Value::TypeToString(returnType)) + ")";
+							state->diagnosticContainer->AddDiagnostic(returnVal->origin, message);
+						}
+					}
+					continue;
+				}
+
+				// Execution must never run off the end of a block into whatever is placed after it
+				if (!bIsFunction)
+				{
+					block->AddHalt();
+				}
+				else
+				{
+					if (returnType != Value::Type::VOID_ && reachable.find(block) != reachable.end())
+					{
+						bMissingReturn = true;
+					}
+					// Void functions get auto generated return statements (non-void ones only in unreachable blocks)
+					block->AddReturn(Span(Span::Source::GENERATED), nullptr);
+				}
+			}
+
+			if (bMissingReturn)
+			{
+				state->diagnosticContainer->AddDiagnostic(origin, "Not all code paths return a value");
+			}
+		}
+
+		IR::Value* IntermediateRepresentation::SplitIntoTemporary(IR::Value* value)
+		{
+			if (value == nullptr || IR::Value::IsSimple(value->type))
+			{
+				return value;
+			}
+
+			std::string tempIdent = state->NextTemporary();
+			state->WriteVariableInBlock(tempIdent, value);
+			return new IR::Identifier(state, value->origin, tempIdent);
+		}
+
+		IR::Value* IntermediateRepresentation::ToBoolOperand(IR::Value* value)
+		{
+			if (value == nullptr)
+			{
+				return nullptr;
+			}
+
+			Value::Type valueType = state->GetValueType(value);
+			if (valueType == Value::Type::BOOL)
+			{
+				return value;
+			}
+
+			if (valueType == Value::Type::INT || valueType == Value::Type::FLOAT)
+			{
+				if (IR::Value::IsLiteral(value->type))
+				{
+					IR::Value* result = new IR::Constant(IR::Value(value->origin, state, value->AsBool() != 0));
+					value->Destroy();
+					delete value;
+					return result;
+				}
+
+				IR::Value* zeroConst = (valueType == Value::Type::INT) ? new IR::Value(value->origin, state, 0) : new IR::Value(value->origin, state, 0.0f);
+				return SplitIntoTemporary(new IR::BinaryValue(state, value->origin, IR::BinaryOperatorType::NOT_EQUAL_TEST, value, zeroConst));
+			}
+
+			state->diagnosticContainer->AddDiagnostic(value->origin, "Expected a bool operand");
+			return value;
+		}
+
+		bool IntermediateRepresentation::LowerConditionalBranch(AST::Expression* condition, Span origin, Block* then, Block* otherwise)
+		{
+			IR::Value* conditionExpr = LowerExpression(condition);
+			if (conditionExpr == nullptr)
+			{
+				return false;
+			}
+
+			if (conditionExpr->type == IR::Value::Type::STRING ||
+				conditionExpr->type == IR::Value::Type::CHAR)
+			{
+				state->diagnosticContainer->AddDiagnostic(conditionExpr->origin, "Invalid conditional expression");
+				conditionExpr->Destroy();
+				delete conditionExpr;
+				return false;
+			}
+
+			if (IR::Value::IsLiteral(conditionExpr->type))
+			{
+				// Constant condition (the other block is unreachable)
+				bool bTrue = conditionExpr->AsBool() != 0;
+				conditionExpr->Destroy();
+				delete conditionExpr;
+				state->InsertionBlock()->AddBranch(origin, bTrue ? then : otherwise);
+				return true;
+			}
+
+			IR::Value::Type valueType = state->GetValueType(conditionExpr);
+			IR::Value* zeroConst = nullptr;
+			if (valueType == IR::Value::Type::INT)
+			{
+				zeroConst = new IR::Value(conditionExpr->origin, state, 0);
+			}
+			else if (valueType == IR::Value::Type::FLOAT)
+			{
+				zeroConst = new IR::Value(conditionExpr->origin, state, 0.0f);
+			}
+			else if (valueType == IR::Value::Type::BOOL)
+			{
+				zeroConst = new IR::Value(conditionExpr->origin, state, false);
+			}
+			else
+			{
+				std::string conditionString = condition->ToString();
+				state->diagnosticContainer->AddDiagnostic(conditionExpr->origin, "Invalid conditional \"" + conditionString + "\"");
+				conditionExpr->Destroy();
+				delete conditionExpr;
+				return false;
+			}
+
+			std::string tempIdent = state->NextTemporary();
+			Span conditionOrigin = conditionExpr->origin;
+			state->WriteVariableInBlock(tempIdent, conditionExpr);
+
+			IR::Identifier* newTemp = new IR::Identifier(state, conditionOrigin, tempIdent);
+			IR::Value* rewrittenConditionExpr = new IR::BinaryValue(state, conditionOrigin, IR::BinaryOperatorType::NOT_EQUAL_TEST, newTemp, zeroConst);
+			state->InsertionBlock()->AddConditionalBranch(state, origin, rewrittenConditionExpr, then, otherwise);
+			return true;
 		}
 
 		void IntermediateRepresentation::LowerFunctionDefinitions(AST::Statement* statement)
@@ -903,6 +1045,7 @@ namespace flex
 				IR::Block* bodyBlock = new IR::Block(state, funcDecl->span);
 				bodyBlock->funcName = funcDecl->name;
 
+				const u32 firstBlockIndex = (u32)state->blocks.size();
 				state->PushInstructionBlock(bodyBlock);
 
 				State::FuncSig& funcSig = state->functionTypes[funcDecl->name];
@@ -917,22 +1060,7 @@ namespace flex
 					state->InsertionBlock()->AddAssignment(new IR::Assignment(state, arg->span, arg->identifierStr, argument));
 				}
 				LowerStatement(funcDecl->body);
-				if (bodyBlock->terminator != nullptr)
-				{
-					CheckReturnTypesMatch(IR::Value::FromASTTypeName(funcDecl->returnType), funcDecl->span, bodyBlock);
-				}
-				else
-				{
-					if (funcDecl->returnType == AST::TypeName::VOID)
-					{
-						// Void functions get auto generated return statement
-						bodyBlock->AddReturn(Span(Span::Source::GENERATED), nullptr);
-					}
-					else
-					{
-						state->diagnosticContainer->AddDiagnostic(funcDecl->span, "Expected return statement");
-					}
-				}
+				FinishBlocks(firstBlockIndex, true, IR::Value::FromASTTypeName(funcDecl->returnType), funcDecl->span);
 				state->InsertionBlock()->SealBlock();
 			} break;
 			}
@@ -963,7 +1091,9 @@ namespace flex
 					}
 					else
 					{
-						state->diagnosticContainer->AddDiagnostic(statement->span, "Function with name %s not found\n");
+						// (LowerExpression already reported the undeclared function)
+						value->Destroy();
+						delete value;
 						return;
 					}
 				}
@@ -988,130 +1118,21 @@ namespace flex
 					Block* mergeBlock = new Block(state, state->InsertionBlock()->origin);
 					Block* ifFalseBlock = ifStatement->otherwise == nullptr ? nullptr : new Block(state, ifStatement->otherwise->span);
 
-					IR::Value* conditionExpr = LowerExpression(ifStatement->condition);
-					if (conditionExpr == nullptr)
+					// (Without an else clause the false path goes straight to the merge block)
+					if (!LowerConditionalBranch(ifStatement->condition, ifStatement->span, ifTrueBlock, ifFalseBlock != nullptr ? ifFalseBlock : mergeBlock))
 					{
-						ifTrueBlock->Destroy();
 						delete ifTrueBlock;
-						mergeBlock->Destroy();
 						delete mergeBlock;
-						if (ifFalseBlock != nullptr) // (no else clause)
-						{
-							ifFalseBlock->Destroy();
-							delete ifFalseBlock;
-						}
+						delete ifFalseBlock;
 						return;
 					}
 
-					bool bAlwaysTakeTrue = false;
-					bool bAlwaysTakeFalse = false;
-
-					// Eliminate dead branches
-					if (conditionExpr->type == IR::Value::Type::INT ||
-						conditionExpr->type == IR::Value::Type::FLOAT ||
-						conditionExpr->type == IR::Value::Type::BOOL)
-					{
-						if (conditionExpr->AsInt() == 0)
-						{
-							bAlwaysTakeFalse = true;
-						}
-						else
-						{
-							bAlwaysTakeTrue = true;
-						}
-					}
-					else if (conditionExpr->type == IR::Value::Type::STRING ||
-						conditionExpr->type == IR::Value::Type::CHAR)
-					{
-						state->diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), "Invalid conditional expression");
-						return;
-					}
-
-					if (bAlwaysTakeTrue)
-					{
-						conditionExpr->Destroy();
-						delete conditionExpr;
-						conditionExpr = nullptr;
-						if (ifFalseBlock != nullptr) // (no else clause)
-						{
-							ifFalseBlock->Destroy();
-							delete ifFalseBlock;
-							ifFalseBlock = nullptr;
-						}
-
-						state->InsertionBlock()->AddBranch(ifStatement->span, ifTrueBlock);
-						state->PushInstructionBlock(ifTrueBlock);
-						LowerStatement(ifStatement->then);
-						state->InsertionBlock()->AddBranch(ifStatement->span, mergeBlock);
-						state->InsertionBlock()->SealBlock();
-						state->PushInstructionBlock(mergeBlock);
-						return;
-					}
-
-					if (bAlwaysTakeFalse)
-					{
-						conditionExpr->Destroy();
-						delete conditionExpr;
-						conditionExpr = nullptr;
-						ifTrueBlock->Destroy();
-						delete ifTrueBlock;
-						ifTrueBlock = nullptr;
-
-						if (ifStatement->otherwise != nullptr)
-						{
-							state->InsertionBlock()->AddBranch(ifStatement->span, ifFalseBlock);
-							state->PushInstructionBlock(ifFalseBlock);
-							LowerStatement(ifStatement->otherwise);
-							state->InsertionBlock()->AddBranch(ifStatement->span, mergeBlock);
-							state->InsertionBlock()->SealBlock();
-							state->PushInstructionBlock(mergeBlock);
-						}
-						else
-						{
-							ifFalseBlock->Destroy();
-							delete ifFalseBlock;
-							ifFalseBlock = nullptr;
-						}
-						return;
-					}
-
-					IR::Value::Type valueType = state->GetValueType(conditionExpr);
-
-					std::string tempIdent = state->NextTemporary();
-					state->WriteVariableInBlock(tempIdent, conditionExpr);
-
-					IR::Identifier* newTemp = new IR::Identifier(state, conditionExpr->origin, tempIdent);
-					IR::Value* zeroConst;
-					if (valueType == IR::Value::Type::INT)
-					{
-						zeroConst = new IR::Value(conditionExpr->origin, state, 0);
-					}
-					else if (valueType == IR::Value::Type::FLOAT)
-					{
-						zeroConst = new IR::Value(conditionExpr->origin, state, 0.0f);
-					}
-					else if (valueType == IR::Value::Type::BOOL)
-					{
-						zeroConst = new IR::Value(conditionExpr->origin, state, false);
-					}
-					else
-					{
-						newTemp->Destroy();
-						delete newTemp;
-						std::string ifString = ifStatement->condition->ToString();
-						state->diagnosticContainer->AddDiagnostic(conditionExpr->origin, "Invalid conditional \"" + ifString + "\"");
-						return;
-					}
-
-					IR::Value* rewrittenConditionExpr = new IR::BinaryValue(state, conditionExpr->origin, IR::BinaryOperatorType::NOT_EQUAL_TEST, newTemp, zeroConst);
-
-					state->InsertionBlock()->AddConditionalBranch(state, ifStatement->span, rewrittenConditionExpr, ifTrueBlock, ifFalseBlock);
 					state->PushInstructionBlock(ifTrueBlock);
 					LowerStatement(ifStatement->then);
 					state->InsertionBlock()->AddBranch(ifStatement->span, mergeBlock);
 					state->InsertionBlock()->SealBlock();
 
-					if (ifStatement->otherwise != nullptr)
+					if (ifFalseBlock != nullptr)
 					{
 						state->PushInstructionBlock(ifFalseBlock);
 						LowerStatement(ifStatement->otherwise);
@@ -1120,6 +1141,98 @@ namespace flex
 					}
 
 					state->PushInstructionBlock(mergeBlock);
+				} break;
+				case AST::StatementType::WHILE:
+				{
+					AST::WhileStatement* whileStatement = (AST::WhileStatement*)statement;
+
+					Block* conditionBlock = new Block(state, whileStatement->condition->span);
+					Block* bodyBlock = new Block(state, whileStatement->body->span);
+					Block* exitBlock = new Block(state, whileStatement->span);
+
+					state->InsertionBlock()->AddBranch(whileStatement->span, conditionBlock);
+					state->PushInstructionBlock(conditionBlock);
+					if (!LowerConditionalBranch(whileStatement->condition, whileStatement->span, bodyBlock, exitBlock))
+					{
+						delete bodyBlock;
+						delete exitBlock;
+						return;
+					}
+
+					state->PushInstructionBlock(bodyBlock);
+					m_BreakTargets.push_back(exitBlock);
+					LowerStatement(whileStatement->body);
+					m_BreakTargets.pop_back();
+					state->InsertionBlock()->AddBranch(whileStatement->span, conditionBlock);
+
+					state->PushInstructionBlock(exitBlock);
+				} break;
+				case AST::StatementType::DO_WHILE:
+				{
+					AST::DoWhileStatement* doWhileStatement = (AST::DoWhileStatement*)statement;
+
+					Block* bodyBlock = new Block(state, doWhileStatement->body->span);
+					Block* conditionBlock = new Block(state, doWhileStatement->condition->span);
+					Block* exitBlock = new Block(state, doWhileStatement->span);
+
+					state->InsertionBlock()->AddBranch(doWhileStatement->span, bodyBlock);
+					state->PushInstructionBlock(bodyBlock);
+					m_BreakTargets.push_back(exitBlock);
+					LowerStatement(doWhileStatement->body);
+					m_BreakTargets.pop_back();
+					state->InsertionBlock()->AddBranch(doWhileStatement->span, conditionBlock);
+
+					state->PushInstructionBlock(conditionBlock);
+					LowerConditionalBranch(doWhileStatement->condition, doWhileStatement->span, bodyBlock, exitBlock);
+
+					// (Pushed even on error since breaks in the body may already target it)
+					state->PushInstructionBlock(exitBlock);
+				} break;
+				case AST::StatementType::FOR:
+				{
+					AST::ForStatement* forStatement = (AST::ForStatement*)statement;
+
+					if (forStatement->setup != nullptr)
+					{
+						LowerStatement(forStatement->setup);
+					}
+
+					Block* conditionBlock = new Block(state, forStatement->span);
+					Block* bodyBlock = new Block(state, forStatement->body->span);
+					Block* updateBlock = new Block(state, forStatement->span);
+					Block* exitBlock = new Block(state, forStatement->span);
+
+					state->InsertionBlock()->AddBranch(forStatement->span, conditionBlock);
+					state->PushInstructionBlock(conditionBlock);
+					if (forStatement->condition != nullptr)
+					{
+						if (!LowerConditionalBranch((AST::Expression*)forStatement->condition, forStatement->span, bodyBlock, exitBlock))
+						{
+							delete bodyBlock;
+							delete updateBlock;
+							delete exitBlock;
+							return;
+						}
+					}
+					else
+					{
+						state->InsertionBlock()->AddBranch(forStatement->span, bodyBlock);
+					}
+
+					state->PushInstructionBlock(bodyBlock);
+					m_BreakTargets.push_back(exitBlock);
+					LowerStatement(forStatement->body);
+					m_BreakTargets.pop_back();
+					state->InsertionBlock()->AddBranch(forStatement->span, updateBlock);
+
+					state->PushInstructionBlock(updateBlock);
+					if (forStatement->update != nullptr)
+					{
+						LowerStatement(forStatement->update);
+					}
+					state->InsertionBlock()->AddBranch(forStatement->span, conditionBlock);
+
+					state->PushInstructionBlock(exitBlock);
 				} break;
 				case AST::StatementType::ASSIGNMENT:
 				{
@@ -1326,7 +1439,10 @@ namespace flex
 		{
 			if (IsLiteral(expression->statementType))
 			{
-				return new IR::Constant(IR::Value(expression->GetValue()));
+				IR::Constant* constant = new IR::Constant(IR::Value(expression->GetValue()));
+				constant->origin = expression->span;
+				constant->irState = state; // (Used to report errors when folding constants)
+				return constant;
 			}
 
 			switch (expression->statementType)
@@ -1366,7 +1482,33 @@ namespace flex
 				IR::Value* loweredExpr = LowerExpression(unaryOperation->expression);
 				if (loweredExpr != nullptr)
 				{
-					return new IR::UnaryValue(state, unaryOperation->span, irOpType, loweredExpr);
+					// Fold constants
+					IR::Value* folded = nullptr;
+					if (irOpType == IR::UnaryOperatorType::NEGATE && loweredExpr->type == IR::Value::Type::INT)
+					{
+						folded = new IR::Constant(IR::Value(unaryOperation->span, state, -loweredExpr->valInt));
+					}
+					else if (irOpType == IR::UnaryOperatorType::NEGATE && loweredExpr->type == IR::Value::Type::FLOAT)
+					{
+						folded = new IR::Constant(IR::Value(unaryOperation->span, state, -loweredExpr->valFloat));
+					}
+					else if (irOpType == IR::UnaryOperatorType::NOT && loweredExpr->type == IR::Value::Type::BOOL)
+					{
+						folded = new IR::Constant(IR::Value(unaryOperation->span, state, loweredExpr->valBool == 0));
+					}
+					else if (irOpType == IR::UnaryOperatorType::BIN_INVERT && loweredExpr->type == IR::Value::Type::INT)
+					{
+						folded = new IR::Constant(IR::Value(unaryOperation->span, state, ~loweredExpr->valInt));
+					}
+					if (folded != nullptr)
+					{
+						loweredExpr->Destroy();
+						delete loweredExpr;
+						return folded;
+					}
+
+					// (Codegen needs a simple operand)
+					return new IR::UnaryValue(state, unaryOperation->span, irOpType, SplitIntoTemporary(loweredExpr));
 				}
 			} break;
 			case AST::StatementType::BINARY_OPERATION:
@@ -1396,104 +1538,75 @@ namespace flex
 				if (lhsVal == nullptr ||
 					rhsVal == nullptr)
 				{
+					if (lhsVal != nullptr)
+					{
+						lhsVal->Destroy();
+						delete lhsVal;
+					}
+					if (rhsVal != nullptr)
+					{
+						rhsVal->Destroy();
+						delete rhsVal;
+					}
 					return nullptr;
+				}
+
+				const bool bBooleanOp = irOpType == IR::BinaryOperatorType::BOOLEAN_AND || irOpType == IR::BinaryOperatorType::BOOLEAN_OR;
+				if (bBooleanOp)
+				{
+					// && & || take bools (ints & floats are compared against zero)
+					lhsVal = ToBoolOperand(SplitIntoTemporary(lhsVal));
+					rhsVal = ToBoolOperand(SplitIntoTemporary(rhsVal));
 				}
 
 				if (IR::Value::IsLiteral(lhsVal->type) &&
 					IR::Value::IsLiteral(rhsVal->type))
 				{
+					IR::Value* folded = nullptr;
 					IR::Value::Type resultType;
 					if (IR::Value::TypesAreCoercible(state, lhsVal, rhsVal, resultType))
 					{
+						Span foldedOrigin = lhsVal->origin.Extend(rhsVal->origin);
 						switch (irOpType)
 						{
-						case IR::BinaryOperatorType::ADD:					return new IR::Constant(*lhsVal + *rhsVal);
-						case IR::BinaryOperatorType::SUB:					return new IR::Constant(*lhsVal - *rhsVal);
-						case IR::BinaryOperatorType::MUL:					return new IR::Constant(*lhsVal * *rhsVal);
-						case IR::BinaryOperatorType::DIV:					return new IR::Constant(*lhsVal / *rhsVal);
-						case IR::BinaryOperatorType::MOD:					return new IR::Constant(*lhsVal % *rhsVal);
-						case IR::BinaryOperatorType::BIN_AND:				return new IR::Constant(*lhsVal & *rhsVal);
-						case IR::BinaryOperatorType::BIN_OR:				return new IR::Constant(*lhsVal | *rhsVal);
-						case IR::BinaryOperatorType::BIN_XOR:				return new IR::Constant(*lhsVal ^ *rhsVal);
-						case IR::BinaryOperatorType::EQUAL_TEST:
-						{
-							IR::Value val = IR::Value(lhsVal->origin.Extend(rhsVal->origin), state, *lhsVal == *rhsVal);
-							return new IR::Constant(val);
-						}
-						case IR::BinaryOperatorType::NOT_EQUAL_TEST:		return new IR::Constant(IR::Value(lhsVal->origin.Extend(rhsVal->origin), state, *lhsVal != *rhsVal));
-						case IR::BinaryOperatorType::GREATER_TEST:			return new IR::Constant(IR::Value(lhsVal->origin.Extend(rhsVal->origin), state, *lhsVal > *rhsVal));
-						case IR::BinaryOperatorType::GREATER_EQUAL_TEST:	return new IR::Constant(IR::Value(lhsVal->origin.Extend(rhsVal->origin), state, *lhsVal >= *rhsVal));
-						case IR::BinaryOperatorType::LESS_TEST:				return new IR::Constant(IR::Value(lhsVal->origin.Extend(rhsVal->origin), state, *lhsVal < *rhsVal));
-						case IR::BinaryOperatorType::LESS_EQUAL_TEST:		return new IR::Constant(IR::Value(lhsVal->origin.Extend(rhsVal->origin), state, *lhsVal <= *rhsVal));
-						case IR::BinaryOperatorType::BOOLEAN_AND:			return new IR::Constant(*lhsVal && *rhsVal);
-						case IR::BinaryOperatorType::BOOLEAN_OR:			return new IR::Constant(*lhsVal || *rhsVal);
+						case IR::BinaryOperatorType::ADD:					folded = new IR::Constant(*lhsVal + *rhsVal); break;
+						case IR::BinaryOperatorType::SUB:					folded = new IR::Constant(*lhsVal - *rhsVal); break;
+						case IR::BinaryOperatorType::MUL:					folded = new IR::Constant(*lhsVal * *rhsVal); break;
+						case IR::BinaryOperatorType::DIV:					folded = new IR::Constant(*lhsVal / *rhsVal); break;
+						case IR::BinaryOperatorType::MOD:					folded = new IR::Constant(*lhsVal % *rhsVal); break;
+						case IR::BinaryOperatorType::BIN_AND:				folded = new IR::Constant(*lhsVal & *rhsVal); break;
+						case IR::BinaryOperatorType::BIN_OR:				folded = new IR::Constant(*lhsVal | *rhsVal); break;
+						case IR::BinaryOperatorType::BIN_XOR:				folded = new IR::Constant(*lhsVal ^ *rhsVal); break;
+						case IR::BinaryOperatorType::EQUAL_TEST:			folded = new IR::Constant(IR::Value(foldedOrigin, state, *lhsVal == *rhsVal)); break;
+						case IR::BinaryOperatorType::NOT_EQUAL_TEST:		folded = new IR::Constant(IR::Value(foldedOrigin, state, *lhsVal != *rhsVal)); break;
+						case IR::BinaryOperatorType::GREATER_TEST:			folded = new IR::Constant(IR::Value(foldedOrigin, state, *lhsVal > *rhsVal)); break;
+						case IR::BinaryOperatorType::GREATER_EQUAL_TEST:	folded = new IR::Constant(IR::Value(foldedOrigin, state, *lhsVal >= *rhsVal)); break;
+						case IR::BinaryOperatorType::LESS_TEST:				folded = new IR::Constant(IR::Value(foldedOrigin, state, *lhsVal < *rhsVal)); break;
+						case IR::BinaryOperatorType::LESS_EQUAL_TEST:		folded = new IR::Constant(IR::Value(foldedOrigin, state, *lhsVal <= *rhsVal)); break;
+						case IR::BinaryOperatorType::BOOLEAN_AND:			folded = new IR::Constant(IR::Value(foldedOrigin, state, lhsVal->AsBool() != 0 && rhsVal->AsBool() != 0)); break;
+						case IR::BinaryOperatorType::BOOLEAN_OR:			folded = new IR::Constant(IR::Value(foldedOrigin, state, lhsVal->AsBool() != 0 || rhsVal->AsBool() != 0)); break;
 						default:
 							CHECK(false);
-							return new IR::Constant(IR::Value(lhsVal->origin.Extend(rhsVal->origin), state, -1));
+							folded = new IR::Constant(IR::Value(foldedOrigin, state, -1));
+							break;
 						}
 					}
 					else
 					{
 						state->diagnosticContainer->AddDiagnostic(binaryOperation->span, "Types are not coercible");
 					}
+
+					lhsVal->Destroy();
+					delete lhsVal;
+					rhsVal->Destroy();
+					delete rhsVal;
+					return folded;
 				}
 				else
 				{
-					if (!Value::IsLiteral(lhsVal->type) && lhsVal->type != Value::Type::IDENTIFIER)
-					{
-						bool bSplit = true;
-						if (lhsVal->type == Value::Type::BINARY)
-						{
-							IR::BinaryValue* binaryVal = (IR::BinaryValue*)lhsVal;
-							if (IsComparisonOp(binaryVal->opType))
-							{
-								bSplit = false;
-							}
-						}
-						if (bSplit)
-						{
-							std::string lhsVar = state->NextTemporary();
-							state->WriteVariableInBlock(lhsVar, lhsVal);
-							lhsVal = new IR::Identifier(state, lhsVal->origin, lhsVar);
-						}
-					}
-					if (!Value::IsLiteral(rhsVal->type) && rhsVal->type != Value::Type::IDENTIFIER)
-					{
-						bool bSplit = true;
-						if (rhsVal->type == Value::Type::BINARY)
-						{
-							IR::BinaryValue* binaryVal = (IR::BinaryValue*)rhsVal;
-							if (IsComparisonOp(binaryVal->opType))
-							{
-								bSplit = false;
-							}
-						}
-						if (bSplit)
-						{
-							std::string rhsVar = state->NextTemporary();
-							state->WriteVariableInBlock(rhsVar, rhsVal);
-							rhsVal = new IR::Identifier(state, rhsVal->origin, rhsVar);
-						}
-					}
-
-					// Turn simple types e.g. 'a' into 'a != 0' tests
-					if (irOpType == IR::BinaryOperatorType::BOOLEAN_AND ||
-						irOpType == IR::BinaryOperatorType::BOOLEAN_OR)
-					{
-						IR::BinaryValue* binaryVal = (IR::BinaryValue*)rhsVal;
-						if (!IsComparisonOp(binaryVal->opType))
-						{
-							if (!Value::IsLiteral(lhsVal->type))
-							{
-								lhsVal = new IR::BinaryValue(state, lhsVal->origin, IR::BinaryOperatorType::NOT_EQUAL_TEST, lhsVal, new IR::Value(Span(Span::Source::GENERATED), state, 0));
-							}
-							if (!Value::IsLiteral(rhsVal->type))
-							{
-								rhsVal = new IR::BinaryValue(state, rhsVal->origin, IR::BinaryOperatorType::NOT_EQUAL_TEST, rhsVal, new IR::Value(Span(Span::Source::GENERATED), state, 0));
-							}
-						}
-					}
-
+					// Codegen needs simple operands (nested comparisons are split too, their results are bools)
+					lhsVal = SplitIntoTemporary(lhsVal);
+					rhsVal = SplitIntoTemporary(rhsVal);
 
 					IR::Value::Type resultType;
 					if (!IR::Value::TypesAreCoercible(state, lhsVal, rhsVal, resultType))
@@ -1527,16 +1640,40 @@ namespace flex
 			} break;
 			case AST::StatementType::TERNARY_OPERATION:
 			{
+				// Lowered to branches which write a temporary (so only the chosen side is evaluated)
 				AST::TernaryOperation* ternary = (AST::TernaryOperation*)expression;
 
-				IR::Value* condition = LowerExpression(ternary->condition);
-				IR::Value* ifTrue = LowerExpression(ternary->ifTrue);
-				IR::Value* ifFalse = LowerExpression(ternary->ifFalse);
+				Block* ifTrueBlock = new Block(state, ternary->ifTrue->span);
+				Block* ifFalseBlock = new Block(state, ternary->ifFalse->span);
+				Block* mergeBlock = new Block(state, ternary->span);
 
-				if (condition != nullptr && ifTrue != nullptr && ifFalse != nullptr)
+				if (!LowerConditionalBranch(ternary->condition, ternary->span, ifTrueBlock, ifFalseBlock))
 				{
-					return new IR::TernaryValue(state, ternary->span, condition, ifTrue, ifFalse);
+					delete ifTrueBlock;
+					delete ifFalseBlock;
+					delete mergeBlock;
+					return nullptr;
 				}
+
+				std::string tempIdent = state->NextTemporary();
+
+				state->PushInstructionBlock(ifTrueBlock);
+				IR::Value* ifTrue = LowerExpression(ternary->ifTrue);
+				state->WriteVariableInBlock(tempIdent, ifTrue);
+				state->InsertionBlock()->AddBranch(ternary->span, mergeBlock);
+
+				state->PushInstructionBlock(ifFalseBlock);
+				IR::Value* ifFalse = LowerExpression(ternary->ifFalse);
+				state->WriteVariableInBlock(tempIdent, ifFalse);
+				state->InsertionBlock()->AddBranch(ternary->span, mergeBlock);
+
+				state->PushInstructionBlock(mergeBlock);
+
+				if (ifTrue == nullptr || ifFalse == nullptr)
+				{
+					return nullptr;
+				}
+				return new IR::Identifier(state, ternary->span, tempIdent);
 			} break;
 			case AST::StatementType::CALL:
 			{
@@ -1635,9 +1772,16 @@ namespace flex
 			{
 				AST::BreakStatement* breakStatement = (AST::BreakStatement*)expression;
 
+				if (m_BreakTargets.empty())
+				{
+					state->diagnosticContainer->AddDiagnostic(breakStatement->span, "Break statement outside of a loop");
+					return nullptr;
+				}
+
+				// (Following statements go in an unreachable block)
 				IR::Block* nextBlock = new IR::Block(state, breakStatement->span);
 
-				state->InsertionBlock()->AddBranch(breakStatement->span, nextBlock);
+				state->InsertionBlock()->AddBranch(breakStatement->span, m_BreakTargets.back());
 				state->InsertionBlock()->SealBlock();
 
 				state->PushInstructionBlock(nextBlock);
@@ -1649,23 +1793,18 @@ namespace flex
 
 				IR::Block* nextBlock = new IR::Block(state, yieldStatement->span);
 
+				IR::Value* loweredVal = nullptr;
 				if (yieldStatement->yieldValue != nullptr)
 				{
-					IR::Value* loweredVal = LowerExpression(yieldStatement->yieldValue);
-					if (IR::Value::IsLiteral(loweredVal->type) || loweredVal->type == IR::Value::Type::IDENTIFIER)
-					{
-						state->InsertionBlock()->AddYield(yieldStatement->span, loweredVal);
-					}
-					else
-					{
-						std::string tempIdent = state->NextTemporary();
-						state->WriteVariableInBlock(tempIdent, loweredVal);
-						state->InsertionBlock()->AddYield(yieldStatement->span, new IR::Identifier(state, yieldStatement->span, tempIdent));
-					}
+					loweredVal = SplitIntoTemporary(LowerExpression(yieldStatement->yieldValue));
 				}
-				else
+
+				Block* yieldingBlock = state->InsertionBlock();
+				yieldingBlock->AddYield(yieldStatement->span, loweredVal);
+				if (yieldingBlock->terminator != nullptr && yieldingBlock->terminator->type == TerminatorType::YIELD)
 				{
-					state->InsertionBlock()->AddYield(yieldStatement->span, nullptr);
+					// Execution resumes in the next block
+					((YieldReturn*)yieldingBlock->terminator)->target = nextBlock;
 				}
 
 				state->PushInstructionBlock(nextBlock);

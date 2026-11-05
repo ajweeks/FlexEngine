@@ -61,9 +61,9 @@ namespace flex
 		switch (type)
 		{
 		case Type::INT:		return IntToString(valInt);
-		case Type::UINT:	return UIntToString(valInt);
-		case Type::LONG:	return LongToString(valInt);
-		case Type::ULONG:	return ULongToString(valInt);
+		case Type::UINT:	return UIntToString(valUInt);
+		case Type::LONG:	return LongToString(valLong);
+		case Type::ULONG:	return ULongToString(valULong);
 		case Type::FLOAT:	return FloatToString(valFloat);
 		case Type::BOOL:	return BoolToString(valBool);
 		case Type::STRING:	return std::string(valStr);
@@ -572,6 +572,10 @@ namespace flex
 			break;
 		case Type::ULONG:
 			result.valULong = lhs.valULong ^ rhs.valULong;
+			break;
+		case Type::BOOL:
+			// (Used by the VM's not operator)
+			result.valBool = (lhs.valBool != rhs.valBool);
 			break;
 		default:
 			PrintError("Attempted to xor non-numeric types!\n");

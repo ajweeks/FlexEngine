@@ -145,14 +145,14 @@ namespace flex
 
 			for (i32 i = 0; i < (i32)m_Carts.size(); ++i)
 			{
-				if (m_Carts[i]->currentTrackID == InvalidTrackID)
+				if (m_Carts[i] == nullptr || m_Carts[i]->currentTrackID == InvalidTrackID)
 				{
 					continue;
 				}
 
 				for (i32 j = i + 1; j < (i32)m_Carts.size(); ++j)
 				{
-					if (m_Carts[j]->currentTrackID == InvalidTrackID)
+					if (m_Carts[j] == nullptr || m_Carts[j]->currentTrackID == InvalidTrackID)
 					{
 						continue;
 					}
@@ -292,6 +292,12 @@ namespace flex
 
 			for (i32 i = 0; i < (i32)m_CartChains.size(); ++i)
 			{
+				if (m_CartChains[i].carts.empty())
+				{
+					m_CartChains[i].velT = 0.0f;
+					continue;
+				}
+
 				real avgVel = 0.0f;
 				for (i32 j = 0; j < (i32)m_CartChains[i].carts.size(); ++j)
 				{
@@ -306,7 +312,7 @@ namespace flex
 
 			for (BaseCart* cart : m_Carts)
 			{
-				if (cart->chainID == InvalidCartChainID)
+				if (cart != nullptr && cart->chainID == InvalidCartChainID)
 				{
 					cart->UpdatePosition();
 				}
@@ -326,13 +332,17 @@ namespace flex
 				DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
 				for (BaseCart* cart : m_Carts)
 				{
-					debugRenderer->drawSphere(ToBtVec3(cart->GetTransform()->GetWorldPosition()), cart->attachThreshold, btVector3(0.8f, 0.4f, 0.67f));
+					if (cart != nullptr)
+					{
+						debugRenderer->drawSphere(ToBtVec3(cart->GetTransform()->GetWorldPosition()), cart->attachThreshold, btVector3(0.8f, 0.4f, 0.67f));
+					}
 				}
 			}
 
 			for (BaseCart* cart : m_Carts)
 			{
-				if (cart->chainID != InvalidCartChainID &&
+				if (cart != nullptr &&
+					cart->chainID != InvalidCartChainID &&
 					cart->chainID >= m_CartChains.size())
 				{
 					PrintError("BaseCart chain update failed! BaseCart has invalid cart chain ID: %u, num cart chains: %u\n", cart->chainID, (u32)m_CartChains.size());
@@ -343,24 +353,49 @@ namespace flex
 
 	CartID CartManager::RegisterCart(BaseCart* cart)
 	{
-		CartID cartID = (CartID)m_Carts.size();
-
-		if (!cart->IsPrefabTemplate())
+		if (cart->IsPrefabTemplate())
 		{
-			m_Carts.push_back(cart);
+			return InvalidCartID;
 		}
 
-		return cartID;
+		for (u32 i = 0; i < (u32)m_Carts.size(); ++i)
+		{
+			if (m_Carts[i] == nullptr)
+			{
+				m_Carts[i] = cart;
+				return (CartID)i;
+			}
+		}
+
+		m_Carts.push_back(cart);
+		return (CartID)(m_Carts.size() - 1);
 	}
 
 	void CartManager::DeregisterCart(BaseCart* cart)
 	{
-		for (auto iter = m_Carts.begin(); iter != m_Carts.end(); ++iter)
+		for (u32 i = 0; i < (u32)m_Carts.size(); ++i)
 		{
-			if (cart == *iter)
+			if (m_Carts[i] == cart)
 			{
-				m_Carts.erase(iter);
+				// Chains refer to carts by ID, so the slot is left free rather than shifting the others down
+				RemoveCartFromChains((CartID)i);
+				m_Carts[i] = nullptr;
 				return;
+			}
+		}
+	}
+
+	void CartManager::RemoveCartFromChains(CartID cartID)
+	{
+		for (i32 i = 0; i < (i32)m_CartChains.size(); ++i)
+		{
+			if (m_CartChains[i].chainID != InvalidCartChainID && m_CartChains[i].Contains(cartID))
+			{
+				m_CartChains[i].Remove(cartID);
+				if (m_CartChains[i].carts.empty())
+				{
+					m_CartChains[i].Reset();
+				}
 			}
 		}
 	}
@@ -368,6 +403,7 @@ namespace flex
 	BaseCart* CartManager::GetCart(CartID cartID) const
 	{
 		CHECK_LT(cartID, m_Carts.size());
+		CHECK_NE(m_Carts[cartID], nullptr);
 		return m_Carts[cartID];
 	}
 
@@ -481,21 +517,14 @@ namespace flex
 	{
 		// TODO: Update chains properly!?
 
-		if (gameObject->GetTypeID() == BaseCartSID)
+		// (engine carts have their own type ID, so every cart type is checked by its slot rather than by type)
+		for (u32 i = 0; i < (u32)m_Carts.size(); ++i)
 		{
-			BaseCart* cart = (BaseCart*)gameObject;
-			for (i32 i = 0; i < (i32)m_CartChains.size(); ++i)
+			if (m_Carts[i] == gameObject)
 			{
-				if (m_CartChains[i].chainID != InvalidCartChainID &&
-					m_CartChains[i].Contains(cart->cartID))
-				{
-					m_CartChains[i].Remove(cart->cartID);
-
-					//if (m_CartChains[i].carts.empty())
-					//{
-					//	m_CartChains.erase(m_CartChains.begin() + i);
-					//}
-				}
+				RemoveCartFromChains((CartID)i);
+				m_Carts[i] = nullptr;
+				return;
 			}
 		}
 	}

@@ -90,11 +90,12 @@ namespace flex
 
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("directional light info");
 
-		collection->childCollection->RegisterProperty("colour", FIELD_OFFSET_AND_TYPE(DirectionalLight, data.colour))
+		// The authored values are serialized, not the time-of-day modulated ones (which would dim the scene on every save)
+		collection->childCollection->RegisterProperty("colour", FIELD_OFFSET_AND_TYPE(DirectionalLight, baseColour))
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(VEC3_ONE);
-		collection->childCollection->RegisterProperty("brightness", FIELD_OFFSET_AND_TYPE(DirectionalLight, data.brightness))
+		collection->childCollection->RegisterProperty("brightness", FIELD_OFFSET_AND_TYPE(DirectionalLight, baseBrightness))
 			.VersionAdded(2)
 			.Precision(2)
 			.DefaultValue(1.0f);
@@ -221,8 +222,14 @@ namespace flex
 		}
 
 		ImGui::SameLine();
-		ImGui::ColorEdit4("Colour ", &data.colour.r, colorEditFlags);
-		ImGui::SliderFloat("Brightness", &data.brightness, 0.0f, 15.0f);
+		if (ImGui::ColorEdit4("Colour ", &baseColour.r, colorEditFlags))
+		{
+			data.colour = baseColour;
+		}
+		if (ImGui::SliderFloat("Brightness", &baseBrightness, 0.0f, 15.0f))
+		{
+			data.brightness = baseBrightness;
+		}
 
 		ImGui::Spacing();
 		ImGui::Text("Shadow");
@@ -253,6 +260,8 @@ namespace flex
 			PropertyCollection* collection = GetPropertyCollectionManager()->GetCollectionForObjectType(m_TypeID);
 
 			DeserializeRegisteredProperties(directionalLightObj, collection->childCollection);
+			data.colour = baseColour;
+			data.brightness = baseBrightness;
 
 			if (fileVersion < 2)
 			{

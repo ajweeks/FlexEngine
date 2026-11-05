@@ -112,6 +112,7 @@ namespace flex
 		}
 
 		Value::Value(const Value& other) :
+			irState(other.irState),
 			origin(other.origin)
 		{
 			if (type == Type::_NONE)
@@ -128,6 +129,7 @@ namespace flex
 
 		Value::Value(const Value&& other) :
 			type(other.type),
+			irState(other.irState),
 			origin(other.origin)
 		{
 			memcpy(&_largestField, &other._largestField, sizeof(_largestField));
@@ -448,84 +450,65 @@ namespace flex
 
 		bool Value::operator<(const Value& other)
 		{
-			if (ConvertableTo(Type::BOOL) && other.ConvertableTo(Type::BOOL))
+			// (Used when folding constants, so must not change this value's type)
+			if (IsNumeric(type) && IsNumeric(other.type))
 			{
-				type = Type::BOOL;
-				switch (type)
+				if (type == Type::FLOAT || other.type == Type::FLOAT)
 				{
-				case Type::INT:
-					return valInt < other.AsInt();
-				case Type::FLOAT:
-					return valFloat < other.AsFloat();
-				default:
-					PrintError("Attempted to compare non-numeric types!\n");
-					return false;
+					return AsFloat() < other.AsFloat();
 				}
+				return AsInt() < other.AsInt();
 			}
 
+			PrintError("Attempted to compare non-numeric types!\n");
 			return false;
 		}
 
 		bool Value::operator<=(const Value& other)
 		{
-			if (ConvertableTo(Type::BOOL) && other.ConvertableTo(Type::BOOL))
+			// (Used when folding constants, so must not change this value's type)
+			if (IsNumeric(type) && IsNumeric(other.type))
 			{
-				type = Type::BOOL;
-				switch (type)
+				if (type == Type::FLOAT || other.type == Type::FLOAT)
 				{
-				case Type::INT:
-					return valInt <= other.AsInt();
-				case Type::FLOAT:
-					return valFloat <= other.AsFloat();
-				default:
-					PrintError("Attempted to compare non-numeric types!\n");
-					return false;
+					return AsFloat() <= other.AsFloat();
 				}
+				return AsInt() <= other.AsInt();
 			}
 
-			PrintError("Type not convertable to bool\n");
+			PrintError("Attempted to compare non-numeric types!\n");
 			return false;
 		}
 
 		bool Value::operator>(const Value& other)
 		{
-			if (ConvertableTo(Type::BOOL) && other.ConvertableTo(Type::BOOL))
+			// (Used when folding constants, so must not change this value's type)
+			if (IsNumeric(type) && IsNumeric(other.type))
 			{
-				type = Type::BOOL;
-				switch (type)
+				if (type == Type::FLOAT || other.type == Type::FLOAT)
 				{
-				case Type::INT:
-					return valInt > other.AsInt();
-				case Type::FLOAT:
-					return valFloat > other.AsFloat();
-				default:
-					PrintError("Attempted to compare non-numeric types!\n");
-					return false;
+					return AsFloat() > other.AsFloat();
 				}
+				return AsInt() > other.AsInt();
 			}
 
-			PrintError("Type not convertable to bool\n");
+			PrintError("Attempted to compare non-numeric types!\n");
 			return false;
 		}
 
 		bool Value::operator>=(const Value& other)
 		{
-			if (ConvertableTo(Type::BOOL) && other.ConvertableTo(Type::BOOL))
+			// (Used when folding constants, so must not change this value's type)
+			if (IsNumeric(type) && IsNumeric(other.type))
 			{
-				type = Type::BOOL;
-				switch (type)
+				if (type == Type::FLOAT || other.type == Type::FLOAT)
 				{
-				case Type::INT:
-					return valInt >= other.AsInt();
-				case Type::FLOAT:
-					return valFloat >= other.AsFloat();
-				default:
-					PrintError("Attempted to compare non-numeric types!\n");
-					return false;
+					return AsFloat() >= other.AsFloat();
 				}
+				return AsInt() >= other.AsInt();
 			}
 
-			PrintError("Type not convertable to bool\n");
+			PrintError("Attempted to compare non-numeric types!\n");
 			return false;
 		}
 

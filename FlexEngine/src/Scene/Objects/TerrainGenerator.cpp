@@ -2546,6 +2546,12 @@ bChanged = ImGui::ColorEdit3("Cliff", &biome.cliffColour.x) || bChanged;
 	{
 		DestroyMinimapTextures(false);
 
+		if (m_MinimapFuture.valid() && m_MinimapFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready && m_MinimapGeneration != m_MapGeneration)
+		{
+			// Generated for a previous world
+			m_MinimapFuture = {};
+		}
+
 		if (m_MinimapFuture.valid() && m_MinimapFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
 		{
 			m_Minimap = m_MinimapFuture.get();
@@ -2593,6 +2599,7 @@ bChanged = ImGui::ColorEdit3("Cliff", &biome.cliffColour.x) || bChanged;
 		if (bStale && !m_MinimapFuture.valid())
 		{
 			m_MinimapFuture = GenerateMap(m_Streamer->Density(), pos, m_MinimapExtent, MINIMAP_RESOLUTION);
+			m_MinimapGeneration = m_MapGeneration;
 		}
 
 		if (m_MinimapTextureID == InvalidTextureID || !m_Minimap.bValid)
@@ -2702,7 +2709,15 @@ bChanged = ImGui::ColorEdit3("Cliff", &biome.cliffColour.x) || bChanged;
 
 		if (m_WorldMapFuture.valid() && m_WorldMapFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
 		{
-			m_WorldMap = m_WorldMapFuture.get();
+			if (m_WorldMapGeneration == m_MapGeneration)
+			{
+				m_WorldMap = m_WorldMapFuture.get();
+			}
+			else
+			{
+				// Generated for a previous world
+				m_WorldMapFuture = {};
+			}
 		}
 
 		const real desiredExtent = m_Params.viewDistance / glm::max(m_WorldMapZoom, 0.01f);
@@ -2712,6 +2727,7 @@ bChanged = ImGui::ColorEdit3("Cliff", &biome.cliffColour.x) || bChanged;
 		if (bMapStale && m_Streamer != nullptr && !m_WorldMapFuture.valid())
 		{
 			m_WorldMapFuture = GenerateMap(m_Streamer->Density(), cameraPos, desiredExtent, 128);
+			m_WorldMapGeneration = m_MapGeneration;
 		}
 
 		// Seed
@@ -3147,6 +3163,8 @@ biomeObj.fields.emplace_back("overhang amplitude", JSONValue(biome.overhangAmpli
 		m_bSnapshotFinal = false;
 		m_LargeMap.bValid = false;
 		m_Minimap.bValid = false;
+		// Maps still being generated for the previous world are discarded when they complete
+		++m_MapGeneration;
 		Regenerate();
 		// Applied now rather than on the next update, so the new world's density (& saved terrain) is used right away
 		ApplyParamsIfDirty();
@@ -3189,12 +3207,19 @@ biomeObj.fields.emplace_back("overhang amplitude", JSONValue(biome.overhangAmpli
 			return;
 		}
 		m_LargeMapFuture = GenerateMap(m_Streamer->Density(), center, extent, resolution, true);
+		m_LargeMapGeneration = m_MapGeneration;
 	}
 
 	void TerrainGenerator::UpdateLargeMap()
 	{
 		if (m_LargeMapFuture.valid() && m_LargeMapFuture.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
 		{
+			if (m_LargeMapGeneration != m_MapGeneration)
+			{
+				// Generated for a previous world
+				m_LargeMapFuture = {};
+				return;
+			}
 			m_LargeMap = m_LargeMapFuture.get();
 			const TextureID textureID = CreateMapTexture(m_LargeMap, "Terrain map");
 			if (m_LargeMapTextureID != InvalidTextureID)

@@ -255,7 +255,6 @@ namespace flex
 		friend SceneManager;
 
 		void FindNextAvailableUniqueName(GameObject* gameObject, i32& highestNoNameObj, i16& maxNumChars, const char* defaultNewNameBase);
-		void DeleteInstancesOfPrefabRecursive(const PrefabID& prefabID, GameObject* gameObject);
 
 		void RemoveObjectImmediateRecursive(const GameObjectID& gameObjectID, bool bDestroy);
 
@@ -317,8 +316,6 @@ namespace flex
 		real m_WeatherCloudiness = -1.0f; // [0, 1], < 0: varies over time
 		real m_WeatherRegionalVariation = 0.6f;
 
-		// Brightness of the midday sun (the directional light's brightness when the scene was loaded)
-		real m_DirLightBaseBrightness = -1.0f;
 		// Eye adaptation exposure (< 0: not yet set, see UpdateExposure)
 		real m_Exposure = -1.0f;
 		real m_ExposureTimeOfDay = 0.0f;
@@ -350,7 +347,8 @@ namespace flex
 		*/
 		GameObjectID FindObjectWithTag(const std::string& tag, GameObject* gameObject);
 
-		void OnPrefabChangedInternal(const PrefabID& prefabID, GameObject* prefabTemplate, GameObject* rootObject);
+		// The root object of every instance of the prefab under gameObject (inclusive)
+		void CollectPrefabInstances(const PrefabID& prefabID, GameObject* gameObject, std::vector<GameObjectID>& outInstanceIDs) const;
 
 		Pair<StringID, std::string> m_NewObjectTypeIDPair;
 

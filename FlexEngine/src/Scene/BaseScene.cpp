@@ -384,26 +384,43 @@ namespace flex
 	{
 		GameObject* prefabTemplate = g_ResourceManager->GetPrefabTemplate(prefabID);
 
+		FLEX_UNUSED(prefabTemplate);
+
 		std::vector<GameObjectID> selectedObjectIDs = g_Editor->GetSelectedObjectIDs(false);
 
+		// Only the root object of each instance is reinstantiated (its children are recreated with it: every object
+		// in an instance carries the prefab ID). The IDs are collected first since reinstantiating replaces objects in
+		// the lists being walked. Reinstantiated objects keep their IDs, so each lookup below stays valid.
+		std::vector<GameObjectID> instanceIDs;
 		for (GameObject* rootObject : m_RootObjects)
 		{
-			OnPrefabChangedInternal(prefabID, prefabTemplate, rootObject);
+			CollectPrefabInstances(prefabID, rootObject, instanceIDs);
+		}
+
+		for (const GameObjectID& instanceID : instanceIDs)
+		{
+			GameObject* instance = GetGameObject(instanceID);
+			if (instance != nullptr)
+			{
+				ReinstantiateFromPrefab(prefabID, instance);
+			}
 		}
 
 		g_Editor->SetSelectedObjects(selectedObjectIDs);
 	}
 
-	void BaseScene::OnPrefabChangedInternal(const PrefabID& prefabID, GameObject* prefabTemplate, GameObject* gameObject)
+	void BaseScene::CollectPrefabInstances(const PrefabID& prefabID, GameObject* gameObject, std::vector<GameObjectID>& outInstanceIDs) const
 	{
 		if (gameObject->m_SourcePrefabID.m_PrefabID == prefabID)
 		{
-			GameObject* newGameObject = ReinstantiateFromPrefab(prefabID, gameObject);
+			// Its children belong to the same instance
+			outInstanceIDs.push_back(gameObject->ID);
+			return;
+		}
 
-			for (GameObject* child : newGameObject->m_Children)
-			{
-				OnPrefabChangedInternal(prefabID, prefabTemplate, child);
-			}
+		for (GameObject* child : gameObject->m_Children)
+		{
+			CollectPrefabInstances(prefabID, child, outInstanceIDs);
 		}
 	}
 
@@ -603,7 +620,8 @@ namespace flex
 		DirectionalLight* dirLight = new DirectionalLight("Directional light");
 		dirLight->pos = glm::vec3(0.0f, 15.0f, 0.0f);
 		dirLight->data.dir = glm::rotate(glm::quat(glm::vec3(130.0f, -65.0f, 120.0f)), VEC3_RIGHT);
-		dirLight->data.brightness = 3.0f;
+		dirLight->baseBrightness = 3.0f;
+		dirLight->data.brightness = dirLight->baseBrightness;
 		g_SceneManager->CurrentScene()->AddRootObjectImmediate(dirLight);
 		dirLight->Initialize();
 		dirLight->PostInitialize();
@@ -644,7 +662,10 @@ namespace flex
 		DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
 		if (dirLight != nullptr)
 		{
-			ImGuiExt::ColorEdit3Gamma("Dir light", &dirLight->data.colour.x);
+			if (ImGuiExt::ColorEdit3Gamma("Dir light", &dirLight->baseColour.x))
+			{
+				dirLight->data.colour = dirLight->baseColour;
+			}
 		}
 		ImGui::PopID();
 		ImGui::PopStyleColor();
@@ -1385,11 +1406,9 @@ namespace flex
 		DirectionalLight* dirLight = g_Renderer->GetDirectionalLight();
 		if (dirLight != nullptr)
 		{
-			if (m_DirLightBaseBrightness < 0.0f)
-			{
-				// The brightness the scene was authored with is that of the midday sun
-				m_DirLightBaseBrightness = dirLight->data.brightness;
-			}
+			// The brightness the scene was authored with is that of the midday sun (the modulated values below are
+			// what's rendered, the authored ones are what's serialized)
+			const real baseBrightness = dirLight->baseBrightness;
 
 			// The sun lights the scene during the day, the moon at night. They swap while both are too dim to notice.
 			glm::vec3 lightDir;
@@ -1399,13 +1418,13 @@ namespace flex
 				lightDir = sunDir;
 				dirLight->data.colour = sunColour;
 				// (scaled down from the authored brightness, which overexposed the scene with the brighter physically based sky)
-				dirLight->data.brightness = m_DirLightBaseBrightness * 0.85f * glm::smoothstep(-0.03f, 0.06f, sunDir.y) * glm::clamp(std::pow(luminance, 0.6f), 0.0f, 1.0f);
+				dirLight->data.brightness = baseBrightness * 0.85f * glm::smoothstep(-0.03f, 0.06f, sunDir.y) * glm::clamp(std::pow(luminance, 0.6f), 0.0f, 1.0f);
 			}
 			else
 			{
 				lightDir = moonDir;
 				dirLight->data.colour = glm::vec3(0.55f, 0.65f, 1.0f);
-				dirLight->data.brightness = m_DirLightBaseBrightness * 0.045f * glm::smoothstep(0.0f, 0.15f, moonDir.y) * (1.0f - glm::smoothstep(-0.12f, -0.03f, sunDir.y));
+				dirLight->data.brightness = baseBrightness * 0.045f * glm::smoothstep(0.0f, 0.15f, moonDir.y) * (1.0f - glm::smoothstep(-0.12f, -0.03f, sunDir.y));
 			}
 			dirLight->data.dir = lightDir;
 			// Matches DirectionalLight's convention (its direction is -forward)
@@ -1484,11 +1503,11 @@ namespace flex
 
 		const glm::vec3 luminanceWeights(0.2126f, 0.7152f, 0.0722f);
 		real targetExposure = 1.0f;
-		if (dirLight != nullptr && m_DirLightBaseBrightness > 0.0f)
+		if (dirLight != nullptr && dirLight->baseBrightness > 0.0f)
 		{
 			// Direct light (lighting less of the scene the lower it is) & sky light (its colours are display values, like in the
 			// shaders, where 0.22 is about the luminance of a clear day's zenith)
-			const real directLuminance = glm::dot(dirLight->data.colour, luminanceWeights) * dirLight->data.brightness / m_DirLightBaseBrightness;
+			const real directLuminance = glm::dot(dirLight->data.colour, luminanceWeights) * dirLight->data.brightness / dirLight->baseBrightness;
 			const real direct = dirLight->data.enabled != 0 ? directLuminance * (0.15f + 0.85f * glm::max(dirLight->data.dir.y, 0.0f)) : 0.0f;
 			const real sky = glm::dot(glm::pow(glm::max(zenithDisplay, VEC3_ZERO), glm::vec3(2.2f)), luminanceWeights) / 0.22f;
 			// Caves: the sun & sky barely reach them, so eyes adapt as they would at night
@@ -2267,22 +2286,16 @@ namespace flex
 
 	void BaseScene::DeleteInstancesOfPrefab(const PrefabID& prefabID)
 	{
+		// Collected first: removing an object erases it from the lists being walked (& destroys its children)
+		std::vector<GameObjectID> instanceIDs;
 		for (GameObject* rootGameObject : m_RootObjects)
 		{
-			DeleteInstancesOfPrefabRecursive(prefabID, rootGameObject);
-		}
-	}
-
-	void BaseScene::DeleteInstancesOfPrefabRecursive(const PrefabID& prefabID, GameObject* gameObject)
-	{
-		if (gameObject->m_SourcePrefabID.m_PrefabID == prefabID)
-		{
-			RemoveObjectImmediate(gameObject, true);
+			CollectPrefabInstances(prefabID, rootGameObject, instanceIDs);
 		}
 
-		for (GameObject* child : gameObject->m_Children)
+		if (!instanceIDs.empty())
 		{
-			DeleteInstancesOfPrefabRecursive(prefabID, child);
+			RemoveObjectsImmediate(instanceIDs, true);
 		}
 	}
 

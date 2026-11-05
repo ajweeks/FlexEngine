@@ -3144,6 +3144,22 @@ namespace flex
 			VulkanMaterial* skyboxMat = (VulkanMaterial*)m_Materials.at(skyboxRenderObject->materialID);
 			VulkanMaterial* renderObjectMat = (VulkanMaterial*)m_Materials.at(renderObject->materialID);
 
+			// (checked before anything is created, so a missing buffer doesn't leak the resources below)
+			VulkanBuffer* skyboxVertexBuffer = m_StaticVertexBuffers[m_Shaders[skyboxMat->shaderID]->staticVertexBufferIndex].second;
+			VulkanBuffer* skyboxIndexBuffer = m_StaticIndexBuffer;
+			if (skyboxVertexBuffer->m_Buffer == VK_NULL_HANDLE)
+			{
+				PrintError("Attempted to generate cubemap from HDR but vertex buffer has not been generated! (for shader %s)\n", skyboxMat->name.c_str());
+				return;
+			}
+			if (skyboxRenderObject->bIndexed &&
+				skyboxIndexBuffer->m_Buffer == VK_NULL_HANDLE)
+			{
+				PrintError("Attempted to generate cubemap from HDR but index buffer has not been generated! (for shader %s)\n", skyboxMat->name.c_str());
+				return;
+			}
+
+			// Only needed while the cubemap is rendered (removed at the end, with its descriptor set)
 			MaterialCreateInfo matCreateInfo = {};
 			matCreateInfo.name = "equirectangular to Cube";
 			matCreateInfo.shaderName = "equirectangular_to_cube";
@@ -3304,20 +3320,6 @@ namespace flex
 				subresourceRange);
 
 
-			VulkanBuffer* skyboxVertexBuffer = m_StaticVertexBuffers[m_Shaders[skyboxMat->shaderID]->staticVertexBufferIndex].second;
-			VulkanBuffer* skyboxIndexBuffer = m_StaticIndexBuffer;
-			if (skyboxVertexBuffer->m_Buffer == VK_NULL_HANDLE)
-			{
-				PrintError("Attempted to generate cubemap from HDR but vertex buffer has not been generated! (for shader %s)\n", skyboxMat->name.c_str());
-				return;
-			}
-			if (skyboxRenderObject->bIndexed &&
-				skyboxIndexBuffer->m_Buffer == VK_NULL_HANDLE)
-			{
-				PrintError("Attempted to generate cubemap from HDR but index buffer has not been generated! (for shader %s)\n", skyboxMat->name.c_str());
-				return;
-			}
-
 			if (skyboxRenderObject->bIndexed)
 			{
 				vkCmdBindIndexBuffer(cmdBuf, skyboxIndexBuffer->m_Buffer, 0, VK_INDEX_TYPE_UINT32);
@@ -3424,6 +3426,8 @@ namespace flex
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
 			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offscreen.image, nullptr);
 			DestroyGraphicsPipeline(pipelineID);
+			m_DescriptorPoolPersistent->FreeSet(descriptorSet);
+			RemoveMaterial(equirectangularToCubeMatID);
 		}
 
 		void VulkanRenderer::GenerateIrradianceSampler(VulkanRenderObject* renderObject)
@@ -3708,6 +3712,7 @@ namespace flex
 			vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
 			vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offscreen.image, nullptr);
 			DestroyGraphicsPipeline(pipelineID);
+			m_DescriptorPoolPersistent->FreeSet(descriptorSet);
 
 			PROFILE_END("Render");
 		}
@@ -3987,8 +3992,7 @@ namespace flex
 
 			{
 				PROFILE_AUTO("FlushCommandBuffer");
-				// TODO: Remove this in a safer way
-				//m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
+				m_CommandBufferManager.FlushCommandBuffer(cmdBuf, m_GraphicsQueue, true);
 			}
 
 			{
@@ -3998,6 +4002,7 @@ namespace flex
 				vkDestroyImageView(m_VulkanDevice->m_LogicalDevice, offscreen.view, nullptr);
 				vkDestroyImage(m_VulkanDevice->m_LogicalDevice, offscreen.image, nullptr);
 				DestroyGraphicsPipeline(pipelineID);
+				m_DescriptorPoolPersistent->FreeSet(descriptorSet);
 			}
 
 			PROFILE_END("Render");
@@ -10700,6 +10705,12 @@ namespace flex
 								{
 									for (RenderID renderID : matBatchPair.batch.objects)
 									{
+										// Must match objects drawn in DrawShaderBatch (which advances the offset per drawn object)
+										if (!GetRenderObject(renderID)->gameObject->IsVisible() || GetRenderObject(renderID)->bHidden)
+										{
+											continue;
+										}
+
 										UpdateDynamicUniformBuffer(renderID, m_WireframeMatID, dynamicUBOOffset);
 										dynamicUBOOffset += RoundUp(wireframeDynamicBuffer->data.unitSize - 1, m_DynamicAlignment);
 									}

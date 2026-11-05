@@ -7,8 +7,10 @@
 // Every binary save shares one container layout (little endian):
 //   Header (24 bytes): magic "FLXB" u32, container version u16, header flags u16, file type (fourcc) u32,
 //                      file version u32, section count u32, crc32 of the preceding 20 bytes u32
-//   Then per section:  tag (fourcc) u32, flags u32, stored size u32, raw size u32, crc32 of the raw bytes u32,
-//                      followed by the stored bytes (zlib compressed when SECTION_ZLIB is set)
+//   Then per section:  tag (fourcc) u32, flags u32, stored size u32, raw size u32, crc32 u32, followed by the stored
+//                      bytes (zlib compressed when SECTION_ZLIB is set). The crc covers the stored bytes, preceded by
+//                      the section header's first 16 bytes when HEADER_SECTION_CRC_COVERS_HEADER is set (every file
+//                      written now; older files only covered the stored bytes).
 // Readers skip sections they don't know & tolerate missing ones, so formats can grow without breaking old saves.
 // Nothing read from disk is trusted: every size & count is bounds checked, and each section's crc is verified.
 // Files are written to a temporary file first, then renamed over the old one, so a crash mid-save can't lose data.
@@ -29,6 +31,12 @@ namespace flex
 		static const u16 CONTAINER_VERSION = 1;
 		static const u32 MAX_SECTION_COUNT = 4096;
 		static const u32 MAX_SECTION_SIZE = 512u * 1024u * 1024u;
+
+		enum HeaderFlags : u16
+		{
+			HEADER_SECTION_CRC_COVERS_HEADER = 1 << 0,	// Each section crc also covers its header (tag, flags & sizes)
+			HEADER_KNOWN_FLAGS = HEADER_SECTION_CRC_COVERS_HEADER,
+		};
 
 		enum SectionFlags : u32
 		{
@@ -177,6 +185,7 @@ namespace flex
 			bool GetSection(const Section& section, std::vector<u8>& outRaw) const;
 
 			u32 m_FileVersion = 0;
+			u16 m_HeaderFlags = 0;
 			std::vector<Section> m_Sections;
 		};
 

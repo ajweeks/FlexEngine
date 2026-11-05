@@ -330,6 +330,11 @@ namespace flex
 
 		WorldMap m_Minimap;
 		std::future<WorldMap> m_MinimapFuture;
+		// Incremented by SetWorld; a map future whose generation differs was started for a previous world
+		u32 m_MapGeneration = 0;
+		u32 m_WorldMapGeneration = 0;
+		u32 m_MinimapGeneration = 0;
+		u32 m_LargeMapGeneration = 0;
 		TextureID m_MinimapTextureID = InvalidTextureID;
 		TextureID m_MapArrowTextureID = InvalidTextureID;
 		// Replaced textures are destroyed once the GPU is no longer using them

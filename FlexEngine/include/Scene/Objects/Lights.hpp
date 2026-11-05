@@ -26,7 +26,11 @@ namespace flex
 
 		bool operator==(const DirectionalLight& other);
 
+		// What's rendered. The sky modulates colour & brightness by the time of day (BaseScene::UpdateSky)
 		DirLightData data;
+		// What was authored (serialized & edited); data is derived from these
+		glm::vec3 baseColour = VEC3_ONE;
+		real baseBrightness = 1.0f;
 
 		// Editor-only
 		glm::vec3 pos = VEC3_ZERO;

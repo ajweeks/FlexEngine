@@ -980,9 +980,9 @@ namespace flex
 				waveSamplingLODs.reserve(waveSamplingLODsArrObj.size());
 				for (u32 i = 0; i < (u32)waveSamplingLODsArrObj.size(); ++i)
 				{
-					real sqrDist;
+					real sqrDist = 0.0f;
 					waveSamplingLODsArrObj[i].TryGetFloat("square dist", sqrDist);
-					real amplitude;
+					real amplitude = 0.0f;
 					waveSamplingLODsArrObj[i].TryGetFloat("amplitude cutoff", amplitude);
 
 					waveSamplingLODs.emplace_back(sqrDist, amplitude);
@@ -1005,12 +1005,13 @@ namespace flex
 				waveTessellationLODs.reserve(waveTessellationLODsArrObj.size());
 				for (u32 i = 0; i < (u32)waveTessellationLODsArrObj.size(); ++i)
 				{
-					real sqrDist;
+					real sqrDist = 0.0f;
 					waveTessellationLODsArrObj[i].TryGetFloat("square dist", sqrDist);
-					u32 vertCount;
+					u32 vertCount = 4;
 					waveTessellationLODsArrObj[i].TryGetUInt("vert count per axis", vertCount);
 
-					waveTessellationLODs.emplace_back(sqrDist, vertCount);
+					// Fewer than two verts per axis divides by zero in the vertex step & index generation
+					waveTessellationLODs.emplace_back(sqrDist, glm::clamp(vertCount, 2u, 256u));
 				}
 			}
 			else
@@ -1197,9 +1198,10 @@ namespace flex
 			return 0.0f;
 		}
 
+		const real sqrDist = dist * dist;
 		for (u32 i = 0; i < (u32)waveSamplingLODs.size(); ++i)
 		{
-			if (dist >= waveSamplingLODs[i].squareDist)
+			if (sqrDist >= waveSamplingLODs[i].squareDist)
 			{
 				return waveSamplingLODs[i].amplitudeCutoff;
 			}

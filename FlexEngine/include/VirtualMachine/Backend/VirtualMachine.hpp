@@ -97,8 +97,8 @@ namespace flex
 			"sub",
 			"mul",
 			"div",
-			"inv",
 			"mod",
+			"inv",
 			"and",
 			"or ",
 			"xor",
@@ -213,12 +213,17 @@ namespace flex
 			void Destroy();
 			InstructionBlock& CurrentInstructionBlock();
 			InstructionBlock& PushInstructionBlock();
+			// Jump targets: labels [0, IR block count) are the IR blocks' starts, NewLabel adds more
+			i32 NewLabel();
+			// Sets label to the next instruction in the current instruction block
+			void PlaceLabel(i32 label);
 
 			std::map<std::string, IR::Assignment> varUsages;
 			std::map<std::string, i32> funcNameToBlockIndexTable;
 			std::map<std::string, i32> varRegisterMap;
 			std::map<std::string, IR::Value::Type> tmpVarTypes;
 			std::vector<InstructionBlock> instructionBlocks;
+			std::vector<i32> labelOffsets; // Instruction index of each label
 
 			DiagnosticContainer* diagnosticContainer = nullptr;
 		};
@@ -234,7 +239,7 @@ namespace flex
 			// Functions are global and can be called prior to definition
 
 			// _ Calling convention _
-			// Caller pushes registers onto stack
+			// Caller pushes registers onto stack (all variable registers allocated so far)
 			// Caller pushes return address onto stack
 			// Caller pushes args in reverse order onto stack
 			// Called runs
@@ -243,7 +248,7 @@ namespace flex
 			//   Resume address is popped off stack
 			//   Return value is pushed onto stack
 			// Caller resumes
-			// Caller pops return value off stack (if non-void func)
+			// Caller pops return value off stack into SCRATCH_REGISTER (if non-void func)
 			// Caller pops registers off stack
 
 			void GenerateFromSource(const char* source);
@@ -264,8 +269,10 @@ namespace flex
 
 			bool IsCompiled() const;
 
-			static const i32 REGISTER_COUNT = 32;
-			static const i32 MAX_STACK_HEIGHT = 2048;
+			static const i32 REGISTER_COUNT = 128;
+			// Never holds a variable: return addresses & return values pass through it
+			static const i32 SCRATCH_REGISTER = REGISTER_COUNT - 1;
+			static const i32 MAX_STACK_HEIGHT = 16384;
 			static const u32 MEMORY_POOL_SIZE = 32768;
 
 			static VariantWrapper g_ZeroIntVariantWrapper;

@@ -47,6 +47,7 @@ namespace flex
 
 		virtual void DrawImGui() override;
 
+		// Cart IDs are stable slots: they aren't shifted when other carts are removed, and a removed cart leaves its chain
 		CartID RegisterCart(BaseCart* cart);
 		void DeregisterCart(BaseCart* cart);
 		BaseCart* GetCart(CartID cartID) const;
@@ -62,10 +63,14 @@ namespace flex
 		void OnGameObjectDestroyed(GameObject* gameObject);
 		OnGameObjectDestroyedCallback<CartManager> m_OnGameObjectDestroyedCallback;
 
+		// Takes the cart out of its chain (resetting chains left empty)
+		void RemoveCartFromChains(CartID cartID);
+
 		// Allocates room for and return the id of the next cart chain ID
 		CartChainID GetNextAvailableCartChainID();
 
 		// TODO: Store GameObjectIDs
+		// Indexed by CartID; null for free slots
 		std::vector<BaseCart*> m_Carts;
 		std::vector<CartChain> m_CartChains;
 

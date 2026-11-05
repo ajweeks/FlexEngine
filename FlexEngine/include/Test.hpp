@@ -949,8 +949,9 @@ namespace flex
 				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
+			EXPECT(ast->rootBlock != nullptr, true);
 			std::string reconstructedStr = ast->rootBlock->ToString();
-			Print("%s\n", reconstructedStr.c_str());
+			EXPECT(reconstructedStr.empty(), false);
 
 			ast->Destroy();
 			delete ast;
@@ -1192,7 +1193,8 @@ namespace flex
 			VM::VirtualMachine* vm = new VM::VirtualMachine();
 			vm->GenerateFromSource("\n"
 				"func foo() -> int { return 2 * 7 + 9 - 6; }"
-				"int bar = foo() * foo() + foo(); \n");
+				"int bar = foo() * foo() + foo(); \n"
+				"out_0 = bar; \n");
 
 			EXPECT((u64)vm->state->diagnosticContainer->diagnostics.size(), (u64)0);
 
@@ -1205,7 +1207,7 @@ namespace flex
 			}
 
 			i32 foo = 2 * 7 + 9 - 6; // 17
-			EXPECT(vm->registers[6].valInt, foo * foo + foo); // 306
+			EXPECT(vm->terminalOutputs[0].valInt, foo * foo + foo); // 306
 			EXPECT(vm->stack.empty(), true);
 
 			delete vm;
@@ -1217,7 +1219,8 @@ namespace flex
 			VM::VirtualMachine* vm = new VM::VirtualMachine();
 			vm->GenerateFromSource("\n"
 				"func foo() -> float { return 2.00 * 7.F + 9.0f - 6.; }"
-				"float bar = foo() * foo() + foo(); \n");
+				"float bar = foo() * foo() + foo(); \n"
+				"out_0 = (int)bar; \n");
 
 			EXPECT((u64)vm->state->diagnosticContainer->diagnostics.size(), (u64)0);
 
@@ -1230,7 +1233,7 @@ namespace flex
 			}
 
 			real foo = 2.0f * 7.0f + 9.0f - 6.0f; // 17.0f
-			EXPECT(vm->registers[6].valFloat, foo * foo + foo); // 306.0f
+			EXPECT(vm->terminalOutputs[0].valInt, (i32)(foo * foo + foo)); // 306
 			EXPECT(vm->stack.empty(), true);
 
 			delete vm;
@@ -1268,6 +1271,7 @@ namespace flex
 				"int a = 10;"
 				"int b = 50 * 99;"
 				"int baz = a * 5 - (a + 12) / b; \n"
+				"out_0 = baz; \n"
 				"// (int a = 5; a < bar * baz; a += 2) { baz = 2 * baz + a; } \n");
 
 			EXPECT((u64)vm->state->diagnosticContainer->diagnostics.size(), (u64)0);
@@ -1280,7 +1284,7 @@ namespace flex
 				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
 			}
 
-			EXPECT(vm->registers[5].valInt, 10 * 5 - (10 + 12) / (50 * 99));
+			EXPECT(vm->terminalOutputs[0].valInt, 10 * 5 - (10 + 12) / (50 * 99));
 			EXPECT(vm->stack.empty(), true);
 
 			delete vm;
@@ -1349,9 +1353,10 @@ namespace flex
 		UNIT_TEST(VMTestsNotAllPathsReturnValue1)
 		{
 			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			// (A constant condition would make every path return)
 			vm->GenerateFromSource("\n"
-				"func foo() -> int { \n"
-				"  if (1) return 1; \n"
+				"func foo(int a) -> int { \n"
+				"  if (a > 0) return 1; \n"
 				"} \n");
 
 			vm->Execute();
@@ -1436,7 +1441,7 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)1);
+			EXPECT(vm->diagnosticContainer->diagnostics.empty(), false);
 
 			delete vm;
 		}
@@ -1451,8 +1456,315 @@ namespace flex
 
 			vm->Execute();
 
-			EXPECT((u64)vm->diagnosticContainer->diagnostics.size(), (u64)1);
+			EXPECT(vm->diagnosticContainer->diagnostics.empty(), false);
 
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		// Compiles & runs source, printing any diagnostics
+		static VM::VirtualMachine* CompileAndRunScript(const char* source)
+		{
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource(source);
+			if (vm->IsCompiled())
+			{
+				vm->Execute();
+			}
+			for (const Diagnostic& diagnostic : vm->diagnosticContainer->diagnostics)
+			{
+				PrintError("L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
+			}
+			return vm;
+		}
+
+		UNIT_TEST(VMTestsVoidReturn)
+		{
+			// A void return used to push a value nobody popped
+			VM::VirtualMachine* vm = CompileAndRunScript(
+				"func f(int a) -> void { if (a > 1) { return; } out_1 = a; return; }\n"
+				"f(5);\n"
+				"f(1);\n"
+				"func g() -> void { out_2 = 3; }\n"
+				"g();\n"
+				"out_0 = 7;\n");
+
+			EXPECT(vm->IsCompiled(), true);
+			EXPECT(vm->diagnosticContainer->diagnostics.empty(), true);
+			EXPECT(vm->terminalOutputs[0].valInt, 7);
+			EXPECT(vm->terminalOutputs[1].valInt, 1);
+			EXPECT(vm->terminalOutputs[2].valInt, 3);
+			EXPECT(vm->stack.empty(), true);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsCallKeepsVariables)
+		{
+			// Calls used to clobber the first variable (register 0), and recursion the caller's variables
+			VM::VirtualMachine* vm = CompileAndRunScript(
+				"int a = 5;\n"
+				"func g(int x) -> int { int y = x * 2; return y; }\n"
+				"int b = g(4);\n"
+				"func factorial(int n) -> int { if (n <= 1) { return 1; } return n * factorial(n - 1); }\n"
+				"out_0 = a;\n"
+				"out_1 = b;\n"
+				"out_2 = factorial(5);\n"
+				"func pow(int val, int depth) -> int { if (depth > 0) { return val * pow(val, depth - 1); } return 1; }\n"
+				"out_3 = pow(2, 8);\n");
+
+			EXPECT(vm->IsCompiled(), true);
+			EXPECT(vm->diagnosticContainer->diagnostics.empty(), true);
+			EXPECT(vm->terminalOutputs[0].valInt, 5);
+			EXPECT(vm->terminalOutputs[1].valInt, 8);
+			EXPECT(vm->terminalOutputs[2].valInt, 120);
+			EXPECT(vm->terminalOutputs[3].valInt, 256);
+			EXPECT(vm->stack.empty(), true);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsMinusWithoutSpaces)
+		{
+			// "x-10" used to lex as "x" "-10" (& then parse as x - 0)
+			VM::VirtualMachine* vm = CompileAndRunScript(
+				"int x = 15;\n"
+				"out_0 = x-10;\n"
+				"out_1 = x*-2;\n"
+				"out_2 = -3;\n"
+				"out_3 = (x)-1;\n");
+
+			EXPECT(vm->IsCompiled(), true);
+			EXPECT(vm->terminalOutputs[0].valInt, 5);
+			EXPECT(vm->terminalOutputs[1].valInt, -30);
+			EXPECT(vm->terminalOutputs[2].valInt, -3);
+			EXPECT(vm->terminalOutputs[3].valInt, 14);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsUnaryPrecedence)
+		{
+			// "-a + b" used to parse as "-(a + b)"
+			AST::AST* ast = new AST::AST();
+			ast->Generate("int c = -a + b;\n");
+			EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
+			AST::Declaration* decl = dynamic_cast<AST::Declaration*>(ast->rootBlock->statements[0]);
+			EXPECT(decl != nullptr, true);
+			AST::BinaryOperation* binary = dynamic_cast<AST::BinaryOperation*>(decl->initializer);
+			EXPECT(binary != nullptr, true);
+			EXPECT(dynamic_cast<AST::UnaryOperation*>(binary->lhs) != nullptr, true);
+			ast->Destroy();
+			delete ast;
+
+			VM::VirtualMachine* vm = CompileAndRunScript(
+				"int a = 2;\n"
+				"int b = 5;\n"
+				"out_0 = -a + b;\n"
+				"out_1 = -(a + b);\n"
+				"out_2 = ~a & 7;\n");
+
+			EXPECT(vm->IsCompiled(), true);
+			EXPECT(vm->terminalOutputs[0].valInt, 3);
+			EXPECT(vm->terminalOutputs[1].valInt, -7);
+			EXPECT(vm->terminalOutputs[2].valInt, ~2 & 7);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsBooleanOps)
+		{
+			VM::VirtualMachine* vm = CompileAndRunScript(
+				"bool t = true;\n"
+				"bool f = false;\n"
+				"int n = 0;\n"
+				"out_0 = 0; out_1 = 0; out_2 = 0; out_3 = 0;\n"
+				"if (t && !f) { out_0 = 1; }\n"
+				"if (f || t) { out_1 = 1; }\n"
+				"bool c = (n < 1) && t;\n"
+				"if (c) { out_2 = 1; }\n"
+				"if (!(t && f) && (n == 0 || f) && !(n > 1)) { out_3 = 1; }\n"
+				"if (f && t) { out_0 = 100; }\n"
+				"if (!t) { out_1 = 100; }\n");
+
+			EXPECT(vm->IsCompiled(), true);
+			EXPECT(vm->diagnosticContainer->diagnostics.empty(), true);
+			EXPECT(vm->terminalOutputs[0].valInt, 1);
+			EXPECT(vm->terminalOutputs[1].valInt, 1);
+			EXPECT(vm->terminalOutputs[2].valInt, 1);
+			EXPECT(vm->terminalOutputs[3].valInt, 1);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsLoops)
+		{
+			// Loops used to be silently dropped
+			VM::VirtualMachine* vm = CompileAndRunScript(
+				"int i = 0;\n"
+				"while (i < 5) { i += 1; }\n"
+				"out_0 = i;\n"
+				"int sum = 0;\n"
+				"for (int j = 1; j <= 4; j = j + 1) { sum += j; }\n"
+				"out_1 = sum;\n"
+				"int k = 10;\n"
+				"do { k -= 3; } while (k > 0);\n"
+				"out_2 = k;\n"
+				"int m = 0;\n"
+				"while (true) { m += 1; if (m == 7) break; }\n"
+				"for (;;) { break; }\n"
+				"out_3 = m;\n");
+
+			EXPECT(vm->IsCompiled(), true);
+			EXPECT(vm->diagnosticContainer->diagnostics.empty(), true);
+			EXPECT(vm->terminalOutputs[0].valInt, 5);
+			EXPECT(vm->terminalOutputs[1].valInt, 1 + 2 + 3 + 4);
+			EXPECT(vm->terminalOutputs[2].valInt, -2);
+			EXPECT(vm->terminalOutputs[3].valInt, 7);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsNestedIf)
+		{
+			VM::VirtualMachine* vm = CompileAndRunScript(
+				"func classify(int a, int b) -> int {\n"
+				"  if (a > 0) {\n"
+				"    if (b > 0) { return 1; }\n"
+				"    else { if (b == 0) { return 2; } }\n"
+				"    return 3;\n"
+				"  } elif (a == 0) {\n"
+				"    return 4;\n"
+				"  }\n"
+				"  int r = 5;\n"
+				"  if (b > 0) r = 6; else r = 7;\n"
+				"  return r;\n"
+				"}\n"
+				"out_0 = classify(1, 1) * 1000 + classify(1, 0) * 100 + classify(1, -1) * 10 + classify(0, 0);\n"
+				"out_1 = classify(-1, 1) * 10 + classify(-1, -1);\n"
+				// Constant conditions (comparisons of constants used to always fold to false)
+				"if (3 > 2) { out_2 = 1; } else { out_2 = 2; }\n"
+				"out_3 = (2.5 >= 2.0) ? 1 : 0;\n");
+
+			EXPECT(vm->IsCompiled(), true);
+			EXPECT(vm->diagnosticContainer->diagnostics.empty(), true);
+			EXPECT(vm->terminalOutputs[0].valInt, 1234);
+			EXPECT(vm->terminalOutputs[1].valInt, 67);
+			EXPECT(vm->terminalOutputs[2].valInt, 1);
+			EXPECT(vm->terminalOutputs[3].valInt, 1);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsTernary)
+		{
+			VM::VirtualMachine* vm = CompileAndRunScript(
+				"int a = 3;\n"
+				"out_0 = a > 2 ? 10 : 20;\n"
+				"out_1 = a > 5 ? 10 : 20;\n"
+				"func fib(int n) -> int { return n < 2 ? n : fib(n - 1) + fib(n - 2); }\n"
+				"out_2 = fib(10);\n");
+
+			EXPECT(vm->IsCompiled(), true);
+			EXPECT(vm->diagnosticContainer->diagnostics.empty(), true);
+			EXPECT(vm->terminalOutputs[0].valInt, 10);
+			EXPECT(vm->terminalOutputs[1].valInt, 20);
+			EXPECT(vm->terminalOutputs[2].valInt, 55);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsYield)
+		{
+			// "yield;" used to always be a syntax error
+			VM::VirtualMachine* vm = CompileAndRunScript(
+				"out_0 = 1;\n"
+				"yield;\n"
+				"out_0 = 2;\n"
+				"int i = 0;\n"
+				"while (i < 3) { i += 1; out_1 = i; yield; }\n"
+				"out_0 = 3;\n");
+
+			EXPECT(vm->IsCompiled(), true);
+			EXPECT(vm->terminalOutputs[0].valInt, 1);
+			EXPECT(vm->IsExecuting(), true);
+			vm->Execute();
+			EXPECT(vm->terminalOutputs[0].valInt, 2);
+			EXPECT(vm->terminalOutputs[1].valInt, 1);
+			vm->Execute();
+			vm->Execute();
+			EXPECT(vm->terminalOutputs[1].valInt, 3);
+			EXPECT(vm->IsExecuting(), true);
+			vm->Execute();
+			EXPECT(vm->terminalOutputs[0].valInt, 3);
+			EXPECT(vm->IsExecuting(), false);
+			EXPECT(vm->diagnosticContainer->diagnostics.empty(), true);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsTerminalOutputRead)
+		{
+			VM::VirtualMachine* vm = CompileAndRunScript(
+				"out_0 = 4;\n"
+				"out_1 = out_0 * 2;\n"
+				"func twice(int v) -> int { return v * 2; }\n"
+				"out_2 = twice(out_1);\n");
+
+			EXPECT(vm->IsCompiled(), true);
+			EXPECT(vm->terminalOutputs[1].valInt, 8);
+			EXPECT(vm->terminalOutputs[2].valInt, 16);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsDeepNestingFailsCleanly)
+		{
+			// Used to overflow the stack
+			std::string source = "int a = ";
+			source.append(5000, '(');
+			source.append("1");
+			source.append(5000, ')');
+			source.append(";\n");
+			source.append(5000, '{');
+			source.append(5000, '}');
+			source.append("\nint b = ");
+			for (u32 i = 0; i < 5000; ++i)
+			{
+				source.append("1 + ");
+			}
+			source.append("1;\n");
+			source.append("int c = ");
+			source.append(5000, '-');
+			source.append("1;\n");
+
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource(source.c_str());
+			EXPECT(vm->IsCompiled(), false);
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		UNIT_TEST(VMTestsUnterminatedString)
+		{
+			// (Used to read past the end of the source)
+			VM::VirtualMachine* vm = new VM::VirtualMachine();
+			vm->GenerateFromSource("string s = \"abc");
+			EXPECT(vm->IsCompiled(), false);
+			vm->GenerateFromSource("string s = \"");
+			EXPECT(vm->IsCompiled(), false);
+			vm->GenerateFromSource("out_0 = 1; break;\n");
+			EXPECT(vm->IsCompiled(), false);
 			delete vm;
 		}
 		UNIT_TEST_END;
@@ -2562,16 +2874,21 @@ namespace flex
 				RayPlaneIntersectionOriginValid, RayPlaneIntersectionXYValid, RayPlaneIntersectionXY2Valid, RayPlaneIntersectionXY3Valid, MinComponentValid, MaxComponentValid,
 				QuaternionsAreNearlyEqual, QuaternionsAreNotNearlyEqual,
 				// Virtual Machine tests
-				// TODO: Fix up
-				//ParseTestBasic1, ParseTestBasic2, ParseTestEmptyFor, ParseTestEmptyWhile, ParseTestEmptyDoWhile,
-				//LexAndParseTests,
-				//VMTestsBasic0, VMTestsBasic1, VMTestsLoop0, VMTestsFunc0,
-				//VMTestsBytecodeGenFromAST0, VMTestsBytecodeGenFromAST1, VMTestsBytecodeGenFromAST2,
-				//VMTestsBytecodeGenFromAST3,
-				//VMTestsBytecodeGenFromAST4,
-				//VMTestsNotAllPathsReturnValue0, VMTestsNotAllPathsReturnValue1, VMTestsMismatchedReturnTypes0, VMTestsMismatchedReturnTypes1,
+				ParseTestBasic1, ParseTestBasic2, ParseTestEmptyFor, ParseTestEmptyWhile, ParseTestEmptyDoWhile,
+				LexAndParseTests,
+				VMTestsBasic0, VMTestsBasic1, VMTestsLoop0, VMTestsFunc0,
+				VMTestsBytecodeGenFromAST0, VMTestsBytecodeGenFromAST1,
+				// TODO: Lists aren't supported by the backend yet
+				//VMTestsBytecodeGenFromAST2,
+				VMTestsBytecodeGenFromAST3,
+				VMTestsBytecodeGenFromAST4,
+				VMTestsNotAllPathsReturnValue0, VMTestsNotAllPathsReturnValue1, VMTestsMismatchedReturnTypes0, VMTestsMismatchedReturnTypes1,
+				// TODO: Variables have no scopes yet (every variable is global)
 				//VMTestsUnreachableVar0, VMTestsUnreachableVar1,
-				//VMTestsUinitializedVar0, VMTestsUinitializedVar1,
+				VMTestsUinitializedVar0, VMTestsUinitializedVar1,
+				VMTestsVoidReturn, VMTestsCallKeepsVariables, VMTestsMinusWithoutSpaces, VMTestsUnaryPrecedence, VMTestsBooleanOps,
+				VMTestsLoops, VMTestsNestedIf, VMTestsTernary, VMTestsYield, VMTestsTerminalOutputRead, VMTestsDeepNestingFailsCleanly,
+				VMTestsUnterminatedString,
 				// Misc tests
 				CountSetBitsValid, PoolTests, PairTests,
 				// Helper tests

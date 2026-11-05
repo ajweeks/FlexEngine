@@ -746,6 +746,15 @@ namespace flex
 		static const size_t HEADER_SIZE = 24;
 		static const size_t SECTION_HEADER_SIZE = 20;
 
+		// The crc of a section whose header is covered (HEADER_SECTION_CRC_COVERS_HEADER): a damaged tag, flags or
+		// size can't pass as a valid section (a flipped tag bit would otherwise load a world missing that section,
+		// and the next save would overwrite the good backup)
+		static u32 SectionCrc(u32 tag, u32 flags, u32 storedSize, u32 rawSize, const u8* stored)
+		{
+			const u32 header[4] = { tag, flags, storedSize, rawSize };
+			return Crc32(stored, storedSize, Crc32(header, sizeof(header)));
+		}
+
 		void FileWriter::AddSection(u32 tag, const std::vector<u8>& raw, u32 flags, bool bCompress)
 		{
 			Section section = {};
@@ -763,7 +772,7 @@ namespace flex
 			{
 				section.stored = raw;
 			}
-			section.rawCrc = Crc32(section.stored.data(), section.stored.size());
+			section.rawCrc = SectionCrc(section.tag, section.flags, (u32)section.stored.size(), section.rawSize, section.stored.data());
 			m_Sections.push_back(std::move(section));
 		}
 
@@ -786,7 +795,7 @@ namespace flex
 
 			writer.Write(CONTAINER_MAGIC);
 			writer.Write(CONTAINER_VERSION);
-			writer.Write((u16)0); // Header flags
+			writer.Write((u16)HEADER_SECTION_CRC_COVERS_HEADER); // Header flags
 			writer.Write(m_FileType);
 			writer.Write(m_FileVersion);
 			writer.Write((u32)m_Sections.size());
@@ -828,7 +837,7 @@ namespace flex
 			}
 		}
 
-		static LoadResult ParseHeader(const u8* data, size_t size, u32 expectedType, u32& outFileVersion, u32& outSectionCount)
+		static LoadResult ParseHeader(const u8* data, size_t size, u32 expectedType, u32& outFileVersion, u32& outSectionCount, u16& outHeaderFlags)
 		{
 			Reader reader(data, size);
 			u32 magic = 0, fileType = 0, headerCrc = 0;
@@ -850,10 +859,11 @@ namespace flex
 			{
 				return LoadResult::CORRUPT;
 			}
-			if (containerVersion != CONTAINER_VERSION)
+			if (containerVersion != CONTAINER_VERSION || (headerFlags & ~(u16)HEADER_KNOWN_FLAGS) != 0)
 			{
 				return LoadResult::UNSUPPORTED_VERSION;
 			}
+			outHeaderFlags = headerFlags;
 			if (fileType != expectedType)
 			{
 				return LoadResult::WRONG_TYPE;
@@ -869,9 +879,10 @@ namespace flex
 		{
 			m_Sections.clear();
 			m_FileVersion = 0;
+			m_HeaderFlags = 0;
 
 			u32 sectionCount = 0;
-			const LoadResult headerResult = ParseHeader(data, size, expectedType, m_FileVersion, sectionCount);
+			const LoadResult headerResult = ParseHeader(data, size, expectedType, m_FileVersion, sectionCount, m_HeaderFlags);
 			if (headerResult != LoadResult::OK)
 			{
 				return headerResult;
@@ -906,6 +917,7 @@ namespace flex
 		{
 			m_Sections.clear();
 			m_FileVersion = 0;
+			m_HeaderFlags = 0;
 
 			if (onlyTags == nullptr)
 			{
@@ -931,7 +943,7 @@ namespace flex
 				return fileSize >= 4 ? LoadResult::CORRUPT : LoadResult::NOT_CONTAINER;
 			}
 			u32 sectionCount = 0;
-			const LoadResult headerResult = ParseHeader(header, HEADER_SIZE, expectedType, m_FileVersion, sectionCount);
+			const LoadResult headerResult = ParseHeader(header, HEADER_SIZE, expectedType, m_FileVersion, sectionCount, m_HeaderFlags);
 			if (headerResult != LoadResult::OK)
 			{
 				return headerResult;
@@ -1025,7 +1037,10 @@ namespace flex
 			{
 				return false;
 			}
-			if (Crc32(section.stored.data(), section.stored.size()) != section.rawCrc)
+			const u32 crc = (m_HeaderFlags & HEADER_SECTION_CRC_COVERS_HEADER) != 0 ?
+				SectionCrc(section.tag, section.flags, (u32)section.stored.size(), section.rawSize, section.stored.data()) :
+				Crc32(section.stored.data(), section.stored.size());
+			if (crc != section.rawCrc)
 			{
 				return false;
 			}
@@ -2194,6 +2209,25 @@ namespace flex
 				const char* text = "{ \"json\" : true }";
 				SAVE_CHECK(reader.Parse((const u8*)text, strlen(text), TEST_TYPE) == LoadResult::NOT_CONTAINER);
 				SAVE_CHECK(reader.Parse(nullptr, 0, TEST_TYPE) == LoadResult::CORRUPT);
+
+				// A damaged section header (not just damaged data) is caught by the section's crc
+				{
+					FileWriter oneSectionWriter(TEST_TYPE, 3);
+					oneSectionWriter.AddSection(FourCC('S', 'M', 'A', 'L'), small, 0, false);
+					const std::vector<u8> oneSection = oneSectionWriter.Build();
+					SAVE_CHECK(oneSection.size() == HEADER_SIZE + SECTION_HEADER_SIZE + small.size());
+
+					std::vector<u8> flippedTag = oneSection;
+					flippedTag[HEADER_SIZE] ^= 1 << 3; // Tag byte 0
+					SAVE_CHECK(reader.Parse(flippedTag.data(), flippedTag.size(), TEST_TYPE) == LoadResult::OK);
+					SAVE_CHECK(!reader.HasSection(FourCC('S', 'M', 'A', 'L')));
+					SAVE_CHECK(!reader.GetSection(FourCC('S' ^ (1 << 3), 'M', 'A', 'L'), raw));
+
+					std::vector<u8> flippedFlag = oneSection;
+					flippedFlag[HEADER_SIZE + 4 + 2] ^= 1; // An optional (bit 16) section flag, which a reader would otherwise ignore
+					SAVE_CHECK(reader.Parse(flippedFlag.data(), flippedFlag.size(), TEST_TYPE) == LoadResult::OK);
+					SAVE_CHECK(!reader.GetSection(FourCC('S', 'M', 'A', 'L'), raw));
+				}
 
 				// Every truncation is detected
 				for (size_t size = 0; size < bytes.size(); ++size)

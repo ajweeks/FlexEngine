@@ -14,6 +14,18 @@ namespace flex
 	{
 		static Identifier* g_InvalidIdentifier = (Identifier*)0xFFFFFFFFFFFFFFFF;
 
+		// Deeper nesting (of parentheses, blocks, unary operators...) is rejected rather than overflowing the stack
+		static const u32 MAX_PARSE_DEPTH = 64;
+		// Longest chain of binary operators in one expression (each one adds a level to the AST)
+		static const u32 MAX_BINARY_CHAIN_LENGTH = 256;
+
+		struct ParseDepthGuard
+		{
+			explicit ParseDepthGuard(u32& depth) : depth(depth) { ++depth; }
+			~ParseDepthGuard() { --depth; }
+			u32& depth;
+		};
+
 		const char* UnaryOperatorTypeToString(UnaryOperatorType opType)
 		{
 			return g_UnaryOperatorTypeStrings[(u32)opType];
@@ -469,16 +481,22 @@ namespace flex
 			stringBuilder.Append("for (");
 			if (setup != nullptr)
 			{
+				// (Includes the semicolon)
 				stringBuilder.Append(setup->ToString());
 			}
-			stringBuilder.Append(" ");
+			else
+			{
+				stringBuilder.Append(";");
+			}
 			if (condition != nullptr)
 			{
+				stringBuilder.Append(" ");
 				stringBuilder.Append(condition->ToString());
 			}
-			stringBuilder.Append("; ");
+			stringBuilder.Append(";");
 			if (update != nullptr)
 			{
+				stringBuilder.Append(" ");
 				stringBuilder.Append(update->ToString());
 			}
 			stringBuilder.Append(")\n");
@@ -1372,7 +1390,8 @@ namespace flex
 
 		bool Parser::HasNext()
 		{
-			return !m_Lexer->sourceIter.EndOfFileReached();
+			// (The lexer reaches the end of the source before the last token has been consumed)
+			return !NextIs(TokenKind::END_OF_FILE);
 		}
 
 		bool Parser::NextIs(TokenKind tokenKind)
@@ -1391,17 +1410,7 @@ namespace flex
 
 		bool Parser::NextIsBinaryOperator()
 		{
-			// Handle "x-1" case where there's no whitespace between numbers
-			if (NextIs(TokenKind::INT_LITERAL) || NextIs(TokenKind::FLOAT_LITERAL))
-			{
-				if (!m_Current.value.empty() && m_Current.value[0] == '-')
-				{
-					m_Current.kind = TokenKind::MINUS;
-					m_Lexer->Backtrack();
-					return true;
-				}
-			}
-
+			// (The lexer lexes "x-1" as a minus, so negative literals never follow an operand)
 			return NextIs(TokenKind::PLUS) ||
 				NextIs(TokenKind::MINUS) ||
 				NextIs(TokenKind::STAR) ||
@@ -1490,7 +1499,7 @@ namespace flex
 			std::vector<Statement*> statements;
 			Span span = Span(0, 0);
 
-			while (!m_Lexer->sourceIter.EndOfFileReached())
+			while (HasNext())
 			{
 				Statement* statement = NextStatement();
 				if (statement == nullptr)
@@ -1542,6 +1551,13 @@ namespace flex
 
 		Expression* Parser::NextPrimary()
 		{
+			ParseDepthGuard depthGuard(m_Depth);
+			if (m_Depth > MAX_PARSE_DEPTH)
+			{
+				diagnosticContainer->AddDiagnostic(m_Current.span, "Expression is nested too deeply");
+				return nullptr;
+			}
+
 			if (NextIsTypename())
 			{
 				Token typeToken = Eat(m_Current.kind);
@@ -1670,7 +1686,7 @@ namespace flex
 					Expression* rhs = NextExpression();
 					if (rhs != nullptr)
 					{
-						rhs->span = rhs->span.Extend(Eat(TokenKind::SEMICOLON).span);
+						// (The trailing semicolon is eaten by the enclosing statement, so this also works in for loop headers)
 						return new Assignment(span.Extend(rhs->span), identifierToken.value, rhs);
 					}
 
@@ -1727,10 +1743,18 @@ namespace flex
 
 		Expression* Parser::NextBinary(i32 lhsPrecendence, Expression* lhs)
 		{
+			u32 chainLength = 0;
 			while (true)
 			{
 				if (lhs == nullptr)
 				{
+					return nullptr;
+				}
+
+				if (++chainLength > MAX_BINARY_CHAIN_LENGTH)
+				{
+					diagnosticContainer->AddDiagnostic(lhs->span, "Expression is too long");
+					delete lhs;
 					return nullptr;
 				}
 
@@ -1785,7 +1809,8 @@ namespace flex
 		UnaryOperation* Parser::NextUnary()
 		{
 			Token unaryOperatorToken = Eat(m_Current.kind);
-			Expression* expression = NextExpression();
+			// Unary operators bind tighter than binary ones ("-a + b" is "(-a) + b")
+			Expression* expression = NextPrimary();
 			if (expression != nullptr)
 			{
 				return new UnaryOperation(unaryOperatorToken.span.Extend(expression->span), TokenKindToUnaryOperatorType(unaryOperatorToken.kind), expression);
@@ -1852,6 +1877,13 @@ namespace flex
 
 		Statement* Parser::NextStatement()
 		{
+			ParseDepthGuard depthGuard(m_Depth);
+			if (m_Depth > MAX_PARSE_DEPTH)
+			{
+				diagnosticContainer->AddDiagnostic(m_Current.span, "Statement is nested too deeply");
+				return nullptr;
+			}
+
 			if (NextIs(TokenKind::IDENTIFIER))
 			{
 				return NextExpression();
@@ -1899,8 +1931,6 @@ namespace flex
 				{
 					yieldValue = NextExpression();
 				}
-				Eat(TokenKind::SEMICOLON);
-
 				return new YieldStatement(yieldToken.span.Extend(Eat(TokenKind::SEMICOLON).span), yieldValue);
 			}
 			else if (NextIs(TokenKind::RETURN))
@@ -1947,6 +1977,12 @@ namespace flex
 				if (then != nullptr)
 				{
 					span = span.Extend(then->span);
+
+					// e.g. "if (a) b += 1; else ..."
+					while (NextIs(TokenKind::SEMICOLON))
+					{
+						Eat(TokenKind::SEMICOLON);
+					}
 
 					Statement* otherwise = nullptr;
 					if (NextIs(TokenKind::ELIF))
@@ -2053,6 +2089,10 @@ namespace flex
 			Statement* body = NextStatement();
 			if (body != nullptr)
 			{
+				while (NextIs(TokenKind::SEMICOLON))
+				{
+					Eat(TokenKind::SEMICOLON);
+				}
 				Eat(TokenKind::WHILE);
 				Eat(TokenKind::OPEN_PAREN);
 				Expression* condition = NextExpression();
@@ -2182,6 +2222,8 @@ namespace flex
 			rootBlock = nullptr;
 			delete parser;
 			parser = nullptr;
+			delete lexer;
+			lexer = nullptr;
 		}
 	} // namespace AST
 } // namespace flex

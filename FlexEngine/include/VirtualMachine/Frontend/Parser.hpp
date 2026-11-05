@@ -820,6 +820,7 @@ namespace flex
 			DiagnosticContainer* diagnosticContainer = nullptr;
 
 			u32 m_TempIdentIdx = 0;
+			u32 m_Depth = 0; // Current recursion depth of NextStatement/NextPrimary
 		};
 
 		struct AST

@@ -10,6 +10,15 @@ namespace flex
 {
 	std::string JSONParser::s_ErrorStr;
 
+	// Objects & arrays recurse, so deeply nested files would overflow the stack (the binary JSON path has the same limit)
+	static const i32 MAX_NESTING_DEPTH = 64;
+	static thread_local i32 s_NestingDepth = 0;
+	struct NestingDepthGuard
+	{
+		NestingDepthGuard() { ++s_NestingDepth; }
+		~NestingDepthGuard() { --s_NestingDepth; }
+	};
+
 	// TODO: Track line & column index to generate better error messages
 
 	namespace
@@ -113,6 +122,7 @@ namespace flex
 		PROFILE_AUTO("JSONParser Parse");
 
 		JSONParser::ClearErrors();
+		s_NestingDepth = 0;
 
 		const std::string& dirtyFileContents = fileContents;
 
@@ -253,6 +263,13 @@ namespace flex
 	bool JSONParser::ParseObject(const std::string& fileContents, i32* offset, JSONObject& outObject)
 	{
 		PROFILE_AUTO("JSONParser ParseObject");
+
+		NestingDepthGuard depthGuard;
+		if (s_NestingDepth > MAX_NESTING_DEPTH)
+		{
+			s_ErrorStr = "Objects nested deeper than " + std::to_string(MAX_NESTING_DEPTH) + " levels at offset " + std::to_string(*offset);
+			return false;
+		}
 
 		if (*offset < 0 || *offset >= (i32)fileContents.size() || fileContents[*offset] != '{')
 		{
@@ -583,6 +600,13 @@ namespace flex
 	bool JSONParser::ParseArray(const std::string& fileContents, i32* offset, const std::string& fieldName, std::vector<JSONField>& fields)
 	{
 		PROFILE_AUTO("JSONParser ParseArray");
+
+		NestingDepthGuard depthGuard;
+		if (s_NestingDepth > MAX_NESTING_DEPTH)
+		{
+			s_ErrorStr = "Arrays nested deeper than " + std::to_string(MAX_NESTING_DEPTH) + " levels: " + fieldName;
+			return false;
+		}
 
 		i32 arrayClosingBracket = MatchingBracket('[', fileContents, *offset);
 		if (arrayClosingBracket == -1)
