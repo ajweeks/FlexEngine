@@ -75,6 +75,8 @@ namespace flex
 		virtual void OnCharge(real chargeAmount) override;
 
 	private:
+		// Set while charge is being passed on, so a loop of wired poles doesn't recurse forever
+		bool m_bCharging = false;
 
 	};
 

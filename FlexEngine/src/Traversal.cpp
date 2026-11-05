@@ -349,7 +349,8 @@ namespace flex
 		delete m_MotesMesh;
 		m_MotesMesh = nullptr;
 
-		g_ResourceManager->DestroyAudioSource(m_VarioBeepID);
+		// Synthesized, so not known to the resource manager
+		AudioManager::DestroyAudioSource(m_VarioBeepID);
 		m_VarioBeepID = InvalidAudioSourceID;
 	}
 

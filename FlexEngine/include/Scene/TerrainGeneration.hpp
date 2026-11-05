@@ -686,6 +686,8 @@ namespace flex
 			// Loads the snapshot at the snapshot path in the background (call after changing world params & edits).
 			// If it matches, it replaces everything displayed at once, rather than regenerating all chunks.
 			void LoadSnapshotAsync();
+			// Cancels a snapshot load in progress (after the params or edits it was loaded for changed)
+			void DiscardSnapshotLoad();
 
 			std::shared_ptr<const TerrainDensity> Density() const { return m_Density; }
 			const WorldParams& Params() const { return m_Params; }

@@ -85,13 +85,15 @@ namespace flex
 	{
 		if (m_btRigidBody != nullptr)
 		{
-			btDiscreteDynamicsWorld* world = g_SceneManager->CurrentScene()->GetPhysicsWorld()->GetWorld();
+			PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+			btDiscreteDynamicsWorld* world = physicsWorld->GetWorld();
 			for (btTypedConstraint* constraint : m_Constraints)
 			{
 				world->removeConstraint(constraint);
 				delete constraint;
 			}
 
+			physicsWorld->OnCollisionObjectDestroyed(m_btRigidBody);
 			world->removeRigidBody(m_btRigidBody);
 			//delete m_btRigidBody->getMotionState(); // ?
 			delete m_btRigidBody;

@@ -147,6 +147,21 @@ namespace flex
 		ForEachRigidBody([alpha](RigidBody* rigidBody) { rigidBody->ApplyInterpolatedTransform(alpha); });
 	}
 
+	void PhysicsWorld::OnCollisionObjectDestroyed(const btCollisionObject* collisionObject)
+	{
+		for (auto iter = m_CollisionPairs.begin(); iter != m_CollisionPairs.end();)
+		{
+			if (iter->first == collisionObject || iter->second == collisionObject)
+			{
+				iter = m_CollisionPairs.erase(iter);
+			}
+			else
+			{
+				++iter;
+			}
+		}
+	}
+
 	btDiscreteDynamicsWorld* PhysicsWorld::GetWorld()
 	{
 		return m_World;

@@ -922,7 +922,7 @@ namespace flex
 			Animal* aimed = FindAimedAnimal(origin, dir, LASSO_RANGE);
 			Animal* led = FindLedAnimal(origin);
 			BuildPiece* post = led != nullptr ? FindAimedFencePost(origin, dir, 8.0f) : nullptr;
-			const bool bClick = g_InputManager->IsMouseButtonPressed(MouseButton::LEFT);
+			const bool bClick = g_InputManager->IsMouseButtonPressed(GameKeys::USE_ITEM.button);
 
 			if (post != nullptr && (aimed == nullptr || aimed->state == AnimalState::FOLLOW))
 			{

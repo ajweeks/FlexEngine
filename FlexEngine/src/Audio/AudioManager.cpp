@@ -753,8 +753,8 @@ namespace flex
 		ALenum error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
+			// (Only this slot failed; deleting every buffer would break all later loads)
 			DisplayALError("alBufferData", error);
-			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
 			return InvalidAudioSourceID;
 		}
 
@@ -948,7 +948,8 @@ namespace flex
 		alDeleteSources(1, &s_Sources[sourceID].source);
 		delete[] s_WaveData[sourceID];
 		s_WaveData[sourceID] = nullptr;
-		s_Sources[sourceID].source = InvalidAudioSourceID;
+		// Reset the cached looping/pitch/fade state too, or the setters skip the AL calls for the slot's next source
+		s_Sources[sourceID] = Source();
 		return true;
 	}
 
@@ -1557,13 +1558,11 @@ namespace flex
 
 	AudioSourceID AudioManager::SynthesizeSoundCommon(AudioSourceID newID, i16* data, u32 bufferSize, u32 sampleRate, i32 format, bool b2D)
 	{
+		// A stale error from an earlier call (e.g. a query on an invalid source) isn't this sound's failure
 		ALenum error = alGetError();
 		if (error != AL_NO_ERROR)
 		{
-			DisplayALError("?", error);
-			alDeleteBuffers(NUM_BUFFERS, s_Buffers);
-			free(data);
-			return InvalidAudioSourceID;
+			DisplayALError("pending before SynthesizeSound", error);
 		}
 
 		// Buffer

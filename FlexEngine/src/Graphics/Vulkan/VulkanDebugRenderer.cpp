@@ -211,7 +211,9 @@ namespace flex
 				u32 newHash = HashVertexBufferDataCreateInfo(m_VertexBufferCreateInfo);
 				PROFILE_END("Hash vertex buffer");
 
-				if (newHash != oldHash && !m_VertexBufferCreateInfo.positions_3D.empty())
+				// (m_Object is null between OnPreSceneChange & OnPostSceneChange)
+				if (newHash != oldHash && !m_VertexBufferCreateInfo.positions_3D.empty() &&
+					m_Object != nullptr && m_Object->GetMesh() != nullptr && m_Object->GetMesh()->GetSubmeshCount() > 0)
 				{
 					m_Object->GetMesh()->GetSubMesh(0)->UpdateDynamicVertexData(m_VertexBufferCreateInfo, indexBuffer);
 				}

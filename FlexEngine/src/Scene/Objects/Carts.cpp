@@ -413,9 +413,16 @@ namespace flex
 	{
 		PropertyCollection* collection = BaseCart::BuildTypeUniquePropertyCollection();
 
+		// Replaces BaseCart's "cart info" collection (EngineCart's Parse/Serialize only handle this one), so the
+		// track fields must be registered here too or engine carts lose their track on save & load
 		collection->childCollection = GetPropertyCollectionManager()->AllocateCollection("engine cart info");
 
-		// BaseCart already registered trackID & dist along track fields
+		collection->childCollection->RegisterProperty("track ID", FIELD_OFFSET_AND_TYPE(EngineCart, currentTrackID))
+			.VersionAdded(6)
+			.DefaultValue(InvalidTrackID);
+		collection->childCollection->RegisterProperty("dist along track", FIELD_OFFSET_AND_TYPE(EngineCart, distAlongTrack))
+			.VersionAdded(6)
+			.DefaultValue(-1.0f);
 		collection->childCollection->RegisterProperty("move direction", FIELD_OFFSET_AND_TYPE(EngineCart, moveDirection))
 			.VersionAdded(6)
 			.Precision(1)

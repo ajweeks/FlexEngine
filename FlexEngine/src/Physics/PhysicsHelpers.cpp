@@ -7,6 +7,7 @@ IGNORE_WARNINGS_PUSH
 #include <BulletCollision/CollisionShapes/btCapsuleShape.h>
 #include <BulletCollision/CollisionShapes/btCollisionShape.h>
 #include <BulletCollision/CollisionShapes/btConeShape.h>
+#include <BulletCollision/CollisionShapes/btCompoundShape.h>
 #include <BulletCollision/CollisionShapes/btCylinderShape.h>
 #include <BulletCollision/CollisionShapes/btSphereShape.h>
 IGNORE_WARNINGS_POP
@@ -115,6 +116,23 @@ namespace flex
 			btVector3 btHalfExtents = static_cast<btCylinderShape*>(originalShape)->getHalfExtentsWithMargin();
 			btHalfExtents = btHalfExtents / btWorldScale;
 			newCollisionShape = new btCylinderShape(btHalfExtents);
+		} break;
+		case COMPOUND_SHAPE_PROXYTYPE:
+		{
+			btCompoundShape* originalCompound = static_cast<btCompoundShape*>(originalShape);
+			btCompoundShape* newCompound = new btCompoundShape();
+			for (i32 i = 0; i < originalCompound->getNumChildShapes(); ++i)
+			{
+				btCollisionShape* childShape = CloneCollisionShape(worldScale, originalCompound->getChildShape(i));
+				if (childShape != nullptr)
+				{
+					// Child origins were scaled along with the compound's local scaling
+					btTransform childTransform = originalCompound->getChildTransform(i);
+					childTransform.setOrigin(childTransform.getOrigin() / btWorldScale);
+					newCompound->addChildShape(childTransform, childShape);
+				}
+			}
+			newCollisionShape = newCompound;
 		} break;
 		default:
 		{

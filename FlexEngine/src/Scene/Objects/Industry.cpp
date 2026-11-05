@@ -240,6 +240,13 @@ namespace flex
 
 	void PowerPole::OnCharge(real chargeAmount)
 	{
+		if (m_bCharging)
+		{
+			// Charge arrived back through a loop of poles (or this pole's own sockets wired together)
+			return;
+		}
+		m_bCharging = true;
+
 		PluggablesSystem* pluggablesSystem = GetSystem<PluggablesSystem>(SystemType::PLUGGABLES);
 		std::vector<SocketData> const* sockets = pluggablesSystem->GetGameObjectSockets(ID);
 		if (sockets != nullptr)
@@ -252,11 +259,12 @@ namespace flex
 				Socket* otherSocket = pluggablesSystem->GetSocketAtOtherEnd(socket);
 				if (otherSocket != nullptr)
 				{
-					// TODO: Detect and avoid infinite loops
 					otherSocket->GetParent()->OnCharge(chargeAmount);
 				}
 			}
 		}
+
+		m_bCharging = false;
 	}
 
 	const char* MineralTypeToString(MineralType type)
@@ -914,7 +922,8 @@ namespace flex
 
 		if (m_SourceID != InvalidAudioSourceID)
 		{
-			g_ResourceManager->DestroyAudioSource(m_SourceID);
+			// The source is cached per file & shared with other speakers, so it mustn't be destroyed
+			AudioManager::StopSource(m_SourceID);
 			m_SourceID = InvalidAudioSourceID;
 		}
 	}

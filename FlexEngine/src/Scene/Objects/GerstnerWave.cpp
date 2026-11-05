@@ -325,9 +325,28 @@ namespace flex
 
 		DEBUG_lastUsedVertCount = vertCount;
 
-		// Resize & regenerate index buffer
-		if ((i32)m_Indices.size() != indexCount)
+		// Resize & regenerate index buffer when the chunk layout (LOD level sequence, which determines every chunk's
+		// vertex offset) changed, not only when the total count did: the same total with chunks at different LODs
+		// would otherwise reuse indices which join vertices from the wrong chunks
+		bool bLayoutChanged = (i32)m_Indices.size() != indexCount || m_IndexLayout.size() != waveChunks.size();
+		if (!bLayoutChanged)
 		{
+			for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
+			{
+				if (m_IndexLayout[chunkIdx] != waveChunks[chunkIdx].tessellationLODLevel)
+				{
+					bLayoutChanged = true;
+					break;
+				}
+			}
+		}
+		if (bLayoutChanged)
+		{
+			m_IndexLayout.resize(waveChunks.size());
+			for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
+			{
+				m_IndexLayout[chunkIdx] = waveChunks[chunkIdx].tessellationLODLevel;
+			}
 			m_Indices.resize(indexCount);
 			i32 i = 0;
 			for (u32 chunkIdx = 0; chunkIdx < (u32)waveChunks.size(); ++chunkIdx)
@@ -1109,6 +1128,15 @@ namespace flex
 	{
 		if (index >= 0 && index < (i32)waveContributions.size())
 		{
+			// Keep the solo pointing at the same wave (or clear it) so SortWaves doesn't read past the end
+			if (soloWaveIndex == index)
+			{
+				soloWaveIndex = -1;
+			}
+			else if (soloWaveIndex > index)
+			{
+				--soloWaveIndex;
+			}
 			waveContributions.erase(waveContributions.begin() + index);
 			SortWaves();
 		}
@@ -1117,6 +1145,10 @@ namespace flex
 	void GerstnerWave::SortWaves()
 	{
 		WaveInfo soloWaveCopy;
+		if (soloWaveIndex >= (i32)waveContributions.size())
+		{
+			soloWaveIndex = -1;
+		}
 		if (soloWaveIndex != -1)
 		{
 			soloWaveCopy = waveContributions[soloWaveIndex];

@@ -126,6 +126,8 @@ namespace flex
 
 		VertexBufferDataCreateInfo m_VertexBufferCreateInfo;
 		std::vector<u32> m_Indices;
+		// Tessellation LOD level of each wave chunk the index buffer was built for
+		std::vector<u32> m_IndexLayout;
 
 		GameObject* bobber = nullptr;
 		Spring<real> bobberTarget;

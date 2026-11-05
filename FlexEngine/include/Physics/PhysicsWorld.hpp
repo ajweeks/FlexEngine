@@ -41,6 +41,10 @@ namespace flex
 
 		btDiscreteDynamicsWorld* GetWorld();
 
+		// Forgets trigger overlap pairs involving the given object, which is about to be deleted (the tick callback
+		// would otherwise call OnOverlapEnd through the freed object on the next step)
+		void OnCollisionObjectDestroyed(const btCollisionObject* collisionObject);
+
 		btVector3 GenerateDirectionRayFromScreenPos(i32 x, i32 y);
 
 		// Returns the first body hit along the given ray

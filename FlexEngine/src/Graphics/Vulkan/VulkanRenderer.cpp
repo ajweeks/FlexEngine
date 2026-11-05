@@ -805,7 +805,8 @@ namespace flex
 				VulkanMaterial* prevMat = (VulkanMaterial*)GetMaterial(matToReplace);
 				delete prevMat;
 
-				m_Materials.emplace(matID, new VulkanMaterial());
+				// (emplace does nothing when the key already exists, which would leave the deleted material in the map)
+				m_Materials[matID] = new VulkanMaterial();
 
 				// Render objects using this material may now use a different shader
 				m_bRebatchRenderObjects = true;
@@ -1502,6 +1503,10 @@ namespace flex
 				descSetCreateInfo.gpuBufferList = &postProcessMaterial->gpuBufferList;
 				descSetCreateInfo.imageDescriptors.SetUniform(&U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB0ColourAttachment0->view, m_SamplerLinearRepeat });
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
+				if (m_PostProcessDescriptorSet != VK_NULL_HANDLE)
+				{
+					m_DescriptorPoolPersistent->FreeSet(m_PostProcessDescriptorSet);
+				}
 				m_PostProcessDescriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1518,6 +1523,10 @@ namespace flex
 				descSetCreateInfo.gpuBufferList = &gammaCorrectMaterial->gpuBufferList;
 				descSetCreateInfo.imageDescriptors.SetUniform(&U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB1ColourAttachment0->view, m_SamplerLinearClampToEdge });
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
+				if (m_GammaCorrectDescriptorSet != VK_NULL_HANDLE)
+				{
+					m_DescriptorPoolPersistent->FreeSet(m_GammaCorrectDescriptorSet);
+				}
 				m_GammaCorrectDescriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1536,6 +1545,10 @@ namespace flex
 				descSetCreateInfo.imageDescriptors.SetUniform(&U_SCENE_SAMPLER, ImageDescriptorInfo{ m_OffscreenFB0ColourAttachment0->view, m_SamplerLinearClampToEdge });
 				descSetCreateInfo.imageDescriptors.SetUniform(&U_HISTORY_SAMPLER, ImageDescriptorInfo{ m_HistoryBuffer->imageView, m_SamplerLinearClampToEdge });
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
+				if (m_TAAResolveDescriptorSet != VK_NULL_HANDLE)
+				{
+					m_DescriptorPoolPersistent->FreeSet(m_TAAResolveDescriptorSet);
+				}
 				m_TAAResolveDescriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1576,6 +1589,11 @@ namespace flex
 				createInfo.depthTestEnable = VK_FALSE;
 				createInfo.depthWriteEnable = VK_FALSE;
 				createInfo.bPersistent = true;
+				if (m_PostProcessGraphicsPipelineID != InvalidGraphicsPipelineID)
+				{
+					DestroyGraphicsPipeline(m_PostProcessGraphicsPipelineID);
+					m_PostProcessGraphicsPipelineID = InvalidGraphicsPipelineID;
+				}
 				CreateGraphicsPipeline(&createInfo, m_PostProcessGraphicsPipelineID);
 			}
 
@@ -1601,6 +1619,11 @@ namespace flex
 				createInfo.pushConstantRangeCount = (u32)pushConstantRanges.size();
 				createInfo.pushConstants = pushConstantRanges.data();
 				createInfo.bPersistent = true;
+				if (m_GammaCorrectGraphicsPipelineID != InvalidGraphicsPipelineID)
+				{
+					DestroyGraphicsPipeline(m_GammaCorrectGraphicsPipelineID);
+					m_GammaCorrectGraphicsPipelineID = InvalidGraphicsPipelineID;
+				}
 				CreateGraphicsPipeline(&createInfo, m_GammaCorrectGraphicsPipelineID);
 			}
 
@@ -1626,6 +1649,11 @@ namespace flex
 				createInfo.pushConstantRangeCount = (u32)pushConstantRanges.size();
 				createInfo.pushConstants = pushConstantRanges.data();
 				createInfo.bPersistent = true;
+				if (m_TAAResolveGraphicsPipelineID != InvalidGraphicsPipelineID)
+				{
+					DestroyGraphicsPipeline(m_TAAResolveGraphicsPipelineID);
+					m_TAAResolveGraphicsPipelineID = InvalidGraphicsPipelineID;
+				}
 				CreateGraphicsPipeline(&createInfo, m_TAAResolveGraphicsPipelineID);
 			}
 		}
@@ -1693,6 +1721,10 @@ namespace flex
 				FrameBufferAttachment* sceneFrameBufferAttachment = m_bEnableTAA ? m_OffscreenFB1ColourAttachment0 : m_OffscreenFB0ColourAttachment0;
 				descSetCreateInfo.imageDescriptors.SetUniform(&U_ALBEDO_SAMPLER, ImageDescriptorInfo{ sceneFrameBufferAttachment->view, m_SamplerLinearRepeat });
 				FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
+				if (m_FinalFullscreenBlitDescriptorSet != VK_NULL_HANDLE)
+				{
+					m_DescriptorPoolPersistent->FreeSet(m_FinalFullscreenBlitDescriptorSet);
+				}
 				m_FinalFullscreenBlitDescriptorSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 			}
 
@@ -1711,6 +1743,11 @@ namespace flex
 				pipelineCreateInfo.depthCompareOp = VK_COMPARE_OP_ALWAYS;
 				pipelineCreateInfo.renderPass = fullscreenShader->renderPass;
 				pipelineCreateInfo.bPersistent = true;
+				if (m_BlitGraphicsPipelineID != InvalidGraphicsPipelineID)
+				{
+					DestroyGraphicsPipeline(m_BlitGraphicsPipelineID);
+					m_BlitGraphicsPipelineID = InvalidGraphicsPipelineID;
+				}
 				CreateGraphicsPipeline(&pipelineCreateInfo, m_BlitGraphicsPipelineID);
 			}
 		}
@@ -2344,6 +2381,10 @@ namespace flex
 						{
 							for (VulkanParticleSystem* system : m_ParticleSystems)
 							{
+								if (system == nullptr)
+								{
+									continue;
+								}
 								VulkanMaterial* simMat = (VulkanMaterial*)m_Materials.at(system->system->simMaterialID);
 								if (simMat->gpuBufferList.Has(GPUBufferType::PARTICLE_DATA))
 								{
@@ -2415,16 +2456,7 @@ namespace flex
 			}
 
 			VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(renderObject->materialID);
-			VulkanShader* shader = (VulkanShader*)GetShader(material->shaderID);
-			VertexIndexBufferPair* vertexIndexBufferPair;
-			if (material->shaderID == m_UIShaderID)
-			{
-				vertexIndexBufferPair = m_DynamicUIVertexIndexBufferPair;
-			}
-			else
-			{
-				vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[shader->dynamicVertexIndexBufferIndex].second;
-			}
+			VertexIndexBufferPair* vertexIndexBufferPair = GetDynamicVertexIndexBufferPair(material->shaderID);
 			VulkanBuffer* vertexBuffer = vertexIndexBufferPair->vertexBuffer;
 			VulkanBuffer* indexBuffer = vertexIndexBufferPair->indexBuffer;
 
@@ -2516,6 +2548,17 @@ namespace flex
 			renderObject->indexOffset = (u32)(indexOffsetBytes / sizeof(u32));
 		}
 
+		VertexIndexBufferPair* VulkanRenderer::GetDynamicVertexIndexBufferPair(ShaderID shaderID)
+		{
+			// UI objects have their own pair, every other dynamic shader shares one per stride
+			if (shaderID == m_UIShaderID)
+			{
+				return m_DynamicUIVertexIndexBufferPair;
+			}
+			VulkanShader* shader = (VulkanShader*)GetShader(shaderID);
+			return m_DynamicVertexIndexBufferPairs[shader->dynamicVertexIndexBufferIndex].second;
+		}
+
 		void VulkanRenderer::FreeDynamicVertexData(RenderID renderID)
 		{
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
@@ -2524,8 +2567,7 @@ namespace flex
 				renderObject->dynamicIndexBufferOffset != InvalidBufferID)
 			{
 				VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(renderObject->materialID);
-				VulkanShader* shader = (VulkanShader*)GetShader(material->shaderID);
-				VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[shader->dynamicVertexIndexBufferIndex].second;
+				VertexIndexBufferPair* vertexIndexBufferPair = GetDynamicVertexIndexBufferPair(material->shaderID);
 
 				if (renderObject->dynamicVertexBufferOffset != InvalidBufferID)
 				{
@@ -2546,8 +2588,7 @@ namespace flex
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
 			VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(renderObject->materialID);
-			VulkanShader* shader = (VulkanShader*)GetShader(material->shaderID);
-			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[shader->dynamicVertexIndexBufferIndex].second;
+			VertexIndexBufferPair* vertexIndexBufferPair = GetDynamicVertexIndexBufferPair(material->shaderID);
 
 			if (renderObject->dynamicVertexBufferOffset != InvalidBufferID)
 			{
@@ -2592,8 +2633,7 @@ namespace flex
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
 			VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(renderObject->materialID);
-			VulkanShader* shader = (VulkanShader*)GetShader(material->shaderID);
-			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[shader->dynamicVertexIndexBufferIndex].second;
+			VertexIndexBufferPair* vertexIndexBufferPair = GetDynamicVertexIndexBufferPair(material->shaderID);
 
 			return (u32)vertexIndexBufferPair->vertexBuffer->m_Size;
 		}
@@ -2603,8 +2643,7 @@ namespace flex
 			VulkanRenderObject* renderObject = GetRenderObject(renderID);
 
 			VulkanMaterial* material = (VulkanMaterial*)m_Materials.at(renderObject->materialID);
-			VulkanShader* shader = (VulkanShader*)GetShader(material->shaderID);
-			VertexIndexBufferPair* vertexIndexBufferPair = m_DynamicVertexIndexBufferPairs[shader->dynamicVertexIndexBufferIndex].second;
+			VertexIndexBufferPair* vertexIndexBufferPair = GetDynamicVertexIndexBufferPair(material->shaderID);
 
 			return (u32)vertexIndexBufferPair->vertexBuffer->GetAllocationSize(renderObject->dynamicVertexBufferOffset);
 		}
@@ -3032,9 +3071,23 @@ namespace flex
 			return particleSystem->ID;
 		}
 
+		void VulkanRenderer::RemoveMaterial(MaterialID materialID)
+		{
+			// The ID is handed to the next material created, which must not inherit this one's sets
+			if (m_DescriptorPool != nullptr)
+			{
+				m_DescriptorPool->FreeMaterialSet(materialID);
+			}
+			if (m_DescriptorPoolPersistent != nullptr)
+			{
+				m_DescriptorPoolPersistent->FreeMaterialSet(materialID);
+			}
+			Renderer::RemoveMaterial(materialID);
+		}
+
 		bool VulkanRenderer::RemoveParticleSystem(ParticleSystemID particleSystemID)
 		{
-			if (particleSystemID < m_ParticleSystems.size())
+			if (particleSystemID < m_ParticleSystems.size() && m_ParticleSystems[particleSystemID] != nullptr)
 			{
 				RemoveMaterial(m_ParticleSystems[particleSystemID]->system->simMaterialID);
 				RemoveMaterial(m_ParticleSystems[particleSystemID]->system->renderingMaterialID);
@@ -3070,7 +3123,7 @@ namespace flex
 
 			for (VulkanParticleSystem* particleSystem : m_ParticleSystems)
 			{
-				if (particleSystem->system->GetParticleSystemTemplateNameSID() == particleTemplateNameSID)
+				if (particleSystem != nullptr && particleSystem->system->GetParticleSystemTemplateNameSID() == particleTemplateNameSID)
 				{
 					particleSystem->system->OnTemplateUpdated(particleTemplate);
 				}
@@ -3298,11 +3351,11 @@ namespace flex
 					vkCmdBindVertexBuffers(cmdBuf, 0, 1, &skyboxVertexBuffer->m_Buffer, offsets);
 					if (skyboxRenderObject->bIndexed)
 					{
-						vkCmdDrawIndexed(cmdBuf, (u32)skyboxRenderObject->indices->size(), 1, 0, 0, 0);
+						vkCmdDrawIndexed(cmdBuf, (u32)skyboxRenderObject->indices->size(), 1, skyboxRenderObject->indexOffset, skyboxRenderObject->vertexOffset, 0);
 					}
 					else
 					{
-						vkCmdDraw(cmdBuf, skyboxRenderObject->vertexBufferData->VertexCount, 1, 0, 0);
+						vkCmdDraw(cmdBuf, skyboxRenderObject->vertexBufferData->VertexCount, 1, skyboxRenderObject->vertexOffset, 0);
 					}
 
 					vkCmdEndRenderPass(cmdBuf);
@@ -4149,6 +4202,10 @@ namespace flex
 			VulkanTexture* noiseTexture = (VulkanTexture*)ssaoMaterial->textures[&U_NOISE_SAMPLER];
 			descSetCreateInfo.imageDescriptors.SetUniform(&U_NOISE_SAMPLER, ImageDescriptorInfo{ noiseTexture->imageView, m_SamplerNearestClampToEdge });
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
+			if (m_SSAODescSet != VK_NULL_HANDLE)
+			{
+				m_DescriptorPoolPersistent->FreeSet(m_SSAODescSet);
+			}
 			m_SSAODescSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 
 			VulkanMaterial* ssaoBlurMaterial = (VulkanMaterial*)m_Materials.at(m_SSAOBlurMatID);
@@ -4164,6 +4221,10 @@ namespace flex
 			descSetCreateInfo.imageDescriptors.SetUniform(&U_SSAO_RAW_SAMPLER, ImageDescriptorInfo{ m_SSAOFBColourAttachment0->view, m_SamplerNearestClampToEdge });
 			descSetCreateInfo.imageDescriptors.SetUniform(&U_SSAO_NORMAL_SAMPLER, ImageDescriptorInfo{ m_GBufferColourAttachment0->view, m_SamplerNearestClampToEdge });
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
+			if (m_SSAOBlurHDescSet != VK_NULL_HANDLE)
+			{
+				m_DescriptorPoolPersistent->FreeSet(m_SSAOBlurHDescSet);
+			}
 			m_SSAOBlurHDescSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 
 			descSetCreateInfo = {};
@@ -4175,6 +4236,10 @@ namespace flex
 			descSetCreateInfo.imageDescriptors.SetUniform(&U_SSAO_RAW_SAMPLER, ImageDescriptorInfo{ m_SSAOBlurHFBColourAttachment0->view, m_SamplerNearestClampToEdge });
 			descSetCreateInfo.imageDescriptors.SetUniform(&U_SSAO_NORMAL_SAMPLER, ImageDescriptorInfo{ m_GBufferColourAttachment0->view, m_SamplerNearestClampToEdge });
 			FillOutBufferDescriptorInfos(&descSetCreateInfo.bufferDescriptors, descSetCreateInfo.gpuBufferList, descSetCreateInfo.shaderID);
+			if (m_SSAOBlurVDescSet != VK_NULL_HANDLE)
+			{
+				m_DescriptorPoolPersistent->FreeSet(m_SSAOBlurVDescSet);
+			}
 			m_SSAOBlurVDescSet = m_DescriptorPoolPersistent->CreateDescriptorSet(&descSetCreateInfo);
 		}
 
@@ -11304,6 +11369,8 @@ namespace flex
 				shader->renderPass = ResolveRenderPassType(m_Shaders[i]->renderPassType, m_Shaders[i]->name.c_str());
 			}
 
+			// The render passes changed, so every pipeline is recreated; the old ones would otherwise leak
+			DestroyNonPersistentGraphicsPipelines();
 			for (u32 i = 0; i < m_RenderObjects.size(); ++i)
 			{
 				CreateGraphicsPipeline(i);
@@ -11336,11 +11403,19 @@ namespace flex
 			// Force font descriptor sets to be regenerated
 			for (BitmapFont* font : g_ResourceManager->fontsScreenSpace)
 			{
+				if ((VkDescriptorSet)font->userData != VK_NULL_HANDLE)
+				{
+					m_DescriptorPoolPersistent->FreeSet((VkDescriptorSet)font->userData);
+				}
 				font->userData = 0; // VK_NULL_HANDLE
 			}
 
 			for (BitmapFont* font : g_ResourceManager->fontsWorldSpace)
 			{
+				if ((VkDescriptorSet)font->userData != VK_NULL_HANDLE)
+				{
+					m_DescriptorPoolPersistent->FreeSet((VkDescriptorSet)font->userData);
+				}
 				font->userData = 0; // VK_NULL_HANDLE
 			}
 
@@ -12261,11 +12336,19 @@ namespace flex
 			// Force font descriptor sets to be regenerated
 			for (BitmapFont* font : g_ResourceManager->fontsScreenSpace)
 			{
+				if ((VkDescriptorSet)font->userData != VK_NULL_HANDLE)
+				{
+					m_DescriptorPoolPersistent->FreeSet((VkDescriptorSet)font->userData);
+				}
 				font->userData = 0; // VK_NULL_HANDLE
 			}
 
 			for (BitmapFont* font : g_ResourceManager->fontsWorldSpace)
 			{
+				if ((VkDescriptorSet)font->userData != VK_NULL_HANDLE)
+				{
+					m_DescriptorPoolPersistent->FreeSet((VkDescriptorSet)font->userData);
+				}
 				font->userData = 0; // VK_NULL_HANDLE
 			}
 

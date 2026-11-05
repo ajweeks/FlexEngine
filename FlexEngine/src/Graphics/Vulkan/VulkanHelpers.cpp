@@ -2759,18 +2759,36 @@ namespace flex
 
 		void VulkanDescriptorPool::FreeSet(VkDescriptorSet descSet)
 		{
+			if (descSet == VK_NULL_HANDLE)
+			{
+				return;
+			}
+
 			// Remove this descSet from descriptorSets if present (certain descSets are not)
 			for (u32 i = 0; i < descriptorSets.size(); ++i)
 			{
 				if (descriptorSets[i] == descSet)
 				{
 					descriptorSets[i] = VK_NULL_HANDLE;
-					--allocatedSetCount;
 					break;
 				}
 			}
 
+			// Every set counts against the pool's limit, not just the per-material ones
+			if (allocatedSetCount > 0)
+			{
+				--allocatedSetCount;
+			}
+
 			vkFreeDescriptorSets(device->m_LogicalDevice, pool, 1, &descSet);
+		}
+
+		void VulkanDescriptorPool::FreeMaterialSet(MaterialID materialID)
+		{
+			if (materialID < (u32)descriptorSets.size() && descriptorSets[materialID] != VK_NULL_HANDLE)
+			{
+				FreeSet(descriptorSets[materialID]);
+			}
 		}
 
 		void VulkanDescriptorPool::DrawImGui()

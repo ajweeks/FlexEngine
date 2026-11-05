@@ -67,6 +67,7 @@ namespace flex
 			virtual void DrawImGuiWindows() override;
 
 			virtual void UpdateDynamicVertexData(RenderID renderID, VertexBufferData const* vertexBufferData, const std::vector<u32>& indexData) override;
+			virtual void RemoveMaterial(MaterialID materialID) override;
 			virtual void FreeDynamicVertexData(RenderID renderID) override;
 			virtual void ShrinkDynamicVertexData(RenderID renderID, real minUnused = 0.0f) override;
 			virtual void ReserveDynamicVertexData(MaterialID materialID, real usedFactor) override;
@@ -806,6 +807,7 @@ namespace flex
 			std::vector<std::pair<u32, VertexIndexBufferPair*>> m_DynamicVertexIndexBufferPairs;
 
 			VertexIndexBufferPair* m_DynamicUIVertexIndexBufferPair = nullptr;
+			VertexIndexBufferPair* GetDynamicVertexIndexBufferPair(ShaderID shaderID);
 
 			struct PendingBufferUpload
 			{

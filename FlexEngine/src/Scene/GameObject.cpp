@@ -312,7 +312,7 @@ namespace flex
 			m_Mesh->PostInitialize();
 		}
 
-		if (rb != nullptr)
+		if (rb != nullptr && rb->GetRigidBodyInternal() != nullptr)
 		{
 			rb->GetRigidBodyInternal()->setUserPointer(this);
 		}
@@ -1044,8 +1044,17 @@ namespace flex
 
 		if ((copyFlags & CopyFlags::RIGIDBODY) && m_RigidBody != nullptr)
 		{
-			newGameObject->SetRigidBody(new RigidBody(*m_RigidBody));
-			newGameObject->SetCollisionShape(CloneCollisionShape(m_Transform.GetWorldScale(), m_CollisionShape));
+			btCollisionShape* clonedShape = CloneCollisionShape(m_Transform.GetWorldScale(), m_CollisionShape);
+			if (clonedShape != nullptr)
+			{
+				newGameObject->SetRigidBody(new RigidBody(*m_RigidBody));
+				newGameObject->SetCollisionShape(clonedShape);
+			}
+			else
+			{
+				// A rigid body without a shape would never be created & its users would dereference null
+				PrintWarn("Copy of %s has no rigid body: its collision shape type can't be cloned\n", m_Name.c_str());
+			}
 		}
 
 		if (copyFlags & CopyFlags::CHILDREN)

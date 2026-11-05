@@ -710,6 +710,8 @@ namespace flex
 			void Replace();
 			void Reset();
 			void FreeSet(VkDescriptorSet descSet);
+			// Frees the set created for the given material (if any)
+			void FreeMaterialSet(MaterialID materialID);
 
 			void DrawImGui();
 

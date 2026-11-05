@@ -4518,6 +4518,7 @@ namespace flex
 			}
 
 			const u8* Current() const { return m_Data + m_Offset; }
+			size_t Remaining() const { return m_Size - m_Offset; }
 			bool Skip(size_t size)
 			{
 				if (m_Offset + size > m_Size)
@@ -4597,6 +4598,12 @@ namespace flex
 
 		static bool ReadIndices(ByteReader& reader, std::vector<u32>& outIndices, u32 indexCount, u32 vertexCount)
 		{
+			// Check the count against the remaining data before allocating (a corrupt count would otherwise throw
+			// bad_alloc on a worker thread, which terminates the process on every load of that world)
+			if ((u64)indexCount * (vertexCount <= 0xFFFF ? sizeof(u16) : sizeof(u32)) > (u64)reader.Remaining())
+			{
+				return false;
+			}
 			outIndices.resize(indexCount);
 			if (vertexCount <= 0xFFFF)
 			{
@@ -5481,9 +5488,21 @@ namespace flex
 			m_bBatchInFlight = false;
 		}
 
+		void TerrainStreamer::DiscardSnapshotLoad()
+		{
+			if (m_SnapshotFuture.valid())
+			{
+				// It was started for the previous params/edits, so it would apply chunks which no longer match
+				*m_SnapshotCancelled = true;
+				m_DiscardedSnapshotFutures.emplace_back(std::move(m_SnapshotFuture));
+				m_bSnapshotReplacesDisplayed = false;
+			}
+		}
+
 		void TerrainStreamer::SetParams(const WorldParams& params)
 		{
 			CancelDesiredComputation();
+			DiscardSnapshotLoad();
 
 			m_Params = params;
 			m_Params.cellsPerChunkAxis = glm::clamp(m_Params.cellsPerChunkAxis, 4u, 96u);
@@ -6228,6 +6247,9 @@ namespace flex
 				return;
 			}
 
+			// A snapshot still loading was saved without these edits
+			DiscardSnapshotLoad();
+
 			// All the edits' chunks are regenerated together
 			glm::vec3 editMin(1e30f);
 			glm::vec3 editMax(-1e30f);
@@ -6303,6 +6325,7 @@ namespace flex
 			{
 				// Regenerate everything (existing chunks remain visible until replaced)
 				CancelDesiredComputation();
+				DiscardSnapshotLoad();
 				m_Pending.clear();
 				m_EditPending.clear();
 				m_SwapGroups.clear();
@@ -6490,7 +6513,10 @@ namespace flex
 			entries.reserve(m_Displayed.size());
 			for (const auto& pair : m_Displayed)
 			{
-				if (pair.second.packed != nullptr)
+				// Chunks which are stale (previous world/params/edits, shown until their replacements are ready) or
+				// whose regeneration after an edit is still pending would be stamped with the current hashes and shown
+				// as up to date on the next load, so they're left out & regenerated then
+				if (pair.second.packed != nullptr && !pair.second.bStale && m_EditPending.find(pair.first) == m_EditPending.end())
 				{
 					entries.push_back(Entry{ pair.first, pair.second.mask, pair.second.packed });
 				}
@@ -6605,6 +6631,11 @@ namespace flex
 				if (!reader.Read(key.level) || !reader.Read(key.index.x) || !reader.Read(key.index.y) || !reader.Read(key.index.z) ||
 					!reader.Read(mask) || !reader.Read(size))
 				{
+					return Snapshot{};
+				}
+				if (key.level < 0 || key.level > 16)
+				{
+					// Corrupt (maxLodLevel is clamped to 16)
 					return Snapshot{};
 				}
 

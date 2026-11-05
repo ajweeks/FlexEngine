@@ -333,7 +333,7 @@ namespace flex
 
 		i32 GetMaterialCount();
 		Material* GetMaterial(MaterialID materialID);
-		void RemoveMaterial(MaterialID materialID);
+		virtual void RemoveMaterial(MaterialID materialID);
 		Shader* GetShader(ShaderID shaderID);
 		MaterialID GetNextAvailableMaterialID() const;
 

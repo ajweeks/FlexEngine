@@ -1592,22 +1592,22 @@ namespace flex
 
 		if (m_Cooldown <= 0.0f)
 		{
-			if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT) && bTossing)
+			if (g_InputManager->IsMouseButtonPressed(GameKeys::USE_ITEM.button) && bTossing)
 			{
 				m_Player->GetTraversal()->TossRope();
 				m_Cooldown = 0.3f;
 			}
-			else if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT) && m_bPlacementValid)
+			else if (g_InputManager->IsMouseButtonPressed(GameKeys::USE_ITEM.button) && m_bPlacementValid)
 			{
 				Place();
 				m_Cooldown = 0.15f;
 			}
-			else if (g_InputManager->IsMouseButtonPressed(MouseButton::LEFT) && !m_bPlacementValid)
+			else if (g_InputManager->IsMouseButtonPressed(GameKeys::USE_ITEM.button) && !m_bPlacementValid)
 			{
 				GameSounds::PlayBuildDenied();
 				m_Cooldown = 0.25f;
 			}
-			else if (g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT) && targeted != nullptr && (!bTorchOnly || targeted->GetPieceType() == BuildPieceType::TORCH))
+			else if (g_InputManager->IsMouseButtonPressed(GameKeys::USE_ITEM_SECONDARY.button) && targeted != nullptr && (!bTorchOnly || targeted->GetPieceType() == BuildPieceType::TORCH))
 			{
 				if (targeted->GetPieceType() == BuildPieceType::TORCH)
 				{
@@ -1615,7 +1615,7 @@ namespace flex
 					const PrefabID torchID = g_ResourceManager->GetPrefabID("torch");
 					if (torchID.IsValid())
 					{
-						m_Player->AddToInventory(torchID, 1);
+						m_Player->AddToInventoryOrDrop(torchID, 1, {}, targeted->GetTransform()->GetWorldPosition());
 					}
 				}
 				g_SceneManager->CurrentScene()->RemoveObject(targeted, true);

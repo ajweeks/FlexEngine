@@ -205,6 +205,9 @@ namespace flex
 		static real NoteToFrequencyHz(i32 note);
 
 		static AudioSourceID SynthesizeSound(sec length, real freq);
+		// Destroys a source directly. File-backed sources are cached per file & owned by the ResourceManager (use
+		// ResourceManager::DestroyAudioSource for those); synthesized sources are the caller's to destroy
+		static bool DestroyAudioSource(AudioSourceID sourceID);
 		static AudioSourceID SynthesizeMelody(real bpm = 340.0f);
 		static void SetListenerPos(const glm::vec3& posWS);
 		static void SetListenerVel(const glm::vec3& velocity);
@@ -291,7 +294,6 @@ namespace flex
 
 		static AudioSourceID SynthesizeSoundCommon(AudioSourceID newID, i16* data, u32 bufferSize, u32 sampleRate, i32 format, bool b2D);
 
-		static bool DestroyAudioSource(AudioSourceID sourceID);
 		static void ClearAllAudioSources();
 
 		// If error is not AL_NO_ERROR then an appropriate error message is printed
