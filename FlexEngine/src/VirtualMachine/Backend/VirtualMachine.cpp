@@ -943,13 +943,6 @@ namespace flex
 				X_END,
 			};
 
-			bool IsJump(OpCode opCode)
-			{
-				return opCode == OpCode::JMP || opCode == OpCode::JZ || opCode == OpCode::JNZ ||
-					opCode == OpCode::JEQ || opCode == OpCode::JNE || opCode == OpCode::JLT ||
-					opCode == OpCode::JLE || opCode == OpCode::JGT || opCode == OpCode::JGE;
-			}
-
 			ExecOp JumpExecOp(OpCode opCode)
 			{
 				switch (opCode)
