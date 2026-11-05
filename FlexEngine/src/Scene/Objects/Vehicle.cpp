@@ -272,6 +272,8 @@ namespace flex
 			GameObject* tireRR = scene->GetGameObject(m_TireIDs[(u32)Tire::RR]);
 
 			m_tuning = {};
+			m_NearbyTrunks.clear();
+			m_FelledTrunks.clear();
 
 			btDiscreteDynamicsWorld* dynamicsWorld = scene->GetPhysicsWorld()->GetWorld();
 
@@ -347,6 +349,58 @@ namespace flex
 				wheel.m_rollInfluence = m_RollInfluence;
 				// Start at rest rather than fully extended, so a newly placed vehicle doesn't bounce
 				wheel.m_raycastInfo.m_suspensionLength = settledLength;
+			}
+
+			real lowestTireY = FLT_MAX;
+			for (i32 i = 0; i < m_TireCount; ++i)
+			{
+				lowestTireY = glm::min(lowestTireY, m_TireRestPositions[i].y);
+			}
+			m_RideHeight = glm::max(m_WheelRadius - lowestTireY, 0.1f);
+
+			// Arcade handling: the body slides along what it hits (trees, rocks, the ground when it bottoms out)
+			// rather than grabbing it & stopping dead
+			m_RigidBody->SetFriction(m_ChassisFriction);
+			chassisRB->setFriction(m_ChassisFriction);
+			chassisRB->setRestitution(0.05f);
+
+			btCollisionShape* shape = chassisRB->getCollisionShape();
+			if (shape != nullptr)
+			{
+				btVector3 aabbMin, aabbMax;
+				shape->getAabb(btTransform::getIdentity(), aabbMin, aabbMax);
+				m_HalfWidth = (real)(aabbMax.getX() - aabbMin.getX()) * 0.5f;
+				m_HalfLength = (real)(aabbMax.getZ() - aabbMin.getZ()) * 0.5f;
+				m_ChassisMinY = (real)aabbMin.getY();
+
+				// Round the box's edges (a box's margin rounds it while keeping its extents) so glancing hits glance
+				// off. The suspension rays must still start inside it, so the radius is kept small enough for that.
+				if (shape->getShapeType() == BOX_SHAPE_PROXYTYPE)
+				{
+					btBoxShape* box = (btBoxShape*)shape;
+					const btVector3 halfExtents = box->getHalfExtentsWithMargin();
+					const btVector3 scale = box->getLocalScaling();
+					real margin = glm::min(0.15f, (real)halfExtents.minAxis() * 0.5f);
+					for (; margin > 0.04f; margin -= 0.01f)
+					{
+						bool bHardPointsInside = true;
+						for (i32 i = 0; i < m_Vehicle->getNumWheels() && bHardPointsInside; ++i)
+						{
+							const btVector3 p = m_Vehicle->getWheelInfo(i).m_chassisConnectionPointCS;
+							const glm::vec3 inner = ToVec3(halfExtents * scale) - glm::vec3(margin);
+							const glm::vec3 outside = glm::max(glm::abs(ToVec3(p)) - inner, VEC3_ZERO);
+							bHardPointsInside = glm::length(outside) < margin - 0.01f;
+						}
+						if (bHardPointsInside)
+						{
+							break;
+						}
+					}
+					if (margin > 0.04f)
+					{
+						box->setMargin(margin);
+					}
+				}
 			}
 		}
 	}
@@ -492,65 +546,6 @@ namespace flex
 			m_EngineForce = 0.0f;
 		}
 
-		if (m_bFlippingRightSideUp)
-		{
-			m_Transform.SetWorldRotation(glm::slerp(m_Transform.GetWorldRotation(), m_TargetRot, glm::clamp(g_DeltaTime * UPRIGHTING_SPEED, 0.0f, 1.0f)));
-			real uprightedness = glm::dot(m_Transform.GetUp(), VEC3_UP);
-			m_SecFlipppingRightSideUp += g_DeltaTime;
-			bool bRightSideUp = uprightedness > 0.9f;
-			if (bRightSideUp || m_SecFlipppingRightSideUp > MAX_FLIPPING_UPRIGHT_TIME)
-			{
-				m_SecFlipppingRightSideUp = 0.0f;
-				m_bFlippingRightSideUp = false;
-			}
-		}
-		else
-		{
-			// Check if flipped upside down and stuck
-			glm::vec3 chassisUp = m_Transform.GetUp();
-			real uprightedness = glm::dot(chassisUp, VEC3_UP);
-			// TODO: Also check num wheels on ground
-			bool bUpsideDown = uprightedness < 0.25f;
-			if (bUpsideDown)
-			{
-				m_SecUpsideDown += g_DeltaTime;
-
-				if (m_SecUpsideDown > SEC_UPSIDE_DOWN_BEFORE_FLIP)
-				{
-					glm::vec3 chassisForward = m_Transform.GetForward();
-					glm::vec3 chassisRight = m_Transform.GetRight();
-
-					Print("Flip!\n");
-					m_bFlippingRightSideUp = true;
-					real w = sqrt(1.0f + uprightedness);
-
-					if (abs(uprightedness) < 0.99f)
-					{
-						if (abs(dot(chassisForward, VEC3_UP)) > abs(dot(chassisRight, VEC3_UP)))
-						{
-							m_TargetRot = glm::normalize(glm::quat(chassisRight.x, chassisRight.y, chassisRight.z, w));
-						}
-						else
-						{
-							m_TargetRot = glm::normalize(glm::quat(chassisForward.x, chassisForward.y, chassisForward.z, w));
-						}
-					}
-					else
-					{
-						// Vectors are nearly parallel, just pick the forward axis to rotate about
-						m_TargetRot = glm::quat(chassisForward.x, chassisForward.y, chassisForward.z, w);
-					}
-					m_SecFlipppingRightSideUp = 0.0f;
-					m_SecUpsideDown = 0.0f;
-					m_Transform.SetWorldPosition(m_Transform.GetWorldPosition() + VEC3_UP * 3.0f);
-				}
-			}
-			else
-			{
-				m_SecUpsideDown = 0.0f;
-			}
-		}
-
 		// TODO: Check in player class? Store min level in scene
 		// Check if fell below the level
 		// (streamed terrain extends far below this, so only scenes without it reset)
@@ -651,14 +646,30 @@ namespace flex
 			return;
 		}
 
-		if (m_Vehicle == nullptr || m_RigidBody == nullptr || m_RigidBody->GetRigidBodyInternal() == nullptr || m_AntiSquat <= 0.0f)
+		if (m_Vehicle == nullptr || m_RigidBody == nullptr || m_RigidBody->GetRigidBodyInternal() == nullptr)
+		{
+			return;
+		}
+		btRigidBody* rb = m_RigidBody->GetRigidBodyInternal();
+
+		if (UpdateUprighting(rb))
+		{
+			m_PrevFixedLinearVel = rb->getLinearVelocity();
+			m_PrevFixedAngularVel = rb->getAngularVelocity();
+			return;
+		}
+
+		UpdateCollisionGrace(rb);
+		m_PrevFixedLinearVel = rb->getLinearVelocity();
+		m_PrevFixedAngularVel = rb->getAngularVelocity();
+
+		if (m_AntiSquat <= 0.0f)
 		{
 			return;
 		}
 
 		// The drive force acts at the rear tires' contact patches, well below the centre of mass, so it pitches the
 		// nose up. Cancel most of that moment (forces applied here are used by the next physics step).
-		btRigidBody* rb = m_RigidBody->GetRigidBodyInternal();
 		const btVector3 chassisUp = rb->getWorldTransform().getBasis().getColumn(1);
 		btVector3 counterTorque(0.0f, 0.0f, 0.0f);
 		for (i32 wheelIndex : { (i32)Tire::RL, (i32)Tire::RR })
@@ -838,7 +849,7 @@ namespace flex
 		ImGui::SliderFloat("Screech threshold", &m_WheelSlipScreechThreshold, 0.0f, 1.0f);
 		if (m_bFlippingRightSideUp)
 		{
-			ImGui::ProgressBar(m_SecFlipppingRightSideUp / MAX_FLIPPING_UPRIGHT_TIME, ImVec2(-1, 0), "Flipping right side up");
+			ImGui::ProgressBar(m_SecFlipppingRightSideUp / UPRIGHTING_DURATION, ImVec2(-1, 0), "Flipping right side up");
 		}
 		else
 		{
@@ -978,9 +989,491 @@ namespace flex
 		m_SecUpsideDown = 0.0f;
 		m_bFlippingRightSideUp = false;
 		m_SecFlipppingRightSideUp = 0.0f;
+		m_UprightAttempts = 0;
 		m_EngineForce = 0.0f;
 		m_BrakeForce = 0.0f;
 		m_Steering = 0.0f;
+	}
+
+	bool Vehicle::SampleGround(const glm::vec3& posWS, glm::vec3& outPos, glm::vec3& outNormal) const
+	{
+		const real startAbove = 3.0f;
+		const real maxDistance = 15.0f;
+		const glm::vec3 from = posWS + VEC3_UP * startAbove;
+		bool bHit = false;
+		real bestY = -FLT_MAX;
+
+		// The terrain's surface (a density march: unaffected by trunks, & works before its collision has loaded)
+		if (TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive())
+		{
+			glm::vec3 hitPos, hitNormal;
+			if (!terrainGenerator->IsWorldChangePending() && terrainGenerator->Raycast(from, -VEC3_UP, maxDistance, hitPos, hitNormal))
+			{
+				bHit = true;
+				bestY = hitPos.y;
+				outPos = hitPos;
+				outNormal = hitNormal;
+			}
+		}
+
+		// Static physics (buildings, platforms, & terrain in scenes without a generator): whichever is higher
+		PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+		if (physicsWorld != nullptr && physicsWorld->GetWorld() != nullptr)
+		{
+			const btVector3 rayFrom = ToBtVec3(from);
+			const btVector3 rayTo = ToBtVec3(from - VEC3_UP * maxDistance);
+			btCollisionWorld::ClosestRayResultCallback rayCallback(rayFrom, rayTo);
+			rayCallback.m_collisionFilterGroup = (i32)CollisionType::DEFAULT;
+			rayCallback.m_collisionFilterMask = (i32)CollisionType::STATIC;
+			physicsWorld->GetWorld()->rayTest(rayFrom, rayTo, rayCallback);
+			if (rayCallback.hasHit() && (real)rayCallback.m_hitPointWorld.getY() > bestY + 0.05f)
+			{
+				bHit = true;
+				outPos = ToVec3(rayCallback.m_hitPointWorld);
+				outNormal = glm::normalize(ToVec3(rayCallback.m_hitNormalWorld));
+			}
+		}
+
+		if (bHit && outNormal.y < 0.0f)
+		{
+			outNormal = -outNormal;
+		}
+		return bHit;
+	}
+
+	void Vehicle::BeginUprighting(btRigidBody* rb)
+	{
+		const btTransform& transform = rb->getCenterOfMassTransform();
+		const glm::vec3 pos = ToVec3(transform.getOrigin());
+		const glm::quat rot = ToQuaternion(transform.getRotation());
+		const glm::vec3 chassisForward = rot * VEC3_FORWARD;
+		const glm::vec3 chassisRight = rot * VEC3_RIGHT;
+
+		// Keep the heading: the forward axis flattened (or, standing on its nose or tail, the one at right angles to
+		// its horizontal right axis)
+		glm::vec3 heading(chassisForward.x, 0.0f, chassisForward.z);
+		if (glm::length(heading) < 0.3f)
+		{
+			heading = glm::cross(glm::vec3(chassisRight.x, 0.0f, chassisRight.z), VEC3_UP);
+		}
+		heading = glm::length(heading) > 1e-3f ? glm::normalize(heading) : VEC3_FORWARD;
+		glm::vec3 headingRight = glm::cross(VEC3_UP, heading);
+
+		// Each attempt in a row tries a little further along (alternately ahead & behind), in case it's wedged
+		glm::vec3 center = pos;
+		if (m_UprightAttempts > 0)
+		{
+			const real step = 2.5f * (real)((m_UprightAttempts + 1) / 2);
+			center += heading * ((m_UprightAttempts % 2 == 1) ? step : -step);
+		}
+
+		// The ground's plane under the wheels (four samples, so a bump or a pebble doesn't tilt it), falling back to
+		// the normal below the centre
+		glm::vec3 groundPos = center - VEC3_UP * m_RideHeight;
+		glm::vec3 groundNormal = VEC3_UP;
+		glm::vec3 centerPos, centerNormal;
+		const bool bCenterHit = SampleGround(center, centerPos, centerNormal);
+		if (bCenterHit)
+		{
+			groundPos = centerPos;
+			groundNormal = centerNormal;
+		}
+		glm::vec3 corners[4];
+		bool bAllCorners = true;
+		const real cornerX[] = { -1.0f, 1.0f, -1.0f, 1.0f };
+		const real cornerZ[] = { 1.0f, 1.0f, -1.0f, -1.0f };
+		for (u32 i = 0; i < 4 && bAllCorners; ++i)
+		{
+			const glm::vec3 samplePos = center + headingRight * (cornerX[i] * m_HalfWidth * 0.85f) + heading * (cornerZ[i] * m_HalfLength * 0.75f);
+			glm::vec3 n;
+			bAllCorners = SampleGround(samplePos, corners[i], n);
+		}
+		if (bAllCorners)
+		{
+			// Diagonals FL-RR & FR-RL
+			glm::vec3 normal = glm::cross(corners[3] - corners[0], corners[2] - corners[1]);
+			if (glm::length(normal) > 1e-4f)
+			{
+				normal = glm::normalize(normal);
+				if (normal.y < 0.0f)
+				{
+					normal = -normal;
+				}
+				groundNormal = normal;
+				const glm::vec3 average = (corners[0] + corners[1] + corners[2] + corners[3]) * 0.25f;
+				groundPos = bCenterHit ? glm::vec3(average.x, glm::max(average.y, centerPos.y), average.z) : average;
+			}
+		}
+		// Don't stand it up on a cliff face
+		const real MAX_TILT_COS = glm::cos(glm::radians(35.0f));
+		if (groundNormal.y < MAX_TILT_COS)
+		{
+			const glm::vec3 horizontal = glm::normalize(glm::vec3(groundNormal.x, 0.0f, groundNormal.z));
+			groundNormal = horizontal * glm::sin(glm::acos(MAX_TILT_COS)) + VEC3_UP * MAX_TILT_COS;
+		}
+
+		const glm::vec3 up = groundNormal;
+		const glm::vec3 right = glm::normalize(glm::cross(up, heading));
+		const glm::vec3 forward = glm::cross(right, up);
+		m_TargetRot = glm::normalize(glm::quat_cast(glm::mat3(right, up, forward)));
+		// A little above where it rests, so it settles onto its springs
+		m_UprightTargetPos = groundPos + up * (m_RideHeight + 0.15f);
+		m_UprightStartPos = pos;
+		m_UprightStartRot = rot;
+		m_SecFlipppingRightSideUp = 0.0f;
+		m_bFlippingRightSideUp = true;
+		m_SecUpsideDown = 0.0f;
+		m_EngineForce = 0.0f;
+		m_BrakeForce = 0.0f;
+		m_Steering = 0.0f;
+		++m_UprightAttempts;
+		Print("Vehicle: uprighting (attempt %u) onto ground at %s, normal %s\n", m_UprightAttempts,
+			VecToString(groundPos, 1).c_str(), VecToString(groundNormal, 2).c_str());
+	}
+
+	bool Vehicle::UpdateUprighting(btRigidBody* rb)
+	{
+		const real dt = g_FixedDeltaTime;
+		auto SetPose = [rb](const glm::vec3& pos, const glm::quat& rot)
+		{
+			const btTransform transform(ToBtQuaternion(rot), ToBtVec3(pos));
+			rb->setCenterOfMassTransform(transform);
+			rb->setInterpolationWorldTransform(transform);
+			if (rb->getMotionState() != nullptr)
+			{
+				rb->getMotionState()->setWorldTransform(transform);
+			}
+			rb->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+			rb->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
+			rb->setInterpolationLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+			rb->setInterpolationAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
+		};
+
+		if (m_bFlippingRightSideUp)
+		{
+			// Lifted in an arc while turning, then set down exactly on the ground's plane. (Moved here, between
+			// physics steps, so the motion is interpolated & nothing simulated fights it.)
+			m_SecFlipppingRightSideUp += dt;
+			const real t = glm::clamp(m_SecFlipppingRightSideUp / UPRIGHTING_DURATION, 0.0f, 1.0f);
+			const real eased = t * t * (3.0f - 2.0f * t);
+			const real lift = glm::sin(t * PI) * 1.2f;
+			SetPose(glm::mix(m_UprightStartPos, m_UprightTargetPos, eased) + VEC3_UP * lift, glm::slerp(m_UprightStartRot, m_TargetRot, eased));
+			if (t >= 1.0f)
+			{
+				glm::vec3 groundPos, groundNormal;
+				const bool bGround = SampleGround(m_UprightTargetPos, groundPos, groundNormal);
+				Print("Vehicle: uprighted (up . ground normal %.3f, %.2fm above the ground)\n", glm::dot(m_TargetRot * VEC3_UP, bGround ? groundNormal : VEC3_UP),
+					bGround ? glm::dot(m_UprightTargetPos - groundPos, groundNormal) - m_RideHeight : -1.0f);
+				m_bFlippingRightSideUp = false;
+				m_SecFlipppingRightSideUp = 0.0f;
+				m_SecSinceUpright = 0.0f;
+				m_SecUpsideDown = 0.0f;
+			}
+			return true;
+		}
+
+		m_SecSinceUpright += dt;
+
+		// FLEX_VEHICLE_FLIP_TEST=<seconds>: rolls the vehicle onto its roof that long after it's first driven (once), to test uprighting
+		static const char* flipTest = getenv("FLEX_VEHICLE_FLIP_TEST");
+		if (flipTest != nullptr && m_bOccupied && m_FlipTestTimer >= 0.0f)
+		{
+			m_FlipTestTimer += dt;
+			if (m_FlipTestTimer > (real)atof(flipTest))
+			{
+				m_FlipTestTimer = -1.0f;
+				btTransform transform = rb->getCenterOfMassTransform();
+				const btVector3 forwardAxis = transform.getBasis().getColumn(2);
+				transform.setRotation(btQuaternion(forwardAxis, PI * 0.97f) * transform.getRotation());
+				transform.setOrigin(transform.getOrigin() + btVector3(0.0f, 1.5f, 0.0f));
+				rb->setCenterOfMassTransform(transform);
+				rb->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+				rb->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
+				Print("Vehicle flip test: rolled onto its roof\n");
+			}
+		}
+		const glm::vec3 chassisUp = ToVec3(rb->getCenterOfMassTransform().getBasis().getColumn(1));
+		const real uprightedness = glm::dot(chassisUp, VEC3_UP);
+		const real speed = (real)rb->getLinearVelocity().length();
+
+		// Back on its wheels & driven a while: later flips start the attempts again
+		if (uprightedness > 0.7f && (speed > 3.0f || m_SecSinceUpright > 6.0f))
+		{
+			m_UprightAttempts = 0;
+		}
+
+		// On its roof or side (& not tumbling through the air, moving fast)
+		const bool bUpsideDown = uprightedness < 0.3f && speed < 3.0f;
+		if (bUpsideDown)
+		{
+			m_SecUpsideDown += dt;
+		}
+		else
+		{
+			m_SecUpsideDown = glm::max(m_SecUpsideDown - dt, 0.0f);
+		}
+
+		const u32 MAX_ATTEMPTS = 4;
+		if (m_SecUpsideDown > SEC_UPSIDE_DOWN_BEFORE_FLIP && m_UprightAttempts < MAX_ATTEMPTS)
+		{
+			BeginUprighting(rb);
+			return true;
+		}
+		return false;
+	}
+
+	void Vehicle::UpdateCollisionGrace(btRigidBody* rb)
+	{
+		PROFILE_AUTO("Vehicle collision grace");
+
+		for (i32 i = (i32)m_FelledTrunks.size() - 1; i >= 0; --i)
+		{
+			m_FelledTrunks[i].secLeft -= g_FixedDeltaTime;
+			if (m_FelledTrunks[i].secLeft <= 0.0f)
+			{
+				m_FelledTrunks.erase(m_FelledTrunks.begin() + i);
+			}
+		}
+
+		UpdateTrunks(rb);
+
+		// Contacts the body (not the wheels, they're rays) made in the step just taken
+		PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+		if (physicsWorld == nullptr || physicsWorld->GetWorld() == nullptr)
+		{
+			return;
+		}
+		const btVector3 prevVel = m_PrevFixedLinearVel;
+		const glm::vec3 prevH(prevVel.getX(), 0.0f, prevVel.getZ());
+		const real prevSpeedH = glm::length(prevH);
+		if (prevSpeedH < 3.0f)
+		{
+			return;
+		}
+		const btVector3 vel = rb->getLinearVelocity();
+		const glm::vec3 velH(vel.getX(), 0.0f, vel.getZ());
+		const real speedLost = prevSpeedH - glm::length(velH);
+		if (speedLost < 0.3f)
+		{
+			return;
+		}
+
+		const btTransform& chassisTransform = rb->getCenterOfMassTransform();
+		const btTransform chassisInverse = chassisTransform.inverse();
+		btDispatcher* dispatcher = physicsWorld->GetWorld()->getDispatcher();
+		glm::vec3 wallNormal = VEC3_ZERO;
+		bool bWall = false;
+		bool bStep = false;
+		bool bThroughFelled = false;
+		const i32 manifoldCount = dispatcher->getNumManifolds();
+		for (i32 m = 0; m < manifoldCount; ++m)
+		{
+			btPersistentManifold* manifold = dispatcher->getManifoldByIndexInternal(m);
+			const bool bIsBody0 = manifold->getBody0() == rb;
+			if (!bIsBody0 && manifold->getBody1() != rb)
+			{
+				continue;
+			}
+			const btCollisionObject* other = bIsBody0 ? manifold->getBody1() : manifold->getBody0();
+			if (!other->hasContactResponse())
+			{
+				continue;
+			}
+			for (i32 c = 0; c < manifold->getNumContacts(); ++c)
+			{
+				const btManifoldPoint& point = manifold->getContactPoint(c);
+				if (point.getDistance() > 0.05f)
+				{
+					continue;
+				}
+				// From the obstacle towards the vehicle
+				glm::vec3 normal = ToVec3(point.m_normalWorldOnB) * (bIsBody0 ? 1.0f : -1.0f);
+				const glm::vec3 contactPos = ToVec3(bIsBody0 ? point.getPositionWorldOnA() : point.getPositionWorldOnB());
+				for (const FelledTrunk& felled : m_FelledTrunks)
+				{
+					const glm::vec2 d(contactPos.x - felled.base.x, contactPos.z - felled.base.z);
+					if (glm::length(d) < felled.radius + 0.8f && contactPos.y > felled.base.y - 0.5f)
+					{
+						bThroughFelled = true;
+					}
+				}
+				if (glm::abs(normal.y) > 0.65f)
+				{
+					// Ground (bottoming out, or landing on its roof): the low friction already lets it slide
+					continue;
+				}
+				// Low on the body: a rock or a ledge it can ride up over
+				const real localY = (real)(chassisInverse * ToBtVec3(contactPos)).getY();
+				if (localY < m_ChassisMinY + 0.25f && normal.y > -0.2f)
+				{
+					bStep = true;
+				}
+				wallNormal += glm::vec3(normal.x, 0.0f, normal.z);
+				bWall = true;
+			}
+		}
+
+		if (bThroughFelled)
+		{
+			// The tree has been knocked over, but its trunk's collision hasn't gone yet: carry on through it
+			const glm::vec3 kept = prevH * 0.92f;
+			rb->setLinearVelocity(btVector3(kept.x, glm::max((real)vel.getY(), (real)prevVel.getY()), kept.z));
+			rb->setAngularVelocity(m_PrevFixedAngularVel);
+			return;
+		}
+
+		if (!bWall || glm::length(wallNormal) < 1e-3f)
+		{
+			return;
+		}
+		wallNormal = glm::normalize(wallNormal);
+		const real into = -glm::dot(prevH, wallNormal);
+		if (into <= 0.0f)
+		{
+			return;
+		}
+		const real impactSin = into / prevSpeedH;
+		glm::vec3 newH = velH;
+		real newY = (real)vel.getY();
+		if (impactSin < m_GlancingMaxSin)
+		{
+			// Glancing: slide along the obstacle, keeping most of the speed, pushed off it a little
+			const glm::vec3 tangential = prevH + wallNormal * into;
+			newH = tangential * m_GlancingSpeedKept + wallNormal * glm::min(into * 0.3f, 1.5f);
+		}
+		if (bStep)
+		{
+			// A low obstacle: hop up over it rather than stopping dead
+			newH = glm::length(newH) < prevSpeedH * 0.75f ? prevH * 0.75f : newH;
+			newY = glm::max(newY, glm::min(speedLost * 0.4f, 3.0f));
+		}
+		if (newH == velH && newY == (real)vel.getY())
+		{
+			return;
+		}
+		rb->setLinearVelocity(btVector3(newH.x, newY, newH.z));
+		// Hits spin the car round: keep some of the spin it had
+		const btVector3 angVel = rb->getAngularVelocity();
+		rb->setAngularVelocity(angVel.lerp(m_PrevFixedAngularVel, 0.6f));
+	}
+
+	void Vehicle::UpdateTrunks(btRigidBody* rb)
+	{
+		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+		if (terrainGenerator == nullptr || terrainGenerator->IsWorldChangePending())
+		{
+			m_NearbyTrunks.clear();
+			return;
+		}
+
+		const glm::vec3 pos = ToVec3(rb->getCenterOfMassPosition());
+		const btVector3 vel = rb->getLinearVelocity();
+		glm::vec3 velH(vel.getX(), 0.0f, vel.getZ());
+		const real speed = glm::length(velH);
+		if (speed < 3.0f)
+		{
+			return;
+		}
+
+		// Trees & cacti near by (found from the density, & only refreshed every few metres)
+		const real QUERY_EXTENT = 20.0f;
+		m_TrunkQueryAge += g_FixedDeltaTime;
+		if (glm::distance(pos, m_TrunkQueryPos) > 6.0f || m_TrunkQueryAge > 2.0f)
+		{
+			PROFILE_AUTO("Vehicle find trunks");
+			m_TrunkQueryPos = pos;
+			m_TrunkQueryAge = 0.0f;
+			std::vector<terrain::PlantInfo> plants;
+			const glm::vec3 extent(QUERY_EXTENT, 8.0f, QUERY_EXTENT);
+			terrainGenerator->FindPlants(pos - extent, pos + extent, plants);
+			m_NearbyTrunks.clear();
+			for (const terrain::PlantInfo& plant : plants)
+			{
+				if (plant.trunkHeight > 0.5f && plant.trunkRadius > 0.0f)
+				{
+					m_NearbyTrunks.push_back({ plant.base, plant.trunkRadius, plant.hash });
+				}
+			}
+		}
+
+		const glm::vec3 dir = velH / speed;
+		const glm::vec3 right = glm::cross(VEC3_UP, dir);
+		real mostUrgent = FLT_MAX;
+		real steerYawRate = 0.0f;
+		for (i32 i = (i32)m_NearbyTrunks.size() - 1; i >= 0; --i)
+		{
+			const NearbyTrunk& trunk = m_NearbyTrunks[i];
+			const glm::vec3 rel = trunk.base - pos;
+			// The trunk must be at the body's height
+			if (rel.y < -(m_RideHeight + 2.5f) || rel.y > 1.5f)
+			{
+				continue;
+			}
+			const glm::vec3 relH(rel.x, 0.0f, rel.z);
+			const real along = glm::dot(relH, dir);
+			const real lateral = glm::dot(relH, right);
+			const real clearance = m_HalfWidth + trunk.radius + 0.15f;
+			if (along < -m_HalfLength || along > m_HalfLength + speed * 0.9f || glm::abs(lateral) > clearance)
+			{
+				continue;
+			}
+
+			// Small trees (palms, birches, saplings, cacti) are knocked over by a fast enough vehicle
+			const real KNOCKABLE_RADIUS = 0.3f;
+			const real knockSpeed = 6.0f + 25.0f * trunk.radius;
+			const real reach = m_HalfLength + trunk.radius + 0.5f + speed * 0.12f;
+			if (trunk.radius <= KNOCKABLE_RADIUS && speed > knockSpeed)
+			{
+				if (along < reach)
+				{
+					std::vector<terrain::PlantInfo> plants;
+					const glm::vec3 boxExtent(0.5f, 1.0f, 0.5f);
+					terrainGenerator->FindPlants(trunk.base - boxExtent, trunk.base + boxExtent, plants);
+					for (const terrain::PlantInfo& plant : plants)
+					{
+						if (plant.hash == trunk.hash)
+						{
+							terrainGenerator->FellPlant(plant, dir);
+							m_FelledTrunks.push_back({ trunk.base, trunk.radius, 1.5f });
+							++m_TreesKnockedOver;
+							Print("Vehicle: knocked over a tree (trunk radius %.2fm) at %.1f m/s\n", trunk.radius, speed);
+							// Hitting it costs a little speed
+							const real kept = 1.0f - glm::clamp(trunk.radius * 0.4f, 0.03f, 0.12f);
+							rb->setLinearVelocity(vel * kept);
+							break;
+						}
+					}
+					m_NearbyTrunks.erase(m_NearbyTrunks.begin() + i);
+				}
+				continue;
+			}
+
+			// Near misses: a trunk which would only clip the side is steered around (head on hits aren't)
+			if (along > m_HalfLength && glm::abs(lateral) > clearance * 0.4f)
+			{
+				const real gap = along - m_HalfLength;
+				const real timeToImpact = glm::max(gap / speed, 0.1f);
+				if (timeToImpact < mostUrgent)
+				{
+					const real shift = clearance - glm::abs(lateral);
+					const real angle = glm::min(glm::atan(shift, glm::max(gap, 0.5f)), 0.35f);
+					mostUrgent = timeToImpact;
+					steerYawRate = -glm::sign(lateral) * glm::min(angle / timeToImpact, m_NearMissMaxYawRate);
+				}
+			}
+		}
+
+		if (steerYawRate != 0.0f)
+		{
+			// Turn the velocity & the body together, so the tires don't fight it
+			const real yaw = steerYawRate * g_FixedDeltaTime;
+			const btVector3 axis(0.0f, 1.0f, 0.0f);
+			const btQuaternion turn(axis, yaw);
+			btTransform transform = rb->getCenterOfMassTransform();
+			transform.setRotation(turn * transform.getRotation());
+			rb->setCenterOfMassTransform(transform);
+			rb->setLinearVelocity(quatRotate(turn, rb->getLinearVelocity()));
+		}
 	}
 
 	void Vehicle::FixupPrefabTemplateIDs(GameObject* newGameObject)

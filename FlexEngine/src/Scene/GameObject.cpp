@@ -103,22 +103,22 @@ namespace flex
 		m_ItemProxyObject->GetTransform()->Scale(m_TypeID == MineralDepositSID ? 0.04f : 0.5f);
 		const bool bScaleToHand = m_TypeID != MineralDepositSID && !IsHandToolType(m_TypeID);
 
-		if (prefabTemplate != nullptr && prefabTemplate->GetMesh() != nullptr)
+		// Items without a mesh file (tools, beds, lassos & torches) build theirs. (Beds used to fall back to a 10m
+		// placeholder cube which surrounded the camera, so only its shadow showed.)
+		if (BuildItemMesh(m_ItemProxyObject, prefabTemplate, false))
+		{
+		}
+		else if (prefabTemplate != nullptr && prefabTemplate->GetMesh() != nullptr)
 		{
 			prefabTemplate->GetMesh()->CloneSelf(m_ItemProxyObject, true);
-		}
-		else if (BuildHandToolMesh(m_ItemProxyObject, m_TypeID))
-		{
-			// Procedural tool mesh
 		}
 		else
 		{
 			// Prefab template has no mesh; attempt type-specific fallback
-			Mesh* mesh = m_ItemProxyObject->SetMesh(new Mesh(m_ItemProxyObject));
 			bool bLoadedFallback = false;
-
 			if (m_TypeID == MineralDepositSID)
 			{
+				Mesh* mesh = m_ItemProxyObject->SetMesh(new Mesh(m_ItemProxyObject));
 				MineralDeposit* mineralDeposit = static_cast<MineralDeposit*>(prefabTemplate);
 				const char* mineralTypeStr = MineralTypeToString(mineralDeposit->GetMineralType());
 				MaterialID matID;
@@ -126,23 +126,38 @@ namespace flex
 				{
 					bLoadedFallback = mesh->LoadFromFile(MESH_DIRECTORY "mineral-deposit-100.glb", matID);
 				}
+				if (!bLoadedFallback)
+				{
+					m_ItemProxyObject->SetMesh(nullptr);
+				}
 			}
 
 			if (!bLoadedFallback)
 			{
-				mesh->LoadPrefabShape(PrefabShape::CUBE, g_Renderer->GetPlaceholderMaterialID());
+				BuildItemMesh(m_ItemProxyObject, prefabTemplate, true);
 			}
 		}
 
 		Mesh* proxyMesh = m_ItemProxyObject->GetMesh();
 		if (bScaleToHand && proxyMesh != nullptr)
 		{
-			// Other items are shown at a size which fits in the hand (whatever their size in the world)
-			const glm::vec3 size = proxyMesh->m_MaxPoint - proxyMesh->m_MinPoint;
+			// Other items are shown at a size which fits in the hand (whatever their size in the world). (From the
+			// submeshes' bounds: the mesh's own aren't updated for meshes built from several LoadFromMemory calls.)
+			glm::vec3 minPoint(FLT_MAX), maxPoint(-FLT_MAX);
+			for (u32 i = 0; i < proxyMesh->GetSubmeshCount(); ++i)
+			{
+				if (MeshComponent* subMesh = proxyMesh->GetSubMesh(i))
+				{
+					minPoint = glm::min(minPoint, subMesh->m_MinPoint);
+					maxPoint = glm::max(maxPoint, subMesh->m_MaxPoint);
+				}
+			}
+			const glm::vec3 size = maxPoint - minPoint;
 			const real largest = glm::max(glm::max(size.x, size.y), size.z);
 			if (largest > 1e-3f && largest < 1e6f)
 			{
-				const real heldSize = 0.38f;
+				// (Torches are long & thin, so they're shown a little longer)
+				const real heldSize = sourcePrefabID == g_ResourceManager->GetPrefabID("torch") ? 0.6f : 0.38f;
 				m_ItemProxyObject->GetTransform()->SetLocalScale(glm::vec3(heldSize / largest));
 			}
 		}

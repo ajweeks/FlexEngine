@@ -340,6 +340,12 @@ namespace flex
 
 		static const glm::vec3 HEADLAMP_MOUNT_POS;
 
+		// The held torch's (unshadowed) light, & the worn headlamp's beam (a shadowed spot light from the forehead along
+		// the look direction). Called once the held item is positioned for the frame (see PlayerInventory.cpp).
+		void UpdateItemLights();
+		void ReleaseHeldTorchLight();
+		PointLightID m_HeldTorchLightID = InvalidPointLightID;
+
 		static const u32 INVENTORY_MIN = 0;
 		static const u32 INVENTORY_MAX = 999;
 		static const u32 INVENTORY_QUICK_ACCESS_MIN = 1000;

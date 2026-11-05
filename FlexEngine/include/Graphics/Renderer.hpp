@@ -307,6 +307,9 @@ namespace flex
 		void RemoveAllPointLights();
 		void UpdatePointLightData(PointLightID ID, PointLightData* data);
 		i32 GetNumPointLights();
+		// Point lights cast shadows by default (when a shadow slot is free). Lights that move with the camera (a held
+		// torch) opt out: they'd re-render their faces every frame & be shadowed by whoever holds them. Reset on removal.
+		void SetPointLightCastsShadow(PointLightID ID, bool bCastsShadow);
 
 		SpotLightID RegisterSpotLight(SpotLightData* spotLightData);
 		void RemoveSpotLight(SpotLightID ID);
@@ -504,6 +507,7 @@ namespace flex
 		i32 m_NumPointLightsEnabled = 0;
 		i32 m_NumSpotLightsEnabled = 0;
 		bool m_bSpotLightCastsShadow[MAX_SPOT_LIGHT_COUNT] = {};
+		bool m_bPointLightNoShadow[MAX_POINT_LIGHT_COUNT] = {};
 		GameObject* m_SpotLightShadowIgnoreRoot[MAX_SPOT_LIGHT_COUNT] = {};
 		i32 m_NumAreaLightsEnabled = 0;
 		DirectionalLight* m_DirectionalLight = nullptr;

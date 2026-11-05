@@ -660,6 +660,11 @@ namespace flex
 			return;
 		}
 		UpdateDiscovery();
+		if (m_PlacingRecipe == nullptr)
+		{
+			// (placement ended, by placing or cancelling: the last frame's preview must not stay)
+			m_Preview.Hide();
+		}
 		if (m_TestStep >= 0)
 		{
 			UpdateTest();
@@ -1037,39 +1042,87 @@ namespace flex
 		}
 		ui.Text(LOCF(Station_ChestSlots, (i32)used, (i32)chest->GetSlotCount()), rightTitle.x, rightTitle.y + rightTitle.h * 0.5f, UITheme::TEXT_BODY_LARGE * s, UITheme::TEXT_SECONDARY);
 
-		DrawPlayerItems(left, [](const GameObjectStack&) { return true; },
-			[this, chest](GameObjectStack& stack) { StoreStack(stack, chest, 0, chest->GetSlotCount()); }, LOC(Station_NoItems));
+		// Slot grids like the inventory view: square tiles, the selected quick access slot outlined. Left click moves a
+		// whole stack to the other side, right click moves one item.
+		const u32 columns = Player::INVENTORY_ITEM_COL_COUNT;
+		const real slotGap = UITheme::SPACE_XS * s;
+		const u32 playerRows = (Player::QUICK_ACCESS_ITEM_COUNT + Player::INVENTORY_ITEM_COUNT + columns - 1) / columns;
+		real slotSize = glm::min(72.0f * s, (columnWidth - slotGap * (columns - 1)) / columns);
+		slotSize = glm::min(slotSize, (left.h - slotGap * (playerRows - 1)) / playerRows);
+		slotSize = glm::max(slotSize, 24.0f * s);
 
-		// The chest's slots (two columns of rows)
-		const real rowHeight = 44.0f * s;
-		const real rowGap = UITheme::SPACE_XS * s;
-		const real subColumnWidth = (right.w - UITheme::SPACE_S * s) * 0.5f;
-		u32 shown = 0;
-		const u32 rowsPerColumn = (u32)glm::floor((right.h + rowGap) / (rowHeight + rowGap));
-		for (u32 i = 0; i < chest->GetSlotCount(); ++i)
+		const bool bLeftClick = g_InputManager->IsMouseButtonPressed(MouseButton::LEFT);
+		const bool bRightClick = g_InputManager->IsMouseButtonPressed(MouseButton::RIGHT);
+		GameObjectStack* clickedStack = nullptr;
+		i32 clickedCount = 0;
+		bool bClickedChest = false;
+		auto drawSlot = [&](const UIRect& rect, GameObjectStack& stack, bool bSelected, bool bChest)
 		{
-			GameObjectStack& stack = chest->GetSlot(i);
+			const bool bHovered = ui.IsMouseOver(rect);
+			if (bSelected)
+			{
+				ui.FillRect(UIRect(rect.x - 2.0f * s, rect.y - 2.0f * s, rect.w + 4.0f * s, rect.h + 4.0f * s), UITheme::EMBER, UITheme::RADIUS_S * s + 2.0f * s);
+			}
+			ui.FillRect(rect, bHovered ? UITheme::RAISED_HOVER : UITheme::RAISED, UITheme::RADIUS_S * s);
 			if (stack.count <= 0)
 			{
-				continue;
+				return;
 			}
-			const u32 column = shown / glm::max(rowsPerColumn, 1u);
-			const u32 rowIndex = shown % glm::max(rowsPerColumn, 1u);
-			if (column >= 2)
+			std::string name = ItemDisplayName(stack.prefabID);
+			const real textSize = UITheme::TEXT_CAPTION * s;
+			while (name.size() > 3 && ui.MeasureText(name, textSize) > rect.w - 6.0f * s)
 			{
-				break;
+				name.pop_back();
 			}
-			const UIRect row(right.x + column * (subColumnWidth + UITheme::SPACE_S * s), right.y + rowIndex * (rowHeight + rowGap), subColumnWidth, rowHeight);
-			const std::string id = "chest slot " + std::to_string(i);
-			if (ui.ListItem(id.c_str(), row, StackLabel(stack), "", false))
+			ui.Text(name, rect.x + rect.w * 0.5f, rect.y + rect.h * 0.4f, textSize, UITheme::TEXT_PRIMARY, TextAlign::CENTER);
+			if (stack.count > 1)
 			{
-				TakeStack(stack);
+				ui.Text(std::to_string(stack.count), rect.x + rect.w - 4.0f * s, rect.y + rect.h - 12.0f * s, textSize, UITheme::EMBER_GLOW, TextAlign::RIGHT);
 			}
-			++shown;
-		}
-		if (shown == 0)
+			if (bHovered)
+			{
+				ui.Tooltip(StackLabel(stack));
+				if (bLeftClick || bRightClick)
+				{
+					clickedStack = &stack;
+					clickedCount = bRightClick ? 1 : stack.count;
+					bClickedChest = bChest;
+				}
+			}
+		};
+		for (u32 i = 0; i < Player::QUICK_ACCESS_ITEM_COUNT + Player::INVENTORY_ITEM_COUNT; ++i)
 		{
-			ui.Text(LOC(Station_ChestEmpty), right.x, right.y + rowHeight * 0.5f, UITheme::TEXT_BODY * s, UITheme::TEXT_SECONDARY);
+			const bool bQuick = i < Player::QUICK_ACCESS_ITEM_COUNT;
+			GameObjectStack& stack = bQuick ? m_Player->m_QuickAccessInventory[i] : m_Player->m_Inventory[i - Player::QUICK_ACCESS_ITEM_COUNT];
+			const UIRect rect(left.x + (i % columns) * (slotSize + slotGap), left.y + (i / columns) * (slotSize + slotGap), slotSize, slotSize);
+			drawSlot(rect, stack, bQuick && (i32)i == m_Player->m_SelectedQuickAccessItemSlot, false);
+		}
+		for (u32 i = 0; i < chest->GetSlotCount(); ++i)
+		{
+			const UIRect rect(right.x + (i % columns) * (slotSize + slotGap), right.y + (i / columns) * (slotSize + slotGap), slotSize, slotSize);
+			drawSlot(rect, chest->GetSlot(i), false, true);
+		}
+		if (clickedStack != nullptr)
+		{
+			if (bClickedChest)
+			{
+				// Take clickedCount items into the inventory (then quick access)
+				u32 remaining = m_Player->AddToInventory(clickedStack->prefabID, clickedCount, clickedStack->userData, InventoryType::PLAYER_INVENTORY);
+				if (remaining > 0)
+				{
+					remaining = m_Player->AddToInventory(clickedStack->prefabID, (i32)remaining, clickedStack->userData, InventoryType::QUICK_ACCESS);
+				}
+				clickedStack->count -= clickedCount - (i32)remaining;
+			}
+			else
+			{
+				const i32 remaining = chest->AddItems(clickedStack->prefabID, clickedCount, 0, chest->GetSlotCount());
+				clickedStack->count -= clickedCount - remaining;
+			}
+			if (clickedStack->count <= 0)
+			{
+				clickedStack->Clear();
+			}
 		}
 
 		const real buttonWidth = 220.0f * s;

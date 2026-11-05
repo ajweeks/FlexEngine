@@ -264,6 +264,13 @@ namespace flex
 	// head/blade facing +Z, ~2.2 units long). Returns false for other types.
 	bool BuildHandToolMesh(GameObject* object, StringID typeID);
 
+	// Height of a held/dropped torch item's flame above its origin (in the mesh's space, see BuildItemMesh)
+	extern const real TORCH_ITEM_FLAME_HEIGHT;
+	// Creates the mesh of an item whose prefab has no (usable) mesh file: hand tools, beds, lassos (a coil of rope) &
+	// torches (a handle with a glowing head). Otherwise, for unknown items, a placeholder box when bPlaceholder.
+	// Submeshes are created with their shaders' vertex attributes. Returns false when nothing was built.
+	bool BuildItemMesh(GameObject* object, GameObject* prefabTemplate, bool bPlaceholder);
+
 	class PickAxe : public HandTool
 	{
 	public:

@@ -342,24 +342,25 @@ namespace flex
 			Buffer Jump(u32 variant)
 			{
 				Rng rng(HashSeed("jump", variant));
-				Buffer out(0.36f);
-				// Push off: a scuff & thump
-				AddThump(out, rng, 0.0f, 0.5f, rng.Range(75.0f, 95.0f), 0.015f);
+				Buffer out(0.26f);
+				// Push off: a scuff & a soft thump
+				AddThump(out, rng, 0.0f, 0.45f, rng.Range(75.0f, 95.0f), 0.012f);
 				Buffer scuff(out.Length());
-				AddGrains(scuff, rng, 0.0f, 0.07f, 1500.0f, 0.01f, 0.8f, 2.0f);
-				FilterInPlace(scuff, Biquad(BQ::BANDPASS, 2000.0f, 0.8f));
-				Mix(out, scuff, 1.2f);
-				// Clothes whooshing as the body rises
+				AddGrains(scuff, rng, 0.0f, 0.06f, 1200.0f, 0.01f, 0.7f, 2.0f);
+				FilterInPlace(scuff, Biquad(BQ::BANDPASS, 1500.0f, 0.8f));
+				Mix(out, scuff, 0.9f);
+				// A faint rustle of clothes as the body rises (low & short, not a whoosh)
 				PinkNoise pink(rng.NextU32());
 				Biquad bandpass;
-				const real f0 = rng.Range(350.0f, 500.0f);
-				const real f1 = rng.Range(1500.0f, 2200.0f);
-				const sec length = rng.Range(0.24f, 0.3f);
+				Biquad soften(BQ::LOWPASS, 1800.0f, 0.7f);
+				const real f0 = rng.Range(300.0f, 420.0f);
+				const real f1 = rng.Range(800.0f, 1100.0f);
+				const sec length = rng.Range(0.15f, 0.19f);
 				for (u32 i = 0; i < out.Count(); ++i)
 				{
 					const real t = (real)i / (real)out.sampleRate;
-					bandpass.Set(BQ::BANDPASS, ExpSweep(t, length * 0.7f, f0, f1), 1.2f);
-					out.samples[i] += bandpass.Process(pink.Next()) * EnvBump(t, length * 0.3f, length) * 2.2f;
+					bandpass.Set(BQ::BANDPASS, ExpSweep(t, length * 0.7f, f0, f1), 1.0f);
+					out.samples[i] += soften.Process(bandpass.Process(pink.Next())) * EnvBump(t, length * 0.3f, length) * 0.7f;
 				}
 				Finish(out, ONE_SHOT_PEAK, 0.04f);
 				return out;
@@ -368,13 +369,13 @@ namespace flex
 			Buffer Land(bool bHeavy, u32 variant)
 			{
 				Rng rng(HashSeed(bHeavy ? "land_heavy" : "land_light", variant));
-				Buffer out(bHeavy ? 0.85f : 0.42f);
-				const real weight = bHeavy ? 1.0f : 0.6f;
+				Buffer out(bHeavy ? 0.55f : 0.32f);
+				const real weight = bHeavy ? 0.8f : 0.55f;
 
 				// Both feet, slightly apart
 				const sec second = rng.Range(0.012f, 0.03f);
-				AddThump(out, rng, 0.0f, 1.0f, rng.Range(55.0f, 70.0f), bHeavy ? 0.06f : 0.03f);
-				AddThump(out, rng, second, 0.7f, rng.Range(60.0f, 80.0f), bHeavy ? 0.05f : 0.025f);
+				AddThump(out, rng, 0.0f, 1.0f, rng.Range(60.0f, 75.0f), bHeavy ? 0.038f : 0.022f);
+				AddThump(out, rng, second, 0.7f, rng.Range(65.0f, 85.0f), bHeavy ? 0.032f : 0.018f);
 
 				// Low rumble of the impact
 				BrownNoise brown(rng.NextU32());
@@ -382,27 +383,23 @@ namespace flex
 				for (u32 i = 0; i < out.Count(); ++i)
 				{
 					const real t = (real)i / (real)out.sampleRate;
-					out.samples[i] += lowpass.Process(brown.Next()) * EnvAttackDecay(t, 0.002f, bHeavy ? 0.09f : 0.04f) * 1.6f * weight;
+					out.samples[i] += lowpass.Process(brown.Next()) * EnvAttackDecay(t, 0.002f, bHeavy ? 0.055f : 0.03f) * 1.2f * weight;
 				}
 
 				// Debris kicked up & settling
 				Buffer debris(out.Length());
-				AddGrains(debris, rng, 0.0f, bHeavy ? 0.3f : 0.14f, 2200.0f, 0.02f, 1.0f, 2.2f);
+				AddGrains(debris, rng, 0.0f, bHeavy ? 0.2f : 0.1f, 2000.0f, 0.02f, 1.0f, 2.2f);
 				if (bHeavy)
 				{
-					AddGrains(debris, rng, 0.15f, 0.55f, 120.0f, 0.1f, 0.6f, 2.0f);
+					AddGrains(debris, rng, 0.1f, 0.3f, 90.0f, 0.06f, 0.4f, 2.0f);
 				}
 				Buffer debrisHigh = debris;
-				FilterInPlace(debris, Biquad(BQ::BANDPASS, 900.0f, 1.0f));
-				FilterInPlace(debrisHigh, Biquad(BQ::BANDPASS, 2800.0f, 0.9f));
-				Mix(out, debris, 1.6f * weight);
-				Mix(out, debrisHigh, 1.0f * weight);
+				FilterInPlace(debris, Biquad(BQ::BANDPASS, 800.0f, 1.0f));
+				FilterInPlace(debrisHigh, Biquad(BQ::BANDPASS, 2200.0f, 0.9f));
+				Mix(out, debris, 1.2f * weight);
+				Mix(out, debrisHigh, 0.35f * weight);
 
-				if (bHeavy)
-				{
-					SoftClip(out, 1.6f);
-				}
-				Finish(out, ONE_SHOT_PEAK, 0.08f);
+				Finish(out, ONE_SHOT_PEAK, 0.06f);
 				return out;
 			}
 
@@ -634,47 +631,40 @@ namespace flex
 				return out;
 			}
 
-			// Exactly one second long, & every component is periodic within it, so it loops seamlessly. The firing
-			// rate (50 Hz) is scaled at runtime with the source's pitch.
+			// Electric motor: a smooth whine (the motor's tone & harmonics, plus a quiet high inverter whine) over a
+			// soft road hum. Exactly one second long with integer frequencies, so it loops seamlessly. Pitch is scaled
+			// at runtime with speed (300 Hz is the base tone at pitch 1).
 			Buffer EngineLoop()
 			{
 				Rng rng(HashSeed("loop_engine", 0));
-				Buffer out(1.0f);
-				const u32 firingRate = 50;
-				const real cycle = 1.0f / (real)firingRate;
-
-				// One combustion pulse per firing: two damped resonances & a burst of exhaust noise
-				Buffer pulse(cycle * 3.0f);
+				const sec loopLength = 1.0f;
+				const sec crossfade = 0.15f;
+				Buffer hum(loopLength + crossfade);
 				{
-					Oscillator a;
-					Oscillator b;
-					WhiteNoise noise(rng.NextU32());
-					Biquad lowpass(BQ::LOWPASS, 1100.0f, 0.8f);
-					for (u32 i = 0; i < pulse.Count(); ++i)
+					BrownNoise brown(rng.NextU32());
+					Biquad lowpass(BQ::LOWPASS, 320.0f, 0.7f);
+					for (real& s : hum.samples)
 					{
-						const real t = (real)i / (real)pulse.sampleRate;
-						pulse.samples[i] = a.Sine(155.0f) * EnvAttackDecay(t, 0.0008f, 0.006f) +
-							b.Sine(92.0f) * EnvAttackDecay(t, 0.001f, 0.01f) * 0.8f +
-							lowpass.Process(noise.Next()) * EnvAttackDecay(t, 0.0005f, 0.004f) * 1.6f;
+						s = lowpass.Process(brown.Next());
 					}
+					MakeSeamlessLoop(hum, crossfade);
+					Normalize(hum, 1.0f);
 				}
-				for (u32 k = 0; k < firingRate; ++k)
-				{
-					// Uneven cylinders give it a lumpy idle (still periodic, the pattern repeats every 4 firings)
-					static const real cylinderGains[] = { 1.0f, 0.82f, 0.93f, 0.76f };
-					const real jitter = rng.Range(-0.0006f, 0.0006f);
-					MixWrapped(out, pulse, cylinderGains[k % 4] * rng.Range(0.92f, 1.0f), k * cycle + jitter);
-				}
-				// Sub rumble at half the firing rate (four stroke)
-				Oscillator sub;
+
+				Buffer out(loopLength);
+				const real motor = 300.0f;
+				const real inverter = 2400.0f;
 				for (u32 i = 0; i < out.Count(); ++i)
 				{
-					out.samples[i] += sub.Sine((real)firingRate * 0.5f) * 0.25f;
+					const real t = (real)i / (real)out.sampleRate;
+					const real w = SYNTH_TWO_PI * motor * t;
+					real whine = std::sin(w) * 0.5f + std::sin(2.0f * w) * 0.22f + std::sin(3.0f * w) * 0.07f + std::sin(4.0f * w) * 0.05f;
+					// Gentle wobble (whole cycles per loop)
+					whine *= 0.93f + 0.07f * std::sin(SYNTH_TWO_PI * 3.0f * t);
+					const real inverterPhase = SYNTH_TWO_PI * inverter * t + (25.0f / 6.0f) * std::sin(SYNTH_TWO_PI * 6.0f * t);
+					out.samples[i] = whine + std::sin(inverterPhase) * 0.05f + hum.samples[i] * 0.3f;
 				}
-				FilterCircular(out, Biquad(BQ::LOWPASS, 2400.0f, 0.7f));
-				FilterCircular(out, Biquad(BQ::PEAK, 180.0f, 1.0f, 4.0f));
-				Normalize(out, 1.0f);
-				SoftClip(out, 1.8f);
+				FilterCircular(out, Biquad(BQ::LOWPASS, 5000.0f, 0.7f));
 				Normalize(out, LOOP_PEAK);
 				return out;
 			}
@@ -883,28 +873,44 @@ namespace flex
 				return out;
 			}
 
-			// Pickaxe on stone: a hard tick, a ringing metallic clink & a dull knock from the rock
+			// Pickaxe on stone: a dull thud & crunch of rock breaking (a short low knock, no ringing), & rubble falling
 			Buffer DigStone(u32 variant)
 			{
 				Rng rng(HashSeed("dig_stone", variant));
-				Buffer out(0.5f);
-				AddThump(out, rng, 0.0f, 0.5f, rng.Range(90.0f, 130.0f), 0.02f);
-				AddClick(out, rng, 0.0f, 0.5f, 2500.0f, 0.0025f);
-				const real base = rng.Range(1500.0f, 2300.0f);
-				const real freqs[] = { base, base * 2.76f, base * 5.4f, base * 8.9f, base * 0.52f };
-				const real gains[] = { 0.28f, 0.2f, 0.1f, 0.05f, 0.15f };
-				const real decays[] = { 0.05f, 0.03f, 0.018f, 0.01f, 0.07f };
-				AddModes(out, 0.0f, 1.0f, freqs, gains, decays, 5);
-				// A smaller bright chip bouncing off a moment later
-				const real freqs2[] = { base * 1.37f, base * 3.1f };
-				const real gains2[] = { 0.12f, 0.06f };
-				const real decays2[] = { 0.03f, 0.015f };
-				AddModes(out, rng.Range(0.045f, 0.09f), 0.8f, freqs2, gains2, decays2, 2);
-				// Rubble skittering away
+				Buffer out(0.45f);
+				AddThump(out, rng, 0.0f, 1.0f, rng.Range(70.0f, 100.0f), 0.03f);
+				// The rock cracking: a burst of mid band noise
+				{
+					WhiteNoise noise(rng.NextU32());
+					Biquad bandpass(BQ::BANDPASS, rng.Range(550.0f, 850.0f), 0.9f);
+					Biquad lowpass(BQ::LOWPASS, 2200.0f, 0.7f);
+					const sec decay = rng.Range(0.02f, 0.03f);
+					for (u32 i = 0; i < out.Count(); ++i)
+					{
+						const real t = (real)i / (real)out.sampleRate;
+						out.samples[i] += lowpass.Process(bandpass.Process(noise.Next())) * EnvAttackDecay(t, 0.001f, decay) * 2.2f;
+					}
+				}
+				AddClick(out, rng, 0.0f, 0.15f, 1500.0f, 0.002f);
+				// A short, low knock from the rock itself (heavily damped, so it doesn't ring)
+				const real base = rng.Range(240.0f, 380.0f);
+				const real freqs[] = { base, base * 2.3f };
+				const real gains[] = { 0.22f, 0.08f };
+				const real decays[] = { 0.018f, 0.01f };
+				AddModes(out, 0.0f, 1.0f, freqs, gains, decays, 2);
+				// Crunch of fragments breaking off
+				Buffer crunch(out.Length());
+				AddGrains(crunch, rng, 0.0f, rng.Range(0.1f, 0.15f), 1800.0f, 0.02f, 1.0f, 2.2f);
+				Buffer crunchHigh = crunch;
+				FilterInPlace(crunch, Biquad(BQ::BANDPASS, rng.Range(800.0f, 1200.0f), 1.0f));
+				FilterInPlace(crunchHigh, Biquad(BQ::BANDPASS, 2000.0f, 1.0f));
+				Mix(out, crunch, 1.6f);
+				Mix(out, crunchHigh, 0.5f);
+				// Rubble trickling down
 				Buffer grit(out.Length());
-				AddGrains(grit, rng, 0.02f, 0.12f, 700.0f, 0.03f, 0.5f, 3.0f);
-				FilterInPlace(grit, Biquad(BQ::BANDPASS, 3200.0f, 1.0f));
-				Mix(out, grit, 1.0f);
+				AddGrains(grit, rng, 0.06f, 0.25f, 300.0f, 0.06f, 0.5f, 2.5f);
+				FilterInPlace(grit, Biquad(BQ::BANDPASS, 1400.0f, 0.9f));
+				Mix(out, grit, 0.8f);
 				Finish(out, ONE_SHOT_PEAK * rng.Range(0.85f, 1.0f), 0.1f);
 				return out;
 			}

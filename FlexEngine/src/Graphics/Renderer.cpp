@@ -676,6 +676,7 @@ namespace flex
 			{
 				m_PointLightData[ID].colour = VEC4_NEG_ONE;
 				m_PointLightData[ID].enabled = 0;
+				m_bPointLightNoShadow[ID] = false;
 				m_NumPointLightsEnabled--;
 				CHECK_GE(m_NumPointLightsEnabled, 0);
 				UpdatePointLightData(ID, nullptr);
@@ -689,9 +690,18 @@ namespace flex
 		{
 			m_PointLightData[i].colour = VEC4_NEG_ONE;
 			m_PointLightData[i].enabled = 0;
+			m_bPointLightNoShadow[i] = false;
 			UpdatePointLightData(i, nullptr);
 		}
 		m_NumPointLightsEnabled = 0;
+	}
+
+	void Renderer::SetPointLightCastsShadow(PointLightID ID, bool bCastsShadow)
+	{
+		if (ID < MAX_POINT_LIGHT_COUNT)
+		{
+			m_bPointLightNoShadow[ID] = !bCastsShadow;
+		}
 	}
 
 	void Renderer::UpdatePointLightData(PointLightID ID, PointLightData* data)

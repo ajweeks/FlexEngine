@@ -6,13 +6,6 @@
 	{
 		"id" : "48BF57C24855478487AF87C8D3EDEC3D",
 		"name" : "lasso",
-		"type" : "object",
-		"mesh" : "donut.glb",
-		"materials" : 
-		[
-			"lasso rope",
-			"lasso rope",
-			"lasso rope"
-		]
+		"type" : "object"
 	}
 }

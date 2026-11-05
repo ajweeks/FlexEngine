@@ -69,6 +69,10 @@ namespace flex
 		// Keeps processing input while the window is unfocused (used by automated tests, which inject input into
 		// hidden windows)
 		void SetIgnoreWindowFocus(bool bIgnoreWindowFocus) { m_bIgnoreWindowFocus = bIgnoreWindowFocus; }
+		// Drops keyboard (except Escape), mouse & gamepad input from the devices, e.g. while the performance test drives the
+		// player. Input injected through the callbacks needs SetDeviceInputBlocked(false) around it.
+		void SetDeviceInputBlocked(bool bBlocked) { m_bDeviceInputBlocked = bBlocked; }
+		bool IsDeviceInputBlocked() const { return m_bDeviceInputBlocked; }
 		void CharCallback(u32 character);
 		// Printable characters typed since the last frame (for in game text fields)
 		const std::string& GetTypedText() const { return m_TypedText; }
@@ -143,6 +147,7 @@ namespace flex
 
 		std::map<KeyCode, Key> m_Keys;
 		bool m_bIgnoreWindowFocus = false;
+		bool m_bDeviceInputBlocked = false;
 
 		// Contains one entry for each entry in the Action enum
 		InputBinding m_InputBindings[(i32)Action::_NONE + 1];

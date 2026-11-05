@@ -29,6 +29,7 @@ IGNORE_WARNINGS_POP
 #include "Scene/Mesh.hpp"
 #include "Scene/MeshComponent.hpp"
 #include "Scene/Objects/Building.hpp" // For AppendBoxToVertexData
+#include "Scene/Objects/Props.hpp" // For Bed::BuildMesh
 #include "Scene/Objects/Wires.hpp"
 #include "Scene/SceneManager.hpp"
 
@@ -1237,6 +1238,74 @@ namespace flex
 				}
 			}
 
+			// Round tube along a path (a rope), with frames carried along it so it doesn't twist. Open ends are capped.
+			void Tube(const std::vector<glm::vec3>& path, real radius, u32 sides = 8)
+			{
+				if (path.size() < 2)
+				{
+					return;
+				}
+				const u32 count = (u32)path.size();
+				glm::vec3 prevTangent = glm::normalize(path[1] - path[0]);
+				glm::vec3 normal = glm::normalize(glm::cross(prevTangent, glm::abs(prevTangent.y) < 0.9f ? VEC3_UP : VEC3_RIGHT));
+				const u32 base = (u32)vertexData.positions_3D.size();
+				real length = 0.0f;
+				for (u32 i = 0; i < count; ++i)
+				{
+					const glm::vec3 tangent = glm::normalize(path[glm::min(i + 1, count - 1)] - path[i > 0 ? i - 1 : 0]);
+					// Parallel transport: turn the normal by the rotation between the tangents
+					const glm::vec3 axis = glm::cross(prevTangent, tangent);
+					const real axisLen = glm::length(axis);
+					if (axisLen > 1e-6f)
+					{
+						const real angle = std::atan2(axisLen, glm::dot(prevTangent, tangent));
+						normal = glm::normalize(glm::angleAxis(angle, axis / axisLen) * normal);
+					}
+					prevTangent = tangent;
+					const glm::vec3 binormal = glm::cross(tangent, normal);
+					if (i > 0)
+					{
+						length += glm::distance(path[i], path[i - 1]);
+					}
+					for (u32 s = 0; s <= sides; ++s)
+					{
+						const real angle = TWO_PI * (real)s / (real)sides;
+						const glm::vec3 radial = normal * std::cos(angle) + binormal * std::sin(angle);
+						Vertex(path[i] + radial * radius, radial, tangent, glm::vec2((real)s / (real)sides, length / (radius * TWO_PI)));
+					}
+				}
+				for (u32 i = 0; i + 1 < count; ++i)
+				{
+					for (u32 s = 0; s < sides; ++s)
+					{
+						const u32 a = base + i * (sides + 1) + s;
+						const u32 b = a + sides + 1;
+						indices.insert(indices.end(), { a, a + 1, b + 1, a, b + 1, b });
+					}
+				}
+				// Caps (small enough to be flat discs)
+				for (u32 end = 0; end < 2; ++end)
+				{
+					const u32 ring = end == 0 ? 0 : count - 1;
+					const glm::vec3 capNormal = end == 0 ? -glm::normalize(path[1] - path[0]) : glm::normalize(path[count - 1] - path[count - 2]);
+					const u32 centerIndex = (u32)vertexData.positions_3D.size();
+					Vertex(path[ring], capNormal, normal, glm::vec2(0.5f));
+					for (u32 s = 0; s < sides; ++s)
+					{
+						const u32 r0 = base + ring * (sides + 1) + s;
+						const u32 r1 = r0 + 1;
+						if (end == 0)
+						{
+							indices.insert(indices.end(), { centerIndex, r1, r0 });
+						}
+						else
+						{
+							indices.insert(indices.end(), { centerIndex, r0, r1 });
+						}
+					}
+				}
+			}
+
 			void AddTo(GameObject* object)
 			{
 				if (indices.empty())
@@ -1381,6 +1450,144 @@ namespace flex
 		stone.AddTo(object);
 		rope.AddTo(object);
 		return true;
+	}
+
+	const real TORCH_ITEM_FLAME_HEIGHT = 0.68f;
+
+	namespace
+	{
+		bool IsPrefabNamed(GameObject* prefabTemplate, const char* prefabName)
+		{
+			const PrefabID prefabID = g_ResourceManager->GetPrefabID(prefabName);
+			return prefabID.IsValid() && g_ResourceManager->GetPrefabTemplate(prefabID) == prefabTemplate;
+		}
+
+		// A coiled lasso: loops of rope stacked side by side (seen face on when held), bound by a few wraps at the
+		// top, with the free end hanging down. About 0.4m across.
+		void BuildLassoMesh(GameObject* object)
+		{
+			ToolPart rope(GetOrCreateToolMaterial("Lasso rope", glm::vec3(0.42f, 0.3f, 0.14f), 0.95f));
+			ToolPart binding(GetOrCreateToolMaterial("Lasso binding", glm::vec3(0.25f, 0.16f, 0.07f), 0.95f));
+
+			const real ropeRadius = 0.017f;
+			const real coilRadius = 0.17f;
+			const u32 loopCount = 5;
+			const u32 segmentsPerLoop = 28;
+			// Each loop sits next to the last (along z) & is a little different in size & sag, like a hand coiled rope
+			std::vector<glm::vec3> coil;
+			coil.reserve(loopCount * segmentsPerLoop + 1);
+			const real loopSpacing = ropeRadius * 2.1f;
+			const real coilDepth = loopSpacing * (real)(loopCount - 1);
+			for (u32 i = 0; i <= loopCount * segmentsPerLoop; ++i)
+			{
+				const real t = (real)i / (real)segmentsPerLoop; // Loops so far
+				const real angle = PI_DIV_TWO + TWO_PI * t; // Starts at the top
+				const real radius = coilRadius * (1.0f + 0.06f * std::sin(t * 2.3f + 0.7f));
+				// Loops hang from the binding at the top, so they sag into an oval
+				const real sag = 1.0f + 0.12f * (1.0f - std::sin(angle)) * 0.5f;
+				coil.emplace_back(std::cos(angle) * radius * (1.0f - 0.04f * std::sin(t * 3.1f)),
+					std::sin(angle) * radius * sag,
+					t * loopSpacing - coilDepth * 0.5f);
+			}
+			// The free end hangs down from where the coil finishes (at the top) on the outside
+			const glm::vec3 coilEnd = coil.back();
+			std::vector<glm::vec3> tail;
+			const u32 tailSegments = 10;
+			for (u32 i = 0; i <= tailSegments; ++i)
+			{
+				const real t = (real)i / (real)tailSegments;
+				tail.emplace_back(coilEnd.x + 0.05f * t + 0.02f * std::sin(t * PI),
+					coilEnd.y - t * (coilRadius * 2.4f),
+					coilEnd.z + ropeRadius * 2.0f + 0.015f * std::sin(t * TWO_PI));
+			}
+			std::vector<glm::vec3> coilAndTail = coil;
+			coilAndTail.insert(coilAndTail.end(), tail.begin() + 1, tail.end());
+			rope.Tube(coilAndTail, ropeRadius, 8);
+
+			// Wraps binding the bundle together at the top (around the coil's top, along x)
+			const real bundleTop = coilRadius;
+			const real bundleRadius = glm::max(coilDepth * 0.5f, ropeRadius) + ropeRadius * 1.6f;
+			std::vector<glm::vec3> wraps;
+			const u32 wrapCount = 3;
+			const u32 wrapSegments = 14;
+			const real wrapSpacing = ropeRadius * 1.9f;
+			for (u32 i = 0; i <= wrapCount * wrapSegments; ++i)
+			{
+				const real t = (real)i / (real)wrapSegments;
+				const real angle = TWO_PI * t;
+				wraps.emplace_back(t * wrapSpacing - wrapSpacing * wrapCount * 0.5f,
+					bundleTop + std::cos(angle) * (ropeRadius * 1.9f),
+					std::sin(angle) * bundleRadius);
+			}
+			binding.Tube(wraps, ropeRadius * 0.8f, 6);
+
+			rope.AddTo(object);
+			binding.AddTo(object);
+		}
+
+		// A held/dropped torch: a wooden handle with a wrapped head & a flame (unlit, so it glows). Its base is at the
+		// origin & it's 0.8m long, along +Y.
+		void BuildTorchItemMesh(GameObject* object)
+		{
+			ToolPart wood(GetOrCreateToolMaterial("Tool handle wood", glm::vec3(0.21f, 0.105f, 0.042f), 0.62f));
+			ToolPart wrap(GetOrCreateToolMaterial("Torch item wrap", glm::vec3(0.09f, 0.06f, 0.035f), 0.95f));
+			// (Same as placed torches' flames, see Building.cpp)
+			MaterialID flameMatID = g_Renderer->GetMaterialID("Build torch flame glow");
+			if (flameMatID == InvalidMaterialID)
+			{
+				MaterialCreateInfo createInfo = {};
+				createInfo.name = "Build torch flame glow";
+				createInfo.shaderName = "colour";
+				createInfo.colourMultiplier = glm::vec4(1.0f, 0.62f, 0.2f, 1.0f);
+				createInfo.bSerializable = false;
+				flameMatID = g_Renderer->InitializeMaterial(&createInfo);
+			}
+			ToolPart flame(flameMatID);
+
+			wood.Cylinder(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 0.56f, 0.0f), 0.022f, 0.027f, 10);
+			wrap.Cylinder(glm::vec3(0.0f, 0.5f, 0.0f), glm::vec3(0.0f, 0.62f, 0.0f), 0.038f, 0.042f, 10);
+			// Flame: a fat base tapering to a point, plus a smaller tongue off to the side
+			flame.Cylinder(glm::vec3(0.0f, 0.61f, 0.0f), glm::vec3(0.0f, 0.7f, 0.0f), 0.036f, 0.04f, 10);
+			flame.Cylinder(glm::vec3(0.0f, 0.7f, 0.0f), glm::vec3(0.0f, 0.8f, 0.0f), 0.04f, 0.004f, 10);
+			flame.Cylinder(glm::vec3(0.012f, 0.68f, 0.01f), glm::vec3(0.022f, 0.76f, 0.016f), 0.02f, 0.003f, 8);
+
+			wood.AddTo(object);
+			wrap.AddTo(object);
+			flame.AddTo(object);
+		}
+	} // anonymous namespace
+
+	bool BuildItemMesh(GameObject* object, GameObject* prefabTemplate, bool bPlaceholder)
+	{
+		const StringID typeID = prefabTemplate != nullptr ? prefabTemplate->GetTypeID() : InvalidStringID;
+		if (BuildHandToolMesh(object, typeID))
+		{
+			return true;
+		}
+		if (typeID == BedSID)
+		{
+			Bed::BuildMesh(object);
+			return true;
+		}
+		if (prefabTemplate != nullptr && IsPrefabNamed(prefabTemplate, "lasso"))
+		{
+			BuildLassoMesh(object);
+			return true;
+		}
+		if (prefabTemplate != nullptr && IsPrefabNamed(prefabTemplate, "torch"))
+		{
+			BuildTorchItemMesh(object);
+			return true;
+		}
+		if (bPlaceholder)
+		{
+			// (LoadPrefabShape's cube is 10m across, & its vertices don't have the placeholder shader's attributes)
+			ToolPart box(g_Renderer->GetPlaceholderMaterialID());
+			box.Box(VEC3_ZERO, glm::vec3(0.15f));
+			box.AddTo(object);
+			return true;
+		}
+		return false;
 	}
 
 	HandTool::HandTool(const std::string& name, StringID typeID, const GameObjectID& gameObjectID, const PrefabIDPair& sourcePrefabID, bool bIsPrefabTemplate) :

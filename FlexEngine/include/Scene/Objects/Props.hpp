@@ -189,11 +189,22 @@ namespace flex
 		// Sleeps until morning if it's night, otherwise tells the player they aren't tired
 		void Sleep(Player* player);
 
+		virtual void OnDeItemize(const GameObjectStack::UserData& userData) override;
+
+		// Creates the bed's submeshes on object (its feet at the origin, the headboard towards +z)
+		static void BuildMesh(GameObject* object);
+		// The box placement checks (centered on the origin) & its preview's outline
+		static void GetPlacementBounds(glm::vec3& outMin, glm::vec3& outMax);
+		// The outline is drawn where FindPlacement puts the bed, & red when it can't go there
+		static void DrawPlacementOutline(const glm::vec3& posWS, const glm::quat& rotWS, const glm::vec4& colour);
+		// Where the feet of a bed placed by its center at centerWS go: on the ground under its corners (the terrain, or
+		// whatever is on it, e.g. a floor). False when there's no ground or it's too steep (the corners' heights differ
+		// by more than MAX_PLACEMENT_STEP).
+		static bool FindPlacement(const glm::vec3& centerWS, const glm::quat& rotWS, glm::vec3& outFeetWS);
+		static constexpr real MAX_PLACEMENT_STEP = 0.45f;
+
 		// Time of day (see BaseScene) the player wakes up at
 		static constexpr real MORNING_TIME_OF_DAY = 0.78f;
-
-	private:
-		void CreateMeshes();
 	};
 
 	class Skybox final : public GameObject

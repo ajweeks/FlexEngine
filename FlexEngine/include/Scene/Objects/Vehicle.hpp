@@ -85,6 +85,18 @@ namespace flex
 
 		void ResetTransform();
 
+		// Ground (terrain, or static physics) below posWS, searching from a little above it. Returns false if there's none.
+		bool SampleGround(const glm::vec3& posWS, glm::vec3& outPos, glm::vec3& outNormal) const;
+		// Starts turning an upturned vehicle back onto its wheels, aligned with the ground below it
+		void BeginUprighting(btRigidBody* rb);
+		// Run each fixed step (after the physics step): detects being stuck upside down & animates uprighting.
+		// Returns true while uprighting (the vehicle is moved by it rather than simulated).
+		bool UpdateUprighting(btRigidBody* rb);
+		// Arcade "grace" each fixed step: keeps momentum through glancing hits (sliding along obstacles & up small
+		// steps rather than halting), steers slightly around trunks it would just clip & knocks over small trees
+		void UpdateCollisionGrace(btRigidBody* rb);
+		void UpdateTrunks(btRigidBody* rb);
+
 		std::array<SoundClip_LoopingSimple, (u32)SoundEffect::_COUNT> m_SoundEffects;
 
 		GameObjectID m_TireIDs[m_TireCount];
@@ -147,9 +159,52 @@ namespace flex
 
 		bool m_bFlippingRightSideUp = false;
 		sec m_SecFlipppingRightSideUp = 0.0f;
-		const sec MAX_FLIPPING_UPRIGHT_TIME = 3.5f;
+		const sec UPRIGHTING_DURATION = 0.7f;
 		glm::quat m_TargetRot;
-		const real UPRIGHTING_SPEED = 10.0f;
+		glm::quat m_UprightStartRot;
+		glm::vec3 m_UprightStartPos;
+		glm::vec3 m_UprightTargetPos;
+		// Attempts in a row which didn't leave it upright (each tries a little further along, & it gives up after a few
+		// until it has been driven again, so it can't loop forever)
+		u32 m_UprightAttempts = 0;
+		sec m_SecSinceUpright = 1000.0f;
+		sec m_FlipTestTimer = 0.0f; // FLEX_VEHICLE_FLIP_TEST
+
+		// Chassis collider extents (local space), from its shape
+		real m_HalfWidth = 0.9f;
+		real m_HalfLength = 2.2f;
+		real m_ChassisMinY = -0.3f;
+		// Height of the origin above the ground when resting on its wheels
+		real m_RideHeight = 0.55f;
+		real m_ChassisFriction = 0.12f;
+
+		// Collision grace
+		btVector3 m_PrevFixedLinearVel = btVector3(0.0f, 0.0f, 0.0f);
+		btVector3 m_PrevFixedAngularVel = btVector3(0.0f, 0.0f, 0.0f);
+		// Fraction of the horizontal speed kept through a glancing hit
+		real m_GlancingSpeedKept = 0.9f;
+		// Hits more glancing than this (sin of the angle between the velocity & the obstacle's surface) slide off
+		real m_GlancingMaxSin = 0.6f;
+		// Max rate (rad/s) the heading is nudged by to just miss a trunk
+		real m_NearMissMaxYawRate = 1.0f;
+		struct NearbyTrunk
+		{
+			glm::vec3 base;
+			real radius;
+			u32 hash;
+		};
+		std::vector<NearbyTrunk> m_NearbyTrunks;
+		glm::vec3 m_TrunkQueryPos = glm::vec3(1e9f);
+		sec m_TrunkQueryAge = 1000.0f;
+		struct FelledTrunk
+		{
+			glm::vec3 base;
+			real radius;
+			sec secLeft;
+		};
+		// Knocked over trees whose trunk's collision may not have been removed yet (the vehicle passes through these)
+		std::vector<FelledTrunk> m_FelledTrunks;
+		u32 m_TreesKnockedOver = 0;
 
 	};
 

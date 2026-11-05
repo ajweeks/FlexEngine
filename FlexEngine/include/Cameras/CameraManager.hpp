@@ -43,6 +43,10 @@ namespace flex
 		// Copies position, rotation, and FOV of "from" to "to"
 		void AlignCameras(BaseCamera* from, BaseCamera* to);
 
+		// The player's field of view setting (radians): applied to every gameplay camera, including ones added later
+		void SetGameplayFOV(real FOV);
+		real GetGameplayFOV() const { return m_GameplayFOV; }
+
 	private:
 		EventReply OnActionEvent(Action action, ActionEvent actionEvent);
 		ActionCallback<CameraManager> m_ActionCallback;
@@ -59,6 +63,7 @@ namespace flex
 		std::vector<BaseCamera*> m_Cameras;
 
 		bool m_bInitialized = false;
+		real m_GameplayFOV = -1.0f; // < 0 until set: cameras keep their own
 
 	};
 

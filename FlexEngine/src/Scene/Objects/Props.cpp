@@ -696,13 +696,13 @@ namespace flex
 		GameObject* child = new GameObject("dropped item child", BaseObjectSID);
 		child->SetSerializable(false);
 
-		if (prefabTemplate->GetMesh() != nullptr)
+		if (BuildItemMesh(child, prefabTemplate, false))
+		{
+			// Procedural mesh (tools, beds, lassos & torches)
+		}
+		else if (prefabTemplate->GetMesh() != nullptr)
 		{
 			prefabTemplate->GetMesh()->CloneSelf(child, true);
-		}
-		else if (BuildHandToolMesh(child, prefabTemplate->GetTypeID()))
-		{
-			// Procedural tool mesh
 		}
 		else if (prefabTemplate->GetTypeID() == RowBoatSID)
 		{
@@ -711,8 +711,7 @@ namespace flex
 		}
 		else
 		{
-			Mesh* mesh = child->SetMesh(new Mesh(child));
-			mesh->LoadPrefabShape(PrefabShape::CUBE, g_Renderer->GetPlaceholderMaterialID());
+			BuildItemMesh(child, prefabTemplate, true);
 		}
 
 		if (prefabTemplate->GetRigidBody() != nullptr)
@@ -928,6 +927,8 @@ namespace flex
 		GameObject(name, BedSID, gameObjectID, sourcePrefabID, bIsPrefabTemplate)
 	{
 		m_bInteractable = true;
+		// Picked up into the inventory & placed from it
+		m_bItemizable = true;
 	}
 
 	PropertyCollection* Bed::BuildTypeUniquePropertyCollection()
@@ -935,7 +936,7 @@ namespace flex
 		return GameObject::BuildPropertyCollection();
 	}
 
-	void Bed::CreateMeshes()
+	void Bed::BuildMesh(GameObject* object)
 	{
 		struct Part
 		{
@@ -965,7 +966,7 @@ namespace flex
 		parts[1].boxes.push_back({ glm::vec3(0.0f, mattressTop + 0.015f, -0.45f), glm::vec3(h.x - 0.02f, 0.03f, 0.55f) });
 		parts[2].boxes.push_back({ glm::vec3(0.0f, mattressTop + 0.06f, h.z - 0.35f), glm::vec3(0.3f, 0.06f, 0.18f) });
 
-		Mesh* mesh = SetMesh(new Mesh(this));
+		Mesh* mesh = object->GetMesh() != nullptr ? object->GetMesh() : object->SetMesh(new Mesh(object));
 		for (Part& part : parts)
 		{
 			VertexBufferDataCreateInfo vertexData = {};
@@ -979,9 +980,98 @@ namespace flex
 		}
 	}
 
+	void Bed::GetPlacementBounds(glm::vec3& outMin, glm::vec3& outMax)
+	{
+		// Centered on the origin, like mesh files' items (OnDeItemize moves the bed down onto the ground)
+		outMin = -BED_HALF_EXTENTS;
+		outMax = BED_HALF_EXTENTS;
+	}
+
+	bool Bed::FindPlacement(const glm::vec3& centerWS, const glm::quat& rotWS, glm::vec3& outFeetWS)
+	{
+		PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
+		TerrainGenerator* terrain = TerrainGenerator::GetActive();
+		const glm::vec3 h = BED_HALF_EXTENTS;
+		const glm::vec3 offsets[5] = { glm::vec3(0.0f), glm::vec3(-h.x, 0.0f, -h.z), glm::vec3(h.x, 0.0f, -h.z), glm::vec3(-h.x, 0.0f, h.z), glm::vec3(h.x, 0.0f, h.z) };
+		real minHeight = FLT_MAX, maxHeight = -FLT_MAX, sum = 0.0f;
+		for (const glm::vec3& offset : offsets)
+		{
+			const glm::vec3 point = centerWS + rotWS * offset;
+			// From a little above the bed (or the terrain there, when the aimed at point is inside a hill), so a roof
+			// overhead isn't found instead of the floor
+			const real terrainHeight = terrain != nullptr ? terrain->SampleHeight(glm::vec2(point.x, point.z)) : -FLT_MAX;
+			const glm::vec3 start(point.x, glm::max(centerWS.y, terrainHeight) + h.y * 2.0f + 0.5f, point.z);
+			glm::vec3 ground;
+			real height;
+			if (physicsWorld != nullptr && physicsWorld->GetPointOnGround(start, ground))
+			{
+				height = ground.y;
+			}
+			else if (terrain != nullptr)
+			{
+				height = terrainHeight;
+			}
+			else
+			{
+				return false;
+			}
+			minHeight = glm::min(minHeight, height);
+			maxHeight = glm::max(maxHeight, height);
+			sum += height;
+		}
+		// (Averaged: on a gentle slope the uphill legs sink a little & the downhill ones float a little)
+		outFeetWS = glm::vec3(centerWS.x, sum / 5.0f, centerWS.z);
+		return maxHeight - minHeight <= MAX_PLACEMENT_STEP;
+	}
+
+	void Bed::DrawPlacementOutline(const glm::vec3& centerWS, const glm::quat& rotWS, const glm::vec4& colour)
+	{
+		DebugRenderer* debugRenderer = g_Renderer->GetDebugRenderer();
+		if (debugRenderer == nullptr)
+		{
+			return;
+		}
+		glm::vec3 feetPos;
+		const bool bValid = FindPlacement(centerWS, rotWS, feetPos);
+		const glm::vec3 posWS = feetPos + rotWS * glm::vec3(0.0f, BED_HALF_EXTENTS.y, 0.0f);
+		const btVector3 lineColour = bValid ? btVector3(colour.r, colour.g, colour.b) : btVector3(1.0f, 0.3f, 0.3f);
+		const glm::vec3 h = BED_HALF_EXTENTS;
+		glm::vec3 corners[8];
+		for (u32 i = 0; i < 8; ++i)
+		{
+			corners[i] = posWS + rotWS * glm::vec3((i & 1) ? h.x : -h.x, (i & 2) ? h.y : -h.y, (i & 4) ? h.z : -h.z);
+		}
+		for (u32 i = 0; i < 8; ++i)
+		{
+			for (u32 bit : { 1u, 2u, 4u })
+			{
+				if ((i & bit) == 0)
+				{
+					debugRenderer->drawLine(ToBtVec3(corners[i]), ToBtVec3(corners[i | bit]), lineColour);
+				}
+			}
+		}
+		// The headboard end (+z)
+		debugRenderer->drawLine(ToBtVec3(corners[4]), ToBtVec3(corners[7]), lineColour);
+		debugRenderer->drawLine(ToBtVec3(corners[5]), ToBtVec3(corners[6]), lineColour);
+	}
+
+	void Bed::OnDeItemize(const GameObjectStack::UserData& userData)
+	{
+		// Placed by its center (see GetPlacementBounds), but the bed's origin is at its feet, which go on the ground
+		// (PlayerController doesn't place beds where FindPlacement fails)
+		glm::vec3 feetPos;
+		FindPlacement(m_Transform.GetWorldPosition(), m_Transform.GetWorldRotation(), feetPos);
+		m_Transform.SetWorldPosition(feetPos);
+		GameObject::OnDeItemize(userData);
+	}
+
 	void Bed::Initialize()
 	{
-		CreateMeshes();
+		if (m_Mesh == nullptr)
+		{
+			BuildMesh(this);
+		}
 
 		if (m_RigidBody == nullptr)
 		{

@@ -1,11 +1,10 @@
 #pragma once
 
-#include <stack>
-
 #include "Scene/Objects/Terminal.hpp" // For Terminal::MAX_OUTPUT_COUNT
 #include "Variant.hpp"
 #include "VirtualMachine/Backend/FunctionBindings.hpp"
 #include "VirtualMachine/Backend/IR.hpp"
+#include "VirtualMachine/StringMap.hpp"
 
 namespace flex
 {
@@ -86,6 +85,10 @@ namespace flex
 			YIELD,
 			RETURN,
 			HALT,
+			// Push/pop the registers a call can clobber (val0: callee's address, val1: number of registers allocated at
+			// the call). Linking turns them into the list of registers the callee (or anything it calls) writes.
+			SAVE,
+			RESTORE,
 
 			_NONE
 		};
@@ -120,6 +123,8 @@ namespace flex
 			"yld",
 			"rtn",
 			"hlt",
+			"sav",
+			"rst",
 
 			"NONE"
 		};
@@ -188,10 +193,42 @@ namespace flex
 			VariantWrapper val2;
 		};
 
-		struct IntermediateFuncAddress
+		// Linked form of an Instruction which the interpreter runs: operands are resolved to pointers (registers,
+		// terminal outputs & constants), jump & call targets to instruction indices
+		struct ExecInstruction
 		{
-			i32 uid;
-			i32 ip;
+			u8 op = 0; // ExecOp (see VirtualMachine.cpp)
+			u16 count = 0; // SAVE/RESTORE: register count, external CALL: argument count
+			i32 target = -1; // Jumps & local calls: instruction index (-1: read it from a), SAVE/RESTORE: list offset
+			Variant* dst = nullptr; // Written operand
+			const Variant* a = nullptr;
+			union
+			{
+				const Variant* b;
+				IFunction* func; // External CALL
+			};
+		};
+
+		// The VM's value stack: keeps its capacity between runs so steady state execution never allocates
+		class ValueStack
+		{
+		public:
+			ValueStack() = default;
+
+			bool empty() const { return m_Data.empty(); }
+			u32 size() const { return (u32)m_Data.size(); }
+			const Variant& top() const { return m_Data.back(); }
+			Variant& top() { return m_Data.back(); }
+			void push(const Variant& value) { m_Data.push_back(value); }
+			void pop() { m_Data.pop_back(); }
+			void clear() { m_Data.clear(); }
+			void reserve(u32 capacity) { m_Data.reserve(capacity); }
+			// Index 0 is the bottom of the stack
+			const Variant& operator[](u32 index) const { return m_Data[index]; }
+
+		private:
+			friend class VirtualMachine;
+			std::vector<Variant> m_Data;
 		};
 
 		struct State;
@@ -200,10 +237,9 @@ namespace flex
 		{
 			void PushBack(const Instruction& inst, Span origin, State* state);
 
-			std::vector<Instruction> instructions;
-			std::vector<Span> instructionOrigins;
-
+			// The block's instructions are state->instructions[startOffset, startOffset + count)
 			i32 startOffset = -1;
+			u32 count = 0;
 		};
 
 		struct State
@@ -218,11 +254,12 @@ namespace flex
 			// Sets label to the next instruction in the current instruction block
 			void PlaceLabel(i32 label);
 
-			std::map<std::string, IR::Assignment> varUsages;
-			std::map<std::string, i32> funcNameToBlockIndexTable;
-			std::map<std::string, i32> varRegisterMap;
-			std::map<std::string, IR::Value::Type> tmpVarTypes;
+			StringMap<i32> funcNameToBlockIndexTable;
+			StringMap<i32> varRegisterMap;
 			std::vector<InstructionBlock> instructionBlocks;
+			// Every block's instructions before jumps & calls are patched (contiguous, in block order)
+			std::vector<Instruction> instructions;
+			std::vector<Span> instructionOrigins;
 			std::vector<i32> labelOffsets; // Instruction index of each label
 
 			DiagnosticContainer* diagnosticContainer = nullptr;
@@ -257,6 +294,9 @@ namespace flex
 
 			void Execute(bool bSingleStep = false);
 
+			// Number of instructions run by the last call to Execute
+			u64 LastExecutedInstructionCount() const;
+
 			DiagnosticContainer* GetDiagnosticContainer();
 
 			bool IsExecuting() const;
@@ -273,7 +313,9 @@ namespace flex
 			// Never holds a variable: return addresses & return values pass through it
 			static const i32 SCRATCH_REGISTER = REGISTER_COUNT - 1;
 			static const i32 MAX_STACK_HEIGHT = 16384;
-			static const u32 MEMORY_POOL_SIZE = 32768;
+			// (Execution stops after this many instructions in one call to Execute)
+			static const u32 MAX_INSTRUCTIONS_PER_EXECUTE = 10'000'000;
+			static const i32 MAX_EXTERNAL_ARG_COUNT = 16;
 
 			static VariantWrapper g_ZeroIntVariantWrapper;
 			static VariantWrapper g_ZeroFloatVariantWrapper;
@@ -301,17 +343,16 @@ namespace flex
 
 			std::array<Variant, REGISTER_COUNT> registers;
 			std::array<Variant, Terminal::MAX_OUTPUT_COUNT> terminalOutputs;
-			std::stack<Variant> stack;
-
-			u32* memory = nullptr;
+			ValueStack stack;
 
 			State* state = nullptr;
 			DiagnosticContainer* diagnosticContainer = nullptr;
 
-			std::string astStr;
-			std::string irStr;
-			std::string unpatchedInstructionStr;
-			std::string instructionStr;
+			// Listings of the last compile's AST, IR & instructions (before & after patching), built on first use
+			const std::string& GetASTString();
+			const std::string& GetIRString();
+			const std::string& GetUnpatchedInstructionString();
+			const std::string& GetInstructionString();
 
 			static bool IsTerminalOutputVar(const std::string& varName);
 			// Returns -1, or terminal output var index if valid name
@@ -322,28 +363,47 @@ namespace flex
 		private:
 			IR::Value::Type FindIRType(IR::State* irState, IR::Value* irValue);
 
-			void AllocateMemory();
+			// Resolves instructions into m_Code, returns false on errors (reported to state's diagnostics). savedRegisters
+			// optionally holds the registers each SAVE/RESTORE instruction saves (by default all below its count).
+			bool Link(const std::vector<std::vector<u8>>* savedRegisters);
+			// For each SAVE/RESTORE: the registers the callee (& everything it calls) writes, below the call's count
+			void ComputeSavedRegisters(IR::IntermediateRepresentation* ir, std::vector<std::vector<u8>>& outSavedRegisters);
+			bool ResolveOperand(VariantWrapper& wrapper, bool bWritten, i32 instructionIndex, Variant*& outPtr);
 			void ZeroOutRegisters();
 			void ZeroOutTerminalOutputs();
 			void ClearStack();
-			void HandleComparison(VariantWrapper& regVal, IR::IntermediateRepresentation* ir, IR::BinaryValue* binaryValue);
-			void HandleComparison(IR::IntermediateRepresentation* ir, IR::Value* condition, i32 ifTrueBlockIndex, i32 ifFalseBlockIndex, bool bInvCondition);
+			// Emits a compare & jumps to the true/false blocks (leaving out a jump to nextBlockIndex, which follows)
+			void HandleComparison(IR::IntermediateRepresentation* ir, IR::Value* condition, i32 ifTrueBlockIndex, i32 ifFalseBlockIndex, i32 nextBlockIndex);
 
 			bool IsExternal(FuncAddress funcAddress);
 			FuncAddress GetExternalFuncAddress(const std::string& functionName);
 			i32 TranslateLocalFuncAddress(FuncAddress localFuncAddress);
-			bool DispatchExternalCall(FuncAddress funcAddress);
 
 			VariantWrapper GetValueWrapperFromIRValue(IR::State* irState, IR::Value* value);
 			i32 CombineInstructionIndex(i32 instructionBlockIndex, i32 instructionIndex);
 			void SplitInstructionIndex(i32 combined, i32& outInstructionBlockIndex, i32& outInstructionIndex);
 			i32 GenerateCallInstruction(IR::State* irState, IR::FunctionCallValue* funcCallValue);
 
+			Arena m_ASTArena;
 			AST::AST* m_AST = nullptr;
 			IR::IntermediateRepresentation* m_IR = nullptr;
 			FunctionBindings* m_FunctionBindings = nullptr;
 
 			bool m_bCompiled = false;
+
+			void BuildDebugStrings();
+
+			bool m_bDebugStringsBuilt = false;
+			bool m_bASTValid = false;
+			bool m_bIRValid = false;
+			std::string m_ASTStr;
+			std::string m_IRStr;
+			std::string m_UnpatchedInstructionStr;
+			std::string m_InstructionStr;
+
+			std::vector<ExecInstruction> m_Code;
+			std::vector<u8> m_SavedRegisterLists; // Register indices referenced by SAVE/RESTORE (offset, count)
+			u64 m_LastExecutedInstructionCount = 0;
 
 		};
 	}// namespace VM

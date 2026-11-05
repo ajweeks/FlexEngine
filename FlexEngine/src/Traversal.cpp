@@ -14,6 +14,7 @@ IGNORE_WARNINGS_POP
 #include "Cameras/BaseCamera.hpp"
 #include "Cameras/CameraManager.hpp"
 #include "FlexEngine.hpp"
+#include "Game.hpp"
 #include "GameSounds.hpp"
 #include "Graphics/BitmapFont.hpp"
 #include "Graphics/Renderer.hpp"
@@ -1308,18 +1309,19 @@ namespace flex
 				// Landed
 				SetMode(Mode::NONE);
 			}
-			if (m_Mode != Mode::CLIMBING)
-			{
-				m_Stamina = glm::min(m_Stamina + m_Settings.staminaRegen * dt, 1.0f);
-				if (m_Stamina >= 1.0f)
-				{
-					m_bStaminaExhausted = false;
-				}
-			}
 		}
 		else
 		{
 			m_TimeSinceGrounded += dt;
+		}
+		// Rests on the ground & while hanging from the grappling hook's rope
+		if ((m_bGrounded || m_Hook.state == HookState::ATTACHED) && m_Mode != Mode::CLIMBING)
+		{
+			m_Stamina = glm::min(m_Stamina + m_Settings.staminaRegen * dt, 1.0f);
+			if (m_Stamina >= 1.0f)
+			{
+				m_bStaminaExhausted = false;
+			}
 		}
 
 		m_TimeSinceJump += dt;
@@ -2834,6 +2836,8 @@ namespace flex
 		}
 
 		std::vector<std::string> lines;
+		// The instructions are hidden under menus (the pause menu's map draws its own text where they'd be)
+		const bool bMenuOpen = g_Game != nullptr && g_Game->IsMenuOpen();
 		const glm::vec3 velocity = ToVec3(m_Player->GetRigidBody()->GetRigidBodyInternal()->getLinearVelocity());
 		switch (m_Mode)
 		{
@@ -2871,7 +2875,7 @@ namespace flex
 			break;
 		}
 
-		if (!lines.empty())
+		if (!lines.empty() && !bMenuOpen)
 		{
 			BitmapFont* font = g_Renderer->SetFont(SID("editor-02"));
 			const real lineHeight = 3.2f * font->GetMetric('W')->height / (real)g_Window->GetSize().y;

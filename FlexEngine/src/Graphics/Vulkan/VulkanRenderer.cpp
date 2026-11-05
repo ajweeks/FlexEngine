@@ -5682,7 +5682,7 @@ namespace flex
 				else
 				{
 					const PointLightData& light = m_PointLightData[i];
-					if (light.enabled == 0 || light.colour.x == -1.0f)
+					if (light.enabled == 0 || light.colour.x == -1.0f || m_bPointLightNoShadow[i])
 					{
 						continue;
 					}
@@ -5809,7 +5809,7 @@ namespace flex
 			for (i32 i = 0; i < MAX_POINT_LIGHT_COUNT; ++i)
 			{
 				const PointLightData& light = m_PointLightData[i];
-				if (light.enabled == 0 || light.colour.x == -1.0f || light.brightness <= 0.0f)
+				if (light.enabled == 0 || light.colour.x == -1.0f || light.brightness <= 0.0f || m_bPointLightNoShadow[i])
 				{
 					continue;
 				}

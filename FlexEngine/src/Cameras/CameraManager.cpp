@@ -86,6 +86,10 @@ namespace flex
 		if (cameraIndex == -1) // Only add camera if it hasn't been added before
 		{
 			m_Cameras.push_back(camera);
+			if (m_GameplayFOV > 0.0f && camera->bIsGameplayCam)
+			{
+				camera->FOV = m_GameplayFOV;
+			}
 
 			if (bSwitchTo)
 			{
@@ -388,6 +392,23 @@ namespace flex
 		CHECK_LT(index, (u32)m_Cameras.size());
 
 		return m_Cameras[index];
+	}
+
+	void CameraManager::SetGameplayFOV(real FOV)
+	{
+		m_GameplayFOV = FOV;
+		for (BaseCamera* camera : m_Cameras)
+		{
+			if (camera->bIsGameplayCam)
+			{
+				camera->FOV = FOV;
+			}
+		}
+		// Cameras don't update while the simulation is paused, so the current one is refreshed now (as the slider is dragged)
+		if (!m_CameraStack.empty())
+		{
+			CurrentCamera()->RecalculateViewProjection();
+		}
 	}
 
 	void CameraManager::AlignCameras(BaseCamera* from, BaseCamera* to)

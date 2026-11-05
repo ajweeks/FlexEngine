@@ -320,35 +320,32 @@ namespace flex
 
 	Token Lexer::NextNumericLiteral()
 	{
-		StringBuilder stringBuilder;
+		// (Every character is part of the literal, so it's a slice of the source)
+		const u32 start = sourceIter.index;
+		auto Slice = [this, start]() { return sourceIter.source.substr(start, sourceIter.index - start); };
 
 		if (sourceIter.Current() == '-')
 		{
-			stringBuilder.Append('-');
 			Advance();
 		}
 
 		while (IsDigit(sourceIter.Current()))
 		{
-			stringBuilder.Append(sourceIter.Current());
 			if (!Advance())
 			{
-				return Token(GetSpan(), TokenKind::INT_LITERAL, stringBuilder.ToString());
+				return Token(GetSpan(), TokenKind::INT_LITERAL, Slice());
 			}
 		}
 
 		if (sourceIter.Current() == '.')
 		{
-			stringBuilder.Append('.');
-
 			if (!Advance())
 			{
-				return Token(GetSpan(), TokenKind::FLOAT_LITERAL, stringBuilder.ToString());
+				return Token(GetSpan(), TokenKind::FLOAT_LITERAL, Slice());
 			}
 
 			while (IsDigit(sourceIter.Current()))
 			{
-				stringBuilder.Append(sourceIter.Current());
 				if (!Advance())
 				{
 					break;
@@ -357,19 +354,20 @@ namespace flex
 
 			if (sourceIter.Current() == 'f' || sourceIter.Current() == 'F')
 			{
-				stringBuilder.Append(sourceIter.Current());
 				Advance();
 			}
 
-			return Token(GetSpan(), TokenKind::FLOAT_LITERAL, stringBuilder.ToString());
+			return Token(GetSpan(), TokenKind::FLOAT_LITERAL, Slice());
 		}
 
-		return Token(GetSpan(), TokenKind::INT_LITERAL, stringBuilder.ToString());
+		return Token(GetSpan(), TokenKind::INT_LITERAL, Slice());
 	}
 
 	Token Lexer::NextStringLiteral()
 	{
-		StringBuilder stringBuilder;
+		// (Reused, so it keeps its capacity)
+		std::string& stringBuilder = m_ScratchString;
+		stringBuilder.clear();
 
 		while (sourceIter.Current() != '"')
 		{
@@ -396,19 +394,19 @@ namespace flex
 				switch (sourceIter.Current())
 				{
 				case 'n':
-					stringBuilder.Append('\n');
+					stringBuilder.push_back('\n');
 					break;
 				case 'r':
-					stringBuilder.Append('\r');
+					stringBuilder.push_back('\r');
 					break;
 				case 't':
-					stringBuilder.Append('\t');
+					stringBuilder.push_back('\t');
 					break;
 				case '\\':
-					stringBuilder.Append('\\');
+					stringBuilder.push_back('\\');
 					break;
 				case '"':
-					stringBuilder.Append('\"');
+					stringBuilder.push_back('\"');
 					break;
 				default:
 					diagnosticContainer->AddDiagnostic(GetSpan(), "Invalid escaped character");
@@ -417,7 +415,7 @@ namespace flex
 			}
 			else
 			{
-				stringBuilder.Append(sourceIter.Current());
+				stringBuilder.push_back(sourceIter.Current());
 			}
 
 			if (!Advance())
@@ -429,25 +427,25 @@ namespace flex
 
 		Advance();
 
-		return Token(GetSpan(), TokenKind::STRING_LITERAL, stringBuilder.ToString());
+		return Token(GetSpan(), TokenKind::STRING_LITERAL, stringBuilder);
 	}
 
 	Token Lexer::NextIdentifierOrKeyword()
 	{
-		StringBuilder stringBuilder;
+		const u32 start = sourceIter.index;
 		while (
 			IsLetter(sourceIter.Current()) ||
 			IsDigit(sourceIter.Current()) ||
 			sourceIter.Current() == '_')
 		{
-			stringBuilder.Append(sourceIter.Current());
 			if (!Advance())
 			{
 				break;
 			}
 		}
 
-		std::string identifier = stringBuilder.ToString();
+		// (A slice of the source, short ones don't allocate)
+		std::string identifier = sourceIter.source.substr(start, sourceIter.index - start);
 
 		if (identifier.empty())
 		{

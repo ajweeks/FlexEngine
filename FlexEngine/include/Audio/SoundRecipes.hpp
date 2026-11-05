@@ -44,7 +44,7 @@ namespace flex
 			UI_TICK,
 			UI_CONFIRM,
 			BUILD_DENIED, // Low double thud
-			DIG_STONE, // Pickaxe clink
+			DIG_STONE, // Pickaxe on stone: thud & crunch
 			DIG_SAND, // Swoosh
 			DIG_GRAVEL, // Crunch
 			ROPE_THROW,
@@ -61,7 +61,7 @@ namespace flex
 			EGG_LAY, // A soft plop & a proud cluck
 
 			// Seamless loops
-			LOOP_ENGINE,
+			LOOP_ENGINE, // Electric motor whine
 			LOOP_SKID,
 			LOOP_WIND,
 			LOOP_AIR_RUSH,

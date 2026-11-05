@@ -416,14 +416,12 @@ namespace flex
 					ImGui::BeginChildFrame(ImGui::GetID("stack"), ImVec2(regionAvail.x / 2.0f - 2, runtimeChildWindowHeight));
 					{
 						ImGui::Text("Stack");
-						// Copy of stack that we can pop elements off of to see contents
-						std::stack<Variant> stackCopy = m_VM->stack;
-						while (!stackCopy.empty())
+						// (Top of the stack first)
+						for (i32 i = (i32)m_VM->stack.size() - 1; i >= 0; --i)
 						{
-							const Variant& value = stackCopy.top();
+							const Variant& value = m_VM->stack[(u32)i];
 							std::string valStr = value.ToString();
 							ImGui::Text("%s", valStr.c_str());
-							stackCopy.pop();
 						}
 					}
 					ImGui::EndChildFrame(); // stack
@@ -452,7 +450,7 @@ namespace flex
 				ImVec2 regionAvail = ImGui::GetContentRegionAvail();
 				if (ImGui::BeginChild("source representations", ImVec2(regionAvail.x - 2, glm::max(regionAvail.y, 50.0f)), true))
 				{
-					if (!m_VM->instructionStr.empty())
+					if (!m_VM->GetInstructionString().empty())
 					{
 						ImGui::Text("Instructions");
 
@@ -479,7 +477,7 @@ namespace flex
 						}
 
 						const ImVec2 preCursorPos = ImGui::GetCursorPos();
-						ImGui::Text("%s", m_VM->instructionStr.c_str());
+						ImGui::Text("%s", m_VM->GetInstructionString().c_str());
 						const ImVec2 postCursorPos = ImGui::GetCursorPos();
 
 						if (m_VM->IsExecuting())
@@ -496,12 +494,12 @@ namespace flex
 						}
 					}
 
-					if (!m_VM->unpatchedInstructionStr.empty())
+					if (!m_VM->GetUnpatchedInstructionString().empty())
 					{
 						ImGui::Separator();
 						ImGui::Text("Instructions (unpatched)");
 						const ImVec2 preCursorPos = ImGui::GetCursorPos();
-						ImGui::Text("%s", m_VM->unpatchedInstructionStr.c_str());
+						ImGui::Text("%s", m_VM->GetUnpatchedInstructionString().c_str());
 						const ImVec2 postCursorPos = ImGui::GetCursorPos();
 
 						if (m_VM->IsExecuting())
@@ -512,7 +510,7 @@ namespace flex
 							for (i32 i = 0; i < (i32)m_VM->state->instructionBlocks.size(); ++i)
 							{
 								i32 startOffset = (i32)m_VM->state->instructionBlocks[i].startOffset;
-								i32 lineCountInBlock = (i32)m_VM->state->instructionBlocks[i].instructions.size();
+								i32 lineCountInBlock = (i32)m_VM->state->instructionBlocks[i].count;
 								if (instIdx >= startOffset &&
 									instIdx < (startOffset + lineCountInBlock))
 								{
@@ -538,18 +536,18 @@ namespace flex
 						}
 					}
 
-					if (!m_VM->irStr.empty())
+					if (!m_VM->GetIRString().empty())
 					{
 						ImGui::Separator();
 						ImGui::Text("IR");
-						ImGui::Text("%s", m_VM->irStr.c_str());
+						ImGui::Text("%s", m_VM->GetIRString().c_str());
 					}
 
-					if (!m_VM->astStr.empty())
+					if (!m_VM->GetASTString().empty())
 					{
 						ImGui::Separator();
 						ImGui::Text("AST");
-						ImGui::Text("%s", m_VM->astStr.c_str());
+						ImGui::Text("%s", m_VM->GetASTString().c_str());
 					}
 				}
 				ImGui::EndChild();

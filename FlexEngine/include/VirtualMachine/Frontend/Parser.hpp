@@ -2,6 +2,7 @@
 
 #include "Helpers.hpp"
 #include "Variant.hpp"
+#include "VirtualMachine/Arena.hpp"
 #include "VirtualMachine/Diagnostics.hpp"
 #include "VirtualMachine/Frontend/Token.hpp"
 
@@ -224,8 +225,6 @@ namespace flex
 
 			virtual std::string ToString() const = 0;
 
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements);
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer);
 
 			Span span;
 			StatementType statementType = StatementType::_NONE;
@@ -271,14 +270,12 @@ namespace flex
 
 		struct StatementBlock final : public Statement
 		{
-			StatementBlock(const Span& span, const std::vector<Statement*>& statements);
+			StatementBlock(const Span& span, const ArenaVector<Statement*>& statements);
 			virtual ~StatementBlock();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
-			std::vector<Statement*> statements;
+			ArenaVector<Statement*> statements;
 		};
 
 		struct IfStatement final : public Statement
@@ -294,8 +291,6 @@ namespace flex
 			virtual ~IfStatement();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			Expression* condition = nullptr;
 			Statement* then = nullptr;
@@ -316,8 +311,6 @@ namespace flex
 			virtual ~ForStatement();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			Statement* setup = nullptr;
 			Statement* condition = nullptr;
@@ -337,8 +330,6 @@ namespace flex
 			virtual ~WhileStatement();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			Expression* condition = nullptr;
 			Statement* body = nullptr;
@@ -356,8 +347,6 @@ namespace flex
 			virtual ~DoWhileStatement();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			Expression* condition = nullptr;
 			Statement* body = nullptr;
@@ -365,7 +354,7 @@ namespace flex
 
 		struct FunctionDeclaration final : public Statement
 		{
-			FunctionDeclaration(Span span, const std::string& name, const std::vector<Declaration*>& arguments, TypeName returnType, StatementBlock* body) :
+			FunctionDeclaration(Span span, const std::string& name, const ArenaVector<Declaration*>& arguments, TypeName returnType, StatementBlock* body) :
 				Statement(span, StatementType::FUNC_DECL),
 				name(name),
 				returnType(returnType),
@@ -377,12 +366,10 @@ namespace flex
 			virtual ~FunctionDeclaration();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			std::string name;
 			TypeName returnType;
-			std::vector<Declaration*> arguments;
+			ArenaVector<Declaration*> arguments;
 			StatementBlock* body;
 		};
 
@@ -410,8 +397,6 @@ namespace flex
 			virtual ~YieldStatement();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			Expression* yieldValue = nullptr;
 		};
@@ -427,8 +412,6 @@ namespace flex
 			virtual ~ReturnStatement();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			Expression* returnValue = nullptr;
 		};
@@ -447,8 +430,6 @@ namespace flex
 			virtual ~Declaration();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			std::string identifierStr;
 			// TODO: Store Assignment?
@@ -475,7 +456,6 @@ namespace flex
 				return identifierStr;
 			}
 
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			std::string identifierStr;
 		};
@@ -493,8 +473,6 @@ namespace flex
 			virtual ~Assignment();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			std::string lhs;
 			Expression* rhs;
@@ -514,8 +492,6 @@ namespace flex
 			virtual ~CompoundAssignment();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			std::string lhs;
 			Expression* rhs;
@@ -629,7 +605,7 @@ namespace flex
 
 		struct ListInitializer final : public Expression
 		{
-			ListInitializer(const Span& span, const std::vector<Expression*>& listValues) :
+			ListInitializer(const Span& span, const ArenaVector<Expression*>& listValues) :
 				Expression(span, StatementType::LIST_INITIALIZER),
 				listValues(listValues)
 			{
@@ -638,10 +614,8 @@ namespace flex
 			virtual ~ListInitializer();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
-			std::vector<Expression*> listValues;
+			ArenaVector<Expression*> listValues;
 		};
 
 		struct IndexOperation final : public Expression
@@ -656,8 +630,6 @@ namespace flex
 			virtual ~IndexOperation();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			std::string container;
 			Expression* indexExpression = nullptr;
@@ -675,8 +647,6 @@ namespace flex
 			virtual ~UnaryOperation();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			Expression* expression = nullptr;
 			UnaryOperatorType operatorType;
@@ -695,8 +665,6 @@ namespace flex
 			virtual ~BinaryOperation();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			BinaryOperatorType operatorType;
 			Expression* lhs = nullptr;
@@ -716,8 +684,6 @@ namespace flex
 			virtual ~TernaryOperation();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			Expression* condition;
 			Expression* ifTrue;
@@ -726,7 +692,7 @@ namespace flex
 
 		struct FunctionCall final : public Expression
 		{
-			FunctionCall(Span span, const std::string& target, const std::vector<Expression*>& arguments) :
+			FunctionCall(Span span, const std::string& target, const ArenaVector<Expression*>& arguments) :
 				Expression(span, StatementType::CALL),
 				target(target),
 				arguments(arguments)
@@ -736,16 +702,14 @@ namespace flex
 			virtual ~FunctionCall();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			std::string target;
-			std::vector<Expression*> arguments;
+			ArenaVector<Expression*> arguments;
 		};
 
 		struct FunctionArgument final : public Expression
 		{
-			FunctionArgument(Span span, const std::string& target, const std::vector<Expression*>& arguments) :
+			FunctionArgument(Span span, const std::string& target, const ArenaVector<Expression*>& arguments) :
 				Expression(span, StatementType::CALL),
 				target(target),
 				arguments(arguments)
@@ -755,11 +719,9 @@ namespace flex
 			virtual ~FunctionArgument();
 
 			virtual std::string ToString() const override;
-			virtual Identifier* RewriteCompoundStatements(Parser* parser, std::vector<Statement*>& tmpStatements) override;
-			virtual void ResolveTypesAndLifetimes(VariableContainer* varContainer, DiagnosticContainer* diagnosticContainer) override;
 
 			std::string target;
-			std::vector<Expression*> arguments;
+			ArenaVector<Expression*> arguments;
 		};
 
 		struct Cast final : public Expression
@@ -780,7 +742,8 @@ namespace flex
 		class Parser
 		{
 		public:
-			Parser(Lexer* lexer, DiagnosticContainer* diagnosticContainer);
+			// Nodes are allocated from arena (& live until it's reset)
+			Parser(Lexer* lexer, DiagnosticContainer* diagnosticContainer, Arena* arena);
 
 			Parser(Parser&) = delete;
 			Parser(Parser&&) = delete;
@@ -810,8 +773,10 @@ namespace flex
 			DoWhileStatement* NextDoWhileStatement();
 			FunctionDeclaration* NextFunctionDeclaration();
 			StatementBlock* NextStatementBlock();
-			std::vector<Declaration*> NextArgumentDefinitionList();
-			std::vector<Expression*> NextArgumentList();
+			ArenaVector<Declaration*> NextArgumentDefinitionList();
+			ArenaVector<Expression*> NextArgumentList();
+
+			Arena* GetArena() { return m_Arena; }
 
 		private:
 			Token m_Current;
@@ -821,11 +786,13 @@ namespace flex
 
 			u32 m_TempIdentIdx = 0;
 			u32 m_Depth = 0; // Current recursion depth of NextStatement/NextPrimary
+			Arena* m_Arena = nullptr;
 		};
 
 		struct AST
 		{
-			explicit AST();
+			// Nodes are allocated from arena (reset by Destroy), or from an arena of its own when it's null
+			explicit AST(Arena* arena = nullptr);
 			~AST();
 
 			AST(AST&) = delete;
@@ -842,6 +809,10 @@ namespace flex
 			Parser* parser = nullptr;
 			Lexer* lexer = nullptr;
 			bool bValid = false;
+
+		private:
+			Arena* m_Arena = nullptr;
+			Arena* m_OwnedArena = nullptr;
 		};
 	} // namespace AST
 } // namespace flex

@@ -18,10 +18,11 @@ namespace flex
 
     void DiagnosticContainer::ComputeLineColumnIndicesFromSource(const std::string& source)
     {
-        std::vector<std::string> sourceLines = SplitNoStrip(source, '\n');
+        LineTable lineTable;
+        lineTable.Build(source);
         for (u32 i = 0; i < (u32)diagnostics.size(); ++i)
         {
-            diagnostics[i].span.ComputeLineColumnIndicesFromSource(sourceLines);
+            lineTable.Apply(diagnostics[i].span);
         }
     }
 } // namespace flex

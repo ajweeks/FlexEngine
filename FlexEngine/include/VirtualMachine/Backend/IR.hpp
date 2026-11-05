@@ -1,9 +1,9 @@
 #pragma once
 
+#include "VirtualMachine/Arena.hpp"
+#include "VirtualMachine/StringMap.hpp"
 #include "VirtualMachine/Backend/IRValue.hpp"
 #include "VirtualMachine/Frontend/Span.hpp"
-
-#include <list>
 
 namespace flex
 {
@@ -90,11 +90,15 @@ namespace flex
 			std::string ToString() const;
 
 			u32 index = 0;
-			std::list<Block*> predecessors;
-			std::list<Assignment*> assignments;
+			ArenaVector<Block*> predecessors;
+			ArenaVector<Assignment*> assignments;
 			Terminator* terminator = nullptr;
 			std::string funcName; // If this block corresponds to a function, this is its name
 			Span origin;
+			u32 visitMark = 0; // (Used by searches)
+
+		private:
+			Arena* m_Arena = nullptr; // (The IR state's, which owns every node)
 		};
 
 		struct Assignment : IR::Value
@@ -392,7 +396,7 @@ namespace flex
 
 		struct FunctionCallValue : IR::Value
 		{
-			FunctionCallValue(State* state, Span origin, const std::string& target, const std::vector<IR::Value*>& arguments) :
+			FunctionCallValue(State* state, Span origin, const std::string& target, const ArenaVector<IR::Value*>& arguments) :
 				Value(origin, state, Value::Type::CALL),
 				target(target),
 				arguments(arguments)
@@ -402,7 +406,7 @@ namespace flex
 			virtual std::string ToString() const override;
 
 			std::string target;
-			std::vector<IR::Value*> arguments;
+			ArenaVector<IR::Value*> arguments;
 		};
 
 		struct CastValue : IR::Value
@@ -440,10 +444,13 @@ namespace flex
 			};
 
 			u32 tempCount = 0;
-			std::map<std::string, Value::Type> variableTypes;
-			std::map<std::string, FuncSig> functionTypes;
+			StringMap<Value::Type> variableTypes;
+			StringMap<FuncSig> functionTypes;
 
 			DiagnosticContainer* diagnosticContainer = nullptr;
+
+			// Owns every block, value & terminator (freed by Clear)
+			Arena arena;
 		};
 
 		struct IntermediateRepresentation
@@ -475,11 +482,16 @@ namespace flex
 			IR::Value* SplitIntoTemporary(IR::Value* value);
 			// Returns a bool typed version of value (for && & ||)
 			IR::Value* ToBoolOperand(IR::Value* value);
-			// Terminates the insertion block with a branch to then or otherwise depending on condition. Returns false on error.
+			// Terminates the insertion block with a branch to then or otherwise depending on condition (&& & || short
+			// circuit through blocks of their own). Returns false on error, in which case nothing branches to them.
 			bool LowerConditionalBranch(AST::Expression* condition, Span origin, Block* then, Block* otherwise);
+			// Whether expression only combines literals (so it folds to a constant, with nothing to short circuit)
+			static bool IsConstantExpression(AST::Expression* expression);
 
 			// Exit blocks of the loops being lowered (targets of break statements)
 			std::vector<Block*> m_BreakTargets;
+			std::vector<Block*> m_VisitStack;
+			u32 m_VisitMark = 0;
 
 			void SetBlockIndices();
 		};

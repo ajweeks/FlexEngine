@@ -1769,6 +1769,235 @@ namespace flex
 		}
 		UNIT_TEST_END;
 
+		UNIT_TEST(VMTestsShortCircuit)
+		{
+			// The right side of && & || only runs when the left side doesn't decide the result (hit counts its calls in out_0)
+			VM::VirtualMachine* vm = CompileAndRunScript(
+				"out_0 = 0; out_1 = 0;\n"
+				"func hit(int v) -> bool { out_0 += 1; return v > 0; }\n"
+				"int zero = 0;\n"
+				"bool a = zero > 0 && hit(1);\n"
+				"bool b = zero == 0 || hit(1);\n"
+				"if (zero > 0 && hit(1)) { out_1 = 100; }\n"
+				"if (zero == 0 || hit(1)) { out_1 += 1; }\n"
+				"if (!(zero == 0) && hit(1)) { out_1 = 200; }\n"
+				"bool c = zero == 0 && hit(1);\n" // (1 call)
+				"bool d = zero > 0 || hit(0);\n" // (1 call)
+				"if (zero != 0 && 10 / zero > 1) { out_1 = 50; }\n"
+				"int q = 0;\n"
+				"while (q < 3 && hit(1)) { q += 1; }\n" // (3 calls)
+				"bool e = (zero > 0 && hit(1)) || (zero == 0 && (hit(1) || hit(1)));\n" // (1 call)
+				"out_2 = (a ? 1 : 0) + (b ? 2 : 0) + (c ? 4 : 0) + (d ? 8 : 0) + (e ? 16 : 0);\n"
+				"out_3 = (true && false) || (false || true) ? 1 : 0;\n");
+
+			EXPECT(vm->IsCompiled(), true);
+			EXPECT(vm->diagnosticContainer->diagnostics.empty(), true);
+			EXPECT(vm->terminalOutputs[0].valInt, 6);
+			EXPECT(vm->terminalOutputs[1].valInt, 1);
+			EXPECT(vm->terminalOutputs[2].valInt, 2 + 4 + 16);
+			EXPECT(vm->terminalOutputs[3].valInt, 1);
+			EXPECT(vm->stack.empty(), true);
+
+			delete vm;
+		}
+		UNIT_TEST_END;
+
+		// Benchmark scripts (loops, arithmetic, calls, logic & strings), checked against values computed here
+		struct VMBenchmarkScript
+		{
+			const char* name;
+			const char* source;
+			i32 expected[4];
+		};
+
+		static std::vector<VMBenchmarkScript> GetVMBenchmarkScripts()
+		{
+			i32 arithSum = 0;
+			real arithFloat = 0.0f;
+			for (i32 i = 0; i < 20000; ++i)
+			{
+				arithSum += (i * 7 + 3) % 11 - i / 5;
+				arithFloat += 0.5f;
+			}
+
+			i32 acc = 0;
+			for (i32 j = 0; j < 2000; ++j)
+			{
+				acc = (acc + j + 1) % 100000;
+			}
+
+			i32 logic = 0;
+			for (i32 k = 0; k < 10000; ++k)
+			{
+				if (k % 3 == 0 && k % 5 == 0) logic += 1;
+				if (k % 7 == 0 || k % 11 == 0) logic += 2;
+				bool b = k > 5000 && k < 7000;
+				if (!b) logic += 0; else logic += 3;
+			}
+
+			return {
+				{ "arith",
+					"int sum = 0;\n"
+					"int i = 0;\n"
+					"float f = 0.0;\n"
+					"while (i < 20000) {\n"
+					"  sum += (i * 7 + 3) % 11 - i / 5;\n"
+					"  f += 0.5;\n"
+					"  i += 1;\n"
+					"}\n"
+					"out_0 = sum;\n"
+					"out_1 = (int)f;\n",
+					{ arithSum, (i32)arithFloat, -1, -1 } },
+				{ "calls",
+					"func fib(int n) -> int { if (n < 2) { return n; } return fib(n - 1) + fib(n - 2); }\n"
+					"func add3(int a, int b, int c) -> int { return a + b + c; }\n"
+					"int acc = 0;\n"
+					"int j = 0;\n"
+					"while (j < 2000) { acc = add3(acc, j, 1) % 100000; j += 1; }\n"
+					"out_0 = fib(16);\n"
+					"out_1 = acc;\n"
+					"out_2 = Quintuple(7);\n",
+					{ 987, acc, 28, -1 } },
+				{ "logic",
+					"int c = 0;\n"
+					"int k = 0;\n"
+					"while (k < 10000) {\n"
+					"  if (k % 3 == 0 && k % 5 == 0) { c += 1; }\n"
+					"  if (k % 7 == 0 || k % 11 == 0) { c += 2; }\n"
+					"  bool b = k > 5000 && k < 7000;\n"
+					"  if (!b) { c += 0; } else { c += 3; }\n"
+					"  k += 1;\n"
+					"}\n"
+					"out_0 = c;\n",
+					{ logic, -1, -1, -1 } },
+				{ "strings",
+					"string s = \"hello\";\n"
+					"string t = \"world\";\n"
+					"char ch = 'a';\n"
+					"int n = 0;\n"
+					"while (n < 10000) { string u = s; s = t; t = u; ch = 'b'; n += 1; }\n"
+					"out_0 = n;\n",
+					{ 10000, -1, -1, -1 } },
+			};
+		}
+
+		// A larger script for timing the compiler (functions, branches, loops, calls & expressions)
+		static std::string GetVMBenchmarkCompileSource()
+		{
+			std::string source;
+			for (i32 f = 0; f < 6; ++f)
+			{
+				std::string fs = IntToString(f);
+				source += "func f" + fs + "(int a, int b) -> int {\n"
+					"  int r" + fs + " = a * " + fs + " + b - (a + 3) * (b - 1) / 7;\n"
+					"  if (r" + fs + " > 100 && a < 50) { r" + fs + " = r" + fs + " - 100; }\n"
+					"  elif (r" + fs + " < 0 || b == 3) { r" + fs + " = 0 - r" + fs + "; }\n"
+					"  else { r" + fs + " += 1; }\n"
+					"  int q" + fs + " = 0;\n"
+					"  while (q" + fs + " < 3) { r" + fs + " += q" + fs + " * 2; q" + fs + " += 1; }\n"
+					"  return r" + fs + ";\n"
+					"}\n"
+					"// Comment line " + fs + "\n"
+					"out_" + IntToString(f % 4) + " = f" + fs + "(" + fs + ", 7);\n";
+			}
+			return source;
+		}
+
+		UNIT_TEST(VMBenchmark)
+		{
+			// FLEX_VM_BENCHMARK=<any value>: in --test, also times the VM's compiler & interpreter on the benchmark scripts & prints them
+			const bool bPrintTimings = getenv("FLEX_VM_BENCHMARK") != nullptr;
+			const i32 compileRuns = bPrintTimings ? 200 : 2;
+			const i32 executeRuns = bPrintTimings ? 20 : 1;
+
+			using Clock = std::chrono::steady_clock;
+			auto MsSince = [](Clock::time_point start)
+			{
+				return std::chrono::duration<double, std::milli>(Clock::now() - start).count();
+			};
+
+			std::vector<VMBenchmarkScript> scripts = GetVMBenchmarkScripts();
+			for (const VMBenchmarkScript& script : scripts)
+			{
+				double bestCompileMs = 1e30;
+				double bestExecuteMs = 1e30;
+				VM::VirtualMachine* vm = new VM::VirtualMachine();
+				for (i32 run = 0; run < compileRuns; ++run)
+				{
+					Clock::time_point start = Clock::now();
+					vm->GenerateFromSource(script.source);
+					bestCompileMs = std::min(bestCompileMs, MsSince(start));
+				}
+				for (const Diagnostic& diagnostic : vm->GetDiagnosticContainer()->diagnostics)
+				{
+					PrintError("%s L%u: %s\n", script.name, diagnostic.span.lineNumber, diagnostic.message.c_str());
+				}
+				EXPECT(vm->IsCompiled(), true);
+
+				for (i32 run = 0; run < executeRuns; ++run)
+				{
+					vm->ClearRuntimeState();
+					Clock::time_point start = Clock::now();
+					vm->Execute();
+					bestExecuteMs = std::min(bestExecuteMs, MsSince(start));
+				}
+
+				EXPECT(vm->GetDiagnosticContainer()->diagnostics.empty(), true);
+				EXPECT(vm->IsExecuting(), false);
+				for (i32 i = 0; i < 4; ++i)
+				{
+					if (script.expected[i] != -1)
+					{
+						EXPECT(vm->terminalOutputs[i].valInt, script.expected[i]);
+					}
+				}
+
+				if (bPrintTimings)
+				{
+					Print("VM benchmark %-8s compile %8.3f ms  execute %8.3f ms  (%u instructions, %u run)\n", script.name, bestCompileMs, bestExecuteMs, (u32)vm->instructions.size(), (u32)vm->LastExecutedInstructionCount());
+				}
+				delete vm;
+			}
+
+			{
+				std::string source = GetVMBenchmarkCompileSource();
+				double bestParseMs = 1e30;
+				double bestCompileMs = 1e30;
+				for (i32 run = 0; run < compileRuns; ++run)
+				{
+					Clock::time_point start = Clock::now();
+					AST::AST* ast = new AST::AST();
+					ast->Generate(source.c_str());
+					bestParseMs = std::min(bestParseMs, MsSince(start));
+					EXPECT(ast->diagnosticContainer->diagnostics.empty(), true);
+					ast->Destroy();
+					delete ast;
+				}
+
+				VM::VirtualMachine* vm = new VM::VirtualMachine();
+				for (i32 run = 0; run < compileRuns; ++run)
+				{
+					Clock::time_point start = Clock::now();
+					vm->GenerateFromSource(source.c_str());
+					bestCompileMs = std::min(bestCompileMs, MsSince(start));
+				}
+				for (const Diagnostic& diagnostic : vm->GetDiagnosticContainer()->diagnostics)
+				{
+					PrintError("compile L%u: %s\n", diagnostic.span.lineNumber, diagnostic.message.c_str());
+				}
+				EXPECT(vm->IsCompiled(), true);
+				vm->Execute();
+				EXPECT(vm->GetDiagnosticContainer()->diagnostics.empty(), true);
+
+				if (bPrintTimings)
+				{
+					Print("VM benchmark compile: %u chars, parse %.3f ms, full compile %.3f ms (%u instructions)\n", (u32)source.size(), bestParseMs, bestCompileMs, (u32)vm->instructions.size());
+				}
+				delete vm;
+			}
+		}
+		UNIT_TEST_END;
+
 		//
 		// Helper tests
 		//
@@ -2888,7 +3117,7 @@ namespace flex
 				VMTestsUinitializedVar0, VMTestsUinitializedVar1,
 				VMTestsVoidReturn, VMTestsCallKeepsVariables, VMTestsMinusWithoutSpaces, VMTestsUnaryPrecedence, VMTestsBooleanOps,
 				VMTestsLoops, VMTestsNestedIf, VMTestsTernary, VMTestsYield, VMTestsTerminalOutputRead, VMTestsDeepNestingFailsCleanly,
-				VMTestsUnterminatedString,
+				VMTestsUnterminatedString, VMTestsShortCircuit, VMBenchmark,
 				// Misc tests
 				CountSetBitsValid, PoolTests, PairTests,
 				// Helper tests

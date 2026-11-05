@@ -23,6 +23,7 @@ IGNORE_WARNINGS_POP
 #include "Profiler.hpp"
 #include "SaveFile.hpp"
 #include "Player.hpp"
+#include "Crafting.hpp"
 #include "PlayerController.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
@@ -36,6 +37,7 @@ IGNORE_WARNINGS_POP
 #include "ResourceManager.hpp"
 #include "Scene/Objects/Props.hpp"
 #include "Traversal.hpp"
+#include "UIMesh.hpp"
 #include "Window/Window.hpp"
 
 namespace flex
@@ -258,9 +260,28 @@ namespace flex
 			static constexpr const char* WORLD_NAME = "Performance test";
 			static constexpr i32 WORLD_SEED = 20240611;
 
+			// One stop's (or all stops') frame times, in ms
+			struct ReportRow
+			{
+				std::string name;
+				ms avg = 0.0f;
+				ms p50 = 0.0f;
+				ms p99 = 0.0f;
+				ms max = 0.0f;
+				i32 hitches = 0;
+				u32 frames = 0;
+			};
+
 			bool IsActive() const { return m_bActive; }
 			bool IsFinished() const { return m_bFinished; }
+			bool WasCancelled() const { return m_bCancelled; }
+			// The whole report as text (as saved & logged)
 			const std::vector<std::string>& GetReport() const { return m_Report; }
+			// The same, for the results screen's table: one row per stop, the overall row & the lines below the table
+			const std::vector<ReportRow>& GetRows() const { return m_Rows; }
+			const ReportRow& GetOverall() const { return m_Overall; }
+			const std::string& GetInfoLine() const { return m_InfoLine; }
+			const std::vector<std::string>& GetNotes() const { return m_Notes; }
 			const std::string& GetReportPath() const { return m_ReportPath; }
 
 			void Start()
@@ -292,13 +313,45 @@ namespace flex
 					m_bTimePaused = scene->GetTimeOfDayPaused();
 					scene->SetTimeOfDayPaused(true);
 					g_InputManager->SetIgnoreWindowFocus(true);
+					// Frame times without v-sync (restored afterwards), & the player's input ignored (other than Escape,
+					// which cancels), so a bumped mouse doesn't change what's measured
+					m_bVSyncWasEnabled = g_Renderer->IsVSyncEnabled();
+					if (m_bVSyncWasEnabled)
+					{
+						g_Renderer->SetVSyncEnabled(false);
+					}
+					g_InputManager->ClearAllInputs();
+					g_InputManager->SetDeviceInputBlocked(true);
 					m_StartedAt = Time::NowTicks();
 					BeginStop(0, player, scene);
 				}
 
+				if (m_bGraphShotTaken)
+				{
+					scene->SetTimeOfDayPaused(m_bTimePaused);
+					Finish(false);
+					return;
+				}
 				const ms frameMs = (ms)(g_UnpausedDeltaTime * 1000.0f);
 				m_StopTime += g_UnpausedDeltaTime;
 				m_Stops[m_StopIndex].frames.push_back(frameMs);
+
+				// The last GRAPH_SECONDS, for the graph
+				m_Recent.push_back(frameMs);
+				m_RecentSeconds += g_UnpausedDeltaTime;
+				while (m_RecentSeconds > GRAPH_SECONDS && m_Recent.size() > 1)
+				{
+					m_RecentSeconds -= m_Recent.front() / 1000.0f;
+					m_Recent.pop_front();
+				}
+				m_HitchThresholdAge += g_UnpausedDeltaTime;
+				if (m_HitchThresholdAge > 0.5f)
+				{
+					m_HitchThresholdAge = 0.0f;
+					std::vector<ms> sorted(m_Recent.begin(), m_Recent.end());
+					std::nth_element(sorted.begin(), sorted.begin() + sorted.size() / 2, sorted.end());
+					m_HitchThreshold = glm::max(sorted[sorted.size() / 2] * 2.0f, HITCH_MIN_MS);
+				}
 
 				// Walks in a slow circle, so the camera sweeps over the terrain
 				m_Yaw += (real)g_UnpausedDeltaTime * 0.35f;
@@ -307,6 +360,17 @@ namespace flex
 				player->GetTransform()->SetWorldRotation(glm::angleAxis(yaw, VEC3_UP));
 				player->AddToPitch(-player->GetPitch() + 0.1f);
 				player->AddToPitch(-player->GetPitch() + glm::radians(-5.0f));
+
+				// FLEX_PERF_TEST=1 also screenshots the frame time graph (saved/screenshots/perf_graph.png) at the very end, &
+				// finishes on the next frame without recording it (the screenshot's cost would be a hitch)
+				if (m_StopIndex + 1 == (i32)m_Stops.size() && m_StopTime > STOP_SECONDS - 0.5f && !m_bGraphShotTaken && getenv("FLEX_PERF_TEST") != nullptr)
+				{
+					const std::string directory = RelativePathToAbsolute(SCREENSHOT_DIRECTORY);
+					Platform::CreateDirectoryRecursive(directory);
+					g_Renderer->RequestScreenshot(directory + "perf_graph.png");
+					m_bGraphShotTaken = true;
+					return;
+				}
 
 				if (m_StopTime > STOP_SECONDS)
 				{
@@ -322,8 +386,94 @@ namespace flex
 				}
 			}
 
+			// A strip along the bottom of the screen while the test runs: the last GRAPH_SECONDS of frame times, with
+			// hitches in red
+			void DrawGraph(GameUI& ui) const
+			{
+				if (!m_bActive || m_StopIndex < 0 || m_Recent.empty())
+				{
+					return;
+				}
+				const real s = ui.Scale();
+				// Centered above the quick access bar (the held tool's hints are in the bottom left)
+				const UIRect plate(ui.Width() * 0.5f - 280.0f * s, ui.Height() - 132.0f * s - 118.0f * s, 560.0f * s, 118.0f * s);
+				ui.FillRect(plate, UITheme::WithAlpha(UITheme::INK, 0.72f), UITheme::RADIUS_M * s);
+				const Stop& stop = m_Stops[m_StopIndex];
+				ui.Text(LOCF(PerfTest_GraphStop, m_StopIndex + 1, (i32)m_Stops.size(), stop.name.c_str()), plate.x + 14.0f * s, plate.y + 16.0f * s,
+					UITheme::TEXT_CAPTION * s, UITheme::TEXT_PRIMARY);
+				ui.Text(LOC(PerfTest_GraphCancel), plate.x + plate.w - 14.0f * s, plate.y + 16.0f * s, UITheme::TEXT_CAPTION * s, UITheme::TEXT_SECONDARY, TextAlign::RIGHT);
+
+				const UIRect graph(plate.x + 14.0f * s, plate.y + 32.0f * s, plate.w - 28.0f * s - 48.0f * s, plate.h - 44.0f * s);
+				const ms scaleMs = 50.0f;
+				auto Y = [&](ms value) { return graph.y + graph.h - glm::min(value / scaleMs, 1.0f) * graph.h; };
+
+				std::vector<glm::vec2> points;
+				std::vector<glm::vec4> colours;
+				std::vector<u32> indices;
+				const real width = ui.Width();
+				const real height = ui.Height();
+				auto AddRect = [&](real x0, real y0, real x1, real y1, const glm::vec4& colour)
+				{
+					const u32 first = (u32)points.size();
+					for (const glm::vec2& p : { glm::vec2(x0, y0), glm::vec2(x1, y0), glm::vec2(x1, y1), glm::vec2(x0, y1) })
+					{
+						points.emplace_back(p.x / width * 2.0f - 1.0f, 1.0f - p.y / height * 2.0f);
+						colours.push_back(colour);
+					}
+					// (Both windings, whichever way the UI mesh culls)
+					indices.insert(indices.end(), { first, first + 2, first + 1, first, first + 3, first + 2, first, first + 1, first + 2, first, first + 2, first + 3 });
+				};
+
+				// Guides at 60 & 30 FPS
+				for (ms guide : { 1000.0f / 60.0f, 1000.0f / 30.0f })
+				{
+					const real y = Y(guide);
+					AddRect(graph.x, y - 0.5f * s, graph.x + graph.w, y + 0.5f * s, UITheme::WithAlpha(UITheme::OUTLINE, 0.8f));
+					ui.Text(LOCF(PerfTest_GraphGuide, 1000.0f / guide), graph.x + graph.w + 6.0f * s, y, UITheme::TEXT_CAPTION * s * 0.85f, UITheme::TEXT_SECONDARY);
+				}
+
+				// One bar per couple of pixels (the slowest frame in it), newest on the right
+				const real columnWidth = glm::max(2.0f * s, 1.0f);
+				const i32 columnCount = glm::max((i32)(graph.w / columnWidth), 1);
+				const real secondsPerColumn = GRAPH_SECONDS / (real)columnCount;
+				real ago = 0.0f;
+				i32 column = -1;
+				ms columnMax = 0.0f;
+				auto FlushColumn = [&]()
+				{
+					if (column < 0 || columnMax <= 0.0f)
+					{
+						return;
+					}
+					const glm::vec4 colour = columnMax > m_HitchThreshold ? UITheme::CLAY : (columnMax > 1000.0f / 30.0f ? UITheme::EMBER : UITheme::MOSS);
+					const real x1 = graph.x + graph.w - (real)column * columnWidth;
+					AddRect(x1 - columnWidth * 0.75f, glm::min(Y(columnMax), graph.y + graph.h - 1.0f * s), x1, graph.y + graph.h, colour);
+				};
+				for (auto it = m_Recent.rbegin(); it != m_Recent.rend(); ++it)
+				{
+					const i32 c = (i32)(ago / secondsPerColumn);
+					if (c >= columnCount)
+					{
+						break;
+					}
+					if (c != column)
+					{
+						FlushColumn();
+						column = c;
+						columnMax = 0.0f;
+					}
+					columnMax = glm::max(columnMax, *it);
+					ago += *it / 1000.0f;
+				}
+				FlushColumn();
+				g_Renderer->GetUIMesh()->DrawPolygonColoured(points, colours, indices);
+			}
+
 		private:
 			static constexpr sec STOP_SECONDS = 12.0f;
+			static constexpr sec GRAPH_SECONDS = 20.0f;
+			// A hitch is a frame both well over the usual time (twice the median) & noticeable
+			static constexpr ms HITCH_MIN_MS = 25.0f;
 
 			struct Stop
 			{
@@ -334,8 +484,21 @@ namespace flex
 				std::vector<ms> frames;
 			};
 
-			static void Press(KeyCode key) { g_InputManager->KeyCallback(key, KeyAction::KEY_PRESS, 0); }
-			static void Release(KeyCode key) { g_InputManager->KeyCallback(key, KeyAction::KEY_RELEASE, 0); }
+			// (Injected while the player's own input is blocked)
+			static void Press(KeyCode key)
+			{
+				const bool bBlocked = g_InputManager->IsDeviceInputBlocked();
+				g_InputManager->SetDeviceInputBlocked(false);
+				g_InputManager->KeyCallback(key, KeyAction::KEY_PRESS, 0);
+				g_InputManager->SetDeviceInputBlocked(bBlocked);
+			}
+			static void Release(KeyCode key)
+			{
+				const bool bBlocked = g_InputManager->IsDeviceInputBlocked();
+				g_InputManager->SetDeviceInputBlocked(false);
+				g_InputManager->KeyCallback(key, KeyAction::KEY_RELEASE, 0);
+				g_InputManager->SetDeviceInputBlocked(bBlocked);
+			}
 
 			void FindStops(TerrainGenerator* terrain)
 			{
@@ -417,24 +580,54 @@ namespace flex
 				return sortedFrames.empty() ? 0.0f : sortedFrames[glm::min((size_t)(p * (real)sortedFrames.size()), sortedFrames.size() - 1)];
 			}
 
+			static ReportRow MakeRow(const std::string& name, const std::vector<ms>& frames, i32 hitches)
+			{
+				ReportRow row;
+				row.name = name;
+				row.hitches = hitches;
+				row.frames = (u32)frames.size();
+				if (frames.empty())
+				{
+					return row;
+				}
+				std::vector<ms> sorted = frames;
+				std::sort(sorted.begin(), sorted.end());
+				ms total = 0.0f;
+				for (ms f : sorted) total += f;
+				row.avg = total / (ms)sorted.size();
+				row.p50 = Percentile(sorted, 0.5f);
+				row.p99 = Percentile(sorted, 0.99f);
+				row.max = sorted.back();
+				return row;
+			}
+
 			void Finish(bool bAborted)
 			{
 				m_bActive = false;
 				m_bFinished = true;
+				m_bCancelled = bAborted;
 				Release(KeyCode::KEY_W);
+				g_InputManager->SetDeviceInputBlocked(false);
+				if (m_bVSyncWasEnabled)
+				{
+					g_Renderer->SetVSyncEnabled(true);
+					m_bVSyncWasEnabled = false;
+				}
 				if (m_StopIndex < 0)
 				{
 					m_Report.push_back("Performance test cancelled before it started");
+					m_Notes.push_back(m_Report.back());
 					return;
 				}
 				char line[256];
 				m_Report.push_back(bAborted ? "Performance test (cancelled early)" : "Performance test");
-				snprintf(line, sizeof(line), "World seed %d, %dx%d, %s build", WORLD_SEED, g_Window->GetFrameBufferSize().x, g_Window->GetFrameBufferSize().y,
+				snprintf(line, sizeof(line), "World seed %d, %dx%d, %s build, v-sync off", WORLD_SEED, g_Window->GetFrameBufferSize().x, g_Window->GetFrameBufferSize().y,
 #if defined(_DEBUG) || defined(DEBUG)
 					"debug");
 #else
 					"release");
 #endif
+				m_InfoLine = std::string(line) + (bAborted ? " (cancelled early)" : "");
 				m_Report.push_back(line);
 				m_Report.push_back("");
 				std::vector<ms> all;
@@ -451,17 +644,13 @@ namespace flex
 					}
 					std::vector<ms> sorted = stop.frames;
 					std::sort(sorted.begin(), sorted.end());
-					ms total = 0.0f;
-					for (ms f : sorted) total += f;
-					const ms avg = total / (ms)sorted.size();
 					const ms median = Percentile(sorted, 0.5f);
 					i32 stopHitches = 0;
 					real at = 0.0f;
 					for (ms f : stop.frames)
 					{
 						at += f / 1000.0f;
-						// A hitch is a frame both well over the usual time here & noticeable (over 25ms)
-						if (f > median * 2.0f && f > 25.0f)
+						if (f > median * 2.0f && f > HITCH_MIN_MS)
 						{
 							++stopHitches;
 							hitches.push_back({ f, i, at });
@@ -469,14 +658,15 @@ namespace flex
 					}
 					hitchCount += stopHitches;
 					all.insert(all.end(), stop.frames.begin(), stop.frames.end());
-					snprintf(line, sizeof(line), "%s | %.2f ms (%.0f FPS) | %.2f | %.2f | %.1f | %d", stop.name.c_str(), avg, 1000.0f / avg, median,
-						Percentile(sorted, 0.99f), sorted.back(), stopHitches);
+					const ReportRow row = MakeRow(stop.name, stop.frames, stopHitches);
+					m_Rows.push_back(row);
+					snprintf(line, sizeof(line), "%s | %.2f ms (%.0f FPS) | %.2f | %.2f | %.1f | %d", row.name.c_str(), row.avg, 1000.0f / row.avg, row.p50,
+						row.p99, row.max, row.hitches);
 					m_Report.push_back(line);
 				}
+				m_Overall = MakeRow("Overall", all, hitchCount);
 				std::sort(all.begin(), all.end());
-				ms total = 0.0f;
-				for (ms f : all) total += f;
-				const ms avg = all.empty() ? 0.0f : total / (ms)all.size();
+				const ms avg = m_Overall.avg;
 				m_Report.push_back("");
 				snprintf(line, sizeof(line), "Overall: %u frames, average %.2f ms (%.0f FPS), p50 %.2f, p95 %.2f, p99 %.2f, max %.1f ms",
 					(u32)all.size(), avg, avg > 0.0f ? 1000.0f / avg : 0.0f, Percentile(all, 0.5f), Percentile(all, 0.95f), Percentile(all, 0.99f), all.empty() ? 0.0f : all.back());
@@ -484,11 +674,16 @@ namespace flex
 				snprintf(line, sizeof(line), "1%% low: %.0f FPS, %d hitch(es), %u frame(s) over 33 ms", Percentile(all, 0.99f) > 0.0f ? 1000.0f / Percentile(all, 0.99f) : 0.0f,
 					hitchCount, (u32)std::count_if(all.begin(), all.end(), [](ms f) { return f > 33.3f; }));
 				m_Report.push_back(line);
+				m_Notes.push_back(line);
 				std::sort(hitches.begin(), hitches.end(), [](const Hitch& a, const Hitch& b) { return a.time > b.time; });
 				for (u32 i = 0; i < hitches.size() && i < 8; ++i)
 				{
 					snprintf(line, sizeof(line), "  hitch %.1f ms at %.1fs into %s", hitches[i].time, hitches[i].at, m_Stops[hitches[i].stop].name.c_str());
 					m_Report.push_back(line);
+					if (i < 5)
+					{
+						m_Notes.push_back(line + 2);
+					}
 				}
 
 				for (const std::string& l : m_Report)
@@ -514,13 +709,24 @@ namespace flex
 
 			bool m_bActive = false;
 			bool m_bFinished = false;
+			bool m_bCancelled = false;
 			bool m_bTimePaused = false;
+			bool m_bVSyncWasEnabled = false;
+			bool m_bGraphShotTaken = false;
 			i32 m_StopIndex = -1;
 			sec m_StopTime = 0.0f;
 			real m_Yaw = 0.0f;
 			u64 m_StartedAt = 0;
 			std::vector<Stop> m_Stops;
+			std::deque<ms> m_Recent;
+			sec m_RecentSeconds = 0.0f;
+			sec m_HitchThresholdAge = 0.0f;
+			ms m_HitchThreshold = HITCH_MIN_MS;
 			std::vector<std::string> m_Report;
+			std::vector<ReportRow> m_Rows;
+			ReportRow m_Overall;
+			std::string m_InfoLine;
+			std::vector<std::string> m_Notes;
 			std::string m_ReportPath;
 		};
 		PerfTest s_PerfTest;
@@ -1260,6 +1466,15 @@ namespace flex
 		switch (m_Screen)
 		{
 		case Screen::PLAYING:
+			{
+				// Escape closes an open crafting, chest or furnace screen instead of pausing
+				Player* player = g_SceneManager->HasSceneLoaded() ? g_SceneManager->CurrentScene()->GetPlayer(0) : nullptr;
+				if (player != nullptr && player->GetCrafting() != nullptr && player->GetCrafting()->IsPanelOpen())
+				{
+					player->GetCrafting()->ClosePanel();
+					return EventReply::CONSUMED;
+				}
+			}
 			if (s_PerfTest.IsActive())
 			{
 				s_PerfTest.Abort();
@@ -1440,10 +1655,6 @@ namespace flex
 				{
 					LeaveWorld();
 					SetScreen(Screen::PERF_RESULTS);
-					if (getenv("FLEX_PERF_TEST") != nullptr)
-					{
-						g_EngineInstance->Stop();
-					}
 					return;
 				}
 			}
@@ -1465,6 +1676,10 @@ namespace flex
 			break;
 		}
 
+		if (m_Screen == Screen::PLAYING)
+		{
+			s_PerfTest.DrawGraph(m_UI);
+		}
 		console.Draw(m_UI);
 		if (m_Settings.bShowFps)
 		{
@@ -1797,15 +2012,106 @@ namespace flex
 		const real s = m_UI.Scale();
 		DrawBackground(1.0f);
 		DrawTitle(LOC(PerfTest_Title), LOC(PerfTest_Subtitle));
-		const UIRect panel(120.0f * s, 300.0f * s, 1500.0f * s, 700.0f * s);
-		m_UI.Panel(panel);
-		UIRect content = panel.Inset(24.0f * s);
-		real y = content.y + 8.0f * s;
-		for (const std::string& line : s_PerfTest.GetReport())
+		// With FLEX_PERF_TEST, the results are screenshotted (saved/screenshots/perf_results.png) before quitting
+		static i32 s_ResultsShotState = 0;
+		if (getenv("FLEX_PERF_TEST") != nullptr)
 		{
-			m_UI.Text(line, content.x, y, UITheme::TEXT_BODY * s, UITheme::TEXT_PRIMARY);
+			if (s_ResultsShotState == 0 && m_ScreenTime > 1.0f)
+			{
+				const std::string directory = RelativePathToAbsolute(SCREENSHOT_DIRECTORY);
+				Platform::CreateDirectoryRecursive(directory);
+				g_Renderer->RequestScreenshot(directory + "perf_results.png");
+				s_ResultsShotState = 1;
+			}
+			else if (s_ResultsShotState > 0 && ++s_ResultsShotState > 5)
+			{
+				g_EngineInstance->Stop();
+			}
+		}
+		// Below the title's subtitle
+		const real panelTop = 384.0f * s;
+		const UIRect panel(UITheme::SCREEN_MARGIN * s, panelTop, glm::min(1500.0f * s, m_UI.Width() - UITheme::SCREEN_MARGIN * s * 2.0f),
+			glm::max(m_UI.Height() - panelTop - 60.0f * s, 300.0f * s));
+		m_UI.Panel(panel);
+		UIRect content = panel.Inset(28.0f * s);
+
+		// Worse values go from the column's colour towards red
+		auto Ramp = [](real value, real good, real bad, const glm::vec4& base)
+		{
+			const real t = glm::clamp((value - good) / (bad - good), 0.0f, 1.0f);
+			glm::vec4 colour = glm::mix(base, UITheme::CLAY, t);
+			colour.a = 1.0f;
+			return colour;
+		};
+		const glm::vec4 dim = UITheme::TEXT_SECONDARY;
+		const glm::vec4 bright = UITheme::TEXT_PRIMARY;
+
+		real y = content.y + 8.0f * s;
+		m_UI.Text(s_PerfTest.GetInfoLine(), content.x, y, UITheme::TEXT_SMALL * s, dim);
+		y += 44.0f * s;
+
+		// Columns (right aligned numbers), spread over the panel's width
+		const real tableScale = glm::min(content.w / (1444.0f * s), 1.0f);
+		const real columnRight[6] = { 640.0f, 790.0f, 950.0f, 1110.0f, 1270.0f, 1430.0f };
+		auto ColumnX = [&](i32 i) { return content.x + columnRight[i] * s * tableScale; };
+		const real rowHeight = 38.0f * s;
+		m_UI.Text(LOC(PerfTest_ColStop), content.x, y, UITheme::TEXT_CAPTION * s, dim);
+		const char* headers[6] = { LOC(PerfTest_ColAvg), LOC(PerfTest_ColFps), LOC(PerfTest_ColP50), LOC(PerfTest_ColP99), LOC(PerfTest_ColMax), LOC(PerfTest_ColHitches) };
+		for (i32 i = 0; i < 6; ++i)
+		{
+			m_UI.Text(headers[i], ColumnX(i), y, UITheme::TEXT_CAPTION * s, i == 0 ? bright : dim, TextAlign::RIGHT);
+		}
+		y += 22.0f * s;
+		m_UI.FillRect(UIRect(content.x, y, ColumnX(5) - content.x, 1.0f * s), UITheme::OUTLINE);
+		y += rowHeight * 0.5f + 4.0f * s;
+
+		char buffer[64];
+		auto DrawRow = [&](const PerfTest::ReportRow& row, bool bOverall, i32 index)
+		{
+			if (!bOverall && (index % 2) == 1)
+			{
+				m_UI.FillRect(UIRect(content.x - 10.0f * s, y - rowHeight * 0.5f, ColumnX(5) - content.x + 20.0f * s, rowHeight), UITheme::WithAlpha(UITheme::RAISED, 0.45f), UITheme::RADIUS_S * s);
+			}
+			const real size = (bOverall ? UITheme::TEXT_BODY_LARGE : UITheme::TEXT_BODY) * s;
+			m_UI.Text(row.name, content.x, y, size, bOverall ? bright : dim, TextAlign::LEFT, bOverall);
+			snprintf(buffer, sizeof(buffer), "%.2f ms", row.avg);
+			m_UI.Text(buffer, ColumnX(0), y, size, Ramp(row.avg, 1000.0f / 120.0f, 1000.0f / 30.0f, bright), TextAlign::RIGHT);
+			snprintf(buffer, sizeof(buffer), "%.0f", row.avg > 0.0f ? 1000.0f / row.avg : 0.0f);
+			m_UI.Text(buffer, ColumnX(1), y, size, Ramp(row.avg, 1000.0f / 120.0f, 1000.0f / 30.0f, dim), TextAlign::RIGHT);
+			snprintf(buffer, sizeof(buffer), "%.2f", row.p50);
+			m_UI.Text(buffer, ColumnX(2), y, size, Ramp(row.p50, 1000.0f / 120.0f, 1000.0f / 30.0f, dim), TextAlign::RIGHT);
+			snprintf(buffer, sizeof(buffer), "%.2f", row.p99);
+			m_UI.Text(buffer, ColumnX(3), y, size, Ramp(row.p99, 1000.0f / 60.0f, 50.0f, dim), TextAlign::RIGHT);
+			snprintf(buffer, sizeof(buffer), "%.1f", row.max);
+			m_UI.Text(buffer, ColumnX(4), y, size, Ramp(row.max, 25.0f, 100.0f, dim), TextAlign::RIGHT);
+			snprintf(buffer, sizeof(buffer), "%d", row.hitches);
+			m_UI.Text(buffer, ColumnX(5), y, size, Ramp((real)row.hitches, 0.0f, bOverall ? 20.0f : 6.0f, dim), TextAlign::RIGHT);
+			y += rowHeight;
+		};
+		const std::vector<PerfTest::ReportRow>& rows = s_PerfTest.GetRows();
+		for (i32 i = 0; i < (i32)rows.size(); ++i)
+		{
+			DrawRow(rows[i], false, i);
+		}
+		if (!rows.empty())
+		{
+			m_UI.FillRect(UIRect(content.x, y - rowHeight * 0.5f + 2.0f * s, ColumnX(5) - content.x, 1.0f * s), UITheme::OUTLINE);
+			y += 8.0f * s;
+			DrawRow(s_PerfTest.GetOverall(), true, 0);
+		}
+
+		y += 12.0f * s;
+		const real notesBottom = content.y + content.h - 80.0f * s;
+		for (const std::string& line : s_PerfTest.GetNotes())
+		{
+			if (y > notesBottom)
+			{
+				break;
+			}
+			m_UI.Text(line, content.x, y, UITheme::TEXT_SMALL * s, dim);
 			y += 26.0f * s;
 		}
+
 		m_UI.Text(LOCF(PerfTest_Saved, s_PerfTest.GetReportPath().c_str()), content.x, content.y + content.h - 60.0f * s, UITheme::TEXT_CAPTION * s, UITheme::TEXT_SECONDARY);
 		if (m_UI.Button("perfback", UIRect(content.x, content.y + content.h - 44.0f * s, 260.0f * s, UITheme::BUTTON_HEIGHT * s * 0.8f), LOC(PerfTest_Back), true))
 		{
@@ -2511,7 +2817,7 @@ namespace flex
 			ref.actionShareTag = shareTag;
 			return ref;
 		};
-		// One column each, except the last column which holds the last two sections
+		// One column each, except General which goes under Items (the shortest), so the panel fits below the title
 		const Section sections[] =
 		{
 			{ LOC(Controls_Movement), {
@@ -2651,36 +2957,42 @@ namespace flex
 			}
 		}
 
-		const real rowHeight = 34.0f * s;
-		const real headingHeight = 50.0f * s;
+		const real rowHeight = 30.0f * s;
+		const real headingHeight = 46.0f * s;
 		const real columnGap = UITheme::SPACE_XXL * s;
 		const real panelWidth = glm::min(1440.0f * s, m_UI.Width() - 2.0f * UITheme::SCREEN_MARGIN * s);
-		const real sectionGap = UITheme::SPACE_M * s;
+		const real sectionGap = UITheme::SPACE_L * s;
+		const u32 sectionColumns[] = { 0, 1, 2, 1 };
+		static_assert(ARRAY_LENGTH(sectionColumns) == ARRAY_LENGTH(sections), "Every section needs a column");
 		real columnHeights[3] = {};
 		for (u32 sectionIndex = 0; sectionIndex < ARRAY_LENGTH(sections); ++sectionIndex)
 		{
-			real& height = columnHeights[glm::min(sectionIndex, 2u)];
+			real& height = columnHeights[sectionColumns[sectionIndex]];
 			height += (height > 0.0f ? sectionGap : 0.0f) + headingHeight + (real)sections[sectionIndex].rows.size() * rowHeight;
 		}
-		const real panelHeight = 2.0f * UITheme::SPACE_L * s + glm::max(columnHeights[0], glm::max(columnHeights[1], columnHeights[2]));
-		const UIRect panel(UITheme::SCREEN_MARGIN * s, 330.0f * s, panelWidth, panelHeight);
+		// Extra room below the last row
+		const real bottomPadding = UITheme::SPACE_XXL * s;
+		const real panelHeight = UITheme::SPACE_L * s + bottomPadding + glm::max(columnHeights[0], glm::max(columnHeights[1], columnHeights[2]));
+		// Below the title's subtitle
+		const UIRect panel(UITheme::SCREEN_MARGIN * s, 372.0f * s, panelWidth, panelHeight);
 		m_UI.Panel(panel);
-		const UIRect content = panel.Inset(UITheme::SPACE_L * s);
+		UIRect content = panel.Inset(UITheme::SPACE_L * s);
+		content.h -= bottomPadding - UITheme::SPACE_L * s;
 		const real columnWidth = (content.w - 2.0f * columnGap) / 3.0f;
+		UIRect columns[3];
+		for (u32 i = 0; i < 3; ++i)
+		{
+			columns[i] = UIRect(content.x + (columnWidth + columnGap) * (real)i, content.y, columnWidth, content.h);
+		}
 
 		const real keyTextSize = UITheme::TEXT_CAPTION * s;
 		const real keyHeight = 26.0f * s;
 		const real keyPadding = 10.0f * s;
-		UIRect column;
 		i32 rebindIndex = 0;
 		for (u32 sectionIndex = 0; sectionIndex < ARRAY_LENGTH(sections); ++sectionIndex)
 		{
-			const u32 columnIndex = glm::min(sectionIndex, 2u);
-			if (sectionIndex == columnIndex)
-			{
-				column = UIRect(content.x + (columnWidth + columnGap) * (real)columnIndex, content.y, columnWidth, content.h);
-			}
-			else
+			UIRect& column = columns[sectionColumns[sectionIndex]];
+			if (column.y > content.y)
 			{
 				column.CutTop(sectionGap);
 			}
@@ -3320,13 +3632,8 @@ namespace flex
 
 	void Game::ApplySettings()
 	{
-		BaseCamera* firstPersonCamera = g_CameraManager->GetCameraByName("first-person");
-		if (firstPersonCamera != nullptr)
-		{
-			firstPersonCamera->FOV = glm::radians(m_Settings.fov);
-			// The camera doesn't update while the simulation is paused, so the new FOV is applied now (as the slider is dragged)
-			firstPersonCamera->RecalculateViewProjection();
-		}
+		// Every gameplay camera (first person, vehicle, overhead, terminal), including ones created later
+		g_CameraManager->SetGameplayFOV(glm::radians(m_Settings.fov));
 		AudioManager::SetMasterGain(m_Settings.masterVolume);
 		GameSounds::SetMusicVolume(m_Settings.musicVolume);
 		if (!Loc::SetLanguage(m_Settings.language))

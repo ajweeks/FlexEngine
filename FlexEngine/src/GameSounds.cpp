@@ -642,8 +642,10 @@ namespace flex
 					const real speed = std::abs(s_VehicleSpeed);
 					const real speedFactor = glm::clamp(speed / 35.0f, 0.0f, 1.0f);
 					const real throttle = glm::clamp(std::abs(s_VehicleThrottle), 0.0f, 1.0f);
-					s_Engine.target = s_SfxVolume * (0.3f + 0.25f * throttle + 0.25f * speedFactor);
-					s_Engine.pitch = glm::clamp(0.6f + 1.2f * speedFactor + 0.2f * throttle, 0.5f, 2.0f);
+					// Electric motor: (nearly) silent at rest, the whine rises in pitch & volume with speed
+					const real moving = synth::SmoothStep(0.0f, 4.0f, speed);
+					s_Engine.target = s_SfxVolume * glm::min(0.02f + 0.35f * moving * (0.5f + 0.5f * speedFactor) + 0.15f * throttle, 0.6f);
+					s_Engine.pitch = glm::clamp(0.35f + 1.45f * speedFactor + 0.1f * throttle, 0.3f, 2.0f);
 
 					const real brakeSkid = s_bVehicleBraking ? synth::SmoothStep(1.0f, 8.0f, speed) : 0.0f;
 					const real slideSkid = 0.6f * synth::SmoothStep(0.5f, 0.9f, s_VehicleSlipSmoothed) * synth::SmoothStep(2.0f, 10.0f, speed);
@@ -902,13 +904,13 @@ namespace flex
 
 		void PlayJump()
 		{
-			PlayOneShot(Sound::JUMP, 0.55f, 0.05f);
+			PlayOneShot(Sound::JUMP, 0.3f, 0.05f);
 		}
 
 		void PlayLand(real intensity)
 		{
 			intensity = glm::clamp(intensity, 0.0f, 1.0f);
-			PlayOneShot(intensity > 0.5f ? Sound::LAND_HEAVY : Sound::LAND_LIGHT, 0.45f + 0.45f * intensity, 0.05f);
+			PlayOneShot(intensity > 0.5f ? Sound::LAND_HEAVY : Sound::LAND_LIGHT, 0.28f + 0.27f * intensity, 0.05f);
 		}
 
 		void PlayGliderStow()

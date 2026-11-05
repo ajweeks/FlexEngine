@@ -219,6 +219,14 @@ namespace flex
 
 		m_pGamepadStates[gamepadIndex] = m_GamepadStates[gamepadIndex];
 
+		real blockedAxes[6] = { 0.0f, 0.0f, 0.0f, 0.0f, -1.0f, -1.0f }; // Centered sticks, released triggers
+		u8 blockedButtons[15] = {};
+		if (m_bDeviceInputBlocked)
+		{
+			axes = blockedAxes;
+			buttons = blockedButtons;
+		}
+
 		for (i32 i = 0; i < 6; ++i)
 		{
 			m_GamepadStates[gamepadIndex].axes[i] = axes[i];
@@ -664,6 +672,13 @@ namespace flex
 
 	void InputManager::CursorPosCallback(double x, double y)
 	{
+		if (m_bDeviceInputBlocked)
+		{
+			// Followed without moving anything (so there's no jump once unblocked)
+			m_PrevMousePosition = m_MousePosition = glm::vec2((real)x, (real)y);
+			return;
+		}
+
 		m_MousePosition = glm::vec2((real)x, (real)y);
 
 #if 0
@@ -779,6 +794,10 @@ namespace flex
 		FLEX_UNUSED(mods);
 
 		CHECK_LT((i32)mouseButton, MOUSE_BUTTON_COUNT);
+		if (m_bDeviceInputBlocked)
+		{
+			return;
+		}
 
 		if (keyAction == KeyAction::KEY_PRESS)
 		{
@@ -876,6 +895,10 @@ namespace flex
 
 	void InputManager::ScrollCallback(double xOffset, double yOffset)
 	{
+		if (m_bDeviceInputBlocked)
+		{
+			return;
+		}
 		m_ScrollXOffset = (real)xOffset;
 		m_ScrollYOffset = (real)yOffset;
 
@@ -891,6 +914,10 @@ namespace flex
 	void InputManager::KeyCallback(KeyCode keyCode, KeyAction keyAction, i32 mods)
 	{
 		FLEX_UNUSED(mods);
+		if (m_bDeviceInputBlocked && keyCode != KeyCode::KEY_ESCAPE)
+		{
+			return;
+		}
 
 		m_Keys[keyCode].pDown = m_Keys[keyCode].down;
 

@@ -29,6 +29,7 @@ IGNORE_WARNINGS_POP
 #include "Physics/PhysicsWorld.hpp"
 #include "Physics/RigidBody.hpp"
 #include "Player.hpp"
+#include "Crafting.hpp"
 #include "ResourceManager.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
@@ -129,7 +130,8 @@ namespace flex
 		{
 			real cycleItemAxis = g_InputManager->GetActionAxisValue(Action::CYCLE_SELECTED_ITEM_FORWARD);
 			// The scroll wheel picks build (or track) pieces while building
-			if (!ImGui::GetIO().WantCaptureMouse && !m_Player->IsBuilding() && !m_Player->IsPlacingTrack())
+			if (!ImGui::GetIO().WantCaptureMouse && !m_Player->IsBuilding() && !m_Player->IsPlacingTrack() &&
+				!(m_Player->GetCrafting() != nullptr && m_Player->GetCrafting()->IsPanelOpen()))
 			{
 				if (cycleItemAxis > 0.0f)
 				{
@@ -401,8 +403,14 @@ namespace flex
 				{
 					RowBoat::GetHullBounds(boundsMin, boundsMax);
 				}
+				// Beds' meshes are built at runtime too
+				const bool bBed = mesh == nullptr && templateObject->GetTypeID() == BedSID;
+				if (bBed)
+				{
+					Bed::GetPlacementBounds(boundsMin, boundsMax);
+				}
 
-				if (mesh != nullptr || bBoat)
+				if (mesh != nullptr || bBoat || bBed)
 				{
 					PhysicsWorld* physicsWorld = g_SceneManager->CurrentScene()->GetPhysicsWorld();
 
@@ -463,6 +471,12 @@ namespace flex
 					physicsWorld->GetWorld()->contactTest(&pairCache, resultCallback);
 
 					m_bItemPlacementValid = !resultCallback.bHit;
+					glm::vec3 bedFeetPos;
+					if (bBed && !Bed::FindPlacement(m_TargetItemPlacementPos, m_TargetItemPlacementRot, bedFeetPos))
+					{
+						// No ground or too steep (its feet are put on the ground when placed, see Bed::OnDeItemize)
+						m_bItemPlacementValid = false;
+					}
 				}
 			}
 		}
@@ -1129,6 +1143,12 @@ namespace flex
 						// Row boats' meshes are built at runtime (there's no mesh file for a hologram), so outline the hull
 						UpdateItemPlacementTransform();
 						RowBoat::DrawPlacementOutline(m_TargetItemPlacementPosSmoothed, m_TargetItemPlacementRotSmoothed,
+							m_bItemPlacementValid ? glm::vec4(0.3f, 1.0f, 0.4f, 1.0f) : glm::vec4(1.0f, 0.3f, 0.3f, 1.0f));
+					}
+					else if (templateObject->GetTypeID() == BedSID)
+					{
+						UpdateItemPlacementTransform();
+						Bed::DrawPlacementOutline(m_TargetItemPlacementPosSmoothed, m_TargetItemPlacementRotSmoothed,
 							m_bItemPlacementValid ? glm::vec4(0.3f, 1.0f, 0.4f, 1.0f) : glm::vec4(1.0f, 0.3f, 0.3f, 1.0f));
 					}
 				}

@@ -6,7 +6,6 @@
 #include "Scene/Objects/Terminal.hpp"
 #include "StringBuilder.hpp"
 #include "VirtualMachine/Backend/IR.hpp"
-#include "VirtualMachine/Backend/VariableContainer.hpp"
 #include "VirtualMachine/Diagnostics.hpp"
 #include "VirtualMachine/Frontend/Lexer.hpp"
 #include "VirtualMachine/Frontend/Parser.hpp"
@@ -83,10 +82,11 @@ namespace flex
 
 		void State::Clear()
 		{
-			varUsages.clear();
 			varRegisterMap.clear();
 			funcNameToBlockIndexTable.clear();
 			instructionBlocks.clear();
+			instructions.clear();
+			instructionOrigins.clear();
 			labelOffsets.clear();
 
 			diagnosticContainer->diagnostics.clear();
@@ -110,8 +110,9 @@ namespace flex
 				}
 			}
 
-			instructions.push_back(inst);
-			instructionOrigins.push_back(origin);
+			state->instructions.push_back(inst);
+			state->instructionOrigins.push_back(origin);
+			++count;
 		}
 
 		InstructionBlock& State::CurrentInstructionBlock()
@@ -134,7 +135,7 @@ namespace flex
 		void State::PlaceLabel(i32 label)
 		{
 			InstructionBlock& currentInstBlock = CurrentInstructionBlock();
-			labelOffsets[label] = currentInstBlock.startOffset + (i32)currentInstBlock.instructions.size();
+			labelOffsets[label] = currentInstBlock.startOffset + (i32)currentInstBlock.count;
 		}
 
 		VirtualMachine::VirtualMachine()
@@ -166,52 +167,44 @@ namespace flex
 				m_IR->Destroy();
 				delete m_IR;
 			}
-
-			free(memory);
 		}
 
 		void VirtualMachine::GenerateFromSource(const char* source)
 		{
 			m_bCompiled = false;
-			astStr = "";
-			irStr = "";
-			instructionStr = "";
+			instructions.clear();
+			instructionOrigins.clear();
+			m_Code.clear();
+			m_bDebugStringsBuilt = false;
+			m_bASTValid = false;
+			m_bIRValid = false;
 			diagnosticContainer->diagnostics.clear();
 
-			if (m_AST != nullptr)
+			// (The AST, IR & bindings are reused by every compile, so their arenas' memory is too)
+			if (m_AST == nullptr)
 			{
-				m_AST->Destroy();
-				delete m_AST;
-				m_AST = nullptr;
+				m_AST = new AST::AST(&m_ASTArena);
 			}
-			if (m_FunctionBindings != nullptr)
+			if (m_FunctionBindings == nullptr)
 			{
-				m_FunctionBindings->ClearBindings();
-				delete m_FunctionBindings;
-				m_FunctionBindings = nullptr;
+				m_FunctionBindings = new FunctionBindings();
+				m_FunctionBindings->RegisterBindings();
 			}
-			if (m_IR != nullptr)
+			if (m_IR == nullptr)
 			{
-				m_IR->Destroy();
-				delete m_IR;
-				m_IR = nullptr;
+				m_IR = new IR::IntermediateRepresentation();
 			}
 
-			m_AST = new AST::AST();
 			m_AST->Generate(source);
 			if (m_AST->rootBlock != nullptr && m_AST->diagnosticContainer->diagnostics.empty())
 			{
-				astStr = m_AST->rootBlock->ToString();
+				m_bASTValid = true;
 
-				m_FunctionBindings = new FunctionBindings();
-				m_FunctionBindings->RegisterBindings();
-
-				m_IR = new IR::IntermediateRepresentation();
 				m_IR->GenerateFromAST(m_AST, m_FunctionBindings);
 
 				if (!m_IR->blocks.empty() && m_IR->state->diagnosticContainer->diagnostics.empty())
 				{
-					irStr = m_IR->ToString();
+					m_bIRValid = true;
 
 					GenerateFromIR(m_IR, m_FunctionBindings);
 
@@ -327,12 +320,12 @@ namespace flex
 
 			InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
 
-			// Save every variable register allocated so far: the callee may use the same ones (it can be the caller
-			// itself, or share variable names with it)
+			// Save the variable registers allocated so far which the callee may write: it can be the caller itself, or
+			// share variable names with it (linking narrows the list down to the registers the callee really writes)
 			const i32 savedRegisterCount = bFuncIsExternal ? 0 : (i32)state->varRegisterMap.size();
-			for (i32 i = 0; i < savedRegisterCount; ++i)
+			if (savedRegisterCount > 0)
 			{
-				currentInstBlock.PushBack(Instruction(OpCode::PUSH, VariantWrapper(VariantWrapper::Type::REGISTER, Variant(i))), funcCallValue->origin, state);
+				currentInstBlock.PushBack(Instruction(OpCode::SAVE, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(funcAddress)), VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(savedRegisterCount))), funcCallValue->origin, state);
 			}
 
 			// Push return IP
@@ -342,7 +335,7 @@ namespace flex
 			if (!bFuncIsExternal)
 			{
 				// Actual IP will be patched up below
-				resumePointPushInstructionIndex = (i32)currentInstBlock.instructions.size();
+				resumePointPushInstructionIndex = (i32)currentInstBlock.count;
 				Instruction pushReturnIP(OpCode::PUSH, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(0)));
 				currentInstBlock.PushBack(pushReturnIP, funcCallValue->origin, state);
 			}
@@ -381,9 +374,9 @@ namespace flex
 			if (!bFuncIsExternal)
 			{
 				// Patch up push call to current instruction offset
-				i32 instructionIndex = (i32)currentInstBlock.instructions.size();
+				i32 instructionIndex = (i32)currentInstBlock.count;
 				i32 value = currentInstBlock.startOffset + instructionIndex;
-				currentInstBlock.instructions[resumePointPushInstructionIndex].val0.variant.valInt = value;
+				state->instructions[currentInstBlock.startOffset + resumePointPushInstructionIndex].val0.variant.valInt = value;
 			}
 
 			IR::Value::Type funcReturnType = irState->functionTypes[funcCallValue->target].returnType;
@@ -396,9 +389,9 @@ namespace flex
 				currentInstBlock.PushBack(popReturnVal, funcCallValue->origin, state);
 			}
 
-			for (i32 i = savedRegisterCount - 1; i >= 0; --i)
+			if (savedRegisterCount > 0)
 			{
-				currentInstBlock.PushBack(Instruction(OpCode::POP, VariantWrapper(VariantWrapper::Type::REGISTER, Variant(i))), funcCallValue->origin, state);
+				currentInstBlock.PushBack(Instruction(OpCode::RESTORE, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(funcAddress)), VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(savedRegisterCount))), funcCallValue->origin, state);
 			}
 
 			return funcReturnType != IR::Value::Type::VOID_ ? returnValueRegister : -1;
@@ -460,11 +453,6 @@ namespace flex
 				{
 					return iter->second;
 				}
-				auto iter2 = state->tmpVarTypes.find(identifier->variable);
-				if (iter2 != state->tmpVarTypes.end())
-				{
-					return iter2->second;
-				}
 			}
 			// fall through
 			default:
@@ -473,146 +461,40 @@ namespace flex
 			}
 		}
 
-		void VirtualMachine::HandleComparison(VariantWrapper& regVal, IR::IntermediateRepresentation* ir, IR::BinaryValue* binaryValue)
+		void VirtualMachine::HandleComparison(IR::IntermediateRepresentation* ir, IR::Value* condition, i32 ifTrueBlockIndex, i32 ifFalseBlockIndex, i32 nextBlockIndex)
 		{
-			if (binaryValue->left->type == IR::Value::Type::BINARY)
-			{
-				IR::BinaryValue* lhsBinaryValue = (IR::BinaryValue*)binaryValue->left;
-				HandleComparison(regVal, ir, lhsBinaryValue);
-			}
-
 			InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
-
-			currentInstBlock.PushBack(Instruction(OpCode::CMP, GetValueWrapperFromIRValue(ir->state, binaryValue->left), g_ZeroIntVariantWrapper), binaryValue->origin, state);
-
-			i32 trueBlock = 0;
-			i32 falseBlock = 1;
-
-			if (binaryValue->opType == IR::BinaryOperatorType::BOOLEAN_AND)
+			if (condition->type != IR::Value::Type::BINARY)
 			{
-				currentInstBlock.PushBack(Instruction(OpCode::JEQ, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(falseBlock))), binaryValue->origin, state);
-
-				currentInstBlock.PushBack(Instruction(OpCode::CMP, GetValueWrapperFromIRValue(ir->state, binaryValue->right), g_ZeroIntVariantWrapper), binaryValue->origin, state);
-
+				ir->state->diagnosticContainer->AddDiagnostic(condition->origin, "Unhandled conditional type");
+				return;
 			}
-			else if (binaryValue->opType == IR::BinaryOperatorType::BOOLEAN_OR)
-			{
-				currentInstBlock.PushBack(Instruction(OpCode::JEQ, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(trueBlock))), binaryValue->origin, state);
 
-				currentInstBlock.PushBack(Instruction(OpCode::CMP, GetValueWrapperFromIRValue(ir->state, binaryValue->right), g_ZeroIntVariantWrapper), binaryValue->origin, state);
+			IR::BinaryValue* binary = (IR::BinaryValue*)condition;
+			OpCode opCode = BinaryOperatorTypeToOpCode(binary->opType);
+			if (opCode == OpCode::_NONE)
+			{
+				ir->state->diagnosticContainer->AddDiagnostic(condition->origin, "Invalid comparison");
+				return;
+			}
+
+			VariantWrapper lhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->left);
+			VariantWrapper rhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->right);
+			currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, rhsWrapper), binary->origin, state);
+
+			// (Blocks are laid out in order, so a jump to the next block can be left out)
+			if (ifFalseBlockIndex == nextBlockIndex)
+			{
+				currentInstBlock.PushBack(Instruction(opCode, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(ifTrueBlockIndex))), binary->origin, state);
+			}
+			else if (ifTrueBlockIndex == nextBlockIndex)
+			{
+				currentInstBlock.PushBack(Instruction(InverseOpCode(opCode), VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(ifFalseBlockIndex))), binary->origin, state);
 			}
 			else
 			{
-				currentInstBlock.PushBack(Instruction(BinaryOperatorTypeToInverseOpCode(binaryValue->opType), VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(falseBlock))), binaryValue->origin, state);
-				currentInstBlock.PushBack(Instruction(OpCode::JMP, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(trueBlock))), binaryValue->origin, state);
-			}
-
-			currentInstBlock.PushBack(Instruction(OpCode::MOV, regVal), binaryValue->origin, state);
-
-			// Move up?
-			if (binaryValue->right->type == IR::Value::Type::BINARY)
-			{
-				IR::BinaryValue* rhsBinaryValue = (IR::BinaryValue*)binaryValue->right;
-				HandleComparison(regVal, ir, rhsBinaryValue);
-			}
-		}
-
-		void VirtualMachine::HandleComparison(IR::IntermediateRepresentation* ir, IR::Value* condition, i32 ifTrueBlockIndex, i32 ifFalseBlockIndex, bool bInvCondition)
-		{
-			InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
-			OpCode opCode = OpCode::_NONE;
-			bool bHandled = false;
-			switch (condition->type)
-			{
-			case IR::Value::Type::BINARY:
-			{
-				IR::BinaryValue* binary = (IR::BinaryValue*)condition;
-
-				switch (binary->opType)
-				{
-				case IR::BinaryOperatorType::EQUAL_TEST:
-					opCode = OpCode::JEQ;
-					break;
-				case IR::BinaryOperatorType::NOT_EQUAL_TEST:
-					opCode = OpCode::JNE;
-					break;
-				case IR::BinaryOperatorType::GREATER_EQUAL_TEST:
-					opCode = OpCode::JGE;
-					break;
-				case IR::BinaryOperatorType::GREATER_TEST:
-					opCode = OpCode::JGT;
-					break;
-				case IR::BinaryOperatorType::LESS_EQUAL_TEST:
-					opCode = OpCode::JLE;
-					break;
-				case IR::BinaryOperatorType::LESS_TEST:
-					opCode = OpCode::JLT;
-					break;
-				case IR::BinaryOperatorType::BIN_AND:
-					opCode = OpCode::AND;
-					break;
-				case IR::BinaryOperatorType::BIN_OR:
-					opCode = OpCode::OR;
-					break;
-				case IR::BinaryOperatorType::BIN_XOR:
-					opCode = OpCode::XOR;
-					break;
-				case IR::BinaryOperatorType::ADD:
-
-					break;
-				case IR::BinaryOperatorType::BOOLEAN_AND:
-				{
-					HandleComparison(ir, binary->left, ifTrueBlockIndex, ifFalseBlockIndex, true);
-					HandleComparison(ir, binary->right, ifTrueBlockIndex, ifFalseBlockIndex, true);
-
-					bHandled = true;
-					opCode = OpCode::_NONE;
-				} break;
-				case IR::BinaryOperatorType::BOOLEAN_OR:
-				{
-					HandleComparison(ir, binary->left, ifTrueBlockIndex, ifFalseBlockIndex, false);
-					HandleComparison(ir, binary->right, ifTrueBlockIndex, ifFalseBlockIndex, false);
-
-					bHandled = true;
-					opCode = OpCode::_NONE;
-				} break;
-				}
-
-				if (!bHandled)
-				{
-					if (opCode == OpCode::_NONE)
-					{
-						ir->state->diagnosticContainer->AddDiagnostic(condition->origin, "Invalid comparison");
-						return;
-					}
-
-					VariantWrapper lhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->left);
-					VariantWrapper rhsWrapper = GetValueWrapperFromIRValue(ir->state, binary->right);
-
-					currentInstBlock.PushBack(Instruction(OpCode::CMP, lhsWrapper, rhsWrapper), binary->origin, state);
-					opCode = bInvCondition ? InverseOpCode(opCode) : opCode;
-					i32 jumpBlockIndex = (i32)(bInvCondition ? ifFalseBlockIndex : ifTrueBlockIndex);
-					i32 jumpBlockIndexOther = (i32)(bInvCondition ? ifTrueBlockIndex : ifFalseBlockIndex);
-					currentInstBlock.PushBack(Instruction(opCode, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(jumpBlockIndex))), binary->origin, state);
-					currentInstBlock.PushBack(Instruction(OpCode::JMP, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(jumpBlockIndexOther))), binary->origin, state);
-				}
-			} break;
-			case IR::Value::Type::IDENTIFIER:
-			case IR::Value::Type::CALL:
-			case IR::Value::Type::CAST:
-			case IR::Value::Type::UNARY:
-			{
-				ir->state->diagnosticContainer->AddDiagnostic(condition->origin, "Unhandled conditional");
-				//VariantWrapper conditionWrapper = GetValueWrapperFromIRValue(ir->state, condition);
-				//VariantWrapper zeroWrapper = GetValueWrapperFromIRValue(ir->state, condition);
-				//currentInstBlock.PushBack(Instruction(OpCode::CMP, conditionWrapper, rhsWrapper), condition->origin);
-				//currentInstBlock.PushBack(Instruction(OpCode::JNE, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(jumpBlockIndex))), binary->origin);
-				//currentInstBlock.PushBack(Instruction(OpCode::JMP, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(jumpBlockIndexOther))), binary->origin);
-			} break;
-			default:
-			{
-				ir->state->diagnosticContainer->AddDiagnostic(condition->origin, "Unhandled conditional type");
-			} break;
+				currentInstBlock.PushBack(Instruction(opCode, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(ifTrueBlockIndex))), binary->origin, state);
+				currentInstBlock.PushBack(Instruction(OpCode::JMP, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant(ifFalseBlockIndex))), binary->origin, state);
 			}
 		}
 
@@ -858,7 +740,7 @@ namespace flex
 
 						IR::YieldReturn* yield = (IR::YieldReturn*)block->terminator;
 						currentInstBlock.PushBack(Instruction(OpCode::YIELD), yield->origin, state);
-						if (yield->target != nullptr)
+						if (yield->target != nullptr && yield->target->index != i + 1)
 						{
 							currentInstBlock.PushBack(Instruction(OpCode::JMP, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant((i32)yield->target->index))), yield->origin, state);
 						}
@@ -868,8 +750,11 @@ namespace flex
 						InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
 
 						IR::Branch* branch = (IR::Branch*)block->terminator;
-						currentInstBlock.PushBack(Instruction(OpCode::JMP, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant((i32)branch->target->index))), branch->origin, state);
-						//state->PushInstructionBlock();
+						// (Falls through to the next block)
+						if (branch->target->index != i + 1)
+						{
+							currentInstBlock.PushBack(Instruction(OpCode::JMP, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant((i32)branch->target->index))), branch->origin, state);
+						}
 					} break;
 					case IR::TerminatorType::CONDITIONAL_BRANCH:
 					{
@@ -880,7 +765,7 @@ namespace flex
 						i32 thenBlockIndex = conditional->then->index;
 						// (IR lowering always gives conditional branches both targets)
 						i32 otherwiseBlockIndex = conditional->otherwise != nullptr ? conditional->otherwise->index : conditional->then->index + 1;
-						HandleComparison(ir, conditional->condition, thenBlockIndex, otherwiseBlockIndex, false);
+						HandleComparison(ir, conditional->condition, thenBlockIndex, otherwiseBlockIndex, (i32)i + 1);
 
 						//currentInstBlock.PushBack(Instruction(OpCode::JMP, VariantWrapper(VariantWrapper::Type::CONSTANT, Variant((i32)ifFalseBlock->index)), state));
 						//state->PushInstructionBlock();
@@ -895,23 +780,19 @@ namespace flex
 				}
 
 				InstructionBlock& currentInstBlock = state->CurrentInstructionBlock();
-				instructionIndex += (u32)currentInstBlock.instructions.size();
+				instructionIndex += currentInstBlock.count;
 			}
 
-			std::vector<std::string> sourceLines = SplitNoStrip(m_AST->lexer->sourceIter.source, '\n');
+			LineTable lineTable;
+			lineTable.Build(m_AST->lexer->sourceIter.source);
 
 			// Turn instruction blocks into contiguous instruction list
 			{
-				for (u32 i = 0; i < (u32)state->instructionBlocks.size(); ++i)
+				instructions = state->instructions;
+				instructionOrigins = state->instructionOrigins;
+				for (Span& origin : instructionOrigins)
 				{
-					std::vector<Instruction>& blockInstructions = state->instructionBlocks[i].instructions;
-					std::vector<Span>& blockInstructionOrigins = state->instructionBlocks[i].instructionOrigins;
-					for (u32 j = 0; j < (u32)blockInstructions.size(); ++j)
-					{
-						instructions.push_back(blockInstructions[j]);
-						blockInstructionOrigins[j].ComputeLineColumnIndicesFromSource(sourceLines);
-						instructionOrigins.push_back(blockInstructionOrigins[j]);
-					}
+					lineTable.Apply(origin);
 				}
 			}
 
@@ -984,70 +865,607 @@ namespace flex
 				}
 			}
 
-			StringBuilder strBuilder;
-			for (u32 i = 0; i < (u32)state->instructionBlocks.size(); ++i)
-			{
-				const InstructionBlock& instBlock = state->instructionBlocks[i];
-				strBuilder.Append(IntToString(i, 1, ' '));
-				strBuilder.AppendLine(": {");
-				for (u32 j = 0; j < (u32)instBlock.instructions.size(); ++j)
-				{
-					const Instruction& inst = instBlock.instructions[j];
-					std::string val0Str = inst.val0.ToString();
-					std::string val1Str = inst.val1.ToString();
-					std::string val2Str = inst.val2.ToString();
-					strBuilder.Append("  ");
-					strBuilder.Append(OpCodeToString(inst.opCode));
-					strBuilder.Append(" ");
-					strBuilder.Append(val0Str.c_str());
-					strBuilder.Append(" ");
-					strBuilder.Append(val1Str.c_str());
-					strBuilder.Append(" ");
-					strBuilder.Append(val2Str.c_str());
-					strBuilder.Append("\n");
-				}
-				strBuilder.AppendLine("}");
-			}
-			unpatchedInstructionStr = strBuilder.ToString();
 
-			strBuilder.Clear();
-			for (u32 i = 0; i < (u32)instructions.size(); ++i)
+			if (state->diagnosticContainer->diagnostics.empty() && ir->state->diagnosticContainer->diagnostics.empty())
 			{
-				const Instruction& inst = instructions[i];
-				std::string val0Str = inst.val0.ToString();
-				std::string val1Str = inst.val1.ToString();
-				std::string val2Str = inst.val2.ToString();
-				strBuilder.Append(IntToString(i, 2, ' '));
-				strBuilder.Append("  ");
-				strBuilder.Append(OpCodeToString(inst.opCode));
-				strBuilder.Append(" ");
-				strBuilder.Append(val0Str.c_str());
-				strBuilder.Append(" ");
-				strBuilder.Append(val1Str.c_str());
-				strBuilder.Append(" ");
-				strBuilder.Append(val2Str.c_str());
-				strBuilder.Append("\n");
+				std::vector<std::vector<u8>> savedRegisters;
+				ComputeSavedRegisters(ir, savedRegisters);
+				Link(&savedRegisters);
 			}
-			instructionStr = strBuilder.ToString();
 		}
 
 		void VirtualMachine::GenerateFromInstStream(const std::vector<Instruction>& inInstructions)
 		{
 			ClearRuntimeState();
+			state->Clear();
+			m_bDebugStringsBuilt = false;
+			m_bASTValid = false;
+			m_bIRValid = false;
 			instructions = inInstructions;
 			// TODO: require instructionOrigins as well
+			instructionOrigins.clear();
 			instructionOrigins.resize(instructions.size(), Span(Span::Source::GENERATED));
-			m_bCompiled = true;
+			m_bCompiled = Link(nullptr);
+		}
+
+#if defined(_MSC_VER)
+#define VM_INLINE __forceinline
+#else
+#define VM_INLINE inline __attribute__((always_inline))
+#endif
+
+		namespace
+		{
+			// Linked op codes (ExecInstruction::op)
+			enum ExecOp : u8
+			{
+				X_NOP,
+				X_MOV,
+				X_ADD,
+				X_SUB,
+				X_MUL,
+				X_DIV,
+				X_MOD,
+				X_INV,
+				X_AND,
+				X_OR,
+				X_XOR,
+				X_ITF,
+				X_FTI,
+				X_CALL,
+				X_CALL_EXTERNAL,
+				X_PUSH,
+				X_POP,
+				X_POP_REGISTER,
+				X_POP_DISCARD,
+				X_CMP,
+				X_JMP,
+				X_JEQ,
+				X_JNE,
+				X_JLT,
+				X_JLE,
+				X_JGT,
+				X_JGE,
+				// A compare fused with the conditional jump after it (the jump also stays at the next index for
+				// anything jumping to it)
+				X_CMP_JEQ,
+				X_CMP_JNE,
+				X_CMP_JLT,
+				X_CMP_JLE,
+				X_CMP_JGT,
+				X_CMP_JGE,
+				X_YIELD,
+				X_RETURN,
+				X_HALT,
+				X_SAVE,
+				X_RESTORE,
+				// Placed after the last instruction (execution running off the end reaches it)
+				X_END,
+			};
+
+			bool IsJump(OpCode opCode)
+			{
+				return opCode == OpCode::JMP || opCode == OpCode::JZ || opCode == OpCode::JNZ ||
+					opCode == OpCode::JEQ || opCode == OpCode::JNE || opCode == OpCode::JLT ||
+					opCode == OpCode::JLE || opCode == OpCode::JGT || opCode == OpCode::JGE;
+			}
+
+			ExecOp JumpExecOp(OpCode opCode)
+			{
+				switch (opCode)
+				{
+				case OpCode::JZ:
+				case OpCode::JEQ: return X_JEQ;
+				case OpCode::JNZ:
+				case OpCode::JNE: return X_JNE;
+				case OpCode::JLT: return X_JLT;
+				case OpCode::JLE: return X_JLE;
+				case OpCode::JGT: return X_JGT;
+				case OpCode::JGE: return X_JGE;
+				default: return X_JMP;
+				}
+			}
+
+			// Whether an op code writes its first operand
+			bool WritesFirstOperand(OpCode opCode)
+			{
+				switch (opCode)
+				{
+				case OpCode::MOV:
+				case OpCode::ADD:
+				case OpCode::SUB:
+				case OpCode::MUL:
+				case OpCode::DIV:
+				case OpCode::MOD:
+				case OpCode::INV:
+				case OpCode::AND:
+				case OpCode::OR:
+				case OpCode::XOR:
+				case OpCode::ITF:
+				case OpCode::FTI:
+				case OpCode::POP:
+					return true;
+				default:
+					return false;
+				}
+			}
+
+			// Assignment with Variant::operator='s semantics (a typed value keeps its type), without its call in the
+			// common cases
+			VM_INLINE void Assign(Variant* dst, const Variant& src)
+			{
+				if (dst->type == src.type || dst->type == Variant::Type::_NONE)
+				{
+					dst->type = src.type;
+					dst->_largestField = src._largestField;
+				}
+				else
+				{
+					*dst = src; // (Reports the mismatch)
+				}
+			}
+
+			VM_INLINE void AssignInt(Variant* dst, i32 value)
+			{
+				if (dst->type == Variant::Type::INT || dst->type == Variant::Type::_NONE)
+				{
+					dst->type = Variant::Type::INT;
+					dst->_largestField = 0;
+					dst->valInt = value;
+				}
+				else
+				{
+					*dst = Variant(value); // (Reports the mismatch)
+				}
+			}
+
+			VM_INLINE void AssignFloat(Variant* dst, real value)
+			{
+				if (dst->type == Variant::Type::FLOAT || dst->type == Variant::Type::_NONE)
+				{
+					dst->type = Variant::Type::FLOAT;
+					dst->_largestField = 0;
+					dst->valFloat = value;
+				}
+				else
+				{
+					*dst = Variant(value); // (Reports the mismatch)
+				}
+			}
+
+			VM_INLINE void AssignBool(Variant* dst, i32 value)
+			{
+				if (dst->type == Variant::Type::BOOL || dst->type == Variant::Type::_NONE)
+				{
+					dst->type = Variant::Type::BOOL;
+					dst->_largestField = 0;
+					dst->valBool = value;
+				}
+				else
+				{
+					*dst = Variant(value != 0); // (Reports the mismatch)
+				}
+			}
+
+			// (Wraps around instead of overflowing like signed arithmetic would)
+			VM_INLINE i32 WrapAdd(i32 a, i32 b) { return (i32)((u32)a + (u32)b); }
+			VM_INLINE i32 WrapSub(i32 a, i32 b) { return (i32)((u32)a - (u32)b); }
+			VM_INLINE i32 WrapMul(i32 a, i32 b) { return (i32)((u32)a * (u32)b); }
+			// (Scripts can divide by zero, & INT_MIN / -1 would trap)
+			VM_INLINE i32 SafeDiv(i32 a, i32 b) { return b == 0 ? 0 : (b == -1 ? WrapSub(0, a) : a / b); }
+			VM_INLINE i32 SafeMod(i32 a, i32 b) { return (b == 0 || b == -1) ? 0 : a % b; }
+
+			// Sets the flags like comparing via Variant subtraction does (zf: equal, sf: lhs > rhs)
+			VM_INLINE void Compare(const Variant& lhs, const Variant& rhs, bool& zf, bool& sf)
+			{
+				if (lhs.type == rhs.type)
+				{
+					if (lhs.type == Variant::Type::INT)
+					{
+						zf = lhs.valInt == rhs.valInt;
+						sf = lhs.valInt > rhs.valInt;
+						return;
+					}
+					if (lhs.type == Variant::Type::FLOAT)
+					{
+						zf = lhs.valFloat == rhs.valFloat;
+						sf = lhs.valFloat > rhs.valFloat;
+						return;
+					}
+				}
+				Variant diff = lhs - rhs;
+				zf = diff.IsZero();
+				sf = diff.IsPositive();
+			}
+		} // namespace
+
+		bool VirtualMachine::ResolveOperand(VariantWrapper& wrapper, bool bWritten, i32 instructionIndex, Variant*& outPtr)
+		{
+			outPtr = nullptr;
+			const Span origin = instructionIndex < (i32)instructionOrigins.size() ? instructionOrigins[instructionIndex] : Span(Span::Source::GENERATED);
+			switch (wrapper.type)
+			{
+			case VariantWrapper::Type::REGISTER:
+				if (wrapper.variant.valInt < 0 || wrapper.variant.valInt >= REGISTER_COUNT)
+				{
+					state->diagnosticContainer->AddDiagnostic(origin, "Compiler error: invalid register");
+					return false;
+				}
+				outPtr = &registers[wrapper.variant.valInt];
+				return true;
+			case VariantWrapper::Type::TERMINAL_OUTPUT:
+				if (wrapper.variant.valInt < 0 || wrapper.variant.valInt >= Terminal::MAX_OUTPUT_COUNT)
+				{
+					state->diagnosticContainer->AddDiagnostic(origin, "Compiler error: invalid terminal output");
+					return false;
+				}
+				outPtr = &terminalOutputs[wrapper.variant.valInt];
+				return true;
+			case VariantWrapper::Type::CONSTANT:
+				if (bWritten)
+				{
+					state->diagnosticContainer->AddDiagnostic(origin, "Compiler error: instruction writes to a constant");
+					return false;
+				}
+				// (instructions isn't changed after linking, so this stays valid)
+				outPtr = &wrapper.variant;
+				return true;
+			default:
+				state->diagnosticContainer->AddDiagnostic(origin, "Compiler error: missing operand");
+				return false;
+			}
+		}
+
+		void VirtualMachine::ComputeSavedRegisters(IR::IntermediateRepresentation* ir, std::vector<std::vector<u8>>& outSavedRegisters)
+		{
+			outSavedRegisters.clear();
+			outSavedRegisters.resize(instructions.size());
+
+			// Each function is the contiguous run of blocks from the one carrying its name up to the next function
+			struct Function
+			{
+				i32 blockIndex;
+				i32 start;
+				i32 end;
+				u64 writes[2];
+				std::vector<i32> callees;
+			};
+			static_assert(REGISTER_COUNT <= 128, "Register sets are two u64 bit masks");
+
+			std::vector<Function> functions;
+			for (u32 i = 0; i < (u32)ir->blocks.size() && i < (u32)state->instructionBlocks.size(); ++i)
+			{
+				if (!ir->blocks[i]->funcName.empty())
+				{
+					Function function = {};
+					function.blockIndex = (i32)i;
+					function.start = state->instructionBlocks[i].startOffset;
+					functions.push_back(function);
+				}
+			}
+			for (u32 f = 0; f < (u32)functions.size(); ++f)
+			{
+				functions[f].end = (f + 1 < (u32)functions.size()) ? functions[f + 1].start : (i32)instructions.size();
+			}
+
+			auto FindFunctionByStart = [&functions](i32 start) -> i32
+			{
+				for (u32 f = 0; f < (u32)functions.size(); ++f)
+				{
+					if (functions[f].start == start)
+					{
+						return (i32)f;
+					}
+				}
+				return -1;
+			};
+			auto FindFunctionByBlock = [&functions](i32 blockIndex) -> i32
+			{
+				for (u32 f = 0; f < (u32)functions.size(); ++f)
+				{
+					if (functions[f].blockIndex == blockIndex)
+					{
+						return (i32)f;
+					}
+				}
+				return -1;
+			};
+
+			for (Function& function : functions)
+			{
+				for (i32 i = function.start; i < function.end; ++i)
+				{
+					const Instruction& inst = instructions[i];
+					if (WritesFirstOperand(inst.opCode) && inst.val0.type == VariantWrapper::Type::REGISTER)
+					{
+						u32 reg = (u32)inst.val0.variant.valInt;
+						if (reg < (u32)REGISTER_COUNT)
+						{
+							function.writes[reg / 64] |= 1ull << (reg % 64);
+						}
+					}
+					else if (inst.opCode == OpCode::CALL && inst.val0.type == VariantWrapper::Type::CONSTANT && !IsExternal(inst.val0.variant.valInt))
+					{
+						i32 callee = FindFunctionByStart(inst.val0.variant.valInt);
+						if (callee != -1)
+						{
+							function.callees.push_back(callee);
+						}
+					}
+				}
+			}
+
+			// Calls clobber everything their callees (transitively) write
+			bool bChanged = true;
+			while (bChanged)
+			{
+				bChanged = false;
+				for (Function& function : functions)
+				{
+					for (i32 callee : function.callees)
+					{
+						for (u32 w = 0; w < 2; ++w)
+						{
+							u64 combined = function.writes[w] | functions[callee].writes[w];
+							if (combined != function.writes[w])
+							{
+								function.writes[w] = combined;
+								bChanged = true;
+							}
+						}
+					}
+				}
+			}
+
+			for (u32 i = 0; i < (u32)instructions.size(); ++i)
+			{
+				const Instruction& inst = instructions[i];
+				if (inst.opCode != OpCode::SAVE && inst.opCode != OpCode::RESTORE)
+				{
+					continue;
+				}
+
+				i32 callee = FindFunctionByBlock(inst.val0.variant.valInt);
+				i32 count = std::min(inst.val1.variant.valInt, (i32)REGISTER_COUNT);
+				std::vector<u8>& saved = outSavedRegisters[i];
+				for (i32 reg = 0; reg < count; ++reg)
+				{
+					// (Unknown callees save everything)
+					if (callee == -1 || (functions[callee].writes[reg / 64] & (1ull << (reg % 64))) != 0)
+					{
+						saved.push_back((u8)reg);
+					}
+				}
+			}
+		}
+
+		bool VirtualMachine::Link(const std::vector<std::vector<u8>>* savedRegisters)
+		{
+			m_Code.clear();
+			m_SavedRegisterLists.clear();
+			m_Code.resize(instructions.size());
+
+			bool bSuccess = true;
+			for (u32 i = 0; i < (u32)instructions.size(); ++i)
+			{
+				Instruction& inst = instructions[i];
+				ExecInstruction& exec = m_Code[i];
+				exec.b = nullptr;
+
+				Variant* val0 = nullptr;
+				Variant* val1 = nullptr;
+				Variant* val2 = nullptr;
+				auto Resolve = [&](VariantWrapper& wrapper, bool bWritten, Variant*& outPtr)
+				{
+					if (!ResolveOperand(wrapper, bWritten, (i32)i, outPtr))
+					{
+						bSuccess = false;
+					}
+				};
+
+				switch (inst.opCode)
+				{
+				case OpCode::MOV:
+				case OpCode::INV:
+				case OpCode::ITF:
+				case OpCode::FTI:
+					Resolve(inst.val0, true, val0);
+					Resolve(inst.val1, false, val1);
+					exec.op = inst.opCode == OpCode::MOV ? X_MOV : inst.opCode == OpCode::INV ? X_INV : inst.opCode == OpCode::ITF ? X_ITF : X_FTI;
+					exec.dst = val0;
+					exec.a = val1;
+					break;
+				case OpCode::ADD:
+				case OpCode::SUB:
+				case OpCode::MUL:
+				case OpCode::DIV:
+				case OpCode::MOD:
+				case OpCode::AND:
+				case OpCode::OR:
+				case OpCode::XOR:
+				{
+					Resolve(inst.val0, true, val0);
+					Resolve(inst.val1, false, val1);
+					Resolve(inst.val2, false, val2);
+					static const ExecOp arithmeticOps[] = { X_ADD, X_SUB, X_MUL, X_DIV, X_MOD };
+					static const ExecOp bitwiseOps[] = { X_AND, X_OR, X_XOR };
+					exec.op = (inst.opCode >= OpCode::ADD && inst.opCode <= OpCode::MOD) ?
+						arithmeticOps[(i32)inst.opCode - (i32)OpCode::ADD] :
+						bitwiseOps[(i32)inst.opCode - (i32)OpCode::AND];
+					exec.dst = val0;
+					exec.a = val1;
+					exec.b = val2;
+				} break;
+				case OpCode::CALL:
+				{
+					if (inst.val0.type != VariantWrapper::Type::CONSTANT)
+					{
+						state->diagnosticContainer->AddDiagnostic(instructionOrigins[i], "Compiler error: call to a non constant address");
+						bSuccess = false;
+						break;
+					}
+					FuncAddress funcAddress = inst.val0.variant.valInt;
+					if (IsExternal(funcAddress))
+					{
+						IFunction* function = nullptr;
+						if (m_FunctionBindings != nullptr)
+						{
+							auto iter = m_FunctionBindings->ExternalFuncTable.find(funcAddress);
+							if (iter != m_FunctionBindings->ExternalFuncTable.end())
+							{
+								function = iter->second;
+							}
+						}
+						// (Calls to unknown external functions do nothing)
+						exec.op = function != nullptr ? X_CALL_EXTERNAL : X_NOP;
+						exec.func = function;
+						exec.count = function != nullptr ? (u16)function->argTypes.size() : 0;
+						if (exec.count > MAX_EXTERNAL_ARG_COUNT)
+						{
+							state->diagnosticContainer->AddDiagnostic(instructionOrigins[i], "Too many arguments for an external function");
+							bSuccess = false;
+						}
+					}
+					else
+					{
+						exec.op = X_CALL;
+						exec.target = TranslateLocalFuncAddress(funcAddress);
+					}
+				} break;
+				case OpCode::PUSH:
+					Resolve(inst.val0, false, val0);
+					exec.op = X_PUSH;
+					exec.a = val0;
+					break;
+				case OpCode::POP:
+					if (!inst.val0.Valid())
+					{
+						exec.op = X_POP_DISCARD;
+						break;
+					}
+					Resolve(inst.val0, true, val0);
+					// Registers can hold any type
+					exec.op = inst.val0.type == VariantWrapper::Type::REGISTER ? X_POP_REGISTER : X_POP;
+					exec.dst = val0;
+					break;
+				case OpCode::CMP:
+					Resolve(inst.val0, false, val0);
+					Resolve(inst.val1, false, val1);
+					exec.op = X_CMP;
+					exec.a = val0;
+					exec.b = val1;
+					break;
+				case OpCode::JMP:
+				case OpCode::JZ:
+				case OpCode::JNZ:
+				case OpCode::JEQ:
+				case OpCode::JNE:
+				case OpCode::JLT:
+				case OpCode::JLE:
+				case OpCode::JGT:
+				case OpCode::JGE:
+					exec.op = JumpExecOp(inst.opCode);
+					if (inst.val0.type == VariantWrapper::Type::CONSTANT)
+					{
+						exec.target = inst.val0.variant.valInt;
+					}
+					else
+					{
+						// (Returns jump to the address in a register)
+						Resolve(inst.val0, false, val0);
+						exec.target = -1;
+						exec.a = val0;
+					}
+					break;
+				case OpCode::YIELD:
+					exec.op = X_YIELD;
+					break;
+				case OpCode::RETURN:
+					exec.op = X_RETURN;
+					if (inst.val0.Valid())
+					{
+						Resolve(inst.val0, false, val0);
+						exec.a = val0;
+					}
+					break;
+				case OpCode::HALT:
+					exec.op = X_HALT;
+					break;
+				case OpCode::SAVE:
+				case OpCode::RESTORE:
+				{
+					exec.op = inst.opCode == OpCode::SAVE ? X_SAVE : X_RESTORE;
+					exec.target = (i32)m_SavedRegisterLists.size();
+					if (savedRegisters != nullptr && i < (u32)savedRegisters->size())
+					{
+						const std::vector<u8>& saved = (*savedRegisters)[i];
+						m_SavedRegisterLists.insert(m_SavedRegisterLists.end(), saved.begin(), saved.end());
+					}
+					else
+					{
+						i32 count = std::max(0, std::min(inst.val1.variant.valInt, (i32)REGISTER_COUNT));
+						for (i32 reg = 0; reg < count; ++reg)
+						{
+							m_SavedRegisterLists.push_back((u8)reg);
+						}
+					}
+					exec.count = (u16)((i32)m_SavedRegisterLists.size() - exec.target);
+				} break;
+				default:
+				{
+					std::string errorMsg = "Unhandled op code: " + std::string(OpCodeToString(inst.opCode));
+					state->diagnosticContainer->AddDiagnostic(instructionOrigins[i], errorMsg);
+					bSuccess = false;
+				} break;
+				}
+			}
+
+			// Jump & call targets (indices up to the end sentinel are valid)
+			const i32 codeSize = (i32)m_Code.size();
+			for (i32 i = 0; i < codeSize; ++i)
+			{
+				const ExecInstruction& exec = m_Code[i];
+				const bool bJump = exec.op == X_CALL || (exec.op >= X_JMP && exec.op <= X_JGE);
+				if (bJump && exec.target != -1 && (exec.target < 0 || exec.target > codeSize))
+				{
+					state->diagnosticContainer->AddDiagnostic(instructionOrigins[i], "Compiler error: jump to an invalid instruction");
+					bSuccess = false;
+				}
+			}
+			ExecInstruction end;
+			end.op = X_END;
+			end.b = nullptr;
+			m_Code.push_back(end);
+
+			// Fuse compares with the conditional jumps following them
+			for (u32 i = 0; i + 1 < (u32)m_Code.size(); ++i)
+			{
+				ExecInstruction& exec = m_Code[i];
+				const ExecInstruction& next = m_Code[i + 1];
+				if (exec.op == X_CMP && next.op >= X_JEQ && next.op <= X_JGE && next.target >= 0)
+				{
+					exec.op = (u8)(X_CMP_JEQ + (next.op - X_JEQ));
+					exec.target = next.target;
+				}
+			}
+
+			if (!bSuccess)
+			{
+				m_Code.clear();
+			}
+			return bSuccess;
 		}
 
 		void VirtualMachine::Execute(bool bSingleStep /* = false */)
 		{
+			m_LastExecutedInstructionCount = 0;
+
 			if (!m_bCompiled)
 			{
 				return;
 			}
 
-			if (instructions.empty())
+			if (m_Code.size() <= 1)
 			{
 				PrintError("Attempted to execute VM without any instructions present\n");
 				return;
@@ -1070,228 +1488,427 @@ namespace flex
 				}
 			}
 
-			u32 loopCount = 0;
-			bool bBreak = false;
-			while (!m_RunningState.terminated && !bBreak)
+			const ExecInstruction* code = m_Code.data();
+			// (Excluding the end sentinel)
+			const u32 codeSize = (u32)m_Code.size() - 1;
+			const u8* savedRegisterLists = m_SavedRegisterLists.data();
+			std::vector<Variant>& stackData = stack.m_Data;
+			if (stackData.capacity() < 256)
 			{
-				if (m_RunningState.instructionIdx < 0 || m_RunningState.instructionIdx >= (i32)instructions.size())
-				{
-					// (e.g. a function whose last block has no terminator)
-					diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), "Execution ran past the end of the program (missing return?)");
-					m_RunningState.terminated = true;
-					break;
-				}
-				Instruction& inst = instructions[m_RunningState.instructionIdx];
+				stackData.reserve(256);
+			}
 
-				i32 pInstIdx = m_RunningState.instructionIdx;
-				switch (inst.opCode)
+			i32 ip = m_RunningState.instructionIdx;
+			bool zf = m_RunningState.zf != 0;
+			bool sf = m_RunningState.sf != 0;
+			bool bTerminated = false;
+			u64 executedCount = 0;
+
+			auto Fail = [&](const char* message)
+			{
+				diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), message);
+				bTerminated = true;
+			};
+
+			// Conditions of the conditional jumps (on the flags set by the last compare)
+#define VM_JEQ (zf)
+#define VM_JNE (!zf)
+#define VM_JLT (!sf && !zf)
+#define VM_JLE (!sf || zf)
+#define VM_JGT (sf && !zf)
+#define VM_JGE (sf || zf)
+			// (Register targets are only known now: out of range ones go to the end sentinel, which reports it)
+#define VM_JUMP_TARGET(exec) ((exec).target >= 0 ? (exec).target : ((u32)(exec).a->valInt <= codeSize ? (exec).a->valInt : (i32)codeSize))
+#define VM_CONDITIONAL_JUMP(op, condition) \
+			case op: \
+				ip = (condition) ? VM_JUMP_TARGET(exec) : ip + 1; \
+				break;
+			// In single step mode fused compares only compare, so the jump is its own step
+#define VM_FUSED_COMPARE_JUMP(op, condition) \
+			case op: \
+				Compare(*exec.a, *exec.b, zf, sf); \
+				ip = bSingleStep ? ip + 1 : ((condition) ? exec.target : ip + 2); \
+				break;
+
+			if ((u32)ip > codeSize)
+			{
+				ip = (i32)codeSize;
+			}
+
+			// One instruction per step, otherwise up to the limit (going past it reports an error below)
+			const u64 instructionBudget = bSingleStep ? 1 : (u64)MAX_INSTRUCTIONS_PER_EXECUTE + 1;
+			bool bYielded = false;
+			while (true)
+			{
+				++executedCount;
+				const ExecInstruction& exec = code[ip];
+				switch (exec.op)
 				{
-				case OpCode::MOV:
-					inst.val0.GetW(this) = inst.val1.Get(this);
+				case X_NOP:
+					++ip;
 					break;
-				case OpCode::ADD:
-					inst.val0.GetW(this) = inst.val1.Get(this) + inst.val2.Get(this);
+				case X_MOV:
+					Assign(exec.dst, *exec.a);
+					++ip;
 					break;
-				case OpCode::SUB:
-					inst.val0.GetW(this) = inst.val1.Get(this) - inst.val2.Get(this);
-					break;
-				case OpCode::MUL:
-					inst.val0.GetW(this) = inst.val1.Get(this) * inst.val2.Get(this);
-					break;
-				case OpCode::DIV:
-					inst.val0.GetW(this) = inst.val1.Get(this) / inst.val2.Get(this);
-					break;
-				case OpCode::MOD:
-					inst.val0.GetW(this) = inst.val1.Get(this) % inst.val2.Get(this);
-					break;
-				case OpCode::INV:
+				case X_ADD:
 				{
-					Variant operand = inst.val1.Get(this);
-					Variant& regVal = inst.val0.GetW(this);
+					const Variant& lhs = *exec.a;
+					const Variant& rhs = *exec.b;
+					if (lhs.type == rhs.type && lhs.type == Variant::Type::INT) AssignInt(exec.dst, WrapAdd(lhs.valInt, rhs.valInt));
+					else if (lhs.type == rhs.type && lhs.type == Variant::Type::FLOAT) AssignFloat(exec.dst, lhs.valFloat + rhs.valFloat);
+					else *exec.dst = lhs + rhs;
+					++ip;
+				} break;
+				case X_SUB:
+				{
+					const Variant& lhs = *exec.a;
+					const Variant& rhs = *exec.b;
+					if (lhs.type == rhs.type && lhs.type == Variant::Type::INT) AssignInt(exec.dst, WrapSub(lhs.valInt, rhs.valInt));
+					else if (lhs.type == rhs.type && lhs.type == Variant::Type::FLOAT) AssignFloat(exec.dst, lhs.valFloat - rhs.valFloat);
+					else *exec.dst = lhs - rhs;
+					++ip;
+				} break;
+				case X_MUL:
+				{
+					const Variant& lhs = *exec.a;
+					const Variant& rhs = *exec.b;
+					if (lhs.type == rhs.type && lhs.type == Variant::Type::INT) AssignInt(exec.dst, WrapMul(lhs.valInt, rhs.valInt));
+					else if (lhs.type == rhs.type && lhs.type == Variant::Type::FLOAT) AssignFloat(exec.dst, lhs.valFloat * rhs.valFloat);
+					else *exec.dst = lhs * rhs;
+					++ip;
+				} break;
+				case X_DIV:
+				{
+					const Variant& lhs = *exec.a;
+					const Variant& rhs = *exec.b;
+					if (lhs.type == rhs.type && lhs.type == Variant::Type::INT) AssignInt(exec.dst, SafeDiv(lhs.valInt, rhs.valInt));
+					else if (lhs.type == rhs.type && lhs.type == Variant::Type::FLOAT) AssignFloat(exec.dst, lhs.valFloat / rhs.valFloat);
+					else *exec.dst = lhs / rhs;
+					++ip;
+				} break;
+				case X_MOD:
+				{
+					const Variant& lhs = *exec.a;
+					const Variant& rhs = *exec.b;
+					if (lhs.type == rhs.type && lhs.type == Variant::Type::INT) AssignInt(exec.dst, SafeMod(lhs.valInt, rhs.valInt));
+					else *exec.dst = lhs % rhs;
+					++ip;
+				} break;
+				case X_INV:
+				{
+					const Variant& operand = *exec.a;
 					if (operand.type == Variant::Type::INT)
 					{
-						regVal.type = Variant::Type::INT;
-						regVal.valInt = ~operand.valInt;
+						exec.dst->type = Variant::Type::INT;
+						exec.dst->valInt = ~operand.valInt;
+						++ip;
 					}
 					else
 					{
-						diagnosticContainer->AddDiagnostic(instructionOrigins[m_RunningState.instructionIdx], "Binary invert can only be applied to ints");
-						m_RunningState.terminated = true;
+						diagnosticContainer->AddDiagnostic(instructionOrigins[ip], "Binary invert can only be applied to ints");
+						bTerminated = true;
 					}
 				} break;
-				case OpCode::AND:
-					// (Also used for && on bools)
-					inst.val0.GetW(this) = inst.val1.Get(this) & inst.val2.Get(this);
-					break;
-				case OpCode::OR:
-					// (Also used for || on bools)
-					inst.val0.GetW(this) = inst.val1.Get(this) | inst.val2.Get(this);
-					break;
-				case OpCode::XOR:
-					inst.val0.GetW(this) = inst.val1.Get(this) ^ inst.val2.Get(this);
-					break;
-				case OpCode::ITF:
+				case X_AND:
 				{
-					Variant& regVal = inst.val0.GetW(this);
-					regVal.type = Variant::Type::FLOAT;
-					regVal.valFloat = inst.val1.Get(this).AsFloat();
+					// (Also used on bools)
+					const Variant& lhs = *exec.a;
+					const Variant& rhs = *exec.b;
+					if (lhs.type == rhs.type && lhs.type == Variant::Type::INT) AssignInt(exec.dst, lhs.valInt & rhs.valInt);
+					else if (lhs.type == rhs.type && lhs.type == Variant::Type::BOOL) AssignBool(exec.dst, lhs.valBool & rhs.valBool);
+					else *exec.dst = lhs & rhs;
+					++ip;
 				} break;
-				case OpCode::FTI:
+				case X_OR:
 				{
-					Variant& regVal = inst.val0.GetW(this);
-					regVal.type = Variant::Type::INT;
-					regVal.valInt = inst.val1.Get(this).AsInt();
+					const Variant& lhs = *exec.a;
+					const Variant& rhs = *exec.b;
+					if (lhs.type == rhs.type && lhs.type == Variant::Type::INT) AssignInt(exec.dst, lhs.valInt | rhs.valInt);
+					else if (lhs.type == rhs.type && lhs.type == Variant::Type::BOOL) AssignBool(exec.dst, lhs.valBool | rhs.valBool);
+					else *exec.dst = lhs | rhs;
+					++ip;
 				} break;
-				case OpCode::CALL:
+				case X_XOR:
 				{
-					FuncAddress funcAddress = inst.val0.Get(this).valInt;
-					if (IsExternal(funcAddress))
+					// (!a is a ^ true)
+					const Variant& lhs = *exec.a;
+					const Variant& rhs = *exec.b;
+					if (lhs.type == rhs.type && lhs.type == Variant::Type::INT) AssignInt(exec.dst, lhs.valInt ^ rhs.valInt);
+					else if (lhs.type == rhs.type && lhs.type == Variant::Type::BOOL) AssignBool(exec.dst, lhs.valBool != rhs.valBool ? 1 : 0);
+					else *exec.dst = lhs ^ rhs;
+					++ip;
+				} break;
+				case X_ITF:
+				{
+					real value = exec.a->AsFloat();
+					exec.dst->type = Variant::Type::FLOAT;
+					exec.dst->valFloat = value;
+					++ip;
+				} break;
+				case X_FTI:
+				{
+					i32 value = exec.a->AsInt();
+					exec.dst->type = Variant::Type::INT;
+					exec.dst->valInt = value;
+					++ip;
+				} break;
+				case X_CALL:
+					ip = exec.target;
+					break;
+				case X_CALL_EXTERNAL:
+				{
+					const u32 argCount = exec.count;
+					if ((u32)stackData.size() < argCount)
 					{
-						if (!DispatchExternalCall(funcAddress))
-						{
-							m_RunningState.terminated = true;
-						}
+						Fail("Mismatched stack pop (attempted to pop from empty stack)");
+						break;
 					}
-					else
+					// Arguments were pushed in reverse order, so the first one is on top
+					Variant args[MAX_EXTERNAL_ARG_COUNT];
+					const u32 top = (u32)stackData.size();
+					for (u32 i = 0; i < argCount; ++i)
 					{
-						m_RunningState.instructionIdx = TranslateLocalFuncAddress(funcAddress);
+						args[i] = stackData[top - 1 - i];
 					}
+					stackData.resize(top - argCount);
+
+					Variant returnVal = exec.func->Execute(args, (i32)argCount);
+					if (exec.func->returnType != Variant::Type::VOID_)
+					{
+						stackData.push_back(returnVal);
+					}
+					++ip;
 				} break;
-				case OpCode::PUSH:
-					if (stack.size() >= MAX_STACK_HEIGHT)
+				case X_PUSH:
+					if (stackData.size() >= (size_t)MAX_STACK_HEIGHT)
 					{
 						std::string errorMessage = "Stack overflow (reached max value: " + IntToString(MAX_STACK_HEIGHT) + ")";
-						diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), errorMessage);
-						m_RunningState.terminated = true;
+						Fail(errorMessage.c_str());
 						break;
 					}
-					stack.push(inst.val0.Get(this));
+					stackData.push_back(*exec.a);
+					++ip;
 					break;
-				case OpCode::POP:
-					if (stack.empty())
+				case X_POP:
+				case X_POP_REGISTER:
+				case X_POP_DISCARD:
+					if (stackData.empty())
 					{
-						std::string errorMessage = "Mismatched stack pop (attempted to pop from empty stack)";
-						diagnosticContainer->AddDiagnostic(Span(Span::Source::GENERATED), errorMessage);
-						m_RunningState.terminated = true;
+						Fail("Mismatched stack pop (attempted to pop from empty stack)");
 						break;
 					}
-
-					if (inst.val0.Valid())
+					if (exec.op == X_POP_REGISTER)
 					{
-						if (inst.val0.type == VM::VariantWrapper::Type::REGISTER)
-						{
-							// Registers can hold any type
-							inst.val0.GetW(this).type = Variant::Type::_NONE;
-						}
-						inst.val0.GetW(this) = stack.top();
+						// (Registers can hold any type)
+						exec.dst->type = stackData.back().type;
+						exec.dst->_largestField = stackData.back()._largestField;
 					}
-					stack.pop();
+					else if (exec.op == X_POP)
+					{
+						Assign(exec.dst, stackData.back());
+					}
+					stackData.pop_back();
+					++ip;
 					break;
-				case OpCode::CMP:
+				case X_CMP:
+					Compare(*exec.a, *exec.b, zf, sf);
+					++ip;
+					break;
+				case X_JMP:
+					ip = VM_JUMP_TARGET(exec);
+					break;
+				VM_CONDITIONAL_JUMP(X_JEQ, VM_JEQ)
+				VM_CONDITIONAL_JUMP(X_JNE, VM_JNE)
+				VM_CONDITIONAL_JUMP(X_JLT, VM_JLT)
+				VM_CONDITIONAL_JUMP(X_JLE, VM_JLE)
+				VM_CONDITIONAL_JUMP(X_JGT, VM_JGT)
+				VM_CONDITIONAL_JUMP(X_JGE, VM_JGE)
+				VM_FUSED_COMPARE_JUMP(X_CMP_JEQ, VM_JEQ)
+				VM_FUSED_COMPARE_JUMP(X_CMP_JNE, VM_JNE)
+				VM_FUSED_COMPARE_JUMP(X_CMP_JLT, VM_JLT)
+				VM_FUSED_COMPARE_JUMP(X_CMP_JLE, VM_JLE)
+				VM_FUSED_COMPARE_JUMP(X_CMP_JGT, VM_JGT)
+				VM_FUSED_COMPARE_JUMP(X_CMP_JGE, VM_JGE)
+				case X_YIELD:
+					++ip;
+					bYielded = true;
+					break;
+				case X_RETURN:
 				{
-					Variant diff = inst.val0.Get(this) - inst.val1.Get(this);
-					m_RunningState.zf = diff.IsZero();
-					m_RunningState.sf = diff.IsPositive();
+					if (stackData.empty())
+					{
+						Fail("Mismatched stack pop (attempted to pop from empty stack)");
+						break;
+					}
+					i32 resumePoint = stackData.back().valInt;
+					stackData.pop_back();
+					if (exec.a != nullptr)
+					{
+						stackData.push_back(*exec.a);
+					}
+					ip = (u32)resumePoint <= codeSize ? resumePoint : (i32)codeSize;
 				} break;
-				case OpCode::JMP:
-					m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
+				case X_END:
+					// (e.g. a function whose last block has no terminator)
+					Fail("Execution ran past the end of the program (missing return?)");
 					break;
-				case OpCode::JZ:
-					if (m_RunningState.zf)
-					{
-						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
-					}
+				case X_HALT:
+					bTerminated = true;
 					break;
-				case OpCode::JNZ:
-					if (!m_RunningState.zf)
-					{
-						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
-					}
-					break;
-				case OpCode::JLT:
-					if (!m_RunningState.sf && !m_RunningState.zf)
-					{
-						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
-					}
-					break;
-				case OpCode::JLE:
-					if (!m_RunningState.sf || m_RunningState.zf)
-					{
-						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
-					}
-					break;
-				case OpCode::JGT:
-					if (m_RunningState.sf && !m_RunningState.zf)
-					{
-						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
-					}
-					break;
-				case OpCode::JGE:
-					if (m_RunningState.sf || m_RunningState.zf)
-					{
-						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
-					}
-					break;
-				case OpCode::JEQ:
-					if (m_RunningState.zf)
-					{
-						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
-					}
-					break;
-				case OpCode::JNE:
-					if (!m_RunningState.zf)
-					{
-						m_RunningState.instructionIdx = inst.val0.Get(this).valInt;
-					}
-					break;
-				case OpCode::YIELD:
-					// TODO: Store registers/stack?
-					bBreak = true;
-					break;
-				case OpCode::RETURN:
+				case X_SAVE:
 				{
-					i32 resumePoint = stack.top().valInt;
-					m_RunningState.instructionIdx = resumePoint;
-					stack.pop();
-
-					const bool bVoid = !inst.val0.Valid();
-					if (!bVoid)
+					const u32 count = exec.count;
+					if (stackData.size() + count > (size_t)MAX_STACK_HEIGHT)
 					{
-						Variant returnVal = Variant(inst.val0.Get(this));
-						stack.push(returnVal);
+						std::string errorMessage = "Stack overflow (reached max value: " + IntToString(MAX_STACK_HEIGHT) + ")";
+						Fail(errorMessage.c_str());
+						break;
 					}
+					const u8* regs = savedRegisterLists + exec.target;
+					for (u32 i = 0; i < count; ++i)
+					{
+						stackData.push_back(registers[regs[i]]);
+					}
+					++ip;
 				} break;
-				case OpCode::HALT:
-					m_RunningState.terminated = true;
-					break;
+				case X_RESTORE:
+				{
+					const u32 count = exec.count;
+					if ((u32)stackData.size() < count)
+					{
+						Fail("Mismatched stack pop (attempted to pop from empty stack)");
+						break;
+					}
+					const u8* regs = savedRegisterLists + exec.target;
+					for (i32 i = (i32)count - 1; i >= 0; --i)
+					{
+						// (Registers can hold any type)
+						Variant& reg = registers[regs[i]];
+						reg.type = stackData.back().type;
+						reg._largestField = stackData.back()._largestField;
+						stackData.pop_back();
+					}
+					++ip;
+				} break;
 				default:
-					std::string opCodeStr(OpCodeToString(inst.opCode));
-					std::string errorMsg = "Unhandled op code in VirtualMachine::Execute: " + opCodeStr;
-					diagnosticContainer->AddDiagnostic(Span(0, 0), errorMsg);
+					Fail("Unhandled op code in VirtualMachine::Execute");
 					break;
 				}
 
-				if (!m_RunningState.terminated && pInstIdx == m_RunningState.instructionIdx)
-				{
-					++m_RunningState.instructionIdx;
-				}
-
-				if (++loopCount > 10'000'000)
-				{
-					diagnosticContainer->AddDiagnostic(Span(0, 0), "Execution loop took too long, broke out early\n");
-					m_RunningState.terminated = true;
-				}
-
-				if (bSingleStep)
+				if (bTerminated | bYielded | (executedCount >= instructionBudget))
 				{
 					break;
 				}
 			}
 
-			if (m_RunningState.terminated)
+			if (!bSingleStep && !bTerminated && !bYielded && executedCount > MAX_INSTRUCTIONS_PER_EXECUTE)
 			{
-				m_RunningState.instructionIdx = -1;
+				Fail("Execution loop took too long, broke out early\n");
 			}
+
+#undef VM_JEQ
+#undef VM_JNE
+#undef VM_JLT
+#undef VM_JLE
+#undef VM_JGT
+#undef VM_JGE
+#undef VM_JUMP_TARGET
+#undef VM_CONDITIONAL_JUMP
+#undef VM_FUSED_COMPARE_JUMP
+
+			m_LastExecutedInstructionCount = executedCount;
+			m_RunningState.zf = zf ? 1 : 0;
+			m_RunningState.sf = sf ? 1 : 0;
+			m_RunningState.terminated = bTerminated;
+			m_RunningState.instructionIdx = bTerminated ? -1 : ip;
+		}
+
+		u64 VirtualMachine::LastExecutedInstructionCount() const
+		{
+			return m_LastExecutedInstructionCount;
+		}
+
+		void VirtualMachine::BuildDebugStrings()
+		{
+			if (m_bDebugStringsBuilt)
+			{
+				return;
+			}
+			m_bDebugStringsBuilt = true;
+
+			m_ASTStr = (m_bASTValid && m_AST != nullptr && m_AST->rootBlock != nullptr) ? m_AST->rootBlock->ToString() : "";
+			m_IRStr = (m_bIRValid && m_IR != nullptr) ? m_IR->ToString() : "";
+
+			StringBuilder strBuilder;
+			for (u32 i = 0; i < (u32)state->instructionBlocks.size(); ++i)
+			{
+				const InstructionBlock& instBlock = state->instructionBlocks[i];
+				strBuilder.Append(IntToString(i, 1, ' '));
+				strBuilder.AppendLine(": {");
+				for (u32 j = 0; j < instBlock.count; ++j)
+				{
+					const Instruction& inst = state->instructions[instBlock.startOffset + j];
+					std::string val0Str = inst.val0.ToString();
+					std::string val1Str = inst.val1.ToString();
+					std::string val2Str = inst.val2.ToString();
+					strBuilder.Append("  ");
+					strBuilder.Append(OpCodeToString(inst.opCode));
+					strBuilder.Append(" ");
+					strBuilder.Append(val0Str.c_str());
+					strBuilder.Append(" ");
+					strBuilder.Append(val1Str.c_str());
+					strBuilder.Append(" ");
+					strBuilder.Append(val2Str.c_str());
+					strBuilder.Append("\n");
+				}
+				strBuilder.AppendLine("}");
+			}
+			m_UnpatchedInstructionStr = strBuilder.ToString();
+
+			strBuilder.Clear();
+			for (u32 i = 0; i < (u32)instructions.size(); ++i)
+			{
+				const Instruction& inst = instructions[i];
+				std::string val0Str = inst.val0.ToString();
+				std::string val1Str = inst.val1.ToString();
+				std::string val2Str = inst.val2.ToString();
+				strBuilder.Append(IntToString(i, 2, ' '));
+				strBuilder.Append("  ");
+				strBuilder.Append(OpCodeToString(inst.opCode));
+				strBuilder.Append(" ");
+				strBuilder.Append(val0Str.c_str());
+				strBuilder.Append(" ");
+				strBuilder.Append(val1Str.c_str());
+				strBuilder.Append(" ");
+				strBuilder.Append(val2Str.c_str());
+				strBuilder.Append("\n");
+			}
+			m_InstructionStr = strBuilder.ToString();
+		}
+
+		const std::string& VirtualMachine::GetASTString()
+		{
+			BuildDebugStrings();
+			return m_ASTStr;
+		}
+
+		const std::string& VirtualMachine::GetIRString()
+		{
+			BuildDebugStrings();
+			return m_IRStr;
+		}
+
+		const std::string& VirtualMachine::GetUnpatchedInstructionString()
+		{
+			BuildDebugStrings();
+			return m_UnpatchedInstructionStr;
+		}
+
+		const std::string& VirtualMachine::GetInstructionString()
+		{
+			BuildDebugStrings();
+			return m_InstructionStr;
 		}
 
 		DiagnosticContainer* VirtualMachine::GetDiagnosticContainer()
@@ -1321,7 +1938,6 @@ namespace flex
 		void VirtualMachine::ClearRuntimeState()
 		{
 			m_RunningState.Clear();
-			AllocateMemory();
 			ZeroOutRegisters();
 			ZeroOutTerminalOutputs();
 			ClearStack();
@@ -1341,18 +1957,6 @@ namespace flex
 		bool VirtualMachine::IsCompiled() const
 		{
 			return m_bCompiled;
-		}
-
-		void VirtualMachine::AllocateMemory()
-		{
-			if (memory == nullptr)
-			{
-				memory = (u32*)malloc(MEMORY_POOL_SIZE);
-				if (memory == nullptr)
-				{
-					PrintError("Failed to allocate %u bytes for VM memory!\n", MEMORY_POOL_SIZE);
-				}
-			}
 		}
 
 		void VirtualMachine::ZeroOutRegisters()
@@ -1375,10 +1979,7 @@ namespace flex
 
 		void VirtualMachine::ClearStack()
 		{
-			while (!stack.empty())
-			{
-				stack.pop();
-			}
+			stack.clear();
 		}
 
 		bool VirtualMachine::IsExternal(FuncAddress funcAddress)
@@ -1402,34 +2003,6 @@ namespace flex
 		i32 VirtualMachine::TranslateLocalFuncAddress(FuncAddress localFuncAddress)
 		{
 			return localFuncAddress;
-		}
-
-		bool VirtualMachine::DispatchExternalCall(FuncAddress funcAddress)
-		{
-			auto iter = m_FunctionBindings->ExternalFuncTable.find(funcAddress);
-			if (iter != m_FunctionBindings->ExternalFuncTable.end())
-			{
-				IFunction* funcPtr = iter->second;
-
-				std::vector<Variant> args;
-				i32 argCount = (i32)funcPtr->argTypes.size();
-				args.reserve(argCount);
-				for (i32 i = 0; i < argCount; ++i)
-				{
-					const Variant& arg = stack.top();
-					args.emplace_back(arg);
-					stack.pop();
-				}
-
-				Variant returnVal = funcPtr->Execute(args);
-
-				if (funcPtr->returnType != Variant::Type::VOID_)
-				{
-					stack.push(returnVal);
-				}
-			}
-
-			return true;
 		}
 
 		const char* OpCodeToString(OpCode opCode)

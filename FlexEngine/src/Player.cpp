@@ -175,6 +175,7 @@ namespace flex
 
 	void Player::Destroy(bool bDetachFromParent /* = true */)
 	{
+		ReleaseHeldTorchLight();
 		if (m_Woodcraft != nullptr)
 		{
 			m_Woodcraft->Destroy();
@@ -341,7 +342,8 @@ namespace flex
 
 		GameObjectStack& stack = m_QuickAccessInventory[m_SelectedQuickAccessItemSlot];
 		PrefabID desiredActiveItemPrefabID = InvalidPrefabID;
-		if (stack.count > 1 || (stack.count == 1 && !m_bPreviewPlaceItemFromInventory))
+		// Nothing is held while driving or rowing (the hands are busy & the proxy would float beside the vehicle)
+		if ((stack.count > 1 || (stack.count == 1 && !m_bPreviewPlaceItemFromInventory)) && !m_RidingVehicleID.IsValid())
 		{
 			desiredActiveItemPrefabID = stack.prefabID;
 		}
@@ -1175,6 +1177,7 @@ namespace flex
 		{
 			GameObject::UpdateActiveItem(m_ActiveItemCache[m_ActiveItemIndex]);
 		}
+		UpdateItemLights();
 	}
 
 	void Player::UpdateHeldJitterTest()

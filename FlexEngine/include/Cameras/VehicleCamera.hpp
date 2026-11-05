@@ -55,6 +55,10 @@ namespace flex
 		void SetPosAndLookAt();
 		void SetLookAt();
 		void FindActiveVehicle();
+		// Pulls the camera in towards the vehicle so it doesn't go into terrain or large static objects
+		glm::vec3 ResolveCollision(const glm::vec3& pivot, const glm::vec3& desiredPos);
+		// How far a sphere (m_CollisionRadius) can move from 'from' towards 'to' before hitting terrain or something large & static
+		real ClearDistance(const glm::vec3& from, const glm::vec3& to) const;
 
 		void ResetValues();
 
@@ -97,6 +101,14 @@ namespace flex
 		real m_MinElevation = glm::radians(-5.0f);
 		real m_MaxElevation = glm::radians(75.0f);
 		real m_LookOffsetMagnitude = 1.25f;
+
+		// Collision: fraction of the desired follow distance the camera is at (pulled in fast, eased back out)
+		real m_CollisionFraction = 1.0f;
+		const real m_CollisionRadius = 0.35f;
+		const real m_MinCollisionDistance = 1.5f;
+		const real m_CollisionReturnSpeed = 2.0f;
+		// The sweep starts this far above the vehicle's origin (so it starts clear of the ground it sits on)
+		const real m_CollisionPivotHeight = 1.0f;
 
 		void UpdateStats();
 

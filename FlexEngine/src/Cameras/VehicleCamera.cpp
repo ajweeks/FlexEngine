@@ -3,6 +3,10 @@
 #include "Cameras/VehicleCamera.hpp"
 
 IGNORE_WARNINGS_PUSH
+#include <BulletCollision/CollisionShapes/btSphereShape.h>
+#include <BulletDynamics/Dynamics/btDiscreteDynamicsWorld.h>
+#include <BulletDynamics/Dynamics/btRigidBody.h>
+
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp> // for rotateY
 #include <glm/vec2.hpp>
@@ -17,6 +21,7 @@ IGNORE_WARNINGS_POP
 #include "Player.hpp"
 #include "Scene/BaseScene.hpp"
 #include "Scene/GameObject.hpp"
+#include "Scene/Objects/TerrainGenerator.hpp"
 #include "Scene/Objects/Vehicle.hpp"
 #include "Scene/SceneManager.hpp"
 #include "Window/Window.hpp"
@@ -256,6 +261,7 @@ namespace flex
 			// by a frame, by an amount which varied with the frame time: the main cause of the jitter, especially
 			// while turning.)
 			position = GetOffsetPosition(m_TargetLookAtPos, targetForward);
+			position = ResolveCollision(m_TargetLookAtPos + VEC3_UP * m_CollisionPivotHeight, position);
 			SetLookAt();
 
 			CalculateYawAndPitchFromForward();
@@ -317,8 +323,6 @@ namespace flex
 			backward = glm::normalize(backward);
 		}
 
-		// TODO: Check for collisions
-
 		real speedFactor = glm::clamp((m_TargetSpeed - m_MinSpeed) / (m_MaxSpeed - m_MinSpeed), 0.0f, 1.0f);
 		glm::vec3 upward = VEC3_UP * Lerp(m_MaxDownwardAngle, m_MinDownwardAngle, speedFactor);
 		real targetFollowDistance = Lerp(m_ClosestDist, m_FurthestDist, speedFactor);
@@ -349,6 +353,111 @@ namespace flex
 		m_LastLookOffset = lookOffset;
 
 		return lookAtPos + offsetVec + lookOffset3;
+	}
+
+	real VehicleCamera::ClearDistance(const glm::vec3& from, const glm::vec3& to) const
+	{
+		const glm::vec3 offset = to - from;
+		const real length = glm::length(offset);
+		if (length < 1e-3f || IsNanOrInf(offset))
+		{
+			return length;
+		}
+		real clearDist = length;
+
+		// Physics: a sphere swept from above the vehicle out to the camera. Ignores the vehicle itself, triggers,
+		// anything that moves & small props
+		BaseScene* scene = g_SceneManager->CurrentScene();
+		PhysicsWorld* physicsWorld = scene->GetPhysicsWorld();
+		if (physicsWorld != nullptr && physicsWorld->GetWorld() != nullptr)
+		{
+			struct CameraSweepCallback final : public btCollisionWorld::ClosestConvexResultCallback
+			{
+				CameraSweepCallback(const btVector3& from, const btVector3& to, const btCollisionObject* ignored) :
+					ClosestConvexResultCallback(from, to),
+					ignored(ignored)
+				{
+					m_collisionFilterMask = (i32)CollisionType::STATIC | (i32)CollisionType::DEFAULT;
+				}
+
+				virtual bool needsCollision(btBroadphaseProxy* proxy) const override
+				{
+					if (!ClosestConvexResultCallback::needsCollision(proxy))
+					{
+						return false;
+					}
+					const btCollisionObject* object = static_cast<const btCollisionObject*>(proxy->m_clientObject);
+					if (object == ignored || !object->hasContactResponse() || !object->isStaticOrKinematicObject())
+					{
+						return false;
+					}
+					// Streamed terrain's chunks (meshes with no game object) are left to the density raycast below, which
+					// ignores their tree trunks: driving past trees shouldn't make the camera jump in & out
+					if (object->getUserPointer() == nullptr && object->getCollisionShape() != nullptr &&
+						object->getCollisionShape()->getShapeType() == TRIANGLE_MESH_SHAPE_PROXYTYPE && TerrainGenerator::GetActive() != nullptr)
+					{
+						return false;
+					}
+					const btVector3 extent = proxy->m_aabbMax - proxy->m_aabbMin;
+					const real SMALL_PROP_SIZE = 2.0f;
+					return btMax(btMax(extent.x(), extent.y()), extent.z()) >= SMALL_PROP_SIZE;
+				}
+
+				const btCollisionObject* ignored;
+			};
+
+			const btCollisionObject* vehicleBody = (m_TrackedVehicle != nullptr && m_TrackedVehicle->GetRigidBody() != nullptr) ?
+				m_TrackedVehicle->GetRigidBody()->GetRigidBodyInternal() : nullptr;
+			btSphereShape sphere(m_CollisionRadius);
+			const btTransform fromTransform(btQuaternion::getIdentity(), ToBtVec3(from));
+			const btTransform toTransform(btQuaternion::getIdentity(), ToBtVec3(to));
+			CameraSweepCallback callback(fromTransform.getOrigin(), toTransform.getOrigin(), vehicleBody);
+			physicsWorld->GetWorld()->convexSweepTest(&sphere, fromTransform, toTransform, callback);
+			if (callback.hasHit())
+			{
+				clearDist = glm::min(clearDist, callback.m_closestHitFraction * length);
+			}
+		}
+
+		// Terrain whose collision hasn't been created yet (a fast vehicle can outrun it): march the density instead
+		TerrainGenerator* terrainGenerator = TerrainGenerator::GetActive();
+		if (terrainGenerator != nullptr && !terrainGenerator->IsWorldChangePending())
+		{
+			glm::vec3 hitPos, hitNormal;
+			if (terrainGenerator->Raycast(from, offset / length, clearDist + m_CollisionRadius, hitPos, hitNormal))
+			{
+				clearDist = glm::min(clearDist, glm::distance(from, hitPos) - m_CollisionRadius);
+			}
+		}
+
+		return glm::max(clearDist, 0.0f);
+	}
+
+	glm::vec3 VehicleCamera::ResolveCollision(const glm::vec3& pivot, const glm::vec3& desiredPos)
+	{
+		const glm::vec3 offset = desiredPos - pivot;
+		const real desiredDist = glm::length(offset);
+		if (desiredDist < 1e-3f || IsNanOrInf(offset))
+		{
+			return desiredPos;
+		}
+
+		const real clearDist = ClearDistance(pivot, desiredPos);
+		const real targetDist = glm::clamp(clearDist, glm::min(m_MinCollisionDistance, desiredDist), desiredDist);
+		const real targetFraction = targetDist / desiredDist;
+
+		// Fast in (immediately, so the view never clips into the ground), slow out
+		if (targetFraction <= m_CollisionFraction)
+		{
+			m_CollisionFraction = targetFraction;
+		}
+		else
+		{
+			m_CollisionFraction = glm::mix(m_CollisionFraction, targetFraction, 1.0f - glm::exp(-m_CollisionReturnSpeed * g_DeltaTime));
+			m_CollisionFraction = glm::min(m_CollisionFraction + 0.02f * g_DeltaTime, targetFraction);
+		}
+
+		return pivot + offset * m_CollisionFraction;
 	}
 
 	void VehicleCamera::SetPosAndLookAt()
@@ -401,6 +510,7 @@ namespace flex
 		ResetOrientation();
 
 		m_Vel = VEC3_ZERO;
+		m_CollisionFraction = 1.0f;
 		pitch = -PI_DIV_FOUR;
 		m_FollowDistance = -1.0f;
 		m_TargetVelMagnitudeRollingAvg.Reset();

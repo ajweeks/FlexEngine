@@ -2587,11 +2587,6 @@ bChanged = ImGui::ColorEdit3("Cliff", &biome.cliffColour.x) || bChanged;
 
 		Player* player = g_SceneManager->CurrentScene()->GetPlayer(0);
 		const glm::vec3 pos = player != nullptr ? player->GetTransform()->GetWorldPosition() : camera->position;
-		// Hidden while gliding, where the flight instructions need the room
-		if (player != nullptr && player->GetTraversal() != nullptr && (player->GetTraversal()->GetMode() == Traversal::Mode::GLIDING || player->GetTraversal()->GetMode() == Traversal::Mode::WINGSUIT))
-		{
-			return;
-		}
 
 		// Regenerated (in the background, ~60ms) whenever the player moves a little, so they stay near the center
 		const bool bStale = !m_Minimap.bValid || m_Minimap.extent != m_MinimapExtent ||

@@ -422,8 +422,12 @@ namespace flex
 		const real aspectRatio = windowSize.x / windowSize.y;
 		const real tanHalfFov = std::tan(glm::clamp(camera->FOV + camera->fovOffset, glm::radians(5.0f), glm::radians(150.0f)) * 0.5f);
 		const glm::vec3 forward = glm::normalize(camera->forward);
-		const glm::vec3 screenRight = glm::normalize(glm::cross(forward, camera->up));
-		const glm::vec3 screenUp = glm::cross(screenRight, forward);
+		// The screen's axes, from the camera's matrices (cross(forward, up) points left on screen with this projection,
+		// which mirrored the glints horizontally)
+		const glm::mat4 view = camera->GetView();
+		const glm::mat4 proj = camera->GetProjection();
+		const glm::vec3 screenRight = glm::normalize(glm::vec3(view[0][0], view[1][0], view[2][0])) * (proj[0][0] < 0.0f ? -1.0f : 1.0f);
+		const glm::vec3 screenUp = glm::normalize(glm::vec3(view[0][1], view[1][1], view[2][1]));
 		// Sprite space: y in [-1, 1] spans the window's height
 		const real pixel = 2.0f / windowSize.y;
 		const real uiScale = glm::max(windowSize.y / 1080.0f, 0.5f);
@@ -489,26 +493,30 @@ namespace flex
 
 			const glm::vec3 delta = target - eye;
 			const real depth = glm::dot(delta, forward);
-			real sx, sy;
+			real sx = 0.0f, sy = 0.0f;
 			bool bEdge = false;
 			if (depth > 0.1f)
 			{
 				sx = glm::dot(delta, screenRight) / (depth * tanHalfFov);
 				sy = glm::dot(delta, screenUp) / (depth * tanHalfFov);
+				if (glm::abs(sx) > aspectRatio * 0.95f || glm::abs(sy) > 0.95f)
+				{
+					// In front but off screen: on the screen's edge in the chest's direction (so it points the way to turn)
+					glm::vec2 dir(sx, sy);
+					dir = glm::length(dir) > 1e-5f ? glm::normalize(dir) : glm::vec2(0.0f, 1.0f);
+					const real edgeScale = glm::min(aspectRatio * 0.92f / glm::max(glm::abs(dir.x), 1e-4f), 0.92f / glm::max(glm::abs(dir.y), 1e-4f));
+					sx = dir.x * edgeScale;
+					sy = dir.y * edgeScale;
+					bEdge = true;
+				}
 			}
 			else
 			{
-				sx = glm::dot(delta, screenRight);
-				sy = glm::dot(delta, screenUp);
-			}
-			if (depth <= 0.1f || glm::abs(sx) > aspectRatio * 0.95f || glm::abs(sy) > 0.95f)
-			{
-				// Off screen: the glint sits on the screen's edge in the chest's direction (so it points the way to turn)
-				glm::vec2 dir(sx, sy);
-				dir = glm::length(dir) > 1e-5f ? glm::normalize(dir) : glm::vec2(0.0f, 1.0f);
-				const real edgeScale = glm::min(aspectRatio * 0.92f / glm::max(glm::abs(dir.x), 1e-4f), 0.92f / glm::max(glm::abs(dir.y), 1e-4f));
-				sx = dir.x * edgeScale;
-				sy = dir.y * edgeScale;
+				// Behind: on the left or right edge, whichever side is the shorter turn, at about the chest's elevation
+				const real lateral = glm::dot(delta, screenRight);
+				const real elevation = glm::dot(delta, screenUp) / glm::max(glm::length(delta), 1e-3f);
+				sx = (lateral < 0.0f ? -1.0f : 1.0f) * aspectRatio * 0.92f;
+				sy = glm::clamp(elevation / tanHalfFov, -0.85f, 0.85f);
 				bEdge = true;
 			}
 

@@ -80,6 +80,19 @@ namespace flex
 			}
 		}
 
+		// Same result as above (for many spans): binary searches lineStarts (see LineTable)
+		void ComputeLineColumnIndices(const std::vector<u32>& lineStarts, u32 sourceLength)
+		{
+			if ((u32)low > sourceLength || lineStarts.empty())
+			{
+				return;
+			}
+			auto iter = std::upper_bound(lineStarts.begin(), lineStarts.end(), (u32)low);
+			u32 line = (u32)(iter - lineStarts.begin()) - 1;
+			lineNumber = line;
+			columnIndex = (u32)low - lineStarts[line];
+		}
+
 		i32 low;
 		i32 high;
 
@@ -88,5 +101,30 @@ namespace flex
 		u32 columnIndex = 0;
 
 		Source source = Source::INPUT;
+	};
+	// The offset each line of a source starts at, for looking up line numbers of spans
+	struct LineTable
+	{
+		void Build(const std::string& source)
+		{
+			lineStarts.clear();
+			lineStarts.push_back(0);
+			for (u32 i = 0; i < (u32)source.size(); ++i)
+			{
+				if (source[i] == '\n')
+				{
+					lineStarts.push_back(i + 1);
+				}
+			}
+			sourceLength = (u32)source.size();
+		}
+
+		void Apply(Span& span) const
+		{
+			span.ComputeLineColumnIndices(lineStarts, sourceLength);
+		}
+
+		std::vector<u32> lineStarts;
+		u32 sourceLength = 0;
 	};
 } // namespace flex
